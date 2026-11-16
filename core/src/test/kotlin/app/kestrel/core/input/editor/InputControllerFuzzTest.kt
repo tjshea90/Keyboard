@@ -17,7 +17,7 @@ class InputControllerFuzzTest {
 
     private fun op(r: Rig, rnd: Random, external: Boolean) {
         val c = r.c
-        when (val k = rnd.nextInt(if (external) 24 else 20)) {
+        when (rnd.nextInt(if (external) 24 else 20)) {
             0, 1, 2, 3, 4, 5 -> c.type(letters[rnd.nextInt(26)].toString())
             6 -> c.type(punct[rnd.nextInt(punct.size)])
             7 -> c.space()
@@ -36,7 +36,6 @@ class InputControllerFuzzTest {
             22 -> { val a = rnd.nextInt(r.text.length + 1); r.ed.userSelect(a, minOf(r.text.length, a + rnd.nextInt(5))) }
             else -> if (rnd.nextInt(6) == 0) r.ed.appSetText("app " + rnd.nextInt(1000) + " text") else r.ed.userMove(0)
         }
-        if (k < 0) throw IllegalStateException()
     }
 
     private fun run(seed: Long, ops: Int, lazy: Boolean, external: Boolean, flaky: Boolean = false) {
@@ -66,17 +65,21 @@ class InputControllerFuzzTest {
     @Test fun theUserAndTheAppChangeTheTextInBetweenReportsLate() { for (s in 3000L..3250L) run(s, 120, lazy = true, external = true) }
     @Test fun anEditorThatDiesAndComesBack() { for (s in 4000L..4150L) run(s, 120, lazy = false, external = false, flaky = true) }
 
-    /** Nothing the keyboard does with its beliefs may delete text it did not insert: a glide's Backspace removes exactly the glide, never more. */
+    /** Nothing the keyboard does with its beliefs may delete text it did not insert: Backspace after a glide removes exactly the glide, and only the glide. */
     @Test fun backspaceAfterAGlideNeverEatsTheTextBeforeIt() {
         val rnd = Random(77)
         repeat(300) {
             val pre = (0 until rnd.nextInt(30)).map { letters[rnd.nextInt(26)] }.joinToString("")
             val r = Rig(pre); r.act { commitGlide(words[rnd.nextInt(words.size)]) }
-            if (rnd.nextBoolean()) { r.ed.userInsert("Z"); r.sync() }       // the app typed something after the glide: the glide is no longer the last thing
-            val before = r.text
-            r.act { backspace() }
-            assertTrue("backspace removed more than one glide or one character: '$before' -> '${r.text}'", before.length - r.text.length <= (r.c.lastGlide?.text?.length ?: 0).coerceAtLeast(maxOf(1, before.length - pre.length)))
-            assertTrue("the text before the glide was touched: '$pre' -> '${r.text}'", r.text.startsWith(pre.dropLast(0)) || before.length - r.text.length == 1)
+            val withGlide = r.text
+            if (rnd.nextBoolean()) {
+                r.ed.userInsert("Z"); r.sync()                                    // the app typed after the glide: the glide is no longer the last thing
+                r.act { backspace() }
+                assertEquals("only the app's character may go", withGlide, r.text)
+            } else {
+                r.act { backspace() }
+                assertEquals("exactly the glide (word and spaces) goes", pre, r.text)
+            }
         }
     }
 
