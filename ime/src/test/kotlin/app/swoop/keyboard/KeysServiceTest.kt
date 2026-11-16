@@ -7,7 +7,6 @@ import android.os.SystemClock
 import android.view.MotionEvent
 import android.view.View
 import android.view.inputmethod.InputMethodInfo
-import androidx.test.core.app.ApplicationProvider
 import app.kestrel.core.input.Key
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
@@ -16,13 +15,14 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.Robolectric
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.RuntimeEnvironment
 import org.robolectric.annotation.Config
 
 /** KB-100: the keyboard is declared the way Android needs it, the view types, the setup screen opens. Runs on the tablet's API level (29). */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [29])
 class KeysServiceTest {
-    private val app: Application get() = ApplicationProvider.getApplicationContext()
+    private val app: Application get() = RuntimeEnvironment.getApplication()
 
     @Test fun serviceIsDeclaredAsAnInputMethod() {
         val found = app.packageManager.queryIntentServices(Intent("android.view.InputMethod"), PackageManager.GET_META_DATA)
@@ -43,12 +43,12 @@ class KeysServiceTest {
 
     @Test fun onlySetupAndServiceAreExported() {
         val pi = app.packageManager.getPackageInfo(app.packageName, PackageManager.GET_ACTIVITIES or PackageManager.GET_SERVICES or PackageManager.GET_RECEIVERS or PackageManager.GET_PROVIDERS)
-        val exported = ArrayList<String>()
+        val exported = HashSet<String>()
         pi.activities?.filter { it.exported }?.forEach { exported.add(it.name) }
         pi.services?.filter { it.exported }?.forEach { exported.add(it.name) }
         pi.receivers?.filter { it.exported }?.forEach { exported.add(it.name) }
         pi.providers?.filter { it.exported }?.forEach { exported.add(it.name) }
-        assertEquals(listOf("app.swoop.keyboard.SetupActivity", "app.swoop.keyboard.KeysService"), exported.sorted().reversed().sortedBy { if (it.endsWith("SetupActivity")) 0 else 1 })
+        assertEquals(setOf("app.swoop.keyboard.SetupActivity", "app.swoop.keyboard.KeysService"), exported)
     }
 
     @Test fun noPermissionsAreRequested() {
@@ -82,13 +82,13 @@ class KeysServiceTest {
         val v = KeysView(app); val rec = Rec(); v.listener = rec; layout(v)
         val d = app.resources.displayMetrics.density
         val pad = 4f * d; val rowH = 50f * d; val gap = 4f * d
+        assertEquals("q", v.labelOf(Key.Ch("q")))
         tap(v, pad + 8f, pad + 2 * (rowH + gap) + rowH / 2)           // the shift key (first of row 3)
         assertTrue("shift must not be reported to the listener", rec.keys.isEmpty())
-        tap(v, pad + 5f, pad + rowH / 2)                              // q
-        val q = rec.keys.single() as Key.Ch
-        assertEquals("Q", v.labelOf(q.let { Key.Ch(it.text.uppercase()) }).uppercase())
-        tap(v, pad + 5f, pad + rowH / 2)                              // q again, shift is spent
-        assertEquals(2, rec.keys.size)
+        assertEquals("Q", v.labelOf(Key.Ch("q")))
+        tap(v, pad + 5f, pad + rowH / 2)                              // a letter key: shift is spent
+        assertEquals(1, rec.keys.size)
+        assertEquals("q", v.labelOf(Key.Ch("q")))
     }
 
     @Test fun serviceCreatesItsViewAndIgnoresKeysWithoutAnEditor() {
