@@ -2,7 +2,7 @@
 # `[~] ID ... {branch time}` = claimed by a session (tools/claim.sh). `[x] ID ... - proof` = done. New owner requests are appended at the BOTTOM under 'Owner requests' in their own words.
 
 ## Owner requests (newest last, in the owner's words)
-- [x] OR1 "The attached is a project for the keyboard repo. Treat the browser repo as read only" (2026-11-16): build the Swoop keyboard per research/KEYBOARD-APP-PLAN.md in this repo (tjshea90/Keyboard); tjshea90/Browser is READ-ONLY - evidence: CLAUDE.md rule + tools/test_handoff.sh check 'no workflow or script can reach the Browser repo'. Work continues in the KB-ids below.
+- NOTE OR1 (standing instruction, 2026-11-16, the owner): "The attached is a project for the keyboard repo. Treat the browser repo as read only". Build the Swoop keyboard per research/KEYBOARD-APP-PLAN.md in THIS repo (tjshea90/Keyboard); tjshea90/Browser is READ-ONLY (CLAUDE.md rule; tools/test_handoff.sh has a check). The work is the KB-ids below.
 
 
 ## Phase 0 - Bootstrap and safety net (about 1-2 sessions)
@@ -77,4 +77,4 @@
 ## Decisions the owner must make (nothing blocks until the task named)
 - [ ] Q-KB003 Signing key: plan 11.5 says the owner pastes the keystore (base64) and 3 passwords into four GitHub secrets, but they would have to be shown in chat first. PROPOSAL (needs the owner's yes before KB-003): a one-time dispatch-only workflow makes the keystore in CI, encrypts it with a long passphrase the owner types into ONE GitHub secret (SWOOP_KEYSTORE_PASSPHRASE) and commits only signing/swoop.jks.enc + signing/CERT_SHA256. The private key never appears in chat or in clear in the repo.
 - [ ] Q-HEARTBEAT May the session create ONE recurring wake (every 2 hours) that resumes the work after a usage cut-off? It spends a little usage each time (plan Appendix G).
-- [ ] Q-REPO11 Plan 11.0 step 2: the Claude GitHub App is installed for tjshea90/Keyboard (this session can push), but the SESSION also needs read access to the public repos tjshea90/Browser and tjshea90/LinkMeter - Browser is already readable here; LinkMeter is fetched at KB-600 with add_repo (read).
+- [ ] Q-LINKMETER KB-600 needs READ access to the public repo tjshea90/LinkMeter (mcp__claude-code-remote__add_repo, access read); Browser is already readable here. Ask only when KB-600 starts.
