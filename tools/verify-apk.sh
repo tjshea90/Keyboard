@@ -51,7 +51,7 @@ if [ -n "$BT" ] && [ -x "$BT/aapt2" ]; then
   PKG="$(echo "$BADGE" | sed -n "s/^package: name='\([^']*\)'.*/\1/p")"
   VC="$(echo "$BADGE" | sed -n "s/^package:.* versionCode='\([^']*\)'.*/\1/p")"
   VN="$(echo "$BADGE" | sed -n "s/^package:.* versionName='\([^']*\)'.*/\1/p")"
-  MINSDK="$(echo "$BADGE" | sed -n "s/^sdkVersion:'\([^']*\)'.*/\1/p")"
+  MINSDK="$(echo "$BADGE" | sed -n "s/^minSdkVersion:'\([^']*\)'.*/\1/p")"
   if [ "$PKG" = "app.swoop.keyboard" ] || { [ "$CERT" -eq 0 ] && [ "$PKG" = "app.swoop.keyboard.debug" ]; }; then ok "package $PKG"; else bad "package is '$PKG', expected 'app.swoop.keyboard'"; fi
   [ "$VC" = "$(app_vcode)" ] && [ "$VN" = "$(app_vname)" ] && ok "version $VN (code $VC) equals the Gradle file" || bad "APK says $VN/$VC, Gradle says $(app_vname)/$(app_vcode)"
   [ "$MINSDK" = "29" ] && ok "minSdk 29" || bad "minSdk is '$MINSDK', expected 29"
@@ -64,8 +64,9 @@ if [ -n "$BT" ] && [ -x "$BT/aapt2" ]; then
   else bad "PERMISSIONS differ from tools/expected-permissions.txt. in APK: [$(printf '%s' "$GOTP" | tr '\n' ' ')] expected: [$(printf '%s' "$WANTP" | tr '\n' ' ')]"; fi
 
   XML="$("$BT/aapt2" dump xmltree "$APK" --file AndroidManifest.xml 2>/dev/null)"
-  if printf '%s' "$XML" | grep -q 'usesCleartextTraffic.*=(type 0x12)0xffffffff'; then bad "usesCleartextTraffic is true"; else ok "cleartext traffic is not enabled"; fi
-  if printf '%s' "$XML" | grep -q 'allowBackup.*=(type 0x12)0xffffffff'; then bad "allowBackup is true (learned typing data must never be backed up automatically)"; else ok "allowBackup is not enabled"; fi
+  if printf '%s' "$XML" | grep -q 'usesCleartextTraffic.*=true'; then bad "usesCleartextTraffic is true"; else ok "cleartext traffic is not enabled"; fi
+  # allowBackup defaults to TRUE when absent, so it must be present and false: learned typing data must never be backed up automatically
+  if printf '%s' "$XML" | grep -q 'allowBackup.*=false'; then ok "allowBackup is explicitly false"; else bad "allowBackup is not explicitly false (the learned typing data would be backed up)"; fi
   # A GMS DEPENDENCY (service, receiver, provider, uses-library, meta-data...) is forbidden.
   GMS="$(printf '%s' "$XML" | awk '/^ *E: /{el=$2} /com\.google\.android\.gms/ && el!="package"{print el": "$0}' | head -3)"
   if [ -n "$GMS" ]; then bad "manifest depends on Google Mobile Services (the tablet has none; never add GMS): $GMS"; else ok "no Google Mobile Services dependency in the manifest"; fi
