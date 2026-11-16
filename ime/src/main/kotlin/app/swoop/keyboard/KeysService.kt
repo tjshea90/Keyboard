@@ -1,20 +1,21 @@
 package app.swoop.keyboard
 
 import android.inputmethodservice.InputMethodService
-import android.text.InputType
-import android.view.KeyEvent
+import android.os.SystemClock
 import android.view.View
 import android.view.inputmethod.EditorInfo
 import app.kestrel.core.input.Key
+import app.kestrel.core.input.editor.InputController
 
 /**
- * The system keyboard. KB-100 skeleton: shows the keys view and types into the field. KB-101 puts the editor state machine (EditorBridge,
- * composing text, own-edit tracking) between this class and the editor; KB-104 does the Enter/action rules in full. Keep this class THIN:
- * logic belongs in :core where the JVM tests can reach it (plan 13.3).
+ * The system keyboard. THIN on purpose (plan 13.3): every decision about the text is made by [InputController] in :core, where the JVM tests and
+ * the fuzzer reach it; this class forwards the lifecycle, the selection reports and the keys, and keeps the keys view in step.
+ * KB-104 completes the Enter/caps rules, KB-103 adds the glide engine, KB-106 the crash-loop fallback.
  */
 class KeysService : InputMethodService(), KeysView.Listener {
     private var keys: KeysView? = null
-    private var info: EditorInfo? = null
+    private val controller = InputController(InputConnectionBridge { currentInputConnection })
+    private var lastShiftTap = 0L
 
     override fun onCreateInputView(): View = KeysView(this).also { it.listener = this; keys = it }
 
@@ -23,37 +24,35 @@ class KeysService : InputMethodService(), KeysView.Listener {
 
     override fun onStartInputView(editorInfo: EditorInfo, restarting: Boolean) {
         super.onStartInputView(editorInfo, restarting)
-        info = editorInfo
-        keys?.setForField((editorInfo.inputType and InputType.TYPE_MASK_CLASS) != InputType.TYPE_CLASS_NUMBER)
+        val field = FieldInfos.from(editorInfo)
+        controller.startInput(field)
+        keys?.setForField(FieldInfos.wantsLetters(field))
+        keys?.setShift(controller.shift)
     }
 
-    override fun onFinishInputView(finishingInput: Boolean) {
-        super.onFinishInputView(finishingInput)
-        info = null
+    override fun onFinishInput() { controller.finishInput(); super.onFinishInput() }
+
+    /** Android tells us every selection change, ours and everybody else's; the controller tells them apart (plan 6.4). */
+    override fun onUpdateSelection(oldSelStart: Int, oldSelEnd: Int, newSelStart: Int, newSelEnd: Int, candidatesStart: Int, candidatesEnd: Int) {
+        super.onUpdateSelection(oldSelStart, oldSelEnd, newSelStart, newSelEnd, candidatesStart, candidatesEnd)
+        controller.onSelectionUpdate(newSelStart, newSelEnd, candidatesStart, candidatesEnd)
+        keys?.setShift(controller.shift)
     }
 
     override fun onKey(key: Key) {
-        val ic = currentInputConnection ?: return
         when (key) {
-            is Key.Ch -> ic.commitText(keys?.labelOf(key) ?: key.text, 1)
-            Key.Backspace -> sendDownUp(KeyEvent.KEYCODE_DEL)
-            Key.Go -> enter()
+            is Key.Ch -> controller.type(key.text)
+            Key.Backspace -> controller.backspace()
+            Key.Go -> controller.enter()
+            Key.Shift -> {
+                val now = SystemClock.uptimeMillis()
+                if (now - lastShiftTap < DOUBLE_TAP_MS) controller.lockShift() else controller.tapShift()
+                lastShiftTap = now
+            }
             else -> Unit
         }
+        keys?.setShift(controller.shift)
     }
 
-    private fun sendDownUp(code: Int) {
-        val ic = currentInputConnection ?: return
-        ic.sendKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, code))
-        ic.sendKeyEvent(KeyEvent(KeyEvent.ACTION_UP, code))
-    }
-
-    /** The field's own action (Go / Search / Send / Done / Next) when it defines one, else a real Enter key (KB-104 completes this). */
-    private fun enter() {
-        val ei = info
-        val action = (ei?.imeOptions ?: 0) and EditorInfo.IME_MASK_ACTION
-        val noAction = ((ei?.imeOptions ?: 0) and EditorInfo.IME_FLAG_NO_ENTER_ACTION) != 0
-        if (!noAction && action != EditorInfo.IME_ACTION_NONE && action != EditorInfo.IME_ACTION_UNSPECIFIED) currentInputConnection?.performEditorAction(action)
-        else sendDownUp(KeyEvent.KEYCODE_ENTER)
-    }
+    private companion object { const val DOUBLE_TAP_MS = 350L }
 }

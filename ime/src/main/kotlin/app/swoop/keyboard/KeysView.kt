@@ -14,6 +14,7 @@ import app.kestrel.core.input.KeyBox
 import app.kestrel.core.input.KeySpec
 import app.kestrel.core.input.MiniKeyboardGeometry
 import app.kestrel.core.input.MiniKeyboardLayout
+import app.kestrel.core.input.editor.ShiftState
 
 /**
  * KB-100 walking skeleton of the keys view: it draws the ported English QWERTY pages with the SAME geometry function the glide decoder reads
@@ -23,7 +24,7 @@ import app.kestrel.core.input.MiniKeyboardLayout
  */
 class KeysView(context: Context) : View(context) {
     interface Listener {
-        /** A key was tapped. Shift / symbols paging is the view's own business and is not reported. */
+        /** A key was tapped (Shift included; the symbols/letters paging is the view's own business and is not reported). */
         fun onKey(key: Key)
     }
 
@@ -34,7 +35,7 @@ class KeysView(context: Context) : View(context) {
     private val rowH = 50f * density
 
     private var symbols = false
-    private var shift = false
+    private var shift = ShiftState.OFF
     private var forField = true
     private var rows: List<List<KeySpec>> = MiniKeyboardLayout.rows(false, false, true)
     private var boxes: List<List<KeyBox>> = emptyList()
@@ -52,11 +53,14 @@ class KeysView(context: Context) : View(context) {
 
     init { contentDescription = context.getString(R.string.app_name) }
 
+    /** The controller owns the shift state; the view only shows it (capitals on the keys, a lit Shift key). */
+    fun setShift(state: ShiftState) { if (shift != state) { shift = state; rebuild() } }
+
     /** The page for the field being edited (KB-104 chooses it from EditorInfo; today every field gets the text-field letters page). */
     fun setForField(value: Boolean) { if (forField != value) { forField = value; rebuild() } }
 
     private fun rebuild() {
-        rows = MiniKeyboardLayout.rows(symbols, shift, forField)
+        rows = MiniKeyboardLayout.rows(symbols, shift != ShiftState.OFF, forField)
         boxes = MiniKeyboardGeometry.boxes(rows, width - 2 * pad, height - 2 * pad, gap).map { r -> r.map { KeyBox(it.left + pad, it.top + pad, it.right + pad, it.bottom + pad) } }
         invalidate()
     }
@@ -79,7 +83,7 @@ class KeysView(context: Context) : View(context) {
                 rect.set(b.left, b.top, b.right, b.bottom)
                 fill.color = when { b === pressed -> keyFillPressed; spec.key is Key.Ch && spec.label.length <= 2 -> keyFill; else -> keyFillSpecial }
                 canvas.drawRoundRect(rect, r, r, fill)
-                val label = if (spec.key is Key.Shift && shift) "⇪" else spec.label
+                val label = if (spec.key is Key.Shift && shift != ShiftState.OFF) (if (shift == ShiftState.LOCK) "⇪" else "⇧") else spec.label
                 text.textSize = (if (label.length > 2) 15f else 20f) * density
                 canvas.drawText(label, b.centerX, b.centerY - (text.ascent() + text.descent()) / 2f, text)
             }
@@ -119,16 +123,9 @@ class KeysView(context: Context) : View(context) {
 
     private fun press(key: Key) {
         when (key) {
-            Key.Shift -> { shift = !shift; rebuild() }
             Key.ToSymbols -> { symbols = true; rebuild() }
             Key.ToLetters -> { symbols = false; rebuild() }
-            else -> {
-                listener?.onKey(key)
-                if (shift && key is Key.Ch) { shift = false; rebuild() }
-            }
+            else -> listener?.onKey(key)
         }
     }
-
-    /** What a tap on [key] reports for a letter right now (shift applied): used by the service and the tests. */
-    fun labelOf(key: Key.Ch): String = if (shift && key.text.length == 1) key.text.uppercase() else key.text
 }
