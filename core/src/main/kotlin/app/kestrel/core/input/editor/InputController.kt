@@ -39,13 +39,15 @@ class InputController(private val ed: EditorBridge) {
     var shift = ShiftState.OFF; private set
 
     private val pending = Pending()
+    /** The editor may still hold a composing region this keyboard lost track of (a failed call, a new session): it is closed before the next edit. */
+    private var composingUnknown = false
 
     // ------------------------------------------------------------------------------------------------------------ session
 
     /** A new field got the focus (onStartInput / onStartInputView). Forgets everything about the previous one. */
     fun startInput(info: FieldInfo) {
         field = info
-        composing = null; lastGlide = null; shift = ShiftState.OFF
+        composing = null; lastGlide = null; shift = ShiftState.OFF; composingUnknown = true
         pending.clear()
         selStart = info.initialSelStart; selEnd = info.initialSelEnd
         refresh()
@@ -59,9 +61,10 @@ class InputController(private val ed: EditorBridge) {
      * own edits, false when the user or the app moved or changed the text (everything assumed about the old text was dropped).
      */
     fun onSelectionUpdate(newSelStart: Int, newSelEnd: Int, candStart: Int = -1, candEnd: Int = -1): Boolean {
+        if (candStart >= 0 && composing == null) composingUnknown = true           // the editor shows a composing word this keyboard does not know about
         if (pending.matchAndDrop(newSelStart, newSelEnd)) { selStart = newSelStart; selEnd = newSelEnd; return true }
         if (newSelStart == selStart && newSelEnd == selEnd) return true             // e.g. only the composing region changed
-        if (selStart < 0) { selStart = newSelStart; selEnd = newSelEnd; return true } // the first report after an unknown state is the truth
+        if (selStart < 0) { selStart = newSelStart; selEnd = newSelEnd; refresh(); return true } // the first report after an unknown state is the truth (and the text may have changed with it)
         // somebody else moved the cursor or edited the text
         if (composing != null) ed.finishComposing()
         composing = null; lastGlide = null
@@ -80,6 +83,7 @@ class InputController(private val ed: EditorBridge) {
     /** A key was tapped whose label is [key]: a letter, a digit, punctuation, ".com". Letters follow the shift state. */
     fun type(key: String) {
         if (key.isEmpty()) return
+        settle()
         val t = if (shift != ShiftState.OFF && isSingleCodePoint(key)) key.uppercase() else key
         if (isLetter(t) || (composing != null && isWordConnector(t))) {
             if (field.composingAllowed) { typeComposing(t); return }
@@ -104,6 +108,7 @@ class InputController(private val ed: EditorBridge) {
 
     /** One press of Backspace. A tapped word loses its last letter; the word a glide just added goes whole; otherwise the editor deletes (selection or one character). */
     fun backspace() {
+        settle()
         val c = composing
         if (c != null) {
             val shorter = dropLastCodePoint(c)
@@ -143,6 +148,7 @@ class InputController(private val ed: EditorBridge) {
 
     /** Enter: the field's own action when it has one, else a real Enter key. The text after it is unknown, so the window is re-read. */
     fun enter() {
+        settle()
         endComposing(); lastGlide = null
         val a = field.imeAction
         val useAction = !field.noEnterAction && a != ImeActions.UNSPECIFIED && a != ImeActions.NONE
@@ -155,6 +161,7 @@ class InputController(private val ed: EditorBridge) {
     /** A glide ended on [word] (already ranked by the decoder). It is inserted at the cursor with a space after it, and one before it when the text does not end in a space. */
     fun commitGlide(word: String) {
         if (word.isEmpty()) return
+        settle()
         endComposing()
         val w = when (shift) { ShiftState.LOCK -> word.uppercase(); ShiftState.ONCE -> word.replaceFirstChar { it.uppercase() }; ShiftState.OFF -> word }
         val needsLead = before.isNotEmpty() && !before.last().isWhitespace() && before.last() !in NO_SPACE_AFTER
@@ -190,6 +197,7 @@ class InputController(private val ed: EditorBridge) {
     /** Moves the cursor [delta] characters (negative = left), e.g. from sliding a finger over the space key. A tapped word is finished first. */
     fun moveCursor(delta: Int) {
         if (delta == 0) return
+        settle()
         endComposing(); lastGlide = null
         val left = delta < 0
         val steps = minOf(Math.abs(delta), 64)
@@ -256,9 +264,14 @@ class InputController(private val ed: EditorBridge) {
 
     /** Something failed or surprised us: forget every assumption and re-read the editor. */
     private fun resync() {
-        composing = null; lastGlide = null; pending.clear()
+        composing = null; lastGlide = null; pending.clear(); composingUnknown = true
         selStart = -1; selEnd = -1
         refresh()
+    }
+
+    /** Called before every edit: closes a composing region the keyboard lost track of, so an edit can never replace somebody's composing word by accident. */
+    private fun settle() {
+        if (composingUnknown && composing == null && ed.finishComposing()) composingUnknown = false
     }
 
     /** Edits shorten the window from the front; when text exists before it, read it again. */
