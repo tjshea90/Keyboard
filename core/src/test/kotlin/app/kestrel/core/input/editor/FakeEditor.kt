@@ -83,5 +83,10 @@ class FakeEditor(text: String = "", sel: Int = text.length, val multiline: Boole
     /** The user (or the app) inserts [t] at the cursor, e.g. a paste or the app's own autofill. */
     fun userInsert(t: String) { sb.replace(lo(), hi(), t); selS = lo() + t.length; selE = selS; compS = -1; compE = -1; emit() }
     /** The app replaces everything with [t] and puts the cursor at the end. */
-    fun appSetText(t: String) { sb.setLength(0); sb.append(t); selS = sb.length; selE = selS; compS = -1; compE = -1; emit() }
+    fun appSetText(t: String) {
+        // An app that replaces the text and leaves the cursor at the same offset sends NO report at all (real Android only reports changes of the
+        // selection or the composing region), so nothing could ever detect it: the fake never does that, it moves the cursor by one in that case.
+        val old = selS
+        sb.setLength(0); sb.append(if (t.length == old) "$t." else t); selS = sb.length; selE = selS; compS = -1; compE = -1; emit()
+    }
 }
