@@ -1,0 +1,22 @@
+name: Set up the Android build
+description: JDK 21, the Gradle cache, and the SDK packages this repo needs (platform 36, build-tools 36.0.0)
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-java@v5
+      with:
+        distribution: temurin
+        java-version: '21'
+
+    - uses: gradle/actions/setup-gradle@v4
+
+    - name: Android SDK packages
+      shell: bash
+      run: |
+        SDKM="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+        [ -x "$SDKM" ] || SDKM="$(command -v sdkmanager || true)"
+        [ -n "$SDKM" ] || { echo "::error::sdkmanager not found on this runner ($ANDROID_HOME)"; exit 1; }
+        yes | "$SDKM" --licenses >/dev/null 2>&1 || true
+        "$SDKM" "platforms;android-36" "build-tools;36.0.0" 2>&1 | tr '\r' '\n' | tail -4
+        [ -d "$ANDROID_HOME/platforms/android-36" ] || { echo "::error::platform android-36 is not installed"; exit 1; }
+        echo "SDK ready: $(ls "$ANDROID_HOME/platforms" | tr '\n' ' ')"
