@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<lint>
+    <!-- No launcher icon / adaptive icon yet (KB-100 adds the setup activity and an icon). -->
+</lint>

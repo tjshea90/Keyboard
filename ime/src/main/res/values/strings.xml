@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The ONE place the product name lives (plus applicationId in ime/build.gradle.kts). -->
+    <string name="app_name">Swoop</string>
+</resources>

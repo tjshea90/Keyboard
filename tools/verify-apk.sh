@@ -52,7 +52,7 @@ if [ -n "$BT" ] && [ -x "$BT/aapt2" ]; then
   VC="$(echo "$BADGE" | sed -n "s/^package:.* versionCode='\([^']*\)'.*/\1/p")"
   VN="$(echo "$BADGE" | sed -n "s/^package:.* versionName='\([^']*\)'.*/\1/p")"
   MINSDK="$(echo "$BADGE" | sed -n "s/^sdkVersion:'\([^']*\)'.*/\1/p")"
-  [ "$PKG" = "app.swoop.keyboard" ] && ok "package $PKG" || bad "package is '$PKG', expected 'app.swoop.keyboard'"
+  if [ "$PKG" = "app.swoop.keyboard" ] || { [ "$CERT" -eq 0 ] && [ "$PKG" = "app.swoop.keyboard.debug" ]; }; then ok "package $PKG"; else bad "package is '$PKG', expected 'app.swoop.keyboard'"; fi
   [ "$VC" = "$(app_vcode)" ] && [ "$VN" = "$(app_vname)" ] && ok "version $VN (code $VC) equals the Gradle file" || bad "APK says $VN/$VC, Gradle says $(app_vname)/$(app_vcode)"
   [ "$MINSDK" = "29" ] && ok "minSdk 29" || bad "minSdk is '$MINSDK', expected 29"
   if [ "$CERT" -eq 1 ]; then echo "$BADGE" | grep -q "application-debuggable" && bad "APK is debuggable" || ok "not debuggable"; fi
