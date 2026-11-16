@@ -6,7 +6,7 @@
 
 
 ## Phase 0 - Bootstrap and safety net (about 1-2 sessions)
-- [ ] KB-000 Ladder kit, docs at birth, this plan copied to `research/` (section 11) - done when: `bash tools/test_handoff.sh` passes; 3 edits produce `auto-checkpoint:` commits and pushes; `CHECKPOINT.md` has a concrete "next"
+- [x] KB-000 Ladder kit, docs at birth, this plan copied to `research/` (section 11) - done when: `bash tools/test_handoff.sh` passes; 3 edits produce `auto-checkpoint:` commits and pushes; `CHECKPOINT.md` has a concrete "next" - bash tools/test_handoff.sh 65/65 green; autosave hooks fired (auto-checkpoint commits pushed, branch in sync with origin); ckpt 7 written with a concrete next
 - [ ] KB-001 Gradle skeleton: `:core` (JVM, Java-8 API surface, flags as in Kestrel), `:ime` (Android app, `minSdk 29`, `targetSdk 36`, namespace), `:tools`, `:eval`; version catalog like Kestrel's (agp 8.13.2, kotlin 2.3.10); dispatch-only CI - done when: one green CI run (`full_build=false`)
 - [ ] KB-002 Port `core/input` (all files in 3.1) with the 122 tests and `GestureSim`/`GlideEval`; copy `en.klx`, `LICENSE.txt`, `extra-words.txt`, `docs/DICTIONARY.md`; keep package names; compiler task `glideLexicon` works - done when: `./gradlew :core:test` green with the same test counts; list is byte-identical (blob `63e399fbc6`)
 - [ ] KB-003 Private signing key + secrets + CI verification (11.5) - done when: CI builds a release APK whose certificate equals `signing/CERT_SHA256`; owner action done
