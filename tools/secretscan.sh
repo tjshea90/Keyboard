@@ -43,7 +43,9 @@ done < <(git diff --cached --name-only 2>/dev/null)
 # Allowed: the documented example in docs/KEYBOARD-EXPORT.md and fixtures under any */src/test/* folder.
 EXPORT_DIFF="$(git diff --cached -U0 -- . ':(exclude)docs/KEYBOARD-EXPORT.md' ':(exclude)*/src/test/*' 2>/dev/null || true)"
 [ -z "$EXPORT_DIFF" ] && EXPORT_DIFF="$(git diff HEAD -U0 -- . ':(exclude)docs/KEYBOARD-EXPORT.md' ':(exclude)*/src/test/*' 2>/dev/null || true)"
-if printf '%s\n' "$EXPORT_DIFF" | grep -qE '^\+KESTREL-KEYBOARD-LEARNING [0-9]'; then
+# (grep -q in a pipeline under pipefail misreports a large diff: printf dies of SIGPIPE when grep exits early - so capture the first hit instead)
+EXPORT_HIT="$(printf '%s\n' "$EXPORT_DIFF" | grep -m1 -E '^\+KESTREL-KEYBOARD-LEARNING [0-9]' || true)"
+if [ -n "$EXPORT_HIT" ]; then
   echo "SECRET SCAN TRIPPED - a keyboard LEARNING EXPORT (the owner's typing history) is in the tree - nothing was committed."
   echo "Remove it (exports are attached to a chat, never committed), then checkpoint again."
   exit 1
