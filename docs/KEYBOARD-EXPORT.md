@@ -1,3 +1,5 @@
+> Copied unchanged from the Kestrel browser repository (commit 063b2761, blob ffc0f8f9d5). The Swoop keyboard must keep READING format v1 forever; v2 (KB-403) is documented next to it. NEVER commit a real export: the only allowed example is the one in this file.
+
 # Kestrel keyboard learning file (version 1)
 
 What this is: the one file that holds everything the Kestrel keyboard learned about ONE person's typing. It is written by Settings > "Export what the keyboard learned" and read by

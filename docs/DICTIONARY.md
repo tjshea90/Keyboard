@@ -1,7 +1,9 @@
+> Copied from the Kestrel browser repository at commit 063b2761 for the Swoop keyboard (KB-002); paths adapted to this repo. KB-201 moves the list to the KGL2 format.
+
 # The glide-typing word list: sources, licence, how it is made (AT1)
 
 The mini keyboard's glide typing (owner message 34) needs a list of words with how common each one is, and which words follow which. It ships as ONE binary file,
-`geckoapp/src/main/assets/glide/en.klx` (about 2.7 MB; only the Kestrel / GeckoView build has the mini keyboard, so only its APK carries the file). The licence text travels with it as `assets/glide/LICENSE.txt` (in the APK from alpha35; alpha34's APK carries the file but the notice is only in this repository).
+`ime/src/main/assets/glide/en.klx` (about 2.7 MB; this keyboard APK carries the file (copied byte-for-byte from the Kestrel browser, blob 63e399fbc6, sha256 9c17911fa94e2129...)). The licence text travels with it as `assets/glide/LICENSE.txt` (in the APK from alpha35; alpha34's APK carries the file but the notice is only in this repository).
 
 ## What is in it
 
@@ -51,7 +53,7 @@ SOFTWARE.
 1. Fetch the package as DATA into a new empty folder OUTSIDE the repository: `python3 -m pip download symspellpy==6.10.2 --no-deps -d <empty folder>`.
 2. Read only the two `.txt` files out of the wheel (it is a zip): `python3 -I -m zipfile -e <wheel> <another empty folder>` or Python's `zipfile` with `extract` on those two names. Never import or run anything from it.
 3. From the repository root:
-   `./gradlew :tools:glideLexicon --args="--out geckoapp/src/main/assets/glide/en.klx --words <folder>/symspellpy/frequency_dictionary_en_82_765.txt --pairs <folder>/symspellpy/frequency_bigramdictionary_en_243_342.txt --extra tools/glide/extra-words.txt"`
+   `./gradlew :tools:glideLexicon --args="--out ime/src/main/assets/glide/en.klx --words <folder>/symspellpy/frequency_dictionary_en_82_765.txt --pairs <folder>/symspellpy/frequency_bigramdictionary_en_243_342.txt --extra tools/glide/extra-words.txt"`
 4. `./gradlew :core:test --tests 'app.kestrel.core.input.glide.*'` (the accuracy tests read the file and fail when it is missing or too small).
 
 The tool is `tools/src/main/kotlin/app/kestrel/tools/GlideLexiconCompiler.kt`; the file format and its reader are `core/.../input/glide/Lexicon.kt` (`LexiconFile`), tested together in `LexiconFileTest`.
