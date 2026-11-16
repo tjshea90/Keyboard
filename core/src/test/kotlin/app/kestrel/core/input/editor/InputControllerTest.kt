@@ -144,7 +144,9 @@ class InputControllerTest {
         val r = Rig().typeAll("hel"); r.act { moveCursor(-1) }; assertNull(r.c.composing); assertEquals(-1, r.ed.compS)
         r.act { type("X") }; assertEquals("heXl", r.text)
     }
-    @Test fun movingFarKeepsTheBeliefsTrue() { val r = Rig("x".repeat(300), 150); r.act { moveCursor(-40) }; r.act { moveCursor(70) }; assertEquals(180, r.ed.selS) }
+    @Test fun movingFarKeepsTheBeliefsTrue_andOneCallMovesAtMost64() {
+        val r = Rig("x".repeat(300), 150); r.act { moveCursor(-40) }; assertEquals(110, r.ed.selS); r.act { moveCursor(70) }; assertEquals(174, r.ed.selS)
+    }
 
     // ------------------------------------------------------------------ Enter
     @Test fun enterRunsTheFieldsAction() {
