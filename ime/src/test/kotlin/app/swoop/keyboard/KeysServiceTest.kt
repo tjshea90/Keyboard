@@ -78,17 +78,12 @@ class KeysServiceTest {
         assertEquals(listOf("q", "p"), rec.keys.map { (it as Key.Ch).text })
     }
 
-    @Test fun shiftMakesTheNextLetterCapitalThenGoesBack() {
+    @Test fun theShiftKeyIsReportedBecauseTheControllerOwnsTheShiftState() {
         val v = KeysView(app); val rec = Rec(); v.listener = rec; layout(v)
         val d = app.resources.displayMetrics.density
         val pad = 4f * d; val rowH = 50f * d; val gap = 4f * d
-        assertEquals("q", v.labelOf(Key.Ch("q")))
         tap(v, pad + 8f, pad + 2 * (rowH + gap) + rowH / 2)           // the shift key (first of row 3)
-        assertTrue("shift must not be reported to the listener", rec.keys.isEmpty())
-        assertEquals("Q", v.labelOf(Key.Ch("q")))
-        tap(v, pad + 5f, pad + rowH / 2)                              // a letter key: shift is spent
-        assertEquals(1, rec.keys.size)
-        assertEquals("q", v.labelOf(Key.Ch("q")))
+        assertEquals(listOf<Key>(Key.Shift), rec.keys)
     }
 
     @Test fun serviceCreatesItsViewAndIgnoresKeysWithoutAnEditor() {
