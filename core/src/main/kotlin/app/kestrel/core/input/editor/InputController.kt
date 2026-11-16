@@ -201,7 +201,7 @@ class InputController(private val ed: EditorBridge) {
         endComposing(); lastGlide = null
         val left = delta < 0
         val steps = minOf(Math.abs(delta), 64)
-        var predicted = true
+        var predicted = selStart >= 0 && selStart == selEnd   // a selection collapses to one end and the selected text joins the window: re-read instead of predicting
         for (i in 0 until steps) {
             if (!ed.sendKey(if (left) KeyCodes.DPAD_LEFT else KeyCodes.DPAD_RIGHT)) { resync(); return }
             if (!predicted) continue
