@@ -11,6 +11,8 @@ import java.util.Random
  * moves it did, however late the reports arrived and whatever the user or the app did to the text in between. A failure prints the seed.
  */
 class InputControllerFuzzTest {
+    /** SWOOP_FUZZ_SCALE=20 ./gradlew :core:test runs 20x more random streams (a soak before a release). */
+    private val scale = (System.getenv("SWOOP_FUZZ_SCALE") ?: "1").toLongOrNull()?.coerceIn(1L, 200L) ?: 1L
     private val letters = "abcdefghijklmnopqrstuvwxyz"
     private val words = listOf("hello", "world", "for", "fir", "the", "doraby", "a", "i'm", "typing")
     private val punct = listOf(".", ",", "!", "?", "'", "/", ".com", "-", "(", ")", "1", "7", "😀", "é")
@@ -60,11 +62,11 @@ class InputControllerFuzzTest {
         }
     }
 
-    @Test fun ownEditsOnlyReportsDeliveredAtOnce() { for (s in 1L..250L) run(s, 120, lazy = false, external = false) }
-    @Test fun ownEditsOnlyReportsArriveLateAndInBatches() { for (s in 1000L..1250L) run(s, 120, lazy = true, external = false) }
-    @Test fun theUserAndTheAppChangeTheTextInBetweenReportsAtOnce() { for (s in 2000L..2250L) run(s, 120, lazy = false, external = true) }
-    @Test fun theUserAndTheAppChangeTheTextInBetweenReportsLate() { for (s in 3000L..3250L) run(s, 120, lazy = true, external = true) }
-    @Test fun anEditorThatDiesAndComesBack() { for (s in 4000L..4150L) run(s, 120, lazy = false, external = false, flaky = true) }
+    @Test fun ownEditsOnlyReportsDeliveredAtOnce() { for (s in 1L..(1L + (250 - 1) * scale)) run(s, 120, lazy = false, external = false) }
+    @Test fun ownEditsOnlyReportsArriveLateAndInBatches() { for (s in 1000L..(1000L + (1250 - 1000) * scale)) run(s, 120, lazy = true, external = false) }
+    @Test fun theUserAndTheAppChangeTheTextInBetweenReportsAtOnce() { for (s in 2000L..(2000L + (2250 - 2000) * scale)) run(s, 120, lazy = false, external = true) }
+    @Test fun theUserAndTheAppChangeTheTextInBetweenReportsLate() { for (s in 3000L..(3000L + (3250 - 3000) * scale)) run(s, 120, lazy = true, external = true) }
+    @Test fun anEditorThatDiesAndComesBack() { for (s in 4000L..(4000L + (4150 - 4000) * scale)) run(s, 120, lazy = false, external = false, flaky = true) }
 
     /** Nothing the keyboard does with its beliefs may delete text it did not insert: Backspace after a glide removes exactly the glide, and only the glide. */
     @Test fun backspaceAfterAGlideNeverEatsTheTextBeforeIt() {
