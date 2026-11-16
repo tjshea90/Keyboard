@@ -63,7 +63,8 @@ class InputController(private val ed: EditorBridge) {
     fun onSelectionUpdate(newSelStart: Int, newSelEnd: Int, candStart: Int = -1, candEnd: Int = -1): Boolean {
         if (candStart >= 0 && composing == null) composingUnknown = true           // the editor shows a composing word this keyboard does not know about
         if (pending.matchAndDrop(newSelStart, newSelEnd)) { selStart = newSelStart; selEnd = newSelEnd; return true }
-        if (newSelStart == selStart && newSelEnd == selEnd) return true             // e.g. only the composing region changed
+        // the same selection as believed: usually only the composing region changed; but an app that replaced the text and left the cursor where it was looks the same, so with no own edit outstanding the window is checked
+        if (newSelStart == selStart && newSelEnd == selEnd && (!pending.isEmpty() || windowStillTrue())) return true
         if (selStart < 0) { selStart = newSelStart; selEnd = newSelEnd; refresh(); return true } // the first report after an unknown state is the truth (and the text may have changed with it)
         // somebody else moved the cursor or edited the text
         if (composing != null) ed.finishComposing()
@@ -258,6 +259,12 @@ class InputController(private val ed: EditorBridge) {
         pending.push(selStart, selEnd)
     }
 
+    /** A cheap look at the editor: the few units around the cursor are still what the window says. */
+    private fun windowStillTrue(): Boolean {
+        val b = before.takeLast(16); val a = after.take(8)
+        return ed.textBefore(b.length) == b && ed.textAfter(a.length) == a
+    }
+
     private fun verifyBefore(tail: String): Boolean = ed.textBefore(tail.length) == tail && before.endsWith(tail)
 
     private fun refresh() { before = ed.textBefore(WINDOW_BEFORE) ?: ""; after = ed.textAfter(WINDOW_AFTER) ?: "" }
@@ -288,6 +295,7 @@ class InputController(private val ed: EditorBridge) {
         private val a = IntArray(CAP); private val b = IntArray(CAP)
         private var head = 0; private var size = 0
         fun clear() { size = 0 }
+        fun isEmpty() = size == 0
         fun push(s: Int, e: Int) {
             if (size == CAP) { head = (head + 1) % CAP; size-- }
             val i = (head + size) % CAP; a[i] = s; b[i] = e; size++
