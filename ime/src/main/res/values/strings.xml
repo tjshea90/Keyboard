@@ -2,4 +2,20 @@
 <resources>
     <!-- The ONE place the product name lives (plus applicationId in ime/build.gradle.kts). -->
     <string name="app_name">Swoop</string>
+    <string name="subtype_en_us">English (US)</string>
+
+    <string name="setup_title">Set up Swoop</string>
+    <string name="setup_intro">Swoop is a keyboard. Android only uses it after you switch it on and choose it. Your old keyboard stays installed, so you can always go back.</string>
+    <string name="setup_step1">1. Switch Swoop on</string>
+    <string name="setup_step1_button">Open keyboard settings</string>
+    <string name="setup_step2">2. Choose Swoop as the keyboard</string>
+    <string name="setup_step2_button">Choose keyboard</string>
+    <string name="setup_state_enabled_yes">Switched on: yes</string>
+    <string name="setup_state_enabled_no">Switched on: not yet</string>
+    <string name="setup_state_current_yes">Chosen right now: yes</string>
+    <string name="setup_state_current_no">Chosen right now: no (another keyboard is in use)</string>
+    <string name="setup_tryit">3. Try it here</string>
+    <string name="setup_tryit_hint">Tap here and type</string>
+    <string name="setup_fallback">If the buttons do not open the right screen on your tablet: Settings &gt; System &gt; Languages and input &gt; On-screen keyboard &gt; Manage keyboards, switch Swoop on; then tap in any text box and use the keyboard icon at the bottom right (or the notification Choose input method) to pick Swoop.</string>
+    <string name="setup_back">To go back at any time: tap the keyboard icon (or the Choose input method notification) while typing and pick your old keyboard.</string>
 </resources>
