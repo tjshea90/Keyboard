@@ -27,7 +27,8 @@ norm(){ tr -d ': \r' | tr 'A-Z' 'a-z'; }   # apksigner and keytool disagree on c
 BT="$(ls -d "${ANDROID_HOME:-/opt/android-sdk}"/build-tools/* 2>/dev/null | sort -V | tail -1)"
 
 if [ "$CERT" -eq 1 ]; then
-  WANT="$(norm < signing/CERT_SHA256 2>/dev/null | head -c 64)"
+  PIN="${SWOOP_CERT_PIN_FILE:-signing/CERT_SHA256}"   # (the env override is for the signing dry-run in tools/test_handoff.sh and by hand)
+  WANT="$(norm < "$PIN" 2>/dev/null | head -c 64)"
   if ! printf '%s' "$WANT" | grep -Eq '^[0-9a-f]{64}$'; then
     bad "signing/CERT_SHA256 is '${WANT:-missing}': the private signing key does not exist yet (task KB-003). No release APK may be published or installed."
   else

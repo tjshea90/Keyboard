@@ -29,6 +29,7 @@ android {
         if (keystoreProps.getProperty("storeFile") != null) {
             create("swoop") {
                 storeFile = file(keystoreProps.getProperty("storeFile"))
+                storeType = keystoreProps.getProperty("storeType") ?: "pkcs12"
                 storePassword = keystoreProps.getProperty("storePassword")
                 keyAlias = keystoreProps.getProperty("keyAlias")
                 keyPassword = keystoreProps.getProperty("keyPassword")
