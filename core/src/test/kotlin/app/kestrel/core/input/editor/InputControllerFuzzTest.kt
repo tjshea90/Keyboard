@@ -15,47 +15,48 @@ class InputControllerFuzzTest {
     private val words = listOf("hello", "world", "for", "fir", "the", "doraby", "a", "i'm", "typing")
     private val punct = listOf(".", ",", "!", "?", "'", "/", ".com", "-", "(", ")", "1", "7", "😀", "é")
 
-    private fun op(r: Rig, rnd: Random, external: Boolean) {
+    private fun op(r: Rig, rnd: Random, external: Boolean): String {
         val c = r.c
-        when (rnd.nextInt(if (external) 24 else 20)) {
-            0, 1, 2, 3, 4, 5 -> c.type(letters[rnd.nextInt(26)].toString())
-            6 -> c.type(punct[rnd.nextInt(punct.size)])
-            7 -> c.space()
-            8, 9 -> c.backspace()
-            10, 11 -> c.commitGlide(words[rnd.nextInt(words.size)])
-            12 -> c.swapGlide(words[rnd.nextInt(words.size)])
-            13 -> c.moveCursor(rnd.nextInt(9) - 4)
-            14 -> c.enter()
-            15 -> c.tapShift()
-            16 -> c.lockShift()
-            17 -> c.setShift(ShiftState.OFF)
-            18 -> c.moveCursor(rnd.nextInt(121) - 60)
-            19 -> c.type(letters[rnd.nextInt(26)].toString())
-            20 -> r.ed.userMove(rnd.nextInt(r.text.length + 1))
-            21 -> r.ed.userInsert(listOf("PASTED", "x", "\n", "😀")[rnd.nextInt(4)])
-            22 -> { val a = rnd.nextInt(r.text.length + 1); r.ed.userSelect(a, minOf(r.text.length, a + rnd.nextInt(5))) }
-            else -> if (rnd.nextInt(6) == 0) r.ed.appSetText("app " + rnd.nextInt(1000) + " text") else r.ed.userMove(0)
+        val k = rnd.nextInt(if (external) 24 else 20)
+        return when (k) {
+            0, 1, 2, 3, 4, 5, 19 -> { val ch = letters[rnd.nextInt(26)].toString(); c.type(ch); "type $ch" }
+            6 -> { val p = punct[rnd.nextInt(punct.size)]; c.type(p); "type '$p'" }
+            7 -> { c.space(); "space" }
+            8, 9 -> { c.backspace(); "backspace" }
+            10, 11 -> { val w = words[rnd.nextInt(words.size)]; c.commitGlide(w); "glide $w" }
+            12 -> { val w = words[rnd.nextInt(words.size)]; val ok = c.swapGlide(w); "swap $w=$ok" }
+            13 -> { val d = rnd.nextInt(9) - 4; c.moveCursor(d); "move $d" }
+            14 -> { c.enter(); "enter" }
+            15 -> { c.tapShift(); "shift" }
+            16 -> { c.lockShift(); "lock" }
+            17 -> { c.setShift(ShiftState.OFF); "shiftOff" }
+            18 -> { val d = rnd.nextInt(121) - 60; c.moveCursor(d); "move $d" }
+            20 -> { val p = rnd.nextInt(r.text.length + 1); r.ed.userMove(p); "USER move $p" }
+            21 -> { val t = listOf("PASTED", "x", "\n", "\uD83D\uDE00")[rnd.nextInt(4)]; r.ed.userInsert(t); "USER insert '$t'" }
+            22 -> { val a = rnd.nextInt(r.text.length + 1); val b = minOf(r.text.length, a + rnd.nextInt(5)); r.ed.userSelect(a, b); "USER select $a-$b" }
+            else -> if (rnd.nextInt(6) == 0) { r.ed.appSetText("app " + rnd.nextInt(1000) + " text"); "APP setText" } else { r.ed.userMove(0); "USER move 0" }
         }
     }
 
     private fun run(seed: Long, ops: Int, lazy: Boolean, external: Boolean, flaky: Boolean = false) {
         val rnd = Random(seed)
         val start = listOf("", "hello world", "x".repeat(130), "line one\nline two")[rnd.nextInt(4)]
+        val log = ArrayList<String>()
         val r = Rig(start, if (rnd.nextBoolean()) start.length else rnd.nextInt(start.length + 1), multiline = rnd.nextInt(4) != 0,
             action = if (rnd.nextInt(5) == 0) ImeActions.SEARCH else ImeActions.UNSPECIFIED)
         try {
             for (i in 0 until ops) {
                 if (flaky && rnd.nextInt(15) == 0) {
-                    r.ed.failing = true; op(r, rnd, false); r.ed.failing = false
+                    r.ed.failing = true; log.add("DEAD " + op(r, rnd, false)); r.ed.failing = false
                     // a dead editor loses nothing it said: the keyboard is told about the new field state like Android does after a restart
                     r.ed.updates.clear(); r.c.startInput(FieldInfo(initialSelStart = r.ed.selS, initialSelEnd = r.ed.selE)); r.check(); continue
                 }
-                op(r, rnd, external)
+                log.add(op(r, rnd, external))
                 if (lazy) { repeat(rnd.nextInt(3)) { r.deliverOne() } } else { r.sync(); r.check() }
             }
             r.sync(); r.check()
         } catch (e: Throwable) {
-            throw AssertionError("seed $seed (lazy=$lazy external=$external flaky=$flaky) after the editor text '${r.text.take(80).replace("\n", "\\n")}': ${e.message}", e)
+            throw AssertionError("seed $seed (lazy=$lazy external=$external flaky=$flaky) start='${start.take(20).replace("\n", "\\n")}' ops: ${log.takeLast(12)} text='${r.text.takeLast(40).replace("\n", "\\n")}': ${e.message}", e)
         }
     }
 
