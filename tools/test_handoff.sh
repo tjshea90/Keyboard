@@ -155,6 +155,22 @@ git add -A >/dev/null 2>&1
 check "secretscan allows a learning-export fixture under src/test" 'bash tools/secretscan.sh'
 git reset -q; rm -rf core
 
+# ---------------------------------------------------------------- the private signing key (plan 11.5): create / refuse to overwrite / unlock / wrong passphrase / pin
+SK="$T/sk"; mkdir -p "$SK"
+export SWOOP_SIGNING_DIR="$SK/signing" SWOOP_KEYSTORE_PROPS="$SK/ks.properties" SWOOP_TMP="$SK/tmp" SWOOP_KEYSTORE_PASSPHRASE="throwaway test passphrase 0123456789"
+if command -v keytool >/dev/null 2>&1 && command -v openssl >/dev/null 2>&1; then
+  check "signing-key create writes an encrypted key file and a 64-hex pin"  'bash tools/signing-key.sh create >/dev/null && [ -s "$SK/signing/swoop.jks.enc" ] && grep -Eq "^[0-9a-f]{64}$" "$SK/signing/CERT_SHA256"'
+  check "the encrypted key file holds no keystore password or key material in clear" '! grep -qa -e PKCS12 -e storepass -e swoop.p12 "$SK/signing/swoop.jks.enc"'
+  check "signing-key create REFUSES to overwrite an existing key"          '! bash tools/signing-key.sh create'
+  check "signing-key unlock writes keystore.properties only with the right passphrase and the pinned certificate" 'bash tools/signing-key.sh unlock >/dev/null && grep -q "^storeType=pkcs12" "$SK/ks.properties" && [ "$(bash tools/signing-key.sh fingerprint)" = "$(cat "$SK/signing/CERT_SHA256")" ]'
+  check "a wrong passphrase cannot unlock the key"                         '! SWOOP_KEYSTORE_PASSPHRASE="another long passphrase 9876543210" bash tools/signing-key.sh unlock'
+  check "a too-short passphrase is refused"                                '! SWOOP_KEYSTORE_PASSPHRASE="short" bash tools/signing-key.sh unlock'
+  check "unlock refuses when the pin file does not match the key"          'cp "$SK/signing/CERT_SHA256" "$SK/pin.bak"; printf "%064d\n" 0 | tr 0 a > "$SK/signing/CERT_SHA256"; ! bash tools/signing-key.sh unlock; R=$?; cp "$SK/pin.bak" "$SK/signing/CERT_SHA256"; [ "$R" = 0 ]'
+else
+  echo "  note  keytool/openssl missing: signing-key tests skipped"
+fi
+unset SWOOP_SIGNING_DIR SWOOP_KEYSTORE_PROPS SWOOP_TMP SWOOP_KEYSTORE_PASSPHRASE
+
 # ---------------------------------------------------------------- autosave + push
 echo hi > a.txt
 check "autosave commits and pushes"  'bash tools/autosave.sh --text >/dev/null; git log -1 --format=%s | grep -q "^auto-checkpoint:" && [ "$(bash tools/unpushed.sh)" = 0 ]'

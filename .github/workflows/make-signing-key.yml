@@ -1,0 +1,56 @@
+# ONE-TIME: create the keyboard's private release key INSIDE GitHub (plan 11.5, task KB-003), so it never appears in any chat.
+#
+# Before running it the owner adds ONE repository secret, SWOOP_KEYSTORE_PASSPHRASE: a long sentence (20+ characters) they invent and keep somewhere safe
+# (GitHub: repository > Settings > Secrets and variables > Actions > New repository secret). The passphrase encrypts the key file; without it the file is useless.
+# This workflow then writes signing/swoop.jks.enc (the encrypted key) and signing/CERT_SHA256 (the public certificate pin) and commits ONLY those two
+# files to the branch it was dispatched on. It REFUSES to run when signing/swoop.jks.enc already exists: a second key could never update a
+# keyboard that is already installed. Dispatch-only (never a push trigger); the dispatching branch must be the session branch, not main.
+name: Create signing key (one time)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write # commits the two signing files to this branch, nothing else
+
+concurrency:
+  group: make-signing-key
+  cancel-in-progress: false
+
+jobs:
+  create:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: true # needed to push the two files
+
+      - name: Refuse when a key already exists or the secret is missing
+        env:
+          PASS: ${{ secrets.SWOOP_KEYSTORE_PASSPHRASE }}
+        run: |
+          [ ! -e signing/swoop.jks.enc ] || { echo "::error::signing/swoop.jks.enc already exists. A second key could never update the installed keyboard."; exit 1; }
+          [ -n "$PASS" ] || { echo "::error::The repository secret SWOOP_KEYSTORE_PASSPHRASE is not set (Settings > Secrets and variables > Actions)."; exit 1; }
+          [ "${#PASS}" -ge 20 ] || { echo "::error::SWOOP_KEYSTORE_PASSPHRASE must be at least 20 characters (use a long sentence)."; exit 1; }
+
+      - name: Create the key (encrypted) and pin its certificate
+        env:
+          SWOOP_KEYSTORE_PASSPHRASE: ${{ secrets.SWOOP_KEYSTORE_PASSPHRASE }}
+        run: bash tools/signing-key.sh create
+
+      - name: Prove it can be unlocked again, then wipe the temp files
+        env:
+          SWOOP_KEYSTORE_PASSPHRASE: ${{ secrets.SWOOP_KEYSTORE_PASSPHRASE }}
+        run: |
+          bash tools/signing-key.sh unlock
+          rm -f keystore.properties "$RUNNER_TEMP"/*.p12
+
+      - name: Commit the two signing files to this branch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add signing/swoop.jks.enc signing/CERT_SHA256
+          git commit -m "signing: create the private release key (encrypted) and pin its certificate (KB-003)"
+          git push origin "HEAD:${GITHUB_REF_NAME}"
+          echo "Created the signing key. Certificate pin: $(cat signing/CERT_SHA256)" >> "$GITHUB_STEP_SUMMARY"
