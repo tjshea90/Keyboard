@@ -1,0 +1,46 @@
+# Gradle / Android build output
+.gradle/
+.kotlin/
+build/
+!gradle/wrapper/gradle-wrapper.jar
+local.properties
+*.iml
+.idea/
+.cxx/
+captures/
+*.hprof
+
+# PRIVATE signing material (plan 11.5): the keystore never lives in the repo in the clear. The passphrase-encrypted
+# signing/swoop.jks.enc (extension .enc on purpose) is the only form that may be committed.
+keystore.properties
+*.jks
+*.keystore
+*.p12
+*.pem
+*.key
+.env
+.env.*
+
+# The owner's PRIVATE typing data (plan 11.6): learning exports, personal model files, replay logs, snapshots. Never committed.
+personal/
+replay/
+owner-data/
+*.journal
+*.snap
+*.replay
+glide_personal.txt
+own_words.txt
+# (a documented example lives in docs/KEYBOARD-EXPORT.md; test fixtures live under */src/test/)
+
+# APKs are built by GitHub Actions and published as Release assets: never commit one
+*.apk
+*.aab
+dist/
+
+# Local scratch + logs
+/scratch/
+*.log
+.DS_Store
+node_modules/
+__pycache__/
+*.pyc

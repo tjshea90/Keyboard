@@ -1,0 +1,76 @@
+{
+  "_comment": "TEMPLATE for Swoop - install with `bash tools/install-hooks.sh`, never copy by hand. It substitutes __SWOOP_TOOLS__ for this repo's absolute tools/ path and MERGES these entries into the session root's settings file (entries tagged 'swoop-checkpoint-hooks' are the only ones ever replaced; other repos' hooks, permissions and env survive). Scoped to THIS repo only - never a glob over sibling directories. Claude Code on the web does not load hooks from a repo's own .claude/settings.json when the repo sits under a shared session root, which is why the installer targets the root. When the repo itself is the session root (the normal single-repo case) the committed .claude/settings.json is read directly.",
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"__SWOOP_TOOLS__/resume.sh\" 2>/dev/null || true  # swoop-checkpoint-hooks",
+            "timeout": 120,
+            "statusMessage": "Swoop: reading where the last session stopped..."
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"__SWOOP_TOOLS__/capture_inbox.sh\" 2>/dev/null || true  # swoop-checkpoint-hooks",
+            "timeout": 30,
+            "statusMessage": "Swoop: saving your message before starting..."
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write|NotebookEdit|Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"__SWOOP_TOOLS__/autosave.sh\" 2>/dev/null || true  # swoop-checkpoint-hooks",
+            "timeout": 60,
+            "statusMessage": "Swoop: checkpointing to GitHub..."
+          }
+        ]
+      },
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"__SWOOP_TOOLS__/posttool.sh\" 2>/dev/null || true  # swoop-checkpoint-hooks",
+            "timeout": 20
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"__SWOOP_TOOLS__/autosave.sh\" 2>/dev/null || true  # swoop-checkpoint-hooks",
+            "timeout": 60,
+            "statusMessage": "Swoop: final checkpoint..."
+          }
+        ]
+      }
+    ],
+    "PreCompact": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"__SWOOP_TOOLS__/toobig.sh\" 2>/dev/null || true  # swoop-checkpoint-hooks",
+            "timeout": 60,
+            "statusMessage": "Swoop: session is large - saving before compaction..."
+          }
+        ]
+      }
+    ]
+  }
+}
