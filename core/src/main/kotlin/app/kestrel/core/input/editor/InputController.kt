@@ -41,6 +41,8 @@ class InputController(private val ed: EditorBridge) {
     private val pending = Pending()
     /** The editor may still hold a composing region this keyboard lost track of (a failed call, a new session): it is closed before the next edit. */
     private var composingUnknown = false
+    /** Inside a batch the editor reports only the FINAL selection (and none at all when it did not change): intermediate states must not be expected. */
+    private var batchDepth = 0
 
     // ------------------------------------------------------------------------------------------------------------ session
 
@@ -93,11 +95,12 @@ class InputController(private val ed: EditorBridge) {
         val g = lastGlide
         // right after a glide, ".", ",", "/", ".com" ... close the word instead of standing after the space the glide added ("hello" ".com" = "hello.com")
         if (g != null && key in CLOSES_WORD && g.text.endsWith(" ") && before.endsWith(" ") && selStart == selEnd) {
-            ed.beginBatch()
+            val s0 = selStart; val e0 = selEnd
+            beginBatch()
             val ok = ed.deleteSurrounding(1, 0)
             if (ok) { before = before.dropLast(1); moveSel(-1) }
             commit(t)
-            ed.endBatch()
+            endBatch(s0, e0)
             if (!ok) resync()
         } else commit(t)
         lastGlide = null
@@ -181,14 +184,15 @@ class InputController(private val ed: EditorBridge) {
         val shown = g.word
         val w = if (shown.length > 1 && shown.all { it.isUpperCase() }) word.uppercase() else if (shown.firstOrNull()?.isUpperCase() == true) word.replaceFirstChar { it.uppercase() } else word
         val newTail = lead + w + " "
-        ed.beginBatch()
+        val s0 = selStart; val e0 = selEnd
+        beginBatch()
         val deleted = ed.deleteSurrounding(g.text.length, 0)
         var ok = deleted
         if (deleted) {
             before = before.dropLast(g.text.length); moveSel(-g.text.length)
             ok = commit(newTail)
         }
-        ed.endBatch()
+        endBatch(s0, e0)
         if (!ok) { lastGlide = null; resync(); return false }
         lastGlide = GlideTail(newTail, w)
         ensureWindow()
@@ -248,7 +252,7 @@ class InputController(private val ed: EditorBridge) {
     private fun commit(text: String): Boolean {
         if (!ed.commitText(text)) { resync(); return false }
         before = (before + text).takeLast(WINDOW_BEFORE)
-        if (selStart >= 0) { selStart += text.length; selEnd = selStart; pending.push(selStart, selEnd) }
+        if (selStart >= 0) { selStart += text.length; selEnd = selStart; expectNow() }
         return true
     }
 
@@ -256,7 +260,19 @@ class InputController(private val ed: EditorBridge) {
     private fun moveSel(delta: Int) {
         if (selStart < 0) return
         selStart = maxOf(0, selStart + delta); selEnd = selStart
-        pending.push(selStart, selEnd)
+        expectNow()
+    }
+
+    /** The editor will report the current selection (outside a batch; inside one only the final state is reported, see [endBatch]). */
+    private fun expectNow() { if (batchDepth == 0) pending.push(selStart, selEnd) }
+
+    private fun beginBatch() { batchDepth++; ed.beginBatch() }
+
+    /** Ends a batch that started with the selection ([s0], [e0]): the one report the editor sends for it is expected, unless the selection did not change (then it sends none). */
+    private fun endBatch(s0: Int, e0: Int) {
+        if (batchDepth > 0) batchDepth--
+        ed.endBatch()
+        if (batchDepth == 0 && selStart >= 0 && (selStart != s0 || selEnd != e0)) pending.push(selStart, selEnd)
     }
 
     /** A cheap look at the editor: the few units around the cursor are still what the window says. */
