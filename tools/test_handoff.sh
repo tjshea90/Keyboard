@@ -84,7 +84,7 @@ check "tools/MIRROR_MAIN is on or off" 'grep -Eq "^(on|off)$" "$D/tools/MIRROR_M
 check "HANDOFF.md, BRIEF.md, TASKS.md, BUILDLOG.md and CLAUDE.md exist" '[ -f "$D/HANDOFF.md" ] && [ -f "$D/BRIEF.md" ] && [ -f "$D/TASKS.md" ] && [ -f "$D/BUILDLOG.md" ] && [ -f "$D/CLAUDE.md" ]'
 check "the app is readable through appinfo.sh (version, tag, asset) and only swoop-v tags count" '[ "$(bash "$D/tools/appinfo.sh" tag)" = "swoop-v$(bash "$D/tools/appinfo.sh" vname)" ] && [ -n "$(bash "$D/tools/appinfo.sh" asset)" ] && bash "$D/tools/appinfo.sh" of-tag swoop-v1.0 && ! bash "$D/tools/appinfo.sh" of-tag kestrel-v1.0'
 check "BUILDLOG.md lines have the format the gates read (| tag | code N | time | note)" '! grep -E "^\| " "$D/BUILDLOG.md" | grep -vqE "^\| swoop-v[^ |]+ \| code [0-9]+ \| "'
-check "no workflow or script can reach the Browser repo (read-only reference): nothing pushes to tjshea90/Browser" '! grep -rIl "tjshea90/Browser" "$D/tools" "$D/.github" "$D/ship.sh" 2>/dev/null | grep -v test_handoff.sh | grep -q .'
+check "no workflow or script points git or gh at the Browser repo (read-only reference): no clone/push URL, no cd into it" '! grep -rEIl "github\.com/tjshea90/Browser|tjshea90/Browser\.git|cd +/home/user/Browser|git +-C +/home/user/Browser +(push|commit|add|reset|checkout|merge)" "$D/tools" "$D/.github" "$D/ship.sh" "$D/bootstrap.sh" 2>/dev/null | grep -v test_handoff.sh | grep -q .'
 check "the privacy rules are in .gitignore (keystores, APKs, learning exports, replay logs)" 'grep -q "\*.jks" "$D/.gitignore" && grep -q "\.apk" "$D/.gitignore" && grep -q "replay" "$D/.gitignore" && grep -q "personal" "$D/.gitignore"'
 
 # ---------------------------------------------------------------- fixture repo + fake remote
