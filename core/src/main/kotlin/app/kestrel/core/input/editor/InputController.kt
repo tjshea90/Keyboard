@@ -90,7 +90,7 @@ class InputController(private val ed: EditorBridge) {
         if (g != null && key in CLOSES_WORD && g.text.endsWith(" ") && before.endsWith(" ") && selStart == selEnd) {
             ed.beginBatch()
             val ok = ed.deleteSurrounding(1, 0)
-            if (ok) { before = before.dropLast(1); if (selStart > 0) { selStart--; selEnd = selStart } }
+            if (ok) { before = before.dropLast(1); moveSel(-1) }
             commit(t)
             ed.endBatch()
             if (!ok) resync()
