@@ -48,6 +48,14 @@
             android:exported="false"
             android:label="@string/diag_title" />
 
+        <!-- The hand-over of what another app learned (the Kestrel browser): explicit intents only, NO intent filter, so it is never in a share sheet. -->
+        <activity
+            android:name=".ReceiveLearnedActivity"
+            android:exported="true"
+            android:excludeFromRecents="true"
+            android:label="@string/receive_label"
+            android:theme="@android:style/Theme.DeviceDefault.Dialog.NoActionBar" />
+
     </application>
 
 </manifest>

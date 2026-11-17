@@ -62,6 +62,7 @@
     <string name="flow_not_export">This is not a file a Kestrel or Swoop keyboard exported.</string>
     <string name="flow_too_big">This file is too big to be one a keyboard exported.</string>
     <string name="flow_read_failed">The file could not be read.</string>
+    <string name="receive_label">Add to Swoop</string>
     <string name="flow_import_title">Import what the keyboard learned?</string>
     <string name="flow_import_message">The file holds %1$s.\n\nIt is added to what this keyboard has learned. What is learned here stays; importing the same file again changes nothing.</string>
     <string name="flow_import_yes">Import</string>
