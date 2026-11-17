@@ -367,3 +367,9 @@
 >   2. Decide whether you want a private signing key for a live link between Swoop and Kestrel.
 >   3. Optionally set Key height to Extra large on the tablet.
 <!-- sha:afdac080eb83 -->
+
+## 2026-11-17T17:54:06Z
+> I started the handoff save in a background helper, and its result hasn't arrived yet. It is writing a `.handoff/` summary in the Keyboard repo and refreshing the "Session Learnings" block in `CLAUDE.md`. I told it to keep the four existing learnings there, so nothing gets overwritten.
+>
+> The project work itself is already complete and pushed, so this only adds a recap for the next session. I'll confirm the saved paths once the helper reports back.
+<!-- sha:28804facf6d7 -->
