@@ -2,11 +2,11 @@
 
 A small, fast Android keyboard with **glide typing that keeps learning from you**. Built for one old tablet (Android 10 Go, 2 GB RAM, no Google services) and an Android 16 phone, so it is light on purpose: no accounts, no ads, no telemetry, no AI features, no network access at all in the current version.
 
-**Status: early alpha (0.2.x).** It builds and its logic is tested, but it is not yet a daily-driver keyboard. Keep your current keyboard installed and switch back whenever you like (tap the globe key).
+**Status: alpha (0.5.x).** It builds, its logic is tested (unit tests, a simulated thumb, a real Android 10 emulator on GitHub), and the owner's tablet and phone are the real test. Keep your current keyboard installed and switch back whenever you like (hold the space bar, or use Android's keyboard switcher).
 
 ## What works today
 - Tap typing and glide typing (slide over the letters; a glowing trail follows your finger and a glide starts the moment you move; a strip shows other guesses; one Backspace removes the whole glided word).
-- A Gboard-style layout: number row, Backspace at the end of the first letter row, Enter at the end of the home row, Shift on both sides of the bottom letter row, and under it only comma, a wide space bar, full stop and ?123 at the bottom right (no emoji, voice or globe key; hold the space bar to switch keyboards). After ONE special character the keyboard goes straight back to the letters. Holding the full stop or the comma also opens a grid of symbols.
+- The layout of the Gboard photo the owner chose (docs/LAYOUT.md): ten letter keys across with a small digit hint on each of the top row (hold a key to type its digit), the home row indented half a key, Shift at the left and Backspace at the right of the bottom letter row, and under it ?123 (round, bottom LEFT), comma, a very wide blank space bar, full stop and Enter (round, bottom RIGHT). Nothing under the space bar: no emoji, voice or globe key. Hold the full stop or the comma for a grid of special characters; ?123 opens two pages of symbols, and one special character typed brings the letters back. A number row is in Settings (off by default).
 - A toolbar above the keys: settings (cog), clipboard, translate (ES), then the suggested words. Long press a suggested word to remove it for good. A word with an emoji (clown) offers the emoji; tapping it replaces the word.
 - Clipboard like Gboard's: what you copy while the keyboard is open (kept an hour), tap to paste, pin to keep, hold for Pin / Delete, Clear all.
 - Translate: switch it on with the ES icon, type English, press Enter to turn the box into Mexican Spanish, press Enter again to send. The only internet use in the keyboard (MyMemory, then Google Translate, same method as the LinkMeter app).
@@ -23,7 +23,6 @@ A small, fast Android keyboard with **glide typing that keeps learning from you*
 - A crash-loop "safe layout" and a globe key, so a bug can never lock you out of typing.
 - Diagnostics screen (numbers only, nothing you typed) with a Copy button.
 
-Not yet: translation, emoji, clipboard.
 
 ## Install
 1. Open the latest **Release** of this repository on the device and tap the `.apk` file (allow installs from your browser when Android asks).
@@ -32,10 +31,11 @@ Not yet: translation, emoji, clipboard.
 Every Release is built and signed by GitHub Actions (with the dev key committed in `signing/dev/`, so later versions update in place). Only install Swoop APKs from this repository's Releases: because the signing key is public, an APK from anywhere else could be signed to look like an update. The SHA-256 is in each Release text.
 
 ## Privacy
-The app asks for **no permissions** (CI fails if that ever changes without a decision). It does not use the internet. What it learns stays in its private storage; the only way data leaves is the Export button you press. See `docs/IF-THE-KEYBOARD-BREAKS.md` for plain-words help.
+The app asks for ONE permission, INTERNET, and only the translate icon uses it (switched off until you turn it on in the toolbar; two hosts only: MyMemory and Google Translate; nothing else in the keyboard touches the network; CI fails if the permission list ever changes without a decision). What it learns stays in its private storage; the only way data leaves is the Export button you press. See `docs/IF-THE-KEYBOARD-BREAKS.md` for what to do if the keyboard misbehaves.
 
 ## For developers
 - `core/` pure Kotlin (glide decoder, learning, the input state machine); `ime/` the Android app; `tools/` shell tooling and the word-list compiler; `eval/` the accuracy lab.
 - `./gradlew :core:test :ime:testDebugUnitTest :ime:lintDebug` runs the tests (no emulator needed). `.github/workflows/emu-smoke.yml` runs the keyboard on a real Android emulator.
 - Plan and decisions: `research/KEYBOARD-APP-PLAN.md`; job list `TASKS.md`; where work stopped `CHECKPOINT.md`.
 - The glide engine and the English word list come from the Kestrel browser project (word-list licences in `docs/DICTIONARY.md` and `ime/src/main/assets/glide/LICENSE.txt`).
+- The Kestrel browser uses this keyboard: its navigation panel opens Swoop floating over the page when Swoop is the chosen keyboard, and the browser's own mini keyboard runs the SAME engine (a pinned, checked copy of `core/.../input`). See `docs/KESTREL-LINK.md`.
