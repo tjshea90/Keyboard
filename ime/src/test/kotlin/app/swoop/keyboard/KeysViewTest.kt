@@ -141,7 +141,8 @@ class KeysViewTest {
     @Test fun theBubbleIsGoneTheMomentTheFingerLiftsBeforeTheKeyIsSentToTheApp() {
         val (v, r) = view(); val (x, y) = at(v, "h")
         val seen = ArrayList<String?>()
-        v.listener = object : KeysView.Listener { override fun onKey(key: app.kestrel.core.input.Key) { seen.add(v.bubbleTextForTest()); r.keys.add((key as app.kestrel.core.input.Key.Ch).text) } }
+        v.listener = object : KeysView.Listener { override fun onKey(key: app.kestrel.core.input.Key) { seen.add(v.bubbleTextForTest()); r.keys.add((key as app.kestrel.core.input.Key.Ch).text) }
+            override fun onCursor(steps: Int) {} }
         down(v, x, y); assertEquals("h", v.bubbleTextForTest())
         up(v, x, y)
         assertNull("no bubble when the app gets the key (the app can be slow)", seen.single()); assertNull(v.bubbleTextForTest())
