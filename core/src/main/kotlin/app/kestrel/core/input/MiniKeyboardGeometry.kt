@@ -22,15 +22,15 @@ object MiniKeyboardGeometry {
         if (rows.isEmpty()) return emptyList()
         // [rowWeights] make a row taller or thinner than the others (the number row is thinner); null = all rows alike. Drawing, touching and the glide decoder all pass the same weights.
         val weights = if (rowWeights != null && rowWeights.size == rows.size) rowWeights else List(rows.size) { 1f }
-        val total = weights.sum()
+        val heightTotal = weights.sum()
         val usable = height - top - gap * (rows.size - 1)
         val out = ArrayList<List<KeyBox>>(rows.size)
         for ((i, row) in rows.withIndex()) {
-            val total = row.sumOf { it.weight.toDouble() }.toFloat()
-            val unit = (width - gap * (row.size - 1)) / total
+            val rowTotal = row.sumOf { it.weight.toDouble() }.toFloat()
+            val unit = (width - gap * (row.size - 1)) / rowTotal
             var x = 0f
-            val y = top + i * gap + usable * weights.take(i).sum() / total
-            val rowH = usable * weights[i] / total
+            val y = top + i * gap + usable * weights.take(i).sum() / heightTotal
+            val rowH = usable * weights[i] / heightTotal
             val line = ArrayList<KeyBox>(row.size)
             for (k in row) { val w = k.weight * unit; line.add(KeyBox(x, y, x + w, y + rowH)); x += w + gap }
             out.add(line)
