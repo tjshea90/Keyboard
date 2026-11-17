@@ -82,7 +82,13 @@ class InputController(private val ed: EditorBridge, val stats: InputStats = Inpu
         }
         // the same selection as believed: usually only the composing region changed; but an app that replaced the text and left the cursor where it was looks the same, so with no own edit outstanding the window is checked
         if (newSelStart == selStart && newSelEnd == selEnd && (!pending.isEmpty() || windowStillTrue())) return true
-        if (selStart < 0 || adopt > 0) { if (adopt > 0) adopt--; selStart = newSelStart; selEnd = newSelEnd; refresh(); return true } // the first reports after an unknown state are the truth (and the text may have changed with them)
+        if (selStart < 0 || adopt > 0) {                                           // the first reports after an unknown state are the truth (and the text may have changed with them)
+            if (adopt > 0) adopt--
+            selStart = newSelStart; selEnd = newSelEnd; refresh()
+            if (composing != null && candStart < 0) composing = null                // the editor no longer shows the word being tapped
+            lastGlide?.let { g -> if (!before.endsWith(g.text) || selStart != selEnd) lastGlide = null }
+            return true
+        }
         // somebody else moved the cursor or edited the text
         if (composing != null) ed.finishComposing()
         stats.foreignReports++

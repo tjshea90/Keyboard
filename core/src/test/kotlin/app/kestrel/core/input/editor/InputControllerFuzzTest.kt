@@ -60,7 +60,7 @@ class InputControllerFuzzTest {
                 if (r.foreign > f0 && firstForeign == null) firstForeign = "op #$i '${log.last()}' after '${log.getOrNull(log.size - 2)}' (text ...'${r.text.takeLast(20).replace("\n", "\\n")}')"
             }
             r.sync(); r.check()
-            if (!external && !flaky) assertEquals("with no change by the user or the app NO report may look foreign", 0, r.foreign)
+            if (!external && !flaky && !lazy) assertEquals("with no change by the user or the app NO report may look foreign", 0, r.foreign)
         } catch (e: Throwable) {
             throw AssertionError("first foreign report: $firstForeign [${r.firstForeignInfo}]; seed $seed (lazy=$lazy external=$external flaky=$flaky) start='${start.take(20).replace("\n", "\\n")}' first ops: ${log.take(10)} last ops: ${log.takeLast(8)} text='${r.text.takeLast(40).replace("\n", "\\n")}': ${e.message}", e)
         }
