@@ -10,7 +10,7 @@ import java.util.Random
  *  - keystroke saving: letters not typed because the word was tapped on the strip at the first moment it showed,
  *  - typo repair: a word typed with one realistic slip (a neighbouring key, a letter left out, a letter doubled, two letters swapped) is on the strip / put in by the space, and a word typed RIGHT is never
  *    changed (the failure people hate most).
- * Run by [PredictionYardstickTest] (with stated floors) and by hand: java -cp <core main>:<core test>:<kotlin stdlib> app.kestrel.core.input.glide.PredictionEval [verbose]
+ * Run by [PredictionYardstickTest] (with stated floors) and by hand: java -cp <core main>:<core test>:<kotlin stdlib> app.kestrel.core.input.glide.PredictionEval [verbose] [klx=<file>]
  */
 object PredictionEval {
     class Tally(val name: String) {
@@ -152,7 +152,8 @@ object PredictionEval {
 
     @JvmStatic fun main(args: Array<String>) {
         val verbose = args.contains("verbose")
-        val lex = GlideEval.loadLexicon()
+        val klx = args.firstOrNull { it.startsWith("klx=") }?.substring(4)           // klx=<file>: measure another compiled list than the shipped one
+        val lex = if (klx != null) LexiconFile.read(java.io.File(klx).readBytes()) else GlideEval.loadLexicon()
         val keys = GlideEval.keysFor(564f, 160f)
         val r = run(lex, null, keys, EvalCorpus.sentences, EvalCorpus.searches, verbose)
         println("sentences: ${EvalCorpus.sentences.size}, words: ${EvalCorpus.sentences.sumOf { it.size }}, searches: ${EvalCorpus.searches.size}")
