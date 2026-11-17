@@ -133,7 +133,7 @@ class SetupActivity : Activity() {
             look.row(note("Narrow keyboard: when it sits at the bottom, pinch the glowing bar with two fingers, or drag the arrows at either end of the bar inwards. Drag the bar sideways to move it. Double-tap the bar to make it full width again."))
             look.row(actionRow("Make the keyboard full width again", null) { st.saveDock(1000, 500); preview?.applySettings(st) })
             look.row(choiceRow("Key height", null, Settings.KEY_HEIGHTS, st.keyHeight) { change(Prefs.KEYHEIGHT, it) })
-            look.row(choiceRow("Colours", "Automatic follows your phone's light or dark setting.", Settings.THEMES, st.theme) { change(Prefs.THEME, it, rebuild = true) })
+            look.row(choiceRow("Colours", "Dark is the look of the photo this keyboard is modelled on. Automatic follows your phone's light or dark setting.", Settings.THEMES, st.theme) { change(Prefs.THEME, it, rebuild = true) })
             look.row(accentRow("Accent colour", "The glide trail, the lit keys and this screen.", Settings.ACCENTS, st.accent) { change(Prefs.ACCENT, it, rebuild = true) })
         }
         col.addView(look)
