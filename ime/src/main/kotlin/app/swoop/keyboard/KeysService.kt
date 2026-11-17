@@ -112,6 +112,18 @@ class KeysService : InputMethodService() {
         if (!ok) try { (getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager).showInputMethodPicker() } catch (_: Exception) { }
     }
 
+    /**
+     * The Kestrel browser's navigation panel opens this keyboard floating over a page: it sends [ACTION_FLOAT] with InputMethodManager.sendAppPrivateCommand. Android delivers such a command ONLY to the keyboard
+     * that is current and ONLY from the app whose text box is being edited, so no other app can reach this; and all it can do is float or dock the keyboard (it carries no data and reads nothing).
+     */
+    override fun onAppPrivateCommand(action: String?, data: android.os.Bundle?) {
+        when (action) {
+            ACTION_FLOAT -> root?.requestFloating(true)
+            ACTION_DOCK -> root?.requestFloating(false)
+            else -> super.onAppPrivateCommand(action, data)
+        }
+    }
+
     /** The keyboard never takes over the whole screen with the extract UI. */
     override fun onEvaluateFullscreenMode(): Boolean = false
 
@@ -136,6 +148,10 @@ class KeysService : InputMethodService() {
         presenter.onUpdateSelection(newSelStart, newSelEnd, candidatesStart, candidatesEnd)
     }
 }
+
+/** The private commands other apps (the Kestrel browser) may send to the keyboard: see [KeysService.onAppPrivateCommand]. */
+const val ACTION_FLOAT = "app.swoop.keyboard.FLOAT"
+const val ACTION_DOCK = "app.swoop.keyboard.DOCK"
 
 /** [CrashGuard.Store] on a small private file. */
 class FileStore(private val f: File) : CrashGuard.Store {

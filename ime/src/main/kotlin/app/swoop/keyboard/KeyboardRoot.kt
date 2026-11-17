@@ -265,6 +265,9 @@ class KeyboardRoot(context: Context) : FrameLayout(context), GripBar.Host {
     }
     private fun panelWidthPx(): Int = if (!floating) (if (dockFrac >= 0.995f) ViewGroup.LayoutParams.MATCH_PARENT else Math.round(dockFrac * screenW())) else Math.round(FloatingMath.clampWidthDp(if (wDp > 0f) wDp else FloatingMath.defaultWidthDp(screenW() / d), screenW() / d) * d)
 
+    /** Another app asked for it (the Kestrel browser's navigation panel opens the keyboard floating over the page): float, or dock. Does nothing when floating is switched off in the settings or in the settings preview. */
+    fun requestFloating(on: Boolean) { if (floatEnabled && !previewOnly) setFloating(on) }
+
     private fun setFloating(on: Boolean, save: Boolean = true) {
         if (floating == on || (on && previewOnly)) return
         Diag.d("floating -> $on (x=$posX y=$posY wDp=$wDp hMul=$hMul)")
