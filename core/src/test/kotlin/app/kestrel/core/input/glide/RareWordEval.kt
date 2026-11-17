@@ -96,7 +96,7 @@ object RareWordEval {
         for (nm in (a["noise"] ?: "calm,normal,sloppy,bad").split(',')) {
             val noise = GlideEval.noiseFrom(a + mapOf("noise" to nm))
             println("${noise.name}")
-            if (a["old"] != null) println("   OLD list     : " + run(old, new, keys, GlideParams(rareW = 0f), noise, common, seed))
+            if (a["old"] != null) println("   OLD list+params: " + run(old, new, keys, GlideParams(rareW = 0f, keep = 200, quickPrior = 0.12f), noise, common, seed))
             println("   common words : " + run(new, new, keys, params, noise, common, seed, debug = a["dbg"]?.toInt() ?: 0))
             if (a["rare"] != "0") println("   rare words   : " + run(new, new, keys, params, noise, rare, seed + 1))
         }
