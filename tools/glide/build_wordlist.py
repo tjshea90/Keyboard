@@ -142,8 +142,8 @@ def main():
     ap.add_argument('--report', default=None)
     ap.add_argument('--scowl-all', type=int, default=70, help='SCOWL sizes up to this are all admitted')
     ap.add_argument('--scowl-seen', type=int, default=95, help='SCOWL sizes up to this are admitted when a frequency source has seen the word')
-    ap.add_argument('--wf-new', type=float, default=1.5e-6, help='a word that is not in SCOWL needs at least this wordfreq frequency ...')
-    ap.add_argument('--hd-new', type=int, default=60, help='... and at least this many OpenSubtitles occurrences')
+    ap.add_argument('--wf-new', type=float, default=5e-6, help='a word that is not in SCOWL needs at least this wordfreq frequency ...')
+    ap.add_argument('--hd-new', type=int, default=300, help='... and at least this many OpenSubtitles occurrences')
     ap.add_argument('--total', type=int, default=TOTAL)
     a = ap.parse_args()
 
@@ -169,15 +169,12 @@ def main():
     wf_floor = 5e-9
     hd_floor = 0.5 / hd_total
 
-    def sources_seen(w):
-        return (w in wf) + (w in hd) + (w in sy)
-
     vocab = {}  # word -> why
     for w, level in sc.items():
         f = wf.get(w, 0.0)
         if len(w) == 1 and w not in ('a', 'i'):
             continue
-        if "'" in w and not CONTRACTION.match(w):
+        if "'" in w and not (CONTRACTION.match(w) and (not w.endswith("'s") or w[:-2] in S_OK)):
             continue
         if level <= a.scowl_all:
             # very short Scrabble-only words ("xu", "oe") are the ones any glide matches by accident: they need a sign of real use
@@ -186,7 +183,7 @@ def main():
             if len(w) == 3 and f < 1e-7 and hd.get(w, 0) < 30 and sy.get(w, 0) < 100000 and w not in extras:
                 continue
             vocab[w] = 'scowl%d' % level
-        elif sources_seen(w) >= 1 and (f > 0 or w in sy or hd.get(w, 0) >= 3):
+        elif (f > 0 or w in sy) and (level <= 80 or hd.get(w, 0) >= 5):
             if len(w) <= 3 and f < 1e-6:
                 continue
             vocab[w] = 'scowl%d+seen' % level

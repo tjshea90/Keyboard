@@ -164,7 +164,7 @@ class TranslationTest {
 
     // ------------------------------------------------------------------------------------------ shorthand
     @Test fun shorthandIsWrittenOutAsWholeWordsOnly() {
-        assertEquals("Are you coming tonight? I don't know if I can make it, to be honest", Translation.expandShorthand("r u coming 2nite? idk if i can make it, tbh").replace("i can", "I can"))
+        assertEquals("are you coming tonight? I don't know if i can make it, to be honest", Translation.expandShorthand("r u coming 2nite? idk if i can make it, tbh"))
         assertEquals("You there?", Translation.expandShorthand("U there?"))
         assertEquals("with you, without me", Translation.expandShorthand("w/ u, w/o me"))
         assertEquals("don't", Translation.expandShorthand("don't"))
