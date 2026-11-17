@@ -97,6 +97,14 @@ class KeysView(context: Context) : View(context) {
     var keyHeightScale = 1f; set(v) { if (field != v) { field = v; rectsW = -1; requestLayout(); invalidate() } }
     /** The floating keyboard's own height multiplier (corner drags), on top of [keyHeightScale]. */
     var floatMul = 1f; set(v) { if (field != v) { field = v; rectsW = -1; requestLayout(); invalidate() } }
+    /** The palette, for the panels that replace the keys (the clipboard). */
+    val colKey: Int get() = cKey
+    val colSpecial: Int get() = cSpecial
+    val colLit: Int get() = cLit
+    val colText: Int get() = cText
+    val colMuted: Int get() = cMuted
+    val colAccent: Int get() = cAccent
+    val colAccentText: Int get() = cAccentText
     /** The colour behind the keys (the floating frame is painted in it too). */
     val backgroundColor: Int get() = cBg
     var accent = 0xFF1F6FEB.toInt(); set(v) { field = v; applyPalette(); invalidate(); dyn() }
