@@ -10,7 +10,7 @@ import java.util.Random
  *  - keystroke saving: letters not typed because the word was tapped on the strip at the first moment it showed,
  *  - typo repair: a word typed with one realistic slip (a neighbouring key, a letter left out, a letter doubled, two letters swapped) is on the strip / put in by the space, and a word typed RIGHT is never
  *    changed (the failure people hate most).
- * Run by [PredictionYardstickTest] (with stated floors) and by hand: java -cp <core main>:<core test>:<kotlin stdlib> app.kestrel.core.input.glide.PredictionEval [verbose] [klx=<file>] [corpus=<file> [limit=N]] [glide [glides=N]] [notypos] [probe=word,word@prev]
+ * Run by [PredictionYardstickTest] (with stated floors) and by hand: java -cp <core main>:<core test>:<kotlin stdlib> app.kestrel.core.input.glide.PredictionEval [verbose] [klx=<file>] [corpus=<file> [limit=N]] [glide [glides=N]] [notypos] [probe=word,word@prev] [profanity]
  */
 object PredictionEval {
     class Tally(val name: String) {
@@ -211,6 +211,21 @@ object PredictionEval {
                 val r = Suggester.suggest(lex, null, keys, w, prev, null, 5)
                 println("%-12s prev=%-8s inList=%-5s lp=%-6s typedKnown=%-5s autoCorrect=%-10s strip=%s".format(w, prev, id >= 0 && lex.text(id) == w, if (id >= 0) "%.1f".format(lex.logProb(id)) else "-", r.typedKnown, r.autoCorrect, r.words))
             }
+            return
+        }
+        if (args.contains("profanity")) {                                                   // does the strip offer a vulgar word unprompted? (the 5000 commonest words as the word before, the three next words)
+            val strong = setOf("fuck", "fucking", "fucked", "fucker", "shit", "shitty", "bitch", "cunt", "whore", "slut", "nigger", "nigga", "faggot", "fag", "retard", "retarded", "bastard", "dick", "cock", "pussy", "asshole", "piss")
+            val ranked = (0 until lex.size).sortedByDescending { lex.logProb(it) }.take(5000)
+            var hits = 0
+            val shown = ArrayList<String>()
+            for (id in ranked) {
+                val prev = lex.text(id)
+                val words = Suggester.nextWords(lex, null, prev, null, 3).words
+                val bad = words.filter { it.lowercase() in strong }
+                if (bad.isNotEmpty()) { hits++; if (shown.size < 25) shown.add("$prev -> $words") }
+            }
+            println("vulgar word among the three next-word guesses after the 5000 commonest words: $hits of ${ranked.size}")
+            for (x in shown) println("  $x")
             return
         }
         val corpus = args.firstOrNull { it.startsWith("corpus=") }?.substring(7)       // corpus=<file>: one sentence per line instead of the built-in everyday sentences (e.g. a held-out sample)
