@@ -189,6 +189,42 @@ I can't wait to see you
 Wish me luck
 """
 
+    /**
+     * Words people really mistype (typed -> meant): the usual lists of common spelling errors, written out from general knowledge. A space after the typed word should put the meant one in when nothing else could be meant.
+     * One-slip errors (a letter left out / doubled / swapped / a neighbouring key) are the ones a keyboard can repair; the rest are listed too (they show what is out of reach).
+     */
+    val misspellings: List<Pair<String, String>> by lazy {
+        MISSPELLINGS.trim().lines().map { it.trim() }.filter { it.isNotEmpty() }.flatMap { l -> l.split(' ').map { it.substringBefore('>') to it.substringAfter('>') } }
+    }
+    private const val MISSPELLINGS = """
+occured>occurred untill>until tommorow>tomorrow beleive>believe accomodate>accommodate adress>address begining>beginning comming>coming diffrent>different enviroment>environment
+goverment>government happend>happened immediatly>immediately noticable>noticeable publically>publicly truely>truly writting>writing sucess>success succesful>successful neccessary>necessary
+embarass>embarrass independant>independent knowlege>knowledge liason>liaison millenium>millennium occassion>occasion persistant>persistent posession>possession prefered>preferred
+recomend>recommend refered>referred relevent>relevant rythm>rhythm seperate>separate definately>definitely freind>friend recieve>receive thier>their wierd>weird becuase>because
+tomorow>tomorrow realy>really teh>the adn>and hte>the yeild>yield wich>which twelth>twelfth vaccum>vacuum whereever>wherever mispell>misspell acheive>achieve agressive>aggressive
+apparantly>apparently arguement>argument calender>calendar catagory>category cemetary>cemetery collegue>colleague concious>conscious curiousity>curiosity dissapear>disappear
+dissapoint>disappoint existance>existence experiance>experience foriegn>foreign fourty>forty gaurd>guard grammer>grammar hieght>height ignorence>ignorance intresting>interesting
+lenght>length maintainance>maintenance medeval>medieval neice>niece ocurrence>occurrence oppurtunity>opportunity paralell>parallel parliment>parliament peice>piece plesant>pleasant
+potatos>potatoes priviledge>privilege pronounciation>pronunciation reccomend>recommend religous>religious remeber>remember resistence>resistance responsability>responsibility
+restaraunt>restaurant shedule>schedule sincerly>sincerely speach>speech strenght>strength suprise>surprise tendancy>tendency tommorrow>tomorrow unfortunatly>unfortunately
+usualy>usually vegatable>vegetable whith>with wirting>writing yesturday>yesterday thanks>thanks thnks>thanks becasue>because thats>that's didnt>didn't cant>can't
+"""
+
+    /** Shorthand people type in messages: a keyboard must know it (never "correct" it into another word). */
+    val abbreviations: List<String> by lazy { ABBREVIATIONS.trim().split(Regex("\\s+")) }
+    private const val ABBREVIATIONS = """
+pls plz thx thnx ty tysm omw idk imo imho btw fyi lmk tbh brb ttyl np yw rn irl nvm ikr ofc jk wtf lmao lmfao rofl hehe hahaha tho thru cuz gtg afk asap eta wfh dm tmrw sry srsly ppl abt
+bday convo rly def prob ily ilu xoxo bff fam bro sis bruh yo sup wassup hbu hru wyd wya hmu kk ya yep yup nah nope ok okay hmm ugh oops yay omg gonna wanna gotta kinda sorta dunno lemme gimme lol haha
+"""
+
+    /** Real but uncommon words, typed correctly: a space must never change them into a common lookalike. */
+    val rareWords: List<String> by lazy { RARE_WORDS.trim().split(Regex("\\s+")) }
+    private const val RARE_WORDS = """
+quixotic ephemeral obsequious sycophant ubiquitous mellifluous perfunctory pernicious recalcitrant magnanimous surreptitious inchoate pulchritude ineffable petrichor serendipity
+defenestrate bloat float heron sheaf loath gloat sleet gazebo trowel sconce tarpaulin jodhpurs farrier bridle dressage fetlock withers pastern gelding stallion filly paddock kestrel falconry
+tundra isthmus estuary fjord lagoon mesa plateau tarn glacier moraine crevasse scree cairn
+"""
+
     private const val SEARCHES = """
 > weather tomorrow
 > best pizza near me

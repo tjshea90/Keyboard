@@ -141,6 +141,35 @@ object PredictionEval {
         return t
     }
 
+    class FixResult(val misN: Int, val fixed: Int, val wrong: Int, val none: Int, val inStrip: Int, val abbrChanged: List<String>, val abbrN: Int, val rareChanged: List<String>, val rareN: Int, val misDetail: List<String>)
+
+    /** What a space does to words people really mistype, to shorthand, and to rare real words (docs/DICTIONARY.md): the autocorrect policy in numbers. */
+    fun fixes(lex: BinaryLexicon, keys: GlideKeys): FixResult {
+        var fixed = 0; var wrong = 0; var none = 0; var inStrip = 0
+        val detail = ArrayList<String>()
+        for ((typed, meant) in EvalCorpus.misspellings) {
+            if (typed == meant) continue
+            val r = Suggester.suggest(lex, null, keys, typed, null, null, 3)
+            val a = r.autoCorrect
+            if (a != null && a.equals(meant, true)) fixed++ else if (a != null) { wrong++; detail.add("WRONG $typed -> $a (meant $meant)") } else { none++; detail.add("none  $typed (meant $meant) strip=${r.words}") }
+            if (r.words.any { it.equals(meant, true) } || (a != null && a.equals(meant, true))) inStrip++
+        }
+        val abbr = EvalCorpus.abbreviations.filter { Suggester.suggest(lex, null, keys, it, null, null, 3).autoCorrect.let { a -> a != null && !a.equals(it, true) } }
+            .map { it + "->" + Suggester.suggest(lex, null, keys, it, null, null, 3).autoCorrect }
+        val rare = EvalCorpus.rareWords.filter { Suggester.suggest(lex, null, keys, it, null, null, 3).autoCorrect.let { a -> a != null && !a.equals(it, true) } }
+            .map { it + "->" + Suggester.suggest(lex, null, keys, it, null, null, 3).autoCorrect }
+        return FixResult(fixed + wrong + none, fixed, wrong, none, inStrip, abbr, EvalCorpus.abbreviations.size, rare, EvalCorpus.rareWords.size, detail)
+    }
+
+    fun fixReport(f: FixResult, verbose: Boolean = false): String {
+        val b = StringBuilder()
+        b.appendLine("misspellings: put right by the space %d of %d (%.0f %%), a WRONG word %d, left alone %d; the meant word on the strip or put in: %d".format(f.fixed, f.misN, 100.0 * f.fixed / maxOf(1, f.misN), f.wrong, f.none, f.inStrip))
+        b.appendLine("shorthand changed by a space: %d of %d %s".format(f.abbrChanged.size, f.abbrN, f.abbrChanged))
+        b.appendLine("rare real words changed by a space: %d of %d %s".format(f.rareChanged.size, f.rareN, f.rareChanged))
+        if (verbose) for (d in f.misDetail) b.appendLine("  " + d)
+        return b.toString()
+    }
+
     /** One realistic slip: 0 a neighbouring key instead of an inner letter, 1 an inner letter left out, 2 an inner letter doubled, 3 two inner letters swapped. Null when the word cannot take that slip. */
     fun slip(w: String, kind: Int, keys: GlideKeys, rnd: Random): String? {
         val n = w.length
@@ -191,6 +220,7 @@ object PredictionEval {
         val r = run(lex, null, keys, sentences, searches, verbose, withTypos = !args.contains("notypos"))
         println("sentences: ${sentences.size}, words: ${sentences.sumOf { it.size }}, searches: ${searches.size}")
         println(report(r))
+        println(fixReport(fixes(lex, keys), verbose))
         if (args.contains("glide")) for (nz in listOf(SimNoise.NORMAL, SimNoise.SLOPPY)) println(glideInContext(lex, keys, sentences, nz, maxSentences = args.firstOrNull { it.startsWith("glides=") }?.substring(7)?.toInt() ?: 600).toString())
         if (verbose) for (n in r.notes) println(n)
     }
