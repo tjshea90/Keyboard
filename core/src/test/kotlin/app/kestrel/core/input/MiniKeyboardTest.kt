@@ -332,7 +332,7 @@ class MiniKeyboardTest {
 
     @Test fun restartingTheTextForAPageFieldStartsEmptyAndKeepsTheKeyboardPage() {
         val m = MiniKeyboardModel(); m.open("")
-        m.press(Key.ToSymbols); typed(m, "abc"); m.commitGlide("word")
+        m.press(Key.ToSymbols); typed(m, "abc"); m.commitGlide("word"); m.press(Key.ToSymbols)      // (typing a letter leaves the symbols page since M5: back on it for the restart)
         m.restartText()
         assertEquals("", m.text); assertEquals(0, m.cursor); assertFalse(m.glideActive); assertTrue("the symbols page stays", m.symbols)
         typed(m, "x"); assertEquals("x", m.text); assertEquals(1, m.cursor)
