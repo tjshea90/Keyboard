@@ -63,6 +63,6 @@ class InlineReportsTest {
         val sink = r.ed.inlineSink!!; var once = true
         r.ed.inlineSink = { u -> sink(u); if (once && r.text.endsWith("c")) { once = false; r.ed.userInsert("!") } }
         r.c.type("c"); r.c.type("d"); r.sync(); r.check()
-        assertEquals("abc!d", r.text); assertEquals(r.text, r.c.before)
+        assertEquals("abc! D", r.text); assertEquals(r.text, r.c.before)        // (and the space and the capital after the "!" that the repaired picture shows)
     }
 }

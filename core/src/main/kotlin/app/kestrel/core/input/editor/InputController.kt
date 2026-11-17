@@ -282,7 +282,7 @@ class InputController(editor: EditorBridge, val stats: InputStats = InputStats()
             val n = lastCodePointLength(before)
             if (!ed.sendKey(KeyCodes.DEL)) { resync(); return }
             before = before.dropLast(n)
-            moveSel(-n)
+            if (n > 0) moveSel(-n)                          // (Backspace at the very start of the text changes nothing and the editor reports nothing: no report to wait for, or the entry would stay and make a later move to the same offset look like ours)
         }
         ensureWindow()
     }
