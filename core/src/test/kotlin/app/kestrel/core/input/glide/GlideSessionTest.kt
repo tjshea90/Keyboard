@@ -136,4 +136,19 @@ class GlideSessionTest {
     @Test fun settleKeepsTheGlideAndClearsTheStrip() {
         val e = Env(); e.glide("hello"); e.s.settle(); assertEquals("hello ", e.rig.text); assertTrue(e.ui.words.isEmpty()); assertTrue(e.learned().contains("hello"))
     }
+
+    @Test fun aStripTapStillChangesTheWordWhenAnAppRewroteTheFieldAfterTheGlide() {
+        val e = Env(kind = FieldKind.URL); e.glide("hello")
+        e.rig.ed.appSetText("go hello "); e.rig.sync()               // the address bar rewrote its text: the controller forgot the glide
+        assertTrue(e.ui.words.size >= 1)
+        val other = e.ui.words.firstOrNull { it != "hello" }
+        if (other != null) { assertTrue(e.s.pick(other)); e.rig.sync(); assertEquals("go $other ", e.rig.text) }
+    }
+
+    @Test fun aStripTapReplacesTheWordWhenAnAddressBarCompletedItInline() {
+        val e = Env(kind = FieldKind.URL); e.glide("hello")
+        e.rig.ed.appAutocomplete("world.com"); e.rig.sync()
+        val other = e.ui.words.firstOrNull { it != "hello" }
+        if (other != null) { assertTrue(e.s.pick(other)); e.rig.sync(); e.rig.check(); assertEquals("$other ", e.rig.text) }
+    }
 }

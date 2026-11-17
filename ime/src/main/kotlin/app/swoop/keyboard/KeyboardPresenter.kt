@@ -188,7 +188,7 @@ class KeyboardPresenter(
     }
 
     override fun onCandidate(word: String) {
-        if (controller.lastGlide != null) session.pick(word)
+        if (controller.lastGlide != null || session.hasCandidates()) session.pick(word)        // (the strip still shows a glide's guesses even when an app rewrote the field)
         else if (suggestOn) {
             val typed = controller.wordBeforeCursor()
             val w = if (word == literalShown && typed != null) typed else word      // the typed word in quotes: keep it as it is (and learn it)

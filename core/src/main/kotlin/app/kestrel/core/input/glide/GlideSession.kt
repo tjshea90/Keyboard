@@ -75,9 +75,14 @@ class GlideSession(
         show(cands.map { it.text })
     }
 
+    /** True while the strip shows the guesses of a glide (a tap on one replaces the glided word). */
+    fun hasCandidates(): Boolean = shown.isNotEmpty()
+
     /** A candidate in the strip was tapped: it replaces the word the glide put in. */
     fun pick(word: String): Boolean {
-        if (!controller.swapGlide(word)) return false
+        val was = pendingWord ?: topGuess
+        // the glide's own bookkeeping first; when the app rewrote the field and it was lost, the word that was put in is replaced by what the text before the cursor still shows (verified)
+        if (!controller.swapGlide(word) && !(was != null && controller.replaceRecent(was, word))) return false
         pendingWord = word; pendingWeight = 3f                           // the person CHOSE this word over the first guess: it counts three times, once it is kept
         pendingGuessed = topGuess?.takeIf { it != word }                 // ... and the keyboard remembers it guessed the other one
         afterUndo = false
