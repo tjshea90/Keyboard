@@ -17,6 +17,7 @@ import argparse
 import importlib.util
 import json
 import os
+import random
 import re
 import subprocess
 import sys
@@ -202,6 +203,13 @@ def start_server(rep):
 
 
 # ---------------------------------------------------------------------------------------------------------------------------------------------- scenes
+def jitter_for(word, km, sigma_pitch, rnd):
+    """Where a real thumb lands: every letter's touch is off the key centre by a random amount (sigma in key pitches)."""
+    q, w = km.keys.get("k71"), km.keys.get("k77")
+    pitch = abs(w[0] - q[0]) if q and w else 40
+    return {ch: (rnd.gauss(0, sigma_pitch * pitch), rnd.gauss(0, sigma_pitch * pitch)) for ch in set(word)}
+
+
 def type_round(rep, scene, field_value, tap_target, glide=True):
     """One kind of field: tap it, wait for the keyboard, tap-type the phrases and glide the words; [field_value]() returns what the field holds."""
     x, y = tap_target
@@ -253,6 +261,20 @@ def type_round(rep, scene, field_value, tap_target, glide=True):
     time.sleep(1.0)
     got_all = field_value()
     hit, n = words_hit(GLIDE_WORDS, got_all)
+    # the same words with a sloppy thumb (every letter lands about 0.2 key off the centre, the way a real finger does): a second line in the report
+    rnd = random.Random(17)
+    before = got_all
+    for w in GLIDE_WORDS:
+        try:
+            drive.glide_word(w, jitter=jitter_for(w, km, 0.2, rnd))
+        except Exception:
+            continue
+        time.sleep(0.5)
+    time.sleep(1.0)
+    got2 = field_value()[len(before):] if field_value().startswith(before) else field_value()
+    hit2, n2 = words_hit(GLIDE_WORDS, got2)
+    rep.row(scene + " glide sloppy thumb", "INFO", "%d of %d words decoded right with a thumb 0.2 key off the centre: %r" % (hit2, n2, got2[:160]))
+    rep.event(scene, glide_sloppy_hit=hit2, glide_sloppy_n=n2)
     lats.sort()
     lat = "median %.2fs, slowest %.2fs over %d words" % (lats[len(lats) // 2], lats[-1], len(lats)) if lats else "no word appeared"
     rep.row(scene + " glide summary", "INFO", "%d of %d words decoded right: %r; finger-up to word on the page: %s" % (hit, n, got_all[:160], lat))
