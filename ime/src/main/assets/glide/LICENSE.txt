@@ -11,8 +11,8 @@ versions, download locations, checksums and the exact recipe: docs/DICTIONARY.md
    Viewer graphs and data may be freely used for any purpose, although acknowledgement of Google Books Ngram Viewer as the source, and inclusion of a
    link to http://books.google.com/ngrams, would be appreciated); the Leeds Internet Corpus (University of Leeds Centre for Translation Studies);
    Wikipedia; ParaCrawl; OPUS OpenSubtitles 2018 (originating from the OpenSubtitles project, used with attribution to OpenSubtitles); SUBTLEX word
-   lists by Marc Brysbaert et al. (credit: the SUBTLEX authors; SUBTLEX is freely available data); and word counts from Reddit and Twitter (statistics
-   only, no text). Citation: Robyn Speer. (2022). rspeer/wordfreq: v3.0 (v3.0.2). Zenodo. https://doi.org/10.5281/zenodo.7199437
+   lists by Marc Brysbaert et al. (credit: the SUBTLEX authors; SUBTLEX is freely available data); NewsCrawl 2014 and GlobalVoices; OSCAR web text; and
+   word-frequency statistics from Reddit and Twitter (counts only, no text is republished). Citation: Robyn Speer. (2022). rspeer/wordfreq: v3.0 (v3.0.2). Zenodo. https://doi.org/10.5281/zenodo.7199437
 
 2. FrequencyWords (en_full, from the OpenSubtitles 2018 corpus), by Hermit Dave: code MIT (below), content CC BY-SA 4.0. Source of the subtitle
    data: OpenSubtitles (http://www.opensubtitles.org/), via OPUS (http://opus.nlpl.eu/OpenSubtitles2018.php).
