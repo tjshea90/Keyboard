@@ -1,63 +1,38 @@
 package app.swoop.keyboard
 
 import android.inputmethodservice.InputMethodService
-import android.os.SystemClock
+import android.os.Handler
+import android.os.Looper
 import android.view.View
 import android.view.inputmethod.EditorInfo
-import app.kestrel.core.input.ImeLayout
-import app.kestrel.core.input.Key
-import app.kestrel.core.input.editor.InputController
 
 /**
- * The system keyboard. THIN on purpose (plan 13.3): every decision about the text is made by [InputController] in :core, where the JVM tests and
- * the fuzzer reach it; this class forwards the lifecycle, the selection reports and the keys, and keeps the keys view in step.
- * KB-104 completes the Enter/caps rules, KB-103 adds the glide engine, KB-106 the crash-loop fallback.
+ * The system keyboard. A thin shell (plan 13.3): the lifecycle and the selection reports are forwarded to [KeyboardPresenter], which holds every decision
+ * and is tested with a real EditText. KB-104 completes the Enter/caps rules, KB-106 adds the crash-loop fallback.
  */
-class KeysService : InputMethodService(), KeysView.Listener {
-    private var keys: KeysView? = null
-    private val controller = InputController(InputConnectionBridge { currentInputConnection })
-    private var lastShiftTap = 0L
+class KeysService : InputMethodService() {
+    private val main = Handler(Looper.getMainLooper())
+    private val glide by lazy { GlideHost(applicationContext) }
+    private val presenter by lazy { KeyboardPresenter(this, { currentInputConnection }, glide, { main.post(it) }) }
 
-    override fun onCreateInputView(): View = KeysView(this).also { it.listener = this; keys = it }
+    override fun onCreateInputView(): View = KeysView(this).also { v ->
+        presenter.view = v
+        v.addOnLayoutChangeListener { _, l, t, r, b, ol, ot, or, ob -> if (r - l != or - ol || b - t != ob - ot) presenter.prepareGlide() }
+    }
 
     /** The keyboard never takes over the whole screen with the extract UI. */
     override fun onEvaluateFullscreenMode(): Boolean = false
 
     override fun onStartInputView(editorInfo: EditorInfo, restarting: Boolean) {
         super.onStartInputView(editorInfo, restarting)
-        val field = FieldInfos.from(editorInfo)
-        controller.startInput(field)
-        keys?.reset()
-        keys?.setField(field.kind, ImeLayout.actionLabel(field.imeAction, field.noEnterAction))
-        keys?.setShift(controller.shift)
+        presenter.startInput(editorInfo)
     }
 
-    override fun onFinishInput() { controller.finishInput(); super.onFinishInput() }
+    override fun onFinishInput() { presenter.finishInput(); super.onFinishInput() }
 
     /** Android tells us every selection change, ours and everybody else's; the controller tells them apart (plan 6.4). */
     override fun onUpdateSelection(oldSelStart: Int, oldSelEnd: Int, newSelStart: Int, newSelEnd: Int, candidatesStart: Int, candidatesEnd: Int) {
         super.onUpdateSelection(oldSelStart, oldSelEnd, newSelStart, newSelEnd, candidatesStart, candidatesEnd)
-        controller.onSelectionUpdate(newSelStart, newSelEnd, candidatesStart, candidatesEnd)
-        keys?.setShift(controller.shift)
+        presenter.onUpdateSelection(newSelStart, newSelEnd, candidatesStart, candidatesEnd)
     }
-
-    /** The finger slid over the space key. */
-    override fun onCursor(steps: Int) { controller.moveCursor(steps); keys?.setShift(controller.shift) }
-
-    override fun onKey(key: Key) {
-        when (key) {
-            is Key.Ch -> controller.type(key.text)
-            Key.Backspace -> controller.backspace()
-            Key.Go -> controller.enter()
-            Key.Shift -> {
-                val now = SystemClock.uptimeMillis()
-                if (now - lastShiftTap < DOUBLE_TAP_MS) controller.lockShift() else controller.tapShift()
-                lastShiftTap = now
-            }
-            else -> Unit
-        }
-        keys?.setShift(controller.shift)
-    }
-
-    private companion object { const val DOUBLE_TAP_MS = 350L }
 }
