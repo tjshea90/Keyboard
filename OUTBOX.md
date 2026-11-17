@@ -298,3 +298,58 @@
 > 3. Decide the private signing key question for request 16.
 > 4. Next session: compile the browser's Gecko build in CI, wire the navigation panel, and run an emulator smoke test of the new layout.
 <!-- sha:cfaa0d9ff17b -->
+
+## 2026-11-17T17:50:12Z
+> Everything on your list is built and released. The newest build is **Swoop 0.5.0-alpha3**, and it replaces alpha1 and alpha2. It installs over them, and learned data stays. It has only been run on emulators: nothing has been tried on your tablet or phone.
+>
+> Swoop 0.5.0-alpha3, the keyboard to install:
+> https://github.com/tjshea90/Keyboard/releases/tag/swoop-v0.5.0-alpha3
+>
+> Kestrel G alpha66, the browser whose panel opens Swoop. It is unchanged, and no new Kestrel APK was needed:
+> https://github.com/tjshea90/Browser/releases/tag/kestrel-g-v0.3.0-alpha66
+>
+> You sent the photo a second time. It is the identical image I already used.
+>
+> ## What I did since my last update
+> - **Photo match:** I checked the dark look against your photo on Android 10 and Android 16 emulators in night mode. The colours, round ?123 on the left, cyan Enter and blank space bar match.
+> - **Dark is now the default:** a tablet left in day mode would otherwise have shown a light keyboard. This surfaced three white strips in day mode, which I fixed: the bar row above the keys, the strip beside a squeezed keyboard, and the Setup title bar. Settings, Colours still offers Automatic or Light.
+> - **Android 10 bug fixed:** inside Swoop's own Setup and Dictionary screens, a letter typed after "?" came out as "H?a" instead of "H? A". Android 10 reports the cursor position before an edit finishes, which confused the keyboard. Other apps were never affected. It now types "H? A" and "H? A. B" on a real Android 10 emulator.
+> - **Kestrel:** its engine copy is re-synced to the fixed one and its tests pass.
+>
+> ## Your 16 items
+> 1. **Layout:** four rows, digit hints on the top row (hold a key for its digit), settings, clipboard and translate icons on top, nothing under the space bar. Special characters sit on ?123 at the bottom left, as in the photo. Your note said bottom right, where the photo has Enter. Holding the full stop or comma also opens a grid of 30 symbols.
+> 2. **Clipboard:** tap the clipboard icon to paste, pin or delete items, or clear all. It keeps copies for an hour.
+> 3. **Glide trail off:** Settings, Glide trail.
+> 4. **Hide the letters:** Settings, Hide the letters. The blank keys still type and glide.
+> 5. **After one special character, back to letters:** proven on both emulators.
+> 6. **Capital after . ? !:** on by default, proven on both emulators.
+> 7. **Translate:** switch on the A→ES icon, type English, press Enter for Mexican Spanish, press Enter again to send. It is the app's only internet use.
+> 8. **Squeeze the docked keyboard:** drag an arrow at either end of the glowing bar inward, or pinch the bar. Drag the bar sideways to move the keyboard, and double-tap it for full width. The emulator screenshot looks right.
+> 9. **Glide starts after about 5 dp of movement** unless it is clearly a single press.
+> 10. **Prediction accuracy:** the word list is about 140,000 words with a rare-word filter, so "tui" loses to common words. It learns your words, word pairs and corrections.
+> 11. **Emoji in the strip:**
+> [... 2591 characters omitted ...]
+> and recorded.
+> - Android 10 inline-report bug fixed.
+> - Day, night and squeeze looks proven on emulators.
+>
+> **Open / next steps:**
+> 1. Owner tests alpha3 on both devices.
+> 2. Owner decides on the private signing key.
+> 3. Optional: Key height Extra large on the tablet.
+> 4. Later session: Android 16 full pass and sign-off.
+>
+> **Rules to remember:**
+> - Save and checkpoint constantly.
+> - Cold-resume protocol.
+> - Never ship a tag twice.
+> - Say what was not run on a device.
+> - Answer every owner message and re-list open items.
+> - The repo is public: no secrets or photos.
+>
+> ⚠️ **Health:** This chat was compacted once and is very long, so details may blur.
+>
+> 🔴 I'd move to a fresh chat now. Run `/amhandoff` and I'll write a file that brings the new chat fully up to speed.
+>
+> 💡 The code word is off in this chat. Type `/amcodeword` and I'll start every reply with 'Yes Boss!', so you'll notice if I start losing track.
+<!-- sha:16d68b004ba8 -->
