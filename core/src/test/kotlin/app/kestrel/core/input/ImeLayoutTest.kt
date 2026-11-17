@@ -34,19 +34,19 @@ class ImeLayoutTest {
 
     @Test fun theBottomRowDependsOnTheField() {
         fun bottom(kind: FieldKind) = ImeLayout.rows(Page.LETTERS, false, kind, "Go").last().map { it.label }
-        assertEquals(listOf(",", "space", ".", "Go"), bottom(FieldKind.TEXT))
-        assertEquals(listOf("/", "space", ".", ".com", "Go"), bottom(FieldKind.URL))
-        assertEquals(listOf("@", "space", ".", ".com", "Go"), bottom(FieldKind.EMAIL))
+        assertEquals(listOf("123", ",", "space", ".", "Go"), bottom(FieldKind.TEXT))
+        assertEquals(listOf("123", "/", "space", ".", ".com", "Go"), bottom(FieldKind.URL))
+        assertEquals(listOf("123", "@", "space", ".", ".com", "Go"), bottom(FieldKind.EMAIL))
     }
 
-    @Test fun thereIsNoOneTwoThreeKeyAndEverySymbolOfTheOldSymbolsPageIsInTheHoldGrid() {
-        for (kind in FieldKind.values()) for (globe in listOf(false, true)) {
-            val rows = ImeLayout.rows(Page.LETTERS, false, kind, showGlobe = globe)
-            assertTrue("$kind", keys(rows).none { it === Key.ToSymbols || it === Key.ToLetters }); assertTrue(rows.flatten().none { it.label == "123" || it.label == "abc" })
+    @Test fun theOneTwoThreeKeyIsBackAndTheSymbolsPageAndTheHoldGridHaveEverySymbol() {
+        for (kind in listOf(FieldKind.TEXT, FieldKind.SEARCH, FieldKind.PASSWORD, FieldKind.URL, FieldKind.EMAIL)) {
+            assertTrue("$kind has 123", keys(ImeLayout.rows(Page.LETTERS, false, kind)).any { it === Key.ToSymbols })
+            assertTrue("$kind symbols page has abc", keys(ImeLayout.rows(Page.SYMBOLS, false, kind)).any { it === Key.ToLetters })
         }
+        val page = keys(ImeLayout.rows(Page.SYMBOLS, false, FieldKind.TEXT)).filterIsInstance<Key.Ch>().map { it.text }.toSet()
         val grid = ImeLayout.symbolRows.flatten().toSet()
-        for (c in "@#$%&-+()/*\"':;!?_=~<>[]{}\\|") assertTrue("'$c' must be reachable", c.toString() in grid)
-        assertEquals(3, ImeLayout.symbolRows.size); assertTrue(ImeLayout.symbolRows.all { it.size <= 10 })
+        for (c in "@#$%&-+()/*\"':;!?_=~<>[]{}\\|") { assertTrue("'$c' on the symbols page", c.toString() in page); assertTrue("'$c' in the hold grid", c.toString() in grid) }
     }
 
     @Test fun theSpaceBarTakesEverythingTheOtherKeysLeave() {
@@ -57,11 +57,11 @@ class ImeLayoutTest {
             assertTrue("$kind: the space bar is the widest key (${space.weight})", row.all { it === space || it.weight < space.weight })
         }
         val plain = ImeLayout.rows(Page.LETTERS, false, FieldKind.TEXT).last().first { it.label == "space" }
-        assertEquals(6.4f, plain.weight, 0.001f)                       // comma 1 + full stop 1 + action 1.6
+        assertEquals(4.9f, plain.weight, 0.001f)                       // 123 1.5 + comma 1 + full stop 1 + action 1.6
     }
 
     @Test fun everyBottomRowHasASpaceAndAnActionKeyAndNoLetterRowIsWiderThanTen() {
-        for (kind in FieldKind.values()) for (page in listOf(Page.LETTERS)) {
+        for (kind in FieldKind.values()) for (page in Page.values()) {
             val rows = ImeLayout.rows(page, false, kind)
             val ks = keys(rows)
             if (kind != FieldKind.PHONE) assertTrue("$kind/$page needs a space", ks.any { it is Key.Ch && it.text == " " })   // a phone number has no spaces
@@ -80,7 +80,7 @@ class ImeLayoutTest {
     }
 
     @Test fun theNumberRowIsOnEveryTextPageAndCanBeLeftOut() {
-        for (kind in listOf(FieldKind.TEXT, FieldKind.SEARCH, FieldKind.URL, FieldKind.EMAIL, FieldKind.PASSWORD)) for (page in listOf(Page.LETTERS)) {
+        for (kind in listOf(FieldKind.TEXT, FieldKind.SEARCH, FieldKind.URL, FieldKind.EMAIL, FieldKind.PASSWORD)) for (page in Page.values()) {
             val rows = ImeLayout.rows(page, false, kind); assertEquals("$kind/$page", 5, rows.size); assertEquals("1234567890", rows[0].joinToString("") { it.label })
         }
         assertEquals(4, ImeLayout.rows(Page.LETTERS, false, FieldKind.TEXT, "⏎", numberRow = false).size)

@@ -44,8 +44,8 @@ object ImeLayout {
     fun hasNumberRow(rows: List<List<KeySpec>>): Boolean = rows.size == 5
 
     /**
-     * The symbols that used to live behind the "123" key (owner: "Remove the 123 button because there are always numbers"): they open as a grid when the full stop or the comma is HELD (see KeysView), laid out
-     * in the rows people know. Every character of the old symbols page is here.
+     * The symbols of the "123" page, also offered as a grid when the full stop or the comma is HELD (see KeysView). (The owner asked to remove the 123 key and then took it back: "i need a way to get to the special
+     * symbols": the key and the page stay, the grid is a shortcut.)
      */
     val symbolRows: List<List<String>> = listOf("@#$%&-+()/", "*\"':;!?_=~", "<>[]{}\\|").map { r -> r.map { it.toString() } }
 
@@ -56,19 +56,26 @@ object ImeLayout {
         if (kind == FieldKind.NUMBER || kind == FieldKind.PHONE) return keypad(kind, actionLabel, showGlobe)
         val digits = if (numberRow) listOf(chars("1234567890")) else emptyList()
         fun letters(s: String) = chars(if (shift) s.uppercase() else s)
-        // the bottom row: [globe if asked] [one or two small keys] [space: the rest] [the full stop and the action key]
-        fun bottom(vararg fixed: KeySpec): List<KeySpec> {
+        // the bottom row: [the 123 / abc key] [globe if asked] [one or two small keys] [space: ALL the rest] [the full stop and the action key]
+        fun bottom(first: KeySpec, vararg fixed: KeySpec): List<KeySpec> {
             val g = if (showGlobe) listOf(globe) else emptyList()
-            val used = (g + fixed).sumOf { it.weight.toDouble() }.toFloat()
+            val used = (listOf(first) + g + fixed).sumOf { it.weight.toDouble() }.toFloat()
             val space = KeySpec("space", Key.Ch(" "), ROW_UNITS - used)
             val head = fixed.takeWhile { it.label != "." && it.label != ".com" && it.key !== Key.Go }
             val tail = fixed.drop(head.size)
-            return g + head + space + tail
+            return listOf(first) + g + head + space + tail
         }
+        if (page == Page.SYMBOLS) return digits + listOf(
+            chars("@#$%&-+()/"),
+            chars("*\"':;!?_=~"),
+            chars("<>[]{}\\|") + back.let { KeySpec(it.label, it.key, 2f) },
+            bottom(KeySpec("abc", Key.ToLetters, 1.5f), ch(","), ch("."), action(actionLabel, 1.6f)),
+        )
+        val toSymbols = KeySpec("123", Key.ToSymbols, 1.5f)
         val bottomRow = when (kind) {
-            FieldKind.URL -> bottom(ch("/"), ch("."), ch(".com", 1.5f), action(actionLabel, 1.6f))
-            FieldKind.EMAIL -> bottom(ch("@"), ch("."), ch(".com", 1.5f), action(actionLabel, 1.6f))
-            else -> bottom(ch(","), ch("."), action(actionLabel, 1.6f))
+            FieldKind.URL -> bottom(toSymbols, ch("/"), ch("."), ch(".com", 1.5f), action(actionLabel, 1.6f))
+            FieldKind.EMAIL -> bottom(toSymbols, ch("@"), ch("."), ch(".com", 1.5f), action(actionLabel, 1.6f))
+            else -> bottom(toSymbols, ch(","), ch("."), action(actionLabel, 1.6f))
         }
         return digits + listOf(
             letters("qwertyuiop"),
