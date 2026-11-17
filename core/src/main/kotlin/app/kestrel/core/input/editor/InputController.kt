@@ -105,10 +105,14 @@ class InputController(private val ed: EditorBridge, val stats: InputStats = Inpu
         // somebody else moved the cursor or edited the text
         if (composing != null) ed.finishComposing()
         stats.foreignReports++
+        val glide = lastGlide; val wasAt = selStart
         composing = null; lastGlide = null
         clearPending("c3")
         selStart = newSelStart; selEnd = newSelEnd
         refresh()
+        // An address bar (Chrome, Brave, ...) completes what was typed INLINE: it appends the rest of a likely address after the cursor and selects it, which is a report we did not predict. The glided word is still
+        // right before where the selection starts, so it stays the last glide (a tap in the strip can still replace it); only a selection or a move that starts somewhere else forgets it.
+        if (glide != null && wasAt >= 0 && newSelStart == wasAt && before.endsWith(glide.text)) lastGlide = glide
         return false
     }
 
@@ -281,7 +285,7 @@ class InputController(private val ed: EditorBridge, val stats: InputStats = Inpu
     /** A candidate from the strip replaces the word the last glide put in. False (nothing changed) when the last thing was not a glide or the text is no longer there. */
     fun swapGlide(word: String): Boolean {
         val g = lastGlide ?: return false
-        if (selStart != selEnd || !verifyBefore(g.text)) { lastGlide = null; return false }
+        if (!verifyBefore(g.text)) { lastGlide = null; return false }          // (a selection that starts right after the word is an address bar's inline completion: the new word replaces it)
         val lead = if (g.text.startsWith(" ")) " " else ""
         val shown = g.word
         val w = if (shown.length > 1 && shown.all { it.isUpperCase() }) word.uppercase() else if (shown.firstOrNull()?.isUpperCase() == true) word.replaceFirstChar { it.uppercase() } else word
@@ -352,6 +356,34 @@ class InputController(private val ed: EditorBridge, val stats: InputStats = Inpu
         type(boundary)
         val tail = shown + boundary
         if (composing == null && selStart == selEnd && before.endsWith(tail)) lastCorrection = Correction(typed, shown, tail)
+    }
+
+    /**
+     * The word [old] that was just glided or typed (with up to two spaces after it) is replaced by [word] when the text before the cursor still ends with it: the safety net for when this keyboard lost track of its own
+     * glide (an app rewrote the field) but the person still taps the right word in the strip. Verified against the editor first, like every replacement. False (nothing changed) when the text no longer ends with [old].
+     */
+    fun replaceRecent(old: String, word: String): Boolean {
+        if (old.isEmpty() || word.isEmpty()) return false
+        settle()
+        val k = before.length - before.trimEnd(' ').length
+        val core = before.dropLast(k)
+        if (k > 2 || !core.endsWith(old, ignoreCase = true)) return false
+        val shown = core.takeLast(old.length)
+        val n = old.length + k
+        if (!verifyBefore(before.takeLast(n))) return false
+        val w = if (shown.length > 1 && shown.all { it.isUpperCase() }) word.uppercase() else if (shown.first().isUpperCase()) word.replaceFirstChar { it.uppercase() } else word
+        val tail = w + " ".repeat(k)
+        val s0 = selStart; val e0 = selEnd
+        beginBatch()
+        var ok = ed.deleteSurrounding(n, 0)
+        if (ok) { before = before.dropLast(n); moveSel(-n); ok = commit(tail) }
+        endBatch(s0, e0)
+        lastGlide = null
+        if (!ok) { resync(); return false }
+        lastGlide = GlideTail(tail, w)
+        stats.swaps++
+        ensureWindow()
+        return true
     }
 
     /** Moves the cursor [delta] characters (negative = left), e.g. from sliding a finger over the space key. A tapped word is finished first. */

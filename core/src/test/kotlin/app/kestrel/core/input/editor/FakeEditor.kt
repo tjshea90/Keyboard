@@ -95,6 +95,8 @@ class FakeEditor(text: String = "", sel: Int = text.length, val multiline: Boole
     fun userSelect(a: Int, b: Int) { selS = a.coerceIn(0, sb.length); selE = b.coerceIn(0, sb.length); emit() }
     /** The user (or the app) inserts [t] at the cursor, e.g. a paste or the app's own autofill. */
     fun userInsert(t: String) { sb.replace(lo(), hi(), t); selS = lo() + t.length; selE = selS; compS = -1; compE = -1; emit() }
+    /** An address bar's inline completion: [suffix] is appended after the cursor and SELECTED (the cursor stays where the person typed). */
+    fun appAutocomplete(suffix: String) { val at = lo(); sb.insert(hi(), suffix); selS = at; selE = at + suffix.length; compS = -1; compE = -1; emit() }
     /** The app replaces everything with [t] and puts the cursor at the end. */
     fun appSetText(t: String) {
         // An app that replaces the text and leaves the cursor at the same offset sends NO report at all (real Android only reports changes of the

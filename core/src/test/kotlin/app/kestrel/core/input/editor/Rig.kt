@@ -39,6 +39,6 @@ class Rig(text: String = "", sel: Int = text.length, multiline: Boolean = true,
             assertEquals(comp, ed.text.substring(ed.compS, ed.compE)); assertEquals("composing must end at the cursor", ed.compE, ed.selS)
         }
         val g = c.lastGlide
-        if (g != null) { assertEquals("glide tail is no longer before the cursor", g.text, ed.beforeText(g.text.length)); assertEquals(ed.selS, ed.selE) }
+        if (g != null) assertEquals("glide tail is no longer before the cursor", g.text, ed.beforeText(g.text.length))     // (a selection starting right after it is an address bar's inline completion)
     }
 }
