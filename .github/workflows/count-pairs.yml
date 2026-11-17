@@ -1,0 +1,75 @@
+# Counts which word follows which in everyday English (Swoop casual pairs, owner request 17: "optimize word prediction accuracy"). Dispatch-only (never a push trigger: minutes are scarce).
+# The sentence sets are downloaded ON THE RUNNER and stay there: only the COUNTS (pairs inside the shipped word list, seen at least 3 times) are kept as an artifact, and a person mixes them into
+# en.klx with the compile tool (docs/DICTIONARY.md, "Casual pairs"). Sources, both licensed for this use with credit: Tatoeba English sentences (CC BY 2.0 FR, https://tatoeba.org),
+# SODA dialogues by the Allen Institute for AI (CC BY 4.0). The credit lines are in ime/src/main/assets/glide/LICENSE.txt.
+name: Count casual word pairs
+on:
+  workflow_dispatch:
+    inputs:
+      soda_dialogues:
+        description: 'How many SODA dialogues to count (0 = leave SODA out)'
+        type: string
+        default: '250000'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: count-pairs-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  count:
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    env:
+      LM: ${{ github.workspace }}/lm-out
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-build
+        with:
+          gradle-cache: 'false'
+
+      - name: The words of the shipped list
+        run: |
+          mkdir -p "$LM" "$RUNNER_TEMP/src"
+          ./gradlew :tools:glideLexicon --args="--base ime/src/main/assets/glide/en.klx --dump-vocab $LM/vocab.txt" --console=plain
+
+      - name: Fetch the Tatoeba English sentences
+        run: |
+          curl -fsSL --retry 4 --retry-delay 5 https://downloads.tatoeba.org/exports/per_language/eng/eng_sentences.tsv.bz2 -o "$RUNNER_TEMP/src/eng_sentences.tsv.bz2"
+          ls -l "$RUNNER_TEMP/src"
+          sha256sum "$RUNNER_TEMP/src/eng_sentences.tsv.bz2" | tee "$LM/tatoeba.sha256"
+
+      - name: Fetch the SODA dialogues (best effort)
+        id: soda
+        continue-on-error: true
+        if: ${{ inputs.soda_dialogues != '0' }}
+        run: |
+          python3 -m pip install --quiet huggingface_hub pyarrow
+          python3 -I tools/glide/fetch_soda.py --out "$RUNNER_TEMP/src/soda.txt" --dialogues "${{ inputs.soda_dialogues }}"
+          ls -l "$RUNNER_TEMP/src"
+
+      - name: Count the pairs
+        run: |
+          set -o pipefail
+          T="$RUNNER_TEMP/src/eng_sentences.tsv.bz2"
+          S="$RUNNER_TEMP/src/soda.txt"
+          python3 -I tools/glide/count_pairs.py --vocab "$LM/vocab.txt" --text "$T" --tsv-column 3 --out "$LM/pairs_tatoeba.txt" --starters "$LM/starters_tatoeba.txt" 2>&1 | tee "$LM/stats.txt"
+          if [ -f "$S" ]; then
+            python3 -I tools/glide/count_pairs.py --vocab "$LM/vocab.txt" --text "$S" --out "$LM/pairs_soda.txt" --starters "$LM/starters_soda.txt" 2>&1 | tee -a "$LM/stats.txt"
+            python3 -I tools/glide/count_pairs.py --vocab "$LM/vocab.txt" --text "$T" --tsv-column 3 --text "$S" --out "$LM/pairs_both.txt" --starters "$LM/starters_both.txt" 2>&1 | tee -a "$LM/stats.txt"
+          fi
+          rm -f "$LM/vocab.txt"
+          ls -l "$LM"
+
+      - name: Keep the counts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: casual-pairs
+          path: lm-out
+          retention-days: 14
+          if-no-files-found: ignore
