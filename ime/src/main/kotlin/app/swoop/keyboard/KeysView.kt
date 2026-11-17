@@ -79,6 +79,10 @@ class KeysView(context: Context) : View(context) {
     var themeMode = 0; set(v) { if (field != v) { field = v; applyPalette(); invalidate(); dyn() } }
     /** 1.0 = normal key height; the settings offer small / normal / large. */
     var keyHeightScale = 1f; set(v) { if (field != v) { field = v; rectsW = -1; requestLayout(); invalidate() } }
+    /** The floating keyboard's own height multiplier (corner drags), on top of [keyHeightScale]. */
+    var floatMul = 1f; set(v) { if (field != v) { field = v; rectsW = -1; requestLayout(); invalidate() } }
+    /** The colour behind the keys (the floating frame is painted in it too). */
+    val backgroundColor: Int get() = cBg
     var accent = 0xFF1F6FEB.toInt(); set(v) { field = v; applyPalette(); invalidate(); dyn() }
 
     // ---- what is shown
@@ -197,10 +201,14 @@ class KeysView(context: Context) : View(context) {
 
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
         val w = MeasureSpec.getSize(widthMeasureSpec)
+        setMeasuredDimension(w, heightFor(w, floatMul))
+    }
+
+    /** The height this keyboard has when [w] pixels wide and its rows are [mul] times as tall as the settings say (the floating keyboard asks this to turn a corner drag into a height). */
+    fun heightFor(w: Int, mul: Float): Int {
         // a key is about as tall as a letter key is wide (a thumb-sized target), within sensible bounds on a phone and on the tablet
-        val rowH = ((w - 2 * pad) / 10f).coerceIn(dp(40f), dp(52f)) * keyHeightScale
-        val h = (stripPx() + rowH * ImeLayout.rowWeights(rows).sum() + (rows.size - 1) * gap + 2 * pad).toInt()
-        setMeasuredDimension(w, h)
+        val rowH = ((w - 2 * pad) / 10f).coerceIn(dp(40f), dp(52f)) * keyHeightScale * mul
+        return (stripPx() + rowH * ImeLayout.rowWeights(rows).sum() + (rows.size - 1) * gap + 2 * pad).toInt()
     }
 
     private fun layoutKeys() {
