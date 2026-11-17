@@ -80,33 +80,24 @@ for b in blocks:
         if m: frame = tuple(map(int, m.groups())); break
 if not frame: sys.exit(1)
 l, t_, r, b_ = frame
-dp = dens / 160.0; pad = 3 * dp; gap = 3 * dp; strip = 36 * dp; grip = 22 * dp
+dp = dens / 160.0; pad = 5 * dp; strip = 40 * dp; grip = 22 * dp
 W = r - l
-# the IME window ALSO covers the navigation bar below the keyboard, so the keyboard's own height comes from its formula, not from the frame
-rowh = min(max((W - 2 * pad) / 10.0, 40 * dp), 52 * dp)
-H = grip + strip + rowh * 4.72 + 4 * gap + 2 * pad
-# the keys view starts under the neon bar; rows: digits (weight 0.72), q.., a.., z.., bottom (1 each)
-weights = [0.72, 1, 1, 1, 1]
-usable = H - grip - strip - 2 * pad - 4 * gap
-def row_y(i):
-    y = t_ + grip + pad + strip
-    for k in range(i): y += usable * weights[k] / sum(weights) + gap
-    return y + usable * weights[i] / sum(weights) / 2
-def row_x(ws):
-    total = sum(ws); n = len(ws); unit = (W - 2 * pad - gap * (n - 1)) / total
-    xs = []; x = l + pad
-    for w in ws: xs.append(x + w * unit / 2); x += w * unit + gap
-    return xs
-rows = [
-    ("qwertyuiop", row_x([1] * 10 + [1.5])[:-1], 1),
-    ("asdfghjkl", row_x([.5] + [1] * 9 + [2])[1:-1], 2),
-    ("zxcvbnm", row_x([2.25] + [1] * 7 + [2.25])[1:-1], 3),
-]
+# KeysView geometry of the photo layout (owner M1; the numbers are KeysView.GAP_FRAC, GAP_Y_MUL, ROW_H_*; the IME window ALSO covers the navigation bar below the keyboard, so the rows come from the formula, not from the frame):
+# ten key pitches across, a key is a slot minus a gap (MiniKeyboardGeometry.slots), four rows (no number row by default), rows one gap further apart than the keys are across.
+pitch = (W - 2 * pad) / 10.0
+gapx = min(max(pitch * 0.14, 3 * dp), 8 * dp); gapy = gapx * 1.5
+rowh = min(max(pitch * 1.35, 44 * dp), 56 * dp)
+unit = (W - 2 * pad + gapx) / 10.0
+def row_y(i): return t_ + grip + pad + strip + i * (rowh + gapy) + rowh / 2.0
+def cx(cum, w=1.0): return l + pad + (cum + w / 2.0) * unit - gapx / 2.0
 out = {}
-for letters, xs, ri in rows:
-    for ch, x in zip(letters, xs): out[ch] = (int(x), int(row_y(ri)))
-bx = row_x([1.5, 6, 1.5, 2.5])               # the bottom row: comma, space, dot, ?123 (no globe key by default; the space bar takes the rest)
-out['space'] = (int(bx[1]), int(row_y(4))); out['dot'] = (int(bx[2]), int(row_y(4))); out['back'] = (int(row_x([1] * 10 + [1.5])[-1]), int(row_y(1)))
+for i, ch in enumerate("qwertyuiop"): out[ch] = (int(cx(i)), int(row_y(0)))
+for i, ch in enumerate("asdfghjkl"): out[ch] = (int(cx(0.5 + i)), int(row_y(1)))
+for i, ch in enumerate("zxcvbnm"): out[ch] = (int(cx(1.5 + i)), int(row_y(2)))
+out['shift'] = (int(cx(0, 1.5)), int(row_y(2))); out['back'] = (int(cx(8.5, 1.5)), int(row_y(2)))
+out['sym'] = (int(cx(0, 1.5)), int(row_y(3))); out['comma'] = (int(cx(1.5)), int(row_y(3)))
+out['space'] = (int(cx(2.5, 5)), int(row_y(3))); out['dot'] = (int(cx(7.5)), int(row_y(3))); out['enter'] = (int(cx(8.5, 1.5)), int(row_y(3)))
+out['qmark'] = (int(cx(7.5)), int(row_y(2)))              # on the first symbols page: =\< * " ' : ; ! ? Backspace
 out['grip'] = (int(l + W / 2), int(t_ + grip / 2))
 print(frame, (b_ - t_) / dp, ' '.join('%s=%d,%d' % (k, v[0], v[1]) for k, v in out.items()))
 PY
@@ -138,6 +129,13 @@ if [ -n "$GEOM" ]; then
   # ---- 5 Backspace
   adb shell input tap $(key back); sleep 0.5
   T="$(field_text)"; [ "$(echo "$T" | tr A-Z a-z)" = "h" ] && ok "Backspace removed the last letter ($T)" || bad "expected 'h' after Backspace, got '$T'"
+  # ---- 9 the special-characters key (?123 at the bottom LEFT like the photo): one special character, and the letters are back at once (owner M5)
+  adb shell input tap $(key sym); sleep 0.7
+  adb shell input tap $(key qmark); sleep 0.7
+  adb shell input tap $(key a); sleep 0.7
+  T="$(field_text)"; shot symbols
+  case "$T" in *"?a"|*"?A") ok "?123, then ?, then a typed '?a': one special character and the letters are back ($T)" ;; *) bad "expected the field to end with ?a after ?123 ? a, got '$T'" ;; esac
+  adb shell input tap $(key back); sleep 0.4; adb shell input tap $(key back); sleep 0.4
   # ---- 4 glide: a swipe along the top row from t to p (a word like top/tip/typo is decoded)
   adb shell input tap $(key space); sleep 0.4
   X0=$(key t | cut -d' ' -f1); Y0=$(key t | cut -d' ' -f2); X1=$(key p | cut -d' ' -f1)
