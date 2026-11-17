@@ -40,9 +40,9 @@ class GlideParams(
     /** A letter further than this from the path (squared) was not visited at all: the word is dropped. */
     val missLimit2: Float = 6.0f,
     /** How many words go from the quick pass to the careful one. */
-    val keep: Int = 200,
+    val keep: Int = 400,
     val quickEnds: Float = 0.7f,
-    val quickPrior: Float = 0.12f,
+    val quickPrior: Float = 0.10f,
     /** The careful pass: weight of the path between two letters straying from the straight line, and of the first / last letter. */
     val shapeW: Float = 2.0f,
     val endW: Float = 3.0f,
@@ -86,7 +86,7 @@ class GlideParams(
      * own mass lifts its prior), and neither is a word that the pair with the word before makes likely. [rareW] 0 = no price.
      */
     val rareFloor: Float = Rarity.FLOOR,
-    val rareW: Float = 0.45f,
+    val rareW: Float = 1.0f,
     val rareCap: Float = 7f,
 )
 
