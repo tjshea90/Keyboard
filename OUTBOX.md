@@ -353,3 +353,17 @@
 >
 > 💡 The code word is off in this chat. Type `/amcodeword` and I'll start every reply with 'Yes Boss!', so you'll notice if I start losing track.
 <!-- sha:16d68b004ba8 -->
+
+## 2026-11-17T17:50:31Z
+> The notification is a leftover delivery of the heartbeat that fired at 16:31, and that heartbeat is already deleted. It no longer exists, so it cannot fire again.
+>
+> There is nothing for it to resume. This session did the work, and the latest checkpoint (ckpt 312) says nothing is running and the next move is yours. Per the heartbeat's own stand-down rule, I'm leaving everything as it is.
+>
+> Current state:
+> - **Released and recorded:** Swoop 0.5.0-alpha3 and Kestrel G alpha66, with the links in my reply above.
+> - **Saved:** both repos are clean and pushed on `ccr-5531c47b-hl1gzo`, and no scheduled wake is pending.
+> - **Open for you:**
+>   1. Install alpha3 on the tablet and the phone and try the 16 items.
+>   2. Decide whether you want a private signing key for a live link between Swoop and Kestrel.
+>   3. Optionally set Key height to Extra large on the tablet.
+<!-- sha:afdac080eb83 -->
