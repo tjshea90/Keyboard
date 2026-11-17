@@ -11,13 +11,12 @@ import kotlin.system.exitProcess
  *
  *   --words  "word count" per line      --pairs  "first second count" per line
  *   --extra  "word count" per line; a word already known gets AT LEAST that count, an unknown one is added (web names, modern words, the apostrophe words)
- *   --pair-totals  "word count" per line: how often each first word occurs in the text the pairs were counted in; P(second | first) is then the pair count over this (not over the listed pairs only)
  *   --min-count N / --max-words N  drop the rare tail
  *
  * The inputs are untrusted text: they are parsed, never executed.
  */
 fun main(args: Array<String>) {
-    var out: String? = null; var words: String? = null; var pairs: String? = null; var pairTotals: String? = null; val extras = ArrayList<String>()
+    var out: String? = null; var words: String? = null; var pairs: String? = null; val extras = ArrayList<String>()
     var minCount = 0L; var maxWords = Int.MAX_VALUE
     var i = 0
     while (i < args.size) {
@@ -26,14 +25,13 @@ fun main(args: Array<String>) {
             "--words" -> words = args[++i]
             "--pairs" -> pairs = args[++i]
             "--extra" -> extras.add(args[++i])
-            "--pair-totals" -> pairTotals = args[++i]
             "--min-count" -> minCount = args[++i].toLong()
             "--max-words" -> maxWords = args[++i].toInt()
             else -> { System.err.println("unknown argument ${args[i]}"); exitProcess(2) }
         }
         i++
     }
-    if (out == null || words == null) { System.err.println("usage: --out FILE --words FILE [--pairs FILE] [--extra FILE]... [--pair-totals FILE] [--min-count N] [--max-words N]"); exitProcess(2) }
+    if (out == null || words == null) { System.err.println("usage: --out FILE --words FILE [--pairs FILE] [--extra FILE]... [--min-count N] [--max-words N]"); exitProcess(2) }
 
     val counts = HashMap<String, Long>()
     fun eachLine(f: String, parts: Int, block: (List<String>) -> Unit) {
@@ -52,9 +50,7 @@ fun main(args: Array<String>) {
     val ps = ArrayList<LexiconFile.Pair>()
     if (pairs != null) eachLine(pairs, 3) { p -> val c = p[2].toLongOrNull() ?: return@eachLine; if (p[0] in known && p[1] in known) ps.add(LexiconFile.Pair(p[0], p[1], c)) }
 
-    val totals = HashMap<String, Long>()
-    if (pairTotals != null) eachLine(pairTotals, 2) { p -> val c = p[1].toLongOrNull() ?: return@eachLine; if (p[0] in known) totals[p[0]] = c }
-    val bytes = LexiconFile.build(entries, ps, totals)
+    val bytes = LexiconFile.build(entries, ps)
     File(out).parentFile?.mkdirs()
     File(out).writeBytes(bytes)
     println("glide word list: ${entries.size} words, ${ps.size} pairs, ${bytes.size} bytes -> $out")

@@ -211,11 +211,7 @@ object LexiconFile {
 
     private fun q(lnp: Double): Short = Math.round(lnp * SCALE).coerceIn(Short.MIN_VALUE.toLong(), Short.MAX_VALUE.toLong()).toShort()
 
-    /**
-     * [firstTotals]: how often a word occurs in the text the pairs were counted in (word -> count). When given, ln P(second | first) is the pair's count over THAT (at least over the listed
-     * pairs' sum), not over the listed pairs only: a pair list keeps just the biggest pairs, so "over the listed pairs" made a word that appears after a word once look like a certain successor.
-     */
-    fun build(entries: List<Entry>, pairs: List<Pair>, firstTotals: Map<String, Long> = emptyMap()): ByteArray {
+    fun build(entries: List<Entry>, pairs: List<Pair>): ByteArray {
         // one entry per exact text (the biggest count wins), a-z keys only, in alphabetical order of key then text
         val best = HashMap<String, Long>()
         for (e in entries) { val k = GlideLetters.keyOf(e.text); if (k.isEmpty() || k.size > 30 || e.count <= 0L) continue; best[e.text] = maxOf(e.count, best[e.text] ?: 0L) }
@@ -237,7 +233,6 @@ object LexiconFile {
         ps.sortWith(compareBy<P> { it.a }.thenBy { it.b })
         val sumFor = LongArray(n)
         for (p in ps) sumFor[p.a] += p.c
-        for ((w, t) in firstTotals) { val i = idOfText[w] ?: continue; if (t > sumFor[i]) sumFor[i] = t }
         val pairOff = IntArray(n + 1)
         for (p in ps) pairOff[p.a + 1]++
         for (i in 0 until n) pairOff[i + 1] += pairOff[i]
