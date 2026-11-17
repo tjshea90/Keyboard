@@ -56,7 +56,7 @@ class ClipboardPanelTest {
         assertEquals(listOf("keep"), s.items.map { it.text })
     }
     @Test fun withHistoryOffThePanelOffersToTurnItOn() { val (p, _, c) = panel("x", on = false); assertEquals(0, p.cardCountForTest()); tap(p, p.turnOnCenterForTest()); assertEquals(1, c.turnedOn) }
-    @Test @Config(qualifiers = "night-w412dp-h915dp-xxhdpi", sdk = [29]) fun thePanelIsDrawnInTheKeyboardsColoursAndShowsTheCards() {
+    @Test @Config(qualifiers = "w412dp-h915dp-night-xxhdpi", sdk = [29]) fun thePanelIsDrawnInTheKeyboardsColoursAndShowsTheCards() {
         val (p, s, _) = panel("See you at 6 pm at the station", "https://example.com/a/very/long/address/that/does/not/fit/on/one/line/at/all", "123 Main Street", "ok", "Thanks, I will call you tomorrow morning about the thing we talked about yesterday")
         s.pin("ok", true)
         val b = android.graphics.Bitmap.createBitmap(p.width, p.height, android.graphics.Bitmap.Config.ARGB_8888)
