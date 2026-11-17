@@ -261,6 +261,14 @@ class KeyboardPresenterTest {
 
     // ------------------------------------------------------------------ N7: options
 
+    @Test fun theEmulatorSequenceHiBackspaceSymbolsQuestionMarkAKeepsTheSmartSpace() {      // what tools/emu/smoke.sh types on a real Android: it must behave the same on every Android version
+        for (suggest in listOf(false, true)) {
+            val r = Rig(glidePref = true, suggest = suggest)
+            r.tap("h"); r.tap("i"); r.tap("\u232B"); r.tap("?123"); r.tap("?"); r.tap("a")
+            assertEquals("suggest=$suggest", "H? A", r.text)
+        }
+    }
+
     @Test fun aLetterAfterPunctuationGetsItsSpaceAndTheSwitchTurnsItOff() {
         val r = Rig(glidePref = false); for (c in "hello") r.tap(c.toString()); r.tap("."); r.tap("w")
         assertEquals("the new sentence starts with a capital by default", "hello. W", r.text)
