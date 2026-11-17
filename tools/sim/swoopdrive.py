@@ -254,8 +254,14 @@ def tap_char(km, c):
 
 
 def _taps(points, hold, gap):
-    """A batch of taps in one shell call. The very first batch after the keyboard appeared was lost once on the emulator (the raw touch path needs a first event before it works): a first batch that raises no key press is sent again, and counted (STATS['first_batch_lost'])."""
+    """A batch of taps in one shell call. Raw touch injection needs `adb root` (the touch device is written to directly): when the first batch of the run, or the first after a pause, raises no key press it is sent
+    again once (STATS['first_batch_lost']); when that raises none either, raw injection is dead (STATS['raw_dead']) and every tap goes through `input tap`, slower but sure."""
     STATS["taps"] += len(points)
+    if STATS.get("raw_dead"):
+        for (x, y) in points:
+            tap(x, y)
+            time.sleep(gap)
+        return
     check = STATS["batches"] == 0 or time.time() - STATS.get("last_batch", 0.0) > 12.0       # the first batch of the run, and the first after a pause (a keyboard that just came up again)
     before = key_events() if check else 0
     inject_taps(points, hold=hold, gap=gap)
@@ -266,6 +272,12 @@ def _taps(points, hold, gap):
         if key_events() <= before:
             STATS["first_batch_lost"] += 1
             inject_taps(points, hold=hold, gap=gap)
+            time.sleep(0.5)
+            if key_events() <= before:
+                STATS["raw_dead"] = True
+                for (x, y) in points:
+                    tap(x, y)
+                    time.sleep(gap)
 
 
 def _plain(c, km):

@@ -253,6 +253,9 @@ def type_round(rep, scene, field_value, tap_target, glide=True):
     if not glide:
         return
     # gliding
+    if drive.STATS.get("raw_dead"):
+        rep.row(scene + " glide", "FAIL", "raw touch injection does not work in this run (no root?): glides cannot be played")
+        return
     hit = n = 0
     got_all = ""
     lats = []
@@ -616,6 +619,15 @@ def main():
         if not (a.swoop and a.kestrel):
             rep.row("arguments", "FAIL", "--swoop and --kestrel are needed")
             return 1
+        who = sh("id", check=False)
+        if "uid=0" not in who:
+            adb("root", check=False)                          # raw touch injection (glides, fast taps) writes to the touch device: it needs root, which the emulator allows
+            time.sleep(3)
+            adb("wait-for-device", check=False, timeout=60)
+            who = sh("id", check=False)
+        rep.fact("adb shell runs as: %s" % who.strip()[:70])
+        if "uid=0" not in who:
+            rep.row("adb root", "FAIL", "the shell is not root: raw touch injection cannot work, taps fall back to `input tap` and glides cannot be played")
         ok1 = install(rep, a.swoop, "Swoop")
         ok2 = install(rep, a.kestrel, "Kestrel")
         if not (ok1 and ok2):
@@ -646,6 +658,8 @@ def main():
         if srv:
             srv.terminate()
         st = drive.STATS
+        if drive.STATS.get("raw_dead"):
+            rep.row("raw touch injection", "FAIL", "no key press followed a raw batch twice: every tap went through `input tap`")
         rep.fact("driver: %d key-map reads (%.2f s each on average), %d tap batches with %d taps, the first batch lost and sent again %d time(s)" % (
             st["reads"], st["read_s"] / max(1, st["reads"]), st["batches"], st["taps"], st["first_batch_lost"]))
         n = rep.write()

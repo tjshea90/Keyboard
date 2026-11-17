@@ -99,7 +99,7 @@ def install(fake):
     drive.inject = fake.inject
     drive.key_events = fake.key_events
     drive.time = types.SimpleNamespace(time=lambda: 1.0e9 + fake.events * 0.01 + fake.batches * 100.0, sleep=lambda s: None)
-    drive.STATS.update({"reads": 0, "read_s": 0.0, "first_batch_lost": 0, "batches": 0, "taps": 0, "last_batch": 0.0})
+    drive.STATS.update({"reads": 0, "read_s": 0.0, "first_batch_lost": 0, "batches": 0, "taps": 0, "last_batch": 0.0, "raw_dead": False})
 
 
 def check(cond, what):
@@ -139,6 +139,14 @@ def main():
     f = Fake(lose_first=True); install(f)
     drive.type_text("hello")
     check(f.text() == "hello" and drive.STATS["first_batch_lost"] == 1, "a lost first batch is sent again once, not twice: %r lost=%d" % (f.text(), drive.STATS["first_batch_lost"]))
+
+    f = Fake(); install(f)
+    f.inject_taps = lambda points, hold=0.04, gap=0.10: setattr(f, "batches", f.batches + 1)          # raw injection that never does anything (no adb root)
+    drive.inject_taps = f.inject_taps
+    drive.type_text("hello world")
+    check(f.text() == "hello world" and drive.STATS["raw_dead"] is True, "raw injection that does nothing falls back to single taps once, no duplicates: %r dead=%s" % (f.text(), drive.STATS.get("raw_dead")))
+    drive.type_text(" again")
+    check(f.text() == "hello world again", "and keeps typing that way: %r" % f.text())
 
     f = Fake(); install(f)
     f.page = "symbols"
