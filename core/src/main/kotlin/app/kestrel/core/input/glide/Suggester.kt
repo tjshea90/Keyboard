@@ -30,6 +30,10 @@ object Suggester {
     /** Words the person used this many times are theirs: never "corrected". */
     const val OWN_WORD_USES = 2f
     private const val POOL = 48
+    /** A rare word (see [Rarity]) loses this many nats per nat its probability is below the rarity floor, so a completion, a next word or a typo fix is never a rare word while a common one fits; a word the person uses has the mass of its own use added first and so is not rare. */
+    const val RARE_W = 0.7f
+    /** A typed word this improbable (ln) is not trusted as "known" on its own: a one-slip fix that is far more likely may replace it (still needs the usual margin; Backspace puts it back). Words the person typed twice or more are theirs. */
+    const val DEEP_TAIL = -16f
 
     private class Cand(val text: String, val lower: String, var score: Float, val fix: Boolean, val bonus: Float)
 
@@ -89,7 +93,7 @@ object Suggester {
         }
 
         val exactId = main.idOf(t)
-        val mainKnows = exactId >= 0 && main.text(exactId).lowercase() == t
+        val mainKnows = exactId >= 0 && main.text(exactId).lowercase() == t && (main.logProb(exactId) >= DEEP_TAIL || (pm?.weightOf(t) ?: 0f) > 0f)
         val own = pm?.weightOf(t) ?: 0f
         val typedKnown = mainKnows || own >= OWN_WORD_USES
         val ranked = found.values.sortedByDescending { it.score }
@@ -154,7 +158,9 @@ object Suggester {
             if (prev2 != null) { val lt = pm.tripleWeight(prev2, prev); if (lt > 0f) { pb = (1.0 - lt) * pb + lt * pm.tripleProb(prev2, prev, text); known = true } }
         }
         val p = if (known) (1.0 - CONTEXT_MIX) * pu + CONTEXT_MIX * pb else pu
-        return if (p <= 0.0) -30f else Math.log(p).toFloat()
+        if (p <= 0.0) return -30f
+        val lp = Math.log(p).toFloat()
+        return lp - RARE_W * Rarity.below(lp)
     }
 
     private class Variant(val text: String, val cost: Float)
