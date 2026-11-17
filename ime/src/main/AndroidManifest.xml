@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Swoop keyboard. PERMISSIONS: INTERNET only (translate toolbar button, plan 9.2: only code in app.swoop.keyboard.translate may use the network, two hosts,
      HTTPS only); tools/expected-permissions.txt is the list CI compares the built APK against. No network-state permission. Exported components: the IME service (the system binds it, protected by BIND_INPUT_METHOD)
-     and the setup activity (launcher + the keyboard's settings screen). Nothing else may be exported without a plan-9.2 reason. -->
+     and the setup activity (launcher + the keyboard's settings screen). Also exported, by owner request 17: ReceiveLearnedActivity, started with an EXPLICIT intent (no intent filter) by the Kestrel browser to hand over what its own keyboard learned; it only shows a question and adds nothing without a tap. Nothing else may be exported without a plan-9.2 reason. -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <uses-permission android:name="android.permission.INTERNET" />
