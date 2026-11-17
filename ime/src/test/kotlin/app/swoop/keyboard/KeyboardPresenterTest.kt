@@ -49,7 +49,14 @@ class KeyboardPresenterTest {
             et.inputType = inputType; et.imeOptions = imeOptions
             act.setContentView(et)
             info.inputType = inputType; info.imeOptions = imeOptions
-            ic = et.onCreateInputConnection(info)!!
+            val base = et.onCreateInputConnection(info)!!
+            // Robolectric does not route key events from an InputConnection into the EditText: Backspace is done as the delete it stands for
+            ic = object : android.view.inputmethod.InputConnectionWrapper(base, true) {
+                override fun sendKeyEvent(event: android.view.KeyEvent): Boolean {
+                    if (event.keyCode == android.view.KeyEvent.KEYCODE_DEL && event.action == android.view.KeyEvent.ACTION_DOWN) return deleteSurroundingText(1, 0)
+                    return true
+                }
+            }
             presenter = KeyboardPresenter(app, { ic }, { host }, { it.run() })
             presenter.view = view
             presenter.startInput(info)
