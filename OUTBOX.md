@@ -66,3 +66,27 @@
 ## 2026-11-17T01:02:02Z
 > Understood: the same setup as your other repos. That means a public dev signing key committed in the repo, and GitHub builds and signs with it, with no secret and no passphrase. I'm switching to that now. First I'm checking the emulator run.
 <!-- sha:cdd12f89df98 -->
+
+## 2026-11-17T01:17:16Z
+> The first Release is out: GitHub Actions built and signed `swoop-v0.1.0-alpha1`, and the build checked the signature on the exact file it published.
+>
+> https://github.com/tjshea90/Keyboard/releases/tag/swoop-v0.1.0-alpha1
+>
+> **Signing, your way.** I dropped my secret and passphrase idea. Like the Browser repo, the dev key is committed in `signing/dev/` and GitHub signs with it, so no secret is needed. A second Android 10 emulator test passed on a GitHub runner. It installed the app, switched the keyboard on and chose it, showed it in a text field, typed "hi" from real key taps, deleted with Backspace, took a swipe as a glided word, survived the globe key, and logged no crash. That is the first time any of this has run on a real Android.
+>
+> **Install it**
+> 1. Open the Release link on the tablet and tap the `.apk` file.
+> 2. Open the Swoop app, switch the keyboard on and choose it.
+> 3. Keep your old keyboard installed. The globe key switches back.
+>
+> Only install Swoop APKs from this repo's Releases. The signing key is public, so an APK from anywhere else could be signed to look like an update.
+>
+> **To clear this stage (G1)**, paste the Diagnostics numbers here once you've typed on the tablet and phone: Swoop app, Diagnostics, Copy. They hold counters and timings, never what you typed. The Android 16 phone is untested, and I can also run the emulator test on Android 16 if you want.
+>
+> **Still open**
+> - **Wake-ups:** may I set a 2-hourly wake-up that resumes work after a usage cut-off? It costs a little usage each time.
+> - **Next steps:** the tap-typing decoder and word suggestions come next, then LinkMeter translation when we get there.
+> - **Public chat:** the repo is public, so our chat copies in `INBOX.md`/`OUTBOX.md` are public too, and I'll leave them on unless you say to switch them off.
+>
+> The first publish attempt failed once for a reason I couldn't see in the logs. A re-run of the same version went through, and I added error reporting so a repeat would show its reason.
+<!-- sha:39d4255c8ab3 -->
