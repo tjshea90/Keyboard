@@ -40,10 +40,10 @@ class InlineAutocompleteTest {
 
     @Test fun theFallbackReplacesTheLastWordWhenTheKeyboardLostTrackOfItsGlide() {
         val r = url(); r.act { commitGlide("hello") }
-        r.ed.appSetText("hello "); r.sync()                              // the app rewrote the field: the glide is forgotten
+        r.ed.appSetText("go hello "); r.sync()                           // the app rewrote the field: the glide is forgotten
         assertNull(r.c.lastGlide); assertFalse(r.c.swapGlide("hallo"))
         assertTrue(r.c.replaceRecent("hello", "hallo")); r.sync(); r.check()
-        assertEquals("hallo ", r.text); assertEquals("hallo", r.c.lastGlide!!.word)
+        assertEquals("go hallo ", r.text); assertEquals("hallo", r.c.lastGlide!!.word)
     }
 
     @Test fun theFallbackIsVerifiedAndNeverEatsOtherText() {
