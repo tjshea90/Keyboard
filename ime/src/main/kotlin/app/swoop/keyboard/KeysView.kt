@@ -779,12 +779,13 @@ class KeysView(context: Context) : View(context) {
     /** Paging between letters and symbols is the view's own; everything else goes to the listener. */
     private fun emit(key: Key) {
         when (key) {
-            Key.ToSymbols -> { page = Page.SYMBOLS; rebuildRows() }
+            // ?123 on the letters opens the first symbols page; the =\< key there opens the second one and ?123 on the second goes back to the first (the same Key.ToSymbols cycles them, like Gboard)
+            Key.ToSymbols -> { page = if (page == Page.SYMBOLS) Page.SYMBOLS2 else Page.SYMBOLS; rebuildRows() }
             Key.ToLetters -> { page = Page.LETTERS; rebuildRows() }
             else -> {
                 listener?.onKey(key)
-                // Owner, 2026-11-17 (like Gboard): after ONE special character the keyboard goes straight back to the letters (digits stay: they are typed from the number row too; Backspace and Shift change nothing)
-                if (page == Page.SYMBOLS && key is Key.Ch && !(key.text.length == 1 && key.text[0].isDigit())) { page = Page.LETTERS; rebuildRows() }
+                // Owner, 2026-11-17 (like Gboard): after ONE special character the keyboard goes straight back to the letters (digits stay: several are typed in a row; Backspace and Shift change nothing)
+                if (page != Page.LETTERS && key is Key.Ch && !(key.text.length == 1 && key.text[0].isDigit())) { page = Page.LETTERS; rebuildRows() }
             }
         }
     }
