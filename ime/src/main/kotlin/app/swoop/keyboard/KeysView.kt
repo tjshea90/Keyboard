@@ -302,41 +302,93 @@ class KeysView(context: Context) : View(context) {
         drawPopup(c)
     }
 
+    /** The corner radius of a letter key: about a fifth of its width, like the photo. */
+    private fun keyRadius(): Float = Math.max(dp(5f), (pitch() - gapX()) * KEY_R_FRAC)
+
+    /** The two round keys of the photo: ?123 / abc at the left of the bottom row and the action key (Enter) at the right of it. */
+    private fun isPill(k: KeySpec): Boolean {
+        val key = k.key ?: return false
+        return key === Key.Go || ((key === Key.ToSymbols || key === Key.ToLetters) && rows.lastOrNull()?.firstOrNull() === k)
+    }
+
+    /** The small keys of the bottom row (comma, full stop, slash, at sign, .com) are the lighter slate in the photo; letters, digits, symbols and the space bar are the darker one. */
+    private fun isPunctuation(k: KeySpec): Boolean { val t = (k.key as? Key.Ch)?.text ?: return false; return t != " " && rows.lastOrNull()?.contains(k) == true }
+
     private fun drawKey(c: Canvas, k: KeySpec, kb: KeyBox, lit: Boolean, topRow: Boolean) {
         val key = k.key ?: return
-        val r = dp(6f)
         box.set(kb.left, kb.top, kb.right, kb.bottom)
-        val special = key !is Key.Ch || k.label.length > 1
-        fill.color = when {
-            lit -> cLit
-            key === Key.Go -> cAccent
-            key === Key.Shift && shift == ShiftState.LOCK -> cAccent
-            key === Key.Shift && shift == ShiftState.ONCE -> cMuted
-            special -> cSpecial
+        val h = box.height()
+        val pill = isPill(k)
+        val r = if (pill) h / 2f else keyRadius()
+        val locked = key === Key.Shift && shift == ShiftState.LOCK
+        val pale = pill && key !== Key.Go
+        val bg = when {
+            key === Key.Go || locked -> cAccent
+            pale -> cPale
+            key === Key.Backspace || key === Key.Shift || key === Key.ToSymbols || key === Key.ToLetters || key === Key.NextKeyboard || isPunctuation(k) -> cSpecial
             else -> cKey
         }
+        fill.color = if (!lit) bg else if (bg == cAccent || bg == cPale) lighten(bg, 0.3f) else cLit
         c.drawRoundRect(box, r, r, fill)
-        text.color = if (key === Key.Go || (key === Key.Shift && shift == ShiftState.LOCK)) cAccentText else cText
-        if (key === Key.NextKeyboard) { drawGlobe(c, box); return }
-        val label = if (key === Key.Shift) (if (shift == ShiftState.LOCK) "⇪" else "⇧") else k.label
+        val ink = if (bg == cAccent) cAccentText else if (bg == cPale) cPaleText else cText
+        text.color = ink
+        if (key === Key.NextKeyboard) { drawGlobe(c, box, ink); return }
+        if (key === Key.Shift) { drawShift(c, box, ink, shift != ShiftState.OFF, locked); return }
+        if (key === Key.Backspace) { drawBackspace(c, box, ink); return }
+        if (key === Key.Go && k.label == "⏎") { drawEnter(c, box, ink); return }
         if (hideLetters && isLetter(k)) return                                  // a blank key: it is still there and still types
-        text.textSize = (kb.bottom - kb.top) * (if (label.length > 1) 0.30f else if (topRow && ImeLayout.hasNumberRow(rows)) 0.52f else 0.44f)
+        val t = (key as? Key.Ch)?.text
+        if (t == " " && kind != FieldKind.NUMBER && kind != FieldKind.PHONE) return          // the space bar is blank, like the photo
+        val label = if (key === Key.ToLetters) "ABC" else k.label
+        text.textSize = h * (if (label.length > 1) 0.30f else if (topRow && ImeLayout.hasNumberRow(rows)) 0.52f else 0.44f)
         val fm = text.fontMetrics
-        c.drawText(label, box.centerX(), box.centerY() - (fm.ascent + fm.descent) / 2f, text)
+        val low = (t == "." || t == ",") && rows.lastOrNull()?.contains(k) == true      // the photo sets the comma and the full stop low in their keys
+        c.drawText(label, box.centerX(), if (low) box.top + h * 0.80f else box.centerY() - (fm.ascent + fm.descent) / 2f, text)
         if (!numberRow && topRow && page == Page.LETTERS && kind != FieldKind.NUMBER && kind != FieldKind.PHONE && label.length == 1) {   // without the number row: the digit a held top-row letter types, small in its corner
             val d = TOP_ROW.indexOf(label.lowercase())
             if (d >= 0) {
-                text.color = cMuted; text.textSize = (kb.bottom - kb.top) * 0.22f
+                text.color = cMuted; text.textSize = h * 0.22f
                 val hf = text.fontMetrics
                 c.drawText(DIGITS.substring(d, d + 1), box.right - dp(7f), box.top + dp(3f) - hf.ascent, text)
             }
         }
     }
 
+    private val ico = Path()
+    /** Shift: an arrow pointing up, drawn (no font symbol: the tablet's fonts may lack one): an outline while off, solid while on, with a bar under it when locked. */
+    private fun drawShift(c: Canvas, b: RectF, ink: Int, solid: Boolean, locked: Boolean) {
+        val a = Math.min(b.height() * 0.21f, b.width() * 0.24f)
+        val cx = b.centerX(); val cy = b.centerY() - (if (locked) a * 0.12f else 0f)
+        ico.reset()
+        ico.moveTo(cx, cy - a); ico.lineTo(cx + a, cy + a * 0.05f); ico.lineTo(cx + a * 0.45f, cy + a * 0.05f); ico.lineTo(cx + a * 0.45f, cy + a * 0.85f)
+        ico.lineTo(cx - a * 0.45f, cy + a * 0.85f); ico.lineTo(cx - a * 0.45f, cy + a * 0.05f); ico.lineTo(cx - a, cy + a * 0.05f); ico.close()
+        if (solid) { fill.color = ink; c.drawPath(ico, fill) } else { line.color = ink; line.strokeWidth = dp(2f); c.drawPath(ico, line) }
+        if (locked) { fill.color = ink; box2.set(cx - a * 0.45f, cy + a * 1.05f, cx + a * 0.45f, cy + a * 1.25f); c.drawRect(box2, fill) }
+    }
+
+    /** Backspace: a tag pointing left with a cross in it (an outline, like the photo). */
+    private fun drawBackspace(c: Canvas, b: RectF, ink: Int) {
+        val w = Math.min(b.width() * 0.46f, b.height() * 0.66f); val hh = w * 0.72f
+        val l = b.centerX() - w / 2f; val rt = b.centerX() + w / 2f; val tp = b.centerY() - hh / 2f; val bt = b.centerY() + hh / 2f
+        ico.reset(); ico.moveTo(l + w * 0.30f, tp); ico.lineTo(rt, tp); ico.lineTo(rt, bt); ico.lineTo(l + w * 0.30f, bt); ico.lineTo(l, b.centerY()); ico.close()
+        line.color = ink; line.strokeWidth = dp(2f); c.drawPath(ico, line)
+        val x0 = l + w * 0.6f; val d = hh * 0.17f
+        c.drawLine(x0 - d, b.centerY() - d, x0 + d, b.centerY() + d, line); c.drawLine(x0 - d, b.centerY() + d, x0 + d, b.centerY() - d, line)
+    }
+
+    /** Enter: the return arrow (down, then left with a head), as in the photo. */
+    private fun drawEnter(c: Canvas, b: RectF, ink: Int) {
+        val a = Math.min(b.height() * 0.19f, b.width() * 0.19f)
+        val cx = b.centerX(); val cy = b.centerY()
+        line.color = ink; line.strokeWidth = dp(2.4f)
+        ico.reset(); ico.moveTo(cx + a, cy - a * 0.9f); ico.lineTo(cx + a, cy + a * 0.35f); ico.lineTo(cx - a, cy + a * 0.35f); c.drawPath(ico, line)
+        ico.reset(); ico.moveTo(cx - a * 0.3f, cy - a * 0.35f); ico.lineTo(cx - a, cy + a * 0.35f); ico.lineTo(cx - a * 0.3f, cy + a * 1.05f); c.drawPath(ico, line)
+    }
+
     /** The globe on the next-keyboard key: a circle, an equator and two meridians (no font symbol: the tablet's fonts may lack one). */
-    private fun drawGlobe(c: Canvas, b: RectF) {
+    private fun drawGlobe(c: Canvas, b: RectF, ink: Int) {
         val r = Math.min(b.width(), b.height()) * 0.24f
-        line.color = cText; line.strokeWidth = dp(1.6f)
+        line.color = ink; line.strokeWidth = dp(1.6f)
         c.drawCircle(b.centerX(), b.centerY(), r, line)
         c.drawLine(b.centerX() - r, b.centerY(), b.centerX() + r, b.centerY(), line)
         box2.set(b.centerX() - r * 0.45f, b.centerY() - r, b.centerX() + r * 0.45f, b.centerY() + r); c.drawOval(box2, line)
