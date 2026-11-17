@@ -36,7 +36,7 @@ class KeyboardPresenterTest {
     private val dp get() = app.resources.displayMetrics.density
     private val list = LexiconFile.build(listOf("for" to 900L, "fir" to 300L, "fur" to 100L, "hello" to 500L, "world" to 800L, "there" to 700L).map { LexiconFile.Entry(it.first, it.second) }, emptyList())
 
-    private inner class Rig(inputType: Int = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_MULTI_LINE, imeOptions: Int = 0, glidePref: Boolean = true, suggest: Boolean = false, autoFix: Boolean = false, words: ByteArray = list, extra: (android.content.SharedPreferences.Editor) -> Unit = {}) {
+    private inner class Rig(inputType: Int = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_MULTI_LINE, imeOptions: Int = 0, glidePref: Boolean = true, suggest: Boolean = false, autoFix: Boolean = false, words: ByteArray = list, val inline: Boolean = false, extra: (android.content.SharedPreferences.Editor) -> Unit = {}) {
         val act: Activity = Robolectric.buildActivity(Activity::class.java).setup().get()
         val et = EditText(act)
         val info = EditorInfo()
@@ -53,11 +53,18 @@ class KeyboardPresenterTest {
             info.inputType = inputType; info.imeOptions = imeOptions
             val base = et.onCreateInputConnection(info)!!
             // Robolectric does not route key events from an InputConnection into the EditText: Backspace is done as the delete it stands for
+            // [inline]: an editor in the keyboard's OWN process on Android 10 runs the calls inline, so its report of the new cursor position arrives INSIDE the edit call (before the call returns to the keyboard)
             ic = object : android.view.inputmethod.InputConnectionWrapper(base, true) {
                 override fun sendKeyEvent(event: android.view.KeyEvent): Boolean {
                     if (event.keyCode == android.view.KeyEvent.KEYCODE_DEL && event.action == android.view.KeyEvent.ACTION_DOWN) return deleteSurroundingText(1, 0)
                     return true
                 }
+                override fun commitText(text: CharSequence?, newCursorPosition: Int): Boolean = super.commitText(text, newCursorPosition).also { inlineReport() }
+                override fun setComposingText(text: CharSequence?, newCursorPosition: Int): Boolean = super.setComposingText(text, newCursorPosition).also { inlineReport() }
+                override fun finishComposingText(): Boolean = super.finishComposingText().also { inlineReport() }
+                override fun deleteSurroundingText(beforeLength: Int, afterLength: Int): Boolean = super.deleteSurroundingText(beforeLength, afterLength).also { inlineReport() }
+                override fun setSelection(start: Int, end: Int): Boolean = super.setSelection(start, end).also { inlineReport() }
+                override fun endBatchEdit(): Boolean = super.endBatchEdit().also { inlineReport() }
             }
             presenter = KeyboardPresenter(app, { ic }, { host }, { it.run() })
             presenter.view = view
@@ -69,7 +76,8 @@ class KeyboardPresenterTest {
             view.layout(0, 0, view.measuredWidth, view.measuredHeight)
         }
         fun report() { presenter.onUpdateSelection(et.selectionStart, et.selectionEnd, BaseInputConnection.getComposingSpanStart(et.text), BaseInputConnection.getComposingSpanEnd(et.text)) }
-        fun ev(a: Int, x: Float, y: Float) { val t = SystemClock.uptimeMillis(); view.dispatchTouchEvent(MotionEvent.obtain(t, t, a, x, y, 0)); report() }
+        private fun inlineReport() { if (inline) report() }
+        fun ev(a: Int, x: Float, y: Float) { val t = SystemClock.uptimeMillis(); view.dispatchTouchEvent(MotionEvent.obtain(t, t, a, x, y, 0)); if (!inline) report() }
         fun tap(label: String) { val (x, y) = view.centerOf(label)!!; ev(MotionEvent.ACTION_DOWN, x, y); ev(MotionEvent.ACTION_UP, x, y) }
         /** The finger draws [word] over the keys (straight lines between the letters' centres, a point every few pixels) and lifts. */
         fun glide(word: String) {
@@ -267,6 +275,31 @@ class KeyboardPresenterTest {
             r.tap("h"); r.tap("i"); r.tap("\u232B"); r.tap("?123"); r.tap("?"); r.tap("a")
             assertEquals("suggest=$suggest", "h? A", r.text)      // (this plain test field has no capital-at-start flag; the real Android 10 emulator printed H?a here: see TASKS Q-SMARTSPACE)
         }
+    }
+
+    /**
+     * Q-SMARTSPACE: on the Android 10 emulator the keyboard typed "H?a" where Android 16 typed "H? A". The field was the keyboard's OWN Setup field (same process): Android 10 runs such an editor's
+     * calls inline, so the editor's report of the new cursor position arrived INSIDE commitText, before the keyboard had noted its own edit; it took the report for somebody else's change, re-read the
+     * text and then counted its own edit a second time (the trace on the emulator showed the text window one character too long after every key).
+     */
+    @Test fun anEditorInTheKeyboardsOwnProcessReportsInsideTheEditCallAndNothingGoesWrong() {
+        val r = Rig(inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_CAP_SENTENCES or InputType.TYPE_TEXT_FLAG_MULTI_LINE, glidePref = true, suggest = true, inline = true)
+        r.tap("h"); r.tap("i"); r.tap("\u232B"); r.tap("?123"); r.tap("?"); r.tap("a")
+        assertEquals("the space after ? and the capital, as on every other Android", "H? A", r.text)
+        r.tap("."); r.tap("space"); r.tap("b")
+        assertEquals("H? A. B", r.text)
+        assertEquals("the keyboard's picture of the text is the text", r.text, r.presenter.controller.before)
+        assertEquals(r.text.length, r.presenter.controller.selStart); assertEquals(r.text.length, r.presenter.controller.selEnd)
+    }
+
+    @Test fun aGlideAndAStripPickWorkInAnEditorThatReportsInsideTheEditCall() {
+        val r = Rig(inline = true); r.glide("for")
+        assertEquals("for ", r.text); assertEquals("for ", r.presenter.controller.before); assertNotNull("the glide can still be replaced from the strip", r.presenter.controller.lastGlide)
+        val cands = r.view.candidatesForTest()
+        val alt = cands.drop(1).firstOrNull() ?: return
+        val (x, y) = r.view.chipCenterForTest(cands.indexOf(alt))!!
+        r.ev(MotionEvent.ACTION_DOWN, x, y); r.ev(MotionEvent.ACTION_UP, x, y)
+        assertEquals("$alt ", r.text); assertEquals("$alt ", r.presenter.controller.before)
     }
 
     @Test fun aLetterAfterPunctuationGetsItsSpaceAndTheSwitchTurnsItOff() {
