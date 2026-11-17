@@ -2,15 +2,21 @@
 
 A small, fast Android keyboard with **glide typing that keeps learning from you**. Built for one old tablet (Android 10 Go, 2 GB RAM, no Google services) and an Android 16 phone, so it is light on purpose: no accounts, no ads, no telemetry, no AI features, no network access at all in the current version.
 
-**Status: early alpha (0.1.x).** It builds and its logic is tested, but it is not yet a daily-driver keyboard. Keep your current keyboard installed and switch back whenever you like (tap the globe key).
+**Status: early alpha (0.2.x).** It builds and its logic is tested, but it is not yet a daily-driver keyboard. Keep your current keyboard installed and switch back whenever you like (tap the globe key).
 
 ## What works today
-- Tap typing and glide typing (slide over the letters; a strip shows other guesses; one Backspace removes the whole glided word).
-- Learns your words, word pairs, corrections and how your thumb lands, only on your device. Export / import of what it learned (including the file the Kestrel browser's keyboard exports).
-- Text, URL, e-mail, number and phone layouts; symbols page; hold a top-row letter for its digit; slide on the space bar to move the cursor; two-thumb typing.
+- Tap typing and glide typing (slide over the letters; a glowing trail follows your finger and a glide starts the moment you move; a strip shows other guesses; one Backspace removes the whole glided word).
+- A number row above the letters at all times.
+- Word suggestions while you tap, with glide typing on or off: completions, the likely next word, and an automatic fix for an obvious typo (Backspace takes it back and the keyboard never changes that word again).
+- It learns you in every app: your words, the words you use together, your corrections, a word you erased and retyped, and where your thumb lands. Only on your device. Export / import of what it learned (including the file the Kestrel browser's keyboard exports), and a Forget button.
+- Options like other keyboards: space after punctuation, double space for a full stop, capital letters after a full stop, capital I, slide on the space bar to move the cursor, key pop-up, vibration, key sound, key height, light / dark / automatic colours and an accent colour.
+- A redesigned settings screen with a live copy of the keyboard that follows every change.
+- Text, URL, e-mail, number and phone layouts; symbols page; two-thumb typing.
 - Learns nothing in password fields or when an app asks for incognito typing.
 - A crash-loop "safe layout" and a globe key, so a bug can never lock you out of typing.
 - Diagnostics screen (numbers only, nothing you typed) with a Copy button.
+
+Not yet: a floating, resizable keyboard (next), translation, emoji, clipboard.
 
 ## Install
 1. Open the latest **Release** of this repository on the device and tap the `.apk` file (allow installs from your browser when Android asks).
