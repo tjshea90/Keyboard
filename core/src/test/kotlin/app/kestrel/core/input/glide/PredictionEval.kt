@@ -170,6 +170,19 @@ object PredictionEval {
         return b.toString()
     }
 
+    /** How often the strip offers a vulgar word UNPROMPTED: the three next-word guesses after each of the 5000 commonest words (the count, and the first 25 cases). */
+    fun vulgarNextGuesses(lex: BinaryLexicon): Pair<Int, List<String>> {
+        val ranked = (0 until lex.size).sortedByDescending { lex.logProb(it) }.take(5000)
+        var hits = 0
+        val shown = ArrayList<String>()
+        for (id in ranked) {
+            val prev = lex.text(id)
+            val words = Suggester.nextWords(lex, null, prev, null, 3).words
+            if (words.any { it.lowercase() in Suggester.VULGAR }) { hits++; if (shown.size < 25) shown.add("$prev -> $words") }
+        }
+        return hits to shown
+    }
+
     /** One realistic slip: 0 a neighbouring key instead of an inner letter, 1 an inner letter left out, 2 an inner letter doubled, 3 two inner letters swapped. Null when the word cannot take that slip. */
     fun slip(w: String, kind: Int, keys: GlideKeys, rnd: Random): String? {
         val n = w.length
@@ -213,18 +226,9 @@ object PredictionEval {
             }
             return
         }
-        if (args.contains("profanity")) {                                                   // does the strip offer a vulgar word unprompted? (the 5000 commonest words as the word before, the three next words)
-            val strong = setOf("fuck", "fucking", "fucked", "fucker", "shit", "shitty", "bitch", "cunt", "whore", "slut", "nigger", "nigga", "faggot", "fag", "retard", "retarded", "bastard", "dick", "cock", "pussy", "asshole", "piss")
-            val ranked = (0 until lex.size).sortedByDescending { lex.logProb(it) }.take(5000)
-            var hits = 0
-            val shown = ArrayList<String>()
-            for (id in ranked) {
-                val prev = lex.text(id)
-                val words = Suggester.nextWords(lex, null, prev, null, 3).words
-                val bad = words.filter { it.lowercase() in strong }
-                if (bad.isNotEmpty()) { hits++; if (shown.size < 25) shown.add("$prev -> $words") }
-            }
-            println("vulgar word among the three next-word guesses after the 5000 commonest words: $hits of ${ranked.size}")
+        if (args.contains("profanity")) {
+            val (hits, shown) = vulgarNextGuesses(lex)
+            println("vulgar word among the three next-word guesses after the 5000 commonest words: $hits of 5000")
             for (x in shown) println("  $x")
             return
         }
