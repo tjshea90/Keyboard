@@ -83,6 +83,27 @@ All downloads go into NEW EMPTY folders OUTSIDE the repository; only data is rea
 The tool is `tools/src/main/kotlin/app/kestrel/tools/GlideLexiconCompiler.kt`; the file format and its reader are `core/.../input/glide/Lexicon.kt` (`LexiconFile`), tested together in `LexiconFileTest`.
 A word in `extra-words.txt` gets AT LEAST its count; one that is not in the frequency list is added. Words are lowercase a-z (an apostrophe is kept for typing and dropped for the finger's path).
 
+## Casual pairs and shorthand (2026-11-17, owner request 17: "optimize ... word prediction accuracy")
+
+The pair list was only the 242 000 Google-Books pairs of SymSpell (book English): after "on my" the keyboard offered "own", "life", "products". Everyday sentences were counted instead of guessed:
+
+1. `.github/workflows/count-pairs.yml` (dispatch only) downloads the Tatoeba English sentence export on a CI runner (`downloads.tatoeba.org/exports/per_language/eng/eng_sentences.tsv.bz2`,
+   CC BY 2.0 FR) and runs `tools/glide/count_pairs.py`: pairs of neighbouring words inside one stretch of plain words (a comma, full stop, quote or digit ends the stretch: the keyboard has no word
+   before it either, `InputController.twoBefore`), only words of the shipped list, sentences with the names Tom / Mary / John ... left out (26 % of the export: they would make "tom" follow
+   everything), one sentence in 40 held back as a clean test set. Output: `pairs_tatoeba.txt` ("first second count", counts >= 3). 1 516 795 sentences, 11.3 million words, 271 427 pairs kept.
+   The text stays on the runner; only the counts are an artifact. (SODA dialogues, CC BY 4.0, were counted the same way and tried: they add nothing on human-written text, so they are NOT used.)
+2. `gradlew :tools:glideLexicon --args="--base ime/src/main/assets/glide/en.klx --merge-pairs pairs.txt --merge-max-weight 0.55 --merge-k 30 --add-words tools/glide/texting-words.txt --out en.klx"`:
+   `LexiconFile.mergePairs` mixes the two pair sources per first word, chance = (1 - w) * books + w * sentences with w = 0.55 * n / (n + 30) (n = how often the sentences saw words after it: a word they
+   hardly saw keeps the books' pairs). Only pairs seen at least 6 times (143 362 of them) go in: 3, 6 and 12 differ by 0.3 point of keystrokes saved, 0.6 MB apart. `--add-words` adds the shorthand of
+   `tools/glide/texting-words.txt` (58 new words, 8 raised: pls, thx, omw, idk, brb, tbh ...; an unknown short string is otherwise "corrected" into another word: thx -> th, brb -> barb, idk -> id).
+3. `Suggester.CONTEXT_MIX` 0.6 -> 0.75 (with more pairs the word before is worth more; 0.9 gains a little more on the yardsticks but trusts a pair table that has no back-off), doubled letters
+   (`MISSING_DOUBLE` / `EXTRA_DOUBLE` 2.1: adress, realy, tomorow) cost less than other missing / extra letters. `DEEP_TAIL` stays -16: lowering it fixes 3 to 6 more list-misspellings of 109
+   (untill, wierd, publically ...) but "corrects" real rare words (bloat, trowel, farrier, tarn): a wrong word put in by a space is worse than a typo left.
+
+Measured with `PredictionEval` (research/LEARNING_RESULTS.md): the file grows from 3.64 MB to about 4.0 MB; keystrokes saved on the strip 46.2 % -> 51.8 % (held-out Tatoeba sentences 43.7 % -> 47.7 %),
+next word in the strip's three places 24.2 % -> 28.8 %, the right word on the strip after two letters 63.4 % -> 75.9 %, simulated gliding of running text with a sloppy thumb 91.7 % -> 92.8 % first guess,
+typos put right 90.2 % -> 93.0 %, misspellings put right 80 % -> 83 % (of 109 common ones), shorthand changed by a space 25 of 88 -> 0, no word typed right is ever changed.
+
 ## How it was measured
 
 Simulated glides (`GestureSim`, a made-up thumb: calm / normal / sloppy / bad scatter) over the real key layout, decoded against the shipped list: `GlideEval` (top-1 / top-3) and `RareWordEval`
