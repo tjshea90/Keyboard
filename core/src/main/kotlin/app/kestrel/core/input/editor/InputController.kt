@@ -48,6 +48,8 @@ class InputController(private val ed: EditorBridge, val stats: InputStats = Inpu
 
     /** Options the settings switch (N7). Off by default here; the keyboard turns them on from its settings. */
     var autoCapsOn = true
+    /** Capitalise after sentence punctuation even in a text box that did not ask for it (the default; Settings can turn it off). */
+    var sentenceCaps = true
     /** A letter typed right after punctuation that touches the word before it ("hello.world") gets a space first ("hello. world"). */
     var autoSpace = false
 
@@ -73,8 +75,15 @@ class InputController(private val ed: EditorBridge, val stats: InputStats = Inpu
 
     /** The field wants capitals at the cursor (the start of a sentence, a word, or always, as its flags say): Shift goes on for the next letter. Never switches caps lock off. */
     fun autoCaps() {
-        if (!autoCapsOn || field.capsFlags == 0 || shift == ShiftState.LOCK) return
-        if (ed.cursorCapsMode(field.capsFlags) != 0) { if (shift == ShiftState.OFF) shift = ShiftState.ONCE } else if (shift == ShiftState.ONCE && autoShift) shift = ShiftState.OFF
+        if (!autoCapsOn || shift == ShiftState.LOCK) return
+        var flags = field.capsFlags
+        // Owner, 2026-11-17: capitalise the first letter after . ! ? BY DEFAULT, also in a text box that did not ask for it. Such a box gets the SENTENCE rule only once there is text
+        // before the cursor (an empty box stays lowercase, the app did not ask); e-mail, URL, password and number fields never.
+        var extra = false
+        if (flags == 0 && field.kind == FieldKind.TEXT && sentenceCaps && before.isNotBlank()) { flags = CapFlags.SENTENCES; extra = true }
+        if (flags == 0) return
+        if (extra && !before.trimEnd().let { it.endsWith(".") || it.endsWith("!") || it.endsWith("?") || it.endsWith("\u2026") || it.endsWith("\n") } ) { if (shift == ShiftState.ONCE && autoShift) shift = ShiftState.OFF; autoShift = shift == ShiftState.ONCE; return }
+        if (ed.cursorCapsMode(flags) != 0) { if (shift == ShiftState.OFF) shift = ShiftState.ONCE } else if (shift == ShiftState.ONCE && autoShift) shift = ShiftState.OFF
         autoShift = shift == ShiftState.ONCE
     }
     private var autoShift = false
