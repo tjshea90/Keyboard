@@ -5,6 +5,7 @@ import android.os.Looper
 import android.os.SystemClock
 import android.view.MotionEvent
 import android.view.View
+import app.kestrel.core.input.ImeLayout
 import app.kestrel.core.input.Key
 import app.kestrel.core.input.Page
 import app.kestrel.core.input.editor.FieldKind
@@ -127,10 +128,10 @@ class KeysViewTest {
     @Test fun theSecondSymbolsPageIsReachedFromTheFirstAndTheSameKeyGoesBackAndOneSymbolThereReturnsToTheLetters() {
         val (v, r) = view()
         tap(v, at(v, "?123")); assertEquals(Page.SYMBOLS, v.pageForTest())
-        tap(v, at(v, app.kestrel.core.input.ImeLayout.MORE_SYMBOLS)); assertEquals(Page.SYMBOLS2, v.pageForTest()); assertTrue(r.keys.isEmpty())
+        tap(v, at(v, ImeLayout.MORE_SYMBOLS)); assertEquals(Page.SYMBOLS2, v.pageForTest()); assertTrue(r.keys.isEmpty())
         tap(v, at(v, "?123")); assertEquals("?123 on the second page goes back to the first", Page.SYMBOLS, v.pageForTest())
-        tap(v, at(v, app.kestrel.core.input.ImeLayout.MORE_SYMBOLS)); tap(v, at(v, "\u20AC")); assertEquals(listOf("\u20AC"), r.keys); assertEquals("one symbol from the second page and the letters are back", Page.LETTERS, v.pageForTest())
-        tap(v, at(v, "?123")); tap(v, at(v, app.kestrel.core.input.ImeLayout.MORE_SYMBOLS)); tap(v, at(v, "abc")); assertEquals("abc leaves the second page too", Page.LETTERS, v.pageForTest())
+        tap(v, at(v, ImeLayout.MORE_SYMBOLS)); tap(v, at(v, "\u20AC")); assertEquals(listOf("\u20AC"), r.keys); assertEquals("one symbol from the second page and the letters are back", Page.LETTERS, v.pageForTest())
+        tap(v, at(v, "?123")); tap(v, at(v, ImeLayout.MORE_SYMBOLS)); tap(v, at(v, "abc")); assertEquals("abc leaves the second page too", Page.LETTERS, v.pageForTest())
     }
 
     @Test fun afterOneSpecialCharacterTheKeyboardGoesStraightBackToTheLetters() {      // M5, like Gboard
