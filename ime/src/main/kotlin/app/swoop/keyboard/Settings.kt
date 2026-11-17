@@ -16,6 +16,13 @@ object Prefs {
     const val AUTOSPACE = "auto_space_punct"
     const val DOUBLESPACE = "double_space_period"
     const val SPACESLIDE = "space_slide"
+    // floating keyboard
+    const val FLOAT_ON = "float_enabled"
+    const val FLOATING = "floating"
+    const val FLOAT_X = "float_x"
+    const val FLOAT_Y = "float_y"
+    const val FLOAT_W = "float_w_dp"
+    const val FLOAT_H = "float_h_x100"
     // learning
     const val LEARN = "learn_typing"
     // look
@@ -58,6 +65,18 @@ class Settings(private val p: SharedPreferences) {
     val keyPreview get() = b(Prefs.PREVIEW, true)
     val haptics get() = b(Prefs.HAPTIC, true)
     val sound get() = b(Prefs.SOUND, false)
+    /** The neon bar and floating are available (Settings > Layout and look). */
+    val floatEnabled get() = b(Prefs.FLOAT_ON, true)
+    /** The keyboard was floating when it last closed. */
+    val floating get() = b(Prefs.FLOATING, false)
+    /** Where the floating keyboard stands: 0..1000 of the free room across and down; its width in dp (0 = the default); the height multiplier x100 (100 = normal). */
+    val floatX get() = i(Prefs.FLOAT_X, 500)
+    val floatY get() = i(Prefs.FLOAT_Y, 800)
+    val floatWDp get() = i(Prefs.FLOAT_W, 0)
+    val floatHMul get() = i(Prefs.FLOAT_H, 100) / 100f
+    fun saveFloat(floating: Boolean, x: Int, y: Int, wDp: Int, hMul: Float) {
+        p.edit().putBoolean(Prefs.FLOATING, floating).putInt(Prefs.FLOAT_X, x).putInt(Prefs.FLOAT_Y, y).putInt(Prefs.FLOAT_W, wDp).putInt(Prefs.FLOAT_H, Math.round(hMul * 100f)).apply()
+    }
 
     val keyHeightScale get() = KEY_HEIGHT_SCALE[keyHeight]
     val accentColor get() = ACCENTS[accent].color
