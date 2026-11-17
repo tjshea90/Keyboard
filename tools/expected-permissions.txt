@@ -1,2 +1,3 @@
-# no permissions yet. INTERNET is added with KB-601 (translation) together with the 9.2 guard rails, and ONLY then.
-# One <android.permission.NAME> per line; tools/verify-apk.sh compares the built APK against this list exactly.
+# INTERNET only, for the translate package (KB-601, plan 9.2). Never add another one without the owner's decision.
+# One android.permission.NAME per line (the name aapt2 prints, no angle brackets); tools/verify-apk.sh compares the built APK against this list exactly.
+android.permission.INTERNET

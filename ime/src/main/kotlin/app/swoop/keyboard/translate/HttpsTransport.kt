@@ -23,7 +23,9 @@ import java.net.UnknownHostException
  */
 class HttpsTransport internal constructor(
     /** Tests only: maps the https address to a local fake server AFTER the allowlist check. Null in the app. */
-    private val rewrite: ((String) -> String)?
+    private val rewrite: ((String) -> String)?,
+    private val connectMs: Int = CONNECT_MS,
+    private val readMs: Int = READ_MS
 ) : Http {
     constructor() : this(null)
 
@@ -36,8 +38,8 @@ class HttpsTransport internal constructor(
         try {
             c = URL(target).openConnection() as HttpURLConnection
             current = c
-            c.connectTimeout = CONNECT_MS
-            c.readTimeout = READ_MS
+            c.connectTimeout = connectMs
+            c.readTimeout = readMs
             c.instanceFollowRedirects = false
             c.useCaches = false
             c.defaultUseCaches = false
@@ -72,12 +74,12 @@ class HttpsTransport internal constructor(
             throw TransportException(TransportException.Kind.OTHER, e.javaClass.simpleName)
         } finally {
             current = null
-            try { c?.disconnect() } catch (_: RuntimeException) { }
+            try { c?.disconnect() } catch (e: RuntimeException) { }
         }
     }
 
     override fun abort() {
-        try { current?.disconnect() } catch (_: RuntimeException) { }
+        try { current?.disconnect() } catch (e: RuntimeException) { }
     }
 
     private fun read(stream: InputStream): String {

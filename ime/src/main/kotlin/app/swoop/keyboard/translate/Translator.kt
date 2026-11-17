@@ -43,7 +43,7 @@ class Translator internal constructor(private val http: Http, log: TranslateLog?
         http.abort() // an older request still on the wire is stale now
         pool.execute {
             if (latest.get() != id) return@execute
-            var result: TranslateResult = try {
+            val result: TranslateResult = try {
                 engine.translate(text, way) { latest.get() != id }
             } catch (e: RuntimeException) { // an escape from this thread would end the app
                 TranslateResult.failed("The text could not be translated.", false, "", ErrorCode.UNEXPECTED)
