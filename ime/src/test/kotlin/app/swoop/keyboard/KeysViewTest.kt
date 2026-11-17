@@ -124,6 +124,15 @@ class KeysViewTest {
         tap(v, at(v, "abc")); assertEquals(Page.LETTERS, v.pageForTest()); assertTrue("the paging keys are not reported", r.keys.isEmpty())
     }
 
+    @Test fun theSecondSymbolsPageIsReachedFromTheFirstAndTheSameKeyGoesBackAndOneSymbolThereReturnsToTheLetters() {
+        val (v, r) = view()
+        tap(v, at(v, "?123")); assertEquals(Page.SYMBOLS, v.pageForTest())
+        tap(v, at(v, app.kestrel.core.input.ImeLayout.MORE_SYMBOLS)); assertEquals(Page.SYMBOLS2, v.pageForTest()); assertTrue(r.keys.isEmpty())
+        tap(v, at(v, "?123")); assertEquals("?123 on the second page goes back to the first", Page.SYMBOLS, v.pageForTest())
+        tap(v, at(v, app.kestrel.core.input.ImeLayout.MORE_SYMBOLS)); tap(v, at(v, "\u20AC")); assertEquals(listOf("\u20AC"), r.keys); assertEquals("one symbol from the second page and the letters are back", Page.LETTERS, v.pageForTest())
+        tap(v, at(v, "?123")); tap(v, at(v, app.kestrel.core.input.ImeLayout.MORE_SYMBOLS)); tap(v, at(v, "abc")); assertEquals("abc leaves the second page too", Page.LETTERS, v.pageForTest())
+    }
+
     @Test fun afterOneSpecialCharacterTheKeyboardGoesStraightBackToTheLetters() {      // M5, like Gboard
         val (v, r) = view()
         tap(v, at(v, "?123")); assertEquals(Page.SYMBOLS, v.pageForTest())
@@ -181,11 +190,13 @@ class KeysViewTest {
     }
 
     // ------------------------------------------------------------------ hold, bubble, slide
-    @Test fun theNumberRowIsOnTopOfTheLettersAndTypesDigits() {
-        val (v, r) = view(); assertTrue("digits above the letters", at(v, "5").second < at(v, "q").second)
+    private fun relayout(v: KeysView, w: Int = 564) { v.measure(View.MeasureSpec.makeMeasureSpec((w * dp).toInt(), View.MeasureSpec.EXACTLY), View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED)); v.layout(0, 0, v.measuredWidth, v.measuredHeight) }
+    @Test fun withoutTheNumberRowTheLettersAreOnTopLikeThePhoto() { val (v, _) = view(); assertNull("no digit keys on the letters page by default", v.centerOf("5")); assertTrue("q is on the first row", at(v, "q").second < at(v, "a").second) }
+    @Test fun theNumberRowWhenSwitchedOnIsOnTopOfTheLettersAndTypesDigits() {
+        val (v, r) = view(); v.numberRow = true; relayout(v); assertTrue("digits above the letters", at(v, "5").second < at(v, "q").second)
         for (d in "1234567890") tap(v, at(v, d.toString())); assertEquals("1234567890", r.keys.joinToString(""))
     }
-    @Test fun withTheNumberRowANormalHoldOnALetterIsJustTheLetter() { val (v, r) = view(); val (x, y) = at(v, "e"); down(v, x, y); advance(KeysView.HOLD_MS + 50); up(v, x, y); assertEquals(listOf("e"), r.keys) }
+    @Test fun withTheNumberRowANormalHoldOnALetterIsJustTheLetter() { val (v, r) = view(); v.numberRow = true; relayout(v); val (x, y) = at(v, "e"); down(v, x, y); advance(KeysView.HOLD_MS + 50); up(v, x, y); assertEquals(listOf("e"), r.keys) }
     @Test fun withoutTheNumberRowHeldTopRowLetterTypesItsDigitAndShowsItInTheBubble() {
         val (v, r) = view(); v.numberRow = false
         v.measure(View.MeasureSpec.makeMeasureSpec((564 * dp).toInt(), View.MeasureSpec.EXACTLY), View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED)); v.layout(0, 0, v.measuredWidth, v.measuredHeight)
