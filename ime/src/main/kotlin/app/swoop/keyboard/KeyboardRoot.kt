@@ -138,6 +138,8 @@ class KeyboardRoot(context: Context) : FrameLayout(context), GripBar.Host {
     /** The neon bar and floating are on (Settings). */
     var floatEnabled = true; set(v) { field = v; grip.visibility = if (v) View.VISIBLE else View.GONE; if (!v && floating) setFloating(false); requestLayout() }
     var floating = false; private set
+    /** The copy in the settings screen: shows the bar but never floats. */
+    var previewOnly = false
     private var posX = 500; private var posY = 800            // 0..1000 of the free room
     private var wDp = 0f                                        // 0 = the default width for this screen
     private var hMul = 1f
@@ -171,7 +173,7 @@ class KeyboardRoot(context: Context) : FrameLayout(context), GripBar.Host {
         grip.accent = st.accentColor
         posX = st.floatX; posY = st.floatY; wDp = st.floatWDp.toFloat(); hMul = FloatingMath.clampHeightMul(st.floatHMul)
         floatEnabled = st.floatEnabled && !safe
-        val want = floatEnabled && st.floating
+        val want = floatEnabled && st.floating && !previewOnly
         if (want != floating) setFloating(want, save = false) else applyMode()
     }
 
@@ -185,7 +187,7 @@ class KeyboardRoot(context: Context) : FrameLayout(context), GripBar.Host {
     private fun panelWidthPx(): Int = if (!floating) ViewGroup.LayoutParams.MATCH_PARENT else Math.round(FloatingMath.clampWidthDp(if (wDp > 0f) wDp else FloatingMath.defaultWidthDp(screenW() / d), screenW() / d) * d)
 
     private fun setFloating(on: Boolean, save: Boolean = true) {
-        if (floating == on) return
+        if (floating == on || (on && previewOnly)) return
         floating = on
         applyMode()
         if (save) save()

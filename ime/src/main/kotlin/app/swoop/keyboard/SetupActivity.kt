@@ -67,7 +67,7 @@ class SetupActivity : Activity() {
         col.addView(u.sectionTitle("Try it"))
         val tryCard = u.card()
         tryCard.addView(u.note("This is the real keyboard, drawn with your settings. Tap, slide over the letters to see the trail, and change anything below to watch it change here."))
-        val root = KeyboardRoot(this).also { r -> r.keys.setGlideEnabled(true); r.keys.setField(FieldKind.TEXT, "⏎"); r.keys.applyOptions(st) }
+        val root = KeyboardRoot(this).also { r -> r.previewOnly = true; r.keys.setGlideEnabled(true); r.keys.setField(FieldKind.TEXT, "⏎"); r.applySettings(st) }
         preview = root
         tryCard.addView(root, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { leftMargin = u.dp(6f); rightMargin = u.dp(6f); bottomMargin = u.dp(6f) })
         with(u) {
@@ -115,6 +115,7 @@ class SetupActivity : Activity() {
         val look = u.card()
         with(u) {
             look.row(switchRow("Number row", "Keep the digits 1 to 0 above the letters at all times.", st.numberRow) { change(Prefs.NUMBERROW, it) })
+            look.row(switchRow("Floating keyboard", "Shows a glowing bar on top of the keyboard. Press and hold it, then drag, to lift the keyboard off the bottom and move it anywhere. Drag a corner to resize it; double-tap the bar to dock it again.", st.floatEnabled) { change(Prefs.FLOAT_ON, it) })
             look.row(choiceRow("Key height", null, Settings.KEY_HEIGHTS, st.keyHeight) { change(Prefs.KEYHEIGHT, it) })
             look.row(choiceRow("Colours", "Automatic follows your phone's light or dark setting.", Settings.THEMES, st.theme) { change(Prefs.THEME, it, rebuild = true) })
             look.row(accentRow("Accent colour", "The glide trail, the lit keys and this screen.", Settings.ACCENTS, st.accent) { change(Prefs.ACCENT, it, rebuild = true) })
@@ -161,8 +162,8 @@ class SetupActivity : Activity() {
         refreshState(); refreshLearned()
     }
 
-    private fun change(key: String, v: Boolean) { st.set(key, v); preview?.keys?.applyOptions(st); if (key == Prefs.GLIDE) preview?.keys?.setGlideEnabled(true) }
-    private fun change(key: String, v: Int, rebuild: Boolean = false) { st.set(key, v); if (rebuild) build() else preview?.keys?.applyOptions(st) }
+    private fun change(key: String, v: Boolean) { st.set(key, v); preview?.applySettings(st); if (key == Prefs.GLIDE) preview?.keys?.setGlideEnabled(true) }
+    private fun change(key: String, v: Int, rebuild: Boolean = false) { st.set(key, v); if (rebuild) build() else preview?.applySettings(st) }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         if (!flow.onResult(requestCode, resultCode, data)) super.onActivityResult(requestCode, resultCode, data)
