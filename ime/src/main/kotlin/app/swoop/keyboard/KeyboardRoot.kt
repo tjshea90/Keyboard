@@ -246,7 +246,7 @@ class KeyboardRoot(context: Context) : FrameLayout(context), GripBar.Host {
             }
             ins
         }
-        keys.onPaletteChanged = { panel.background = panelBackground() }
+        keys.onPaletteChanged = { panel.background = panelBackground(); background = rootBackground() }
         applyMode()
     }
 
@@ -301,6 +301,12 @@ class KeyboardRoot(context: Context) : FrameLayout(context), GripBar.Host {
         if (floating) GradientDrawable().apply { setColor(keys.backgroundColor); cornerRadius = 16 * d; setStroke((2 * d).toInt(), grip.accent) }
         else android.graphics.drawable.ColorDrawable(keys.backgroundColor)
 
+    /**
+     * The window behind the panel. Docked and squeezed, the keyboard window is still as wide as the screen: the strips beside the narrower panel are in the keyboard's colour too (they showed the keyboard WINDOW's own
+     * background, white on a phone in day mode). Floating, the window is the whole screen and must stay transparent: the app shows around the panel.
+     */
+    private fun rootBackground(): android.graphics.drawable.Drawable? = if (floating) null else android.graphics.drawable.ColorDrawable(keys.backgroundColor)
+
     /** Docked: full width at the bottom. Floating: the chosen width, the chosen row height, at the saved position, in a neon frame. */
     private fun applyMode() {
         grip.floating = floating
@@ -308,6 +314,7 @@ class KeyboardRoot(context: Context) : FrameLayout(context), GripBar.Host {
         val f = frame()
         panel.setPadding(f + (if (floating) 0 else navLeft), f / 2, f + (if (floating) 0 else navRight), f + (if (floating) 0 else navBottom))
         panel.background = panelBackground()
+        background = rootBackground()
         panel.elevation = if (floating) 12 * d else 0f
         minimumHeight = if (floating) screenH() else 0
         requestLayout()

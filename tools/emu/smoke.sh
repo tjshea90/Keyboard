@@ -186,6 +186,13 @@ if [ -n "$GEOM" ]; then
   # the field again, until the docked keyboard really shows (after the keyboard switch the field has moved and a tap on a focused field may not bring the keyboard back: unfocus it first when it does not)
   show_keyboard && ok "the docked keyboard is showing again for the floating stage" || bad "the keyboard could not be brought back for the floating stage"
   GX=$(key grip | cut -d' ' -f1); GY=$(key grip | cut -d' ' -f2)
+  # ---- 8b squeeze (M8): drag the left arrow of the bar inwards: the keyboard gets narrower (screenshot squeezed.png: the strips beside it must be in the keyboard's colour, not white); then drag it back out to full width.
+  # Informational (no check): the arrow stands 20 dp from the left end of the window; the stage that follows needs the full-width keyboard back.
+  AX=$(python3 -I -c "print(int(round(${DENS:-160} / 160.0 * 20)))")
+  adb shell input swipe $AX $GY $((AX + 160)) $GY 500; sleep 1.5; shot squeezed
+  adb shell dumpsys window windows > "$OUT/dumpsys-window-squeezed.txt"
+  adb shell input swipe $((AX + 160)) $GY 0 $GY 500; sleep 1.5; shot unsqueezed
+  echo "  info  squeeze stage done (screenshots squeezed.png and unsqueezed.png)"
   adb shell input swipe $GX $GY $GX $GY 900; sleep 2.5
   adb logcat -d | grep -a SwoopDiag > "$OUT/swoopdiag-float.txt" 2>/dev/null; grep -q "floating -> true" "$OUT/swoopdiag-float.txt" && ok "the keyboard itself logged that it floated" || bad "the keyboard never logged a float (the long press did not reach its bar)"
   adb shell dumpsys window windows > "$OUT/dumpsys-window-float.txt"; shot floating
