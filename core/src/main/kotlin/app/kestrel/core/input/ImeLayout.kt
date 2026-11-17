@@ -13,6 +13,9 @@ enum class Page { LETTERS, SYMBOLS }
 object ImeLayout {
     private fun ch(s: String, w: Float = 1f) = KeySpec(s, Key.Ch(s), w)
     private fun chars(s: String): List<KeySpec> = s.map { ch(it.toString()) }
+    /** The globe: always on the bottom row, so a keyboard that misbehaves can always be left (plan 12 KB-106). Its label is only a name; the view draws a globe. */
+    const val GLOBE = "globe"
+    private val globe = KeySpec(GLOBE, Key.NextKeyboard, 1f)
     private val back = KeySpec("⌫", Key.Backspace, 1.5f)
     private fun action(label: String, w: Float) = KeySpec(label, Key.Go, w)
 
@@ -36,13 +39,13 @@ object ImeLayout {
             chars("1234567890"),
             chars("@#$%&-+()/"),
             chars("_*\"':;!?") + back.let { KeySpec(it.label, it.key, 2f) },
-            listOf(KeySpec("abc", Key.ToLetters, 1.5f), ch(","), KeySpec("space", Key.Ch(" "), 4.5f), ch("."), action(actionLabel, 2f)),
+            listOf(KeySpec("abc", Key.ToLetters, 1.5f), globe, ch(","), KeySpec("space", Key.Ch(" "), 3.5f), ch("."), action(actionLabel, 2f)),
         )
         fun letters(s: String) = chars(if (shift) s.uppercase() else s)
         val bottom = when (kind) {
-            FieldKind.URL -> listOf(KeySpec("123", Key.ToSymbols, 1.5f), ch("/"), KeySpec("space", Key.Ch(" "), 3f), ch("."), ch(".com", 1.5f), action(actionLabel, 2f))
-            FieldKind.EMAIL -> listOf(KeySpec("123", Key.ToSymbols, 1.5f), ch("@"), KeySpec("space", Key.Ch(" "), 3.5f), ch("."), ch(".com", 1.5f), action(actionLabel, 1.5f))
-            else -> listOf(KeySpec("123", Key.ToSymbols, 1.5f), ch(","), KeySpec("space", Key.Ch(" "), 4.5f), ch("."), action(actionLabel, 2f))
+            FieldKind.URL -> listOf(globe, KeySpec("123", Key.ToSymbols, 1.5f), ch("/"), KeySpec("space", Key.Ch(" "), 2f), ch("."), ch(".com", 1.5f), action(actionLabel, 2f))
+            FieldKind.EMAIL -> listOf(globe, KeySpec("123", Key.ToSymbols, 1.5f), ch("@"), KeySpec("space", Key.Ch(" "), 2.5f), ch("."), ch(".com", 1.5f), action(actionLabel, 1.5f))
+            else -> listOf(globe, KeySpec("123", Key.ToSymbols, 1.5f), ch(","), KeySpec("space", Key.Ch(" "), 3.5f), ch("."), action(actionLabel, 2f))
         }
         return listOf(
             letters("qwertyuiop"),
@@ -58,7 +61,7 @@ object ImeLayout {
             listOf(ch("1"), ch("2"), ch("3"), KeySpec("⌫", Key.Backspace, 1f)),
             listOf(ch("4"), ch("5"), ch("6"), ch(if (phone) "+" else "-")),
             listOf(ch("7"), ch("8"), ch("9"), ch(if (phone) "#" else ".")),
-            listOf(ch(if (phone) "*" else ","), ch("0"), if (phone) ch(",") else KeySpec("space", Key.Ch(" "), 1f), action(actionLabel, 1f)),
+            listOf(KeySpec(GLOBE, Key.NextKeyboard, 1f), ch("0"), if (phone) ch(",") else KeySpec("space", Key.Ch(" "), 1f), action(actionLabel, 1f)),
         )
     }
 }

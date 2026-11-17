@@ -12,6 +12,8 @@ sealed class Key {
     object ToSymbols : Key()
     object ToLetters : Key()
     object Go : Key()
+    /** Switches to the next keyboard (the globe key of a system keyboard). Never typed, never shown by the browser's address-bar keyboard. */
+    object NextKeyboard : Key()
 }
 
 /** One key of a row as drawn: [weight] is its width in units (a row adds up to [MiniKeyboardLayout.ROW_UNITS]); a null [key] is only a gap. */

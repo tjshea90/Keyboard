@@ -33,9 +33,9 @@ class ImeLayoutTest {
 
     @Test fun theBottomRowDependsOnTheField() {
         fun bottom(kind: FieldKind) = ImeLayout.rows(Page.LETTERS, false, kind, "Go").last().map { it.label }
-        assertEquals(listOf("123", ",", "space", ".", "Go"), bottom(FieldKind.TEXT))
-        assertEquals(listOf("123", "/", "space", ".", ".com", "Go"), bottom(FieldKind.URL))
-        assertEquals(listOf("123", "@", "space", ".", ".com", "Go"), bottom(FieldKind.EMAIL))
+        assertEquals(listOf("globe", "123", ",", "space", ".", "Go"), bottom(FieldKind.TEXT))
+        assertEquals(listOf("globe", "123", "/", "space", ".", ".com", "Go"), bottom(FieldKind.URL))
+        assertEquals(listOf("globe", "123", "@", "space", ".", ".com", "Go"), bottom(FieldKind.EMAIL))
     }
 
     @Test fun everyBottomRowHasASpaceAndAnActionKeyAndNoLetterRowIsWiderThanTen() {
@@ -49,6 +49,10 @@ class ImeLayoutTest {
         }
     }
 
+    @Test fun everyPageHasTheGlobeKeySoTheKeyboardCanAlwaysBeLeft() {
+        for (kind in FieldKind.values()) for (page in Page.values()) assertTrue("$kind/$page", keys(ImeLayout.rows(page, false, kind)).any { it === Key.NextKeyboard })
+    }
+
     @Test fun theSymbolsPageHasDigitsAndTheWayBack() {
         val rows = ImeLayout.rows(Page.SYMBOLS, false, FieldKind.TEXT)
         assertEquals("1234567890", rows[0].joinToString("") { it.label })
@@ -58,7 +62,7 @@ class ImeLayoutTest {
     @Test fun numberAndPhoneFieldsGetAKeypadWhateverThePage() {
         val n = ImeLayout.rows(Page.LETTERS, true, FieldKind.NUMBER); assertEquals(4, n.size)
         assertEquals(listOf("1", "2", "3", "⌫"), n[0].map { it.label }); assertEquals("0", n[3][1].label)
-        val p = ImeLayout.rows(Page.SYMBOLS, false, FieldKind.PHONE); assertEquals(listOf("*", "0", ",", "⏎"), p[3].map { it.label })
+        val p = ImeLayout.rows(Page.SYMBOLS, false, FieldKind.PHONE); assertEquals(listOf("globe", "0", ",", "⏎"), p[3].map { it.label })
         assertTrue(keys(n).filterIsInstance<Key.Ch>().none { it.text.length == 1 && it.text[0].isLetter() })
     }
 
