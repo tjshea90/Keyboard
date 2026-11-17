@@ -1,21 +1,22 @@
-# CHECKPOINT 143 — read me first, then TASKS.md
+# CHECKPOINT 152 — read me first, then TASKS.md
 
-**Written:** 2026-11-17T01:43:22Z · **tests:** all 1 fast checks green (gradle suite: see ship.sh)
-**Branch:** `ccr-c57dc9d3-149psl` · **builds on:** `6ecbbdb` (this checkpoint is the commit after it)
+**Written:** 2026-11-17T01:49:26Z · **tests:** all 1 fast checks green (gradle suite: see ship.sh)
+**Branch:** `ccr-c57dc9d3-149psl` · **builds on:** `af4466b` (this checkpoint is the commit after it)
 
 ## Just done
-owner's 9 requests (N1-N9) written into TASKS.md in his words; he likes the keyboard so far
+N1 number row always on top (thin row, letters+symbols pages), N5 glide starts after 5 dp, N9/N2 overlay layer + unbuffered dispatch + bubble clears on lift; ime 82 + core tests green, lint ok
 
 ## Do this next
-start N1/N5/N9/N2: (1) ImeLayout number row always on top (letters + symbols pages; MiniKeyboardGeometry.boxes gets optional row weights so the number row is thinner; decoder uses the same boxes), (2) KeysView split: static keys view + overlay layer (lit key, bubble, trail, strip) in a KeyboardRoot FrameLayout, requestUnbufferedDispatch, glide starts after ~6 dp of movement, (3) update KeysViewTest/LookTest. Then N4/N6: GlideTyping.suggest(prefix, prev, prev2) on the engine thread + learn tapped words at word end + erase-and-retype learning; presenter shows completions in the strip and a tap replaces the composing word. Then Prefs/options + settings redesign. Then release 0.2.0-alpha1 (versionCode 2). N3 floating last.
+N4/N6: (1) core GlideTyping.suggest(prefix, prev, prev2, limit) on the engine thread (lexicon prefix range + PersonalModel + pair counts); (2) GlideSession/InputController: learn tapped words at word end (space/punct/enter), erase-and-retype correction learning; (3) KeyboardPresenter shows completions in the strip while typing with taps, tap a suggestion replaces the composing word; (4) tests in core GlideSessionTest + ime KeyboardPresenterTest. Then Prefs/options (N7), settings redesign (N8), release 0.2.0-alpha1 (versionCode 2), N3 floating last.
 
 *(resuming? CLAUDE.md's "FIRST ACTION OF EVERY SESSION" says how; the briefing is tools/resume.sh. Do that first, or autosave may stay off all session.)*
 
 ## Uncommitted right now
-     M TASKS.md
+    (nothing — the tree is clean as of this checkpoint)
 
 ## Last ten checkpoints
 ```
+  558b1e8 ckpt 143: owner's 9 requests (N1-N9) written into TASKS.md in his words; he likes the ke
   eddf918 ckpt 139: FIRST RELEASE swoop-v0.1.0-alpha1 published by GitHub Actions (run 43993744160
   604ad35 ckpt 135: release run 43992969251: build+verify (pinned dev-key certificate) PASSED on G
   df9bd25 ckpt 134: emu-smoke: quiet job log (gradle cache off for that job) and smoke.log artifac
@@ -25,8 +26,7 @@ start N1/N5/N9/N2: (1) ImeLayout number row always on top (letters + symbols pag
   7e85792 ckpt 122: README.md written for the now-public repo; emulator smoke run 43991821449 (API
   67b4887 ckpt 120: emulator smoke test written (tools/emu/smoke.sh + .github/workflows/emu-smoke.
   6f13916 ckpt 118: owner made the repo PUBLIC and asked for the first release now (OR2 in TASKS):
-  1bb33bd ckpt 112: docs: IF-THE-KEYBOARD-BREAKS no longer promises the Forget button before KB-20
 ```
 
-(3 automatic checkpoint(s) since the last deliberate one — the
+(8 automatic checkpoint(s) since the last deliberate one — the
 session was still mid-step. `git diff` against it shows what changed.)
