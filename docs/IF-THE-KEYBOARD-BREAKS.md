@@ -15,7 +15,7 @@ That is on purpose: if the keyboard crashes three times within a minute it turns
 Open the Swoop app > Diagnostics > Copy, and paste what it copies into the chat. It contains only counters and timings, never what you typed. Do NOT paste the learning file or a screenshot of private text.
 
 ## I want to start the learning over
-Swoop app > Forget everything the keyboard learned. (Your exported backup files in Downloads are not touched.)
+Swoop app > Forget everything the keyboard learned (arrives with KB-206; until then, clear the app's storage in Android's Settings > Apps > Swoop > Storage). Your exported backup files in Downloads are not touched.
 
 ## I want my learning back after reinstalling
 Before uninstalling, use Export in the Swoop app (it writes a file to Downloads). After installing again, use Import and pick that file. An update installed from a Release link keeps everything; only a different signing key forces an uninstall, which is why Swoop's key is created once and protected.
