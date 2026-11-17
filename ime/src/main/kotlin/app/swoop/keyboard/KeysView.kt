@@ -46,6 +46,10 @@ class KeysView(context: Context) : View(context) {
         fun onGlideEnd(xs: FloatArray, ys: FloatArray, count: Int) {}
         /** A guess in the strip was tapped. */
         fun onCandidate(word: String) {}
+        /** A guess in the strip was PRESSED AND HELD (owner: long press a recommended word to delete it for good). */
+        fun onCandidateLong(word: String) {}
+        /** An icon of the toolbar at the left of the strip was tapped ([TOOL_SETTINGS], [TOOL_CLIPBOARD], [TOOL_TRANSLATE]). */
+        fun onToolbar(tool: Int) {}
     }
 
     var listener: Listener? = null
@@ -77,6 +81,14 @@ class KeysView(context: Context) : View(context) {
     var soundOn = false
     /** Press the space bar and slide: the text cursor follows the finger. */
     var spaceSlideOn = true
+    /** Owner: "turn off the letters completely, leaving a blank panel that I can type with but it still works as though the letters are there". The keys keep their places and their taps; the letters are not drawn (and no key bubble shows them). */
+    var hideLetters = false; set(v) { if (field != v) { field = v; invalidate(); dyn() } }
+    /** The translate icon is lit while translating is on (the presenter sets it). */
+    var translateOn = false; set(v) { if (field != v) { field = v; dyn() } }
+    /** The "ES" icon only when the person has the translate feature on in Settings. */
+    var translateAvailable = true; set(v) { if (field != v) { field = v; dyn() } }
+    /** An emoji or a word is shown in a suggestion chip; set while a long-press confirmation (remove this word for good?) is on screen. */
+    var confirmWord: String? = null; set(v) { if (field != v) { field = v; dyn() } }
     /** 0 = follows the system's light / dark setting, 1 = dark, 2 = light. */
     var themeMode = 0; set(v) { if (field != v) { field = v; applyPalette(); invalidate(); dyn() } }
     /** 1.0 = normal key height; the settings offer small / normal / large. */
@@ -149,6 +161,7 @@ class KeysView(context: Context) : View(context) {
     fun applyOptions(s: Settings) {
         numberRow = s.numberRow; keyPreview = s.keyPreview; hapticsOn = s.haptics; soundOn = s.sound; trailOn = s.trail
         keyHeightScale = s.keyHeightScale; accent = s.accentColor; themeMode = s.theme; spaceSlideOn = s.spaceSlide; showGlobe = s.showGlobe
+        hideLetters = s.hideLetters; translateAvailable = s.translateEnabled
     }
 
     // ------------------------------------------------------------------ what the service tells the view
@@ -172,7 +185,8 @@ class KeysView(context: Context) : View(context) {
     fun clearCandidates() { if (cands.isNotEmpty() || noWordUntil != 0L) { cands = emptyList(); noWordUntil = 0L; dyn() } }
     fun showNoWord() { cands = emptyList(); noWordUntil = SystemClock.uptimeMillis() + NO_WORD_MS; handler.removeCallbacks(noWordOff); handler.postDelayed(noWordOff, NO_WORD_MS); dyn() }
     val isGliding: Boolean get() = gliding
-    private fun stripPx() = if (glideEnabled || suggestionsEnabled) dp(STRIP_H_DP) else 0f
+    /** The strip above the keys always exists now: the toolbar (settings, clipboard, translate) lives at its left, the guesses fill the rest. */
+    private fun stripPx() = dp(STRIP_H_DP)
 
     /** Everything in flight stops (the keyboard closed or the field changed). */
     fun reset() {
@@ -268,6 +282,7 @@ class KeysView(context: Context) : View(context) {
         text.color = if (key === Key.Go || (key === Key.Shift && shift == ShiftState.LOCK)) cAccentText else cText
         if (key === Key.NextKeyboard) { drawGlobe(c, box); return }
         val label = if (key === Key.Shift) (if (shift == ShiftState.LOCK) "⇪" else "⇧") else k.label
+        if (hideLetters && isLetter(k)) return                                  // a blank key: it is still there and still types
         text.textSize = (kb.bottom - kb.top) * (if (label.length > 1) 0.30f else if (topRow && ImeLayout.hasNumberRow(rows)) 0.52f else 0.44f)
         val fm = text.fontMetrics
         c.drawText(label, box.centerX(), box.centerY() - (fm.ascent + fm.descent) / 2f, text)
