@@ -524,6 +524,7 @@ def main():
     srv = None
     try:
         device_facts(rep)
+        adb("logcat", "-G", "16M", check=False)          # Gecko is chatty: keep the keyboard's lines (and the browser's Health lines) for the whole run
         rep.fact("suite=%s net=%s" % (a.suite, a.net))
         if not (a.swoop and a.kestrel):
             rep.row("arguments", "FAIL", "--swoop and --kestrel are needed")

@@ -120,8 +120,11 @@ class Keymap:
         return "Keymap(%s shift=%d %d keys)" % (self.page, self.shift, len(self.keys))
 
 
+_last_km = {"v": None}
+
+
 def read_keymap():
-    """The newest key map the keyboard logged, or None."""
+    """The newest key map the keyboard logged. The log is a ring buffer that a chatty page (Gecko) can push the one line out of: then the last one seen is returned (the layout only changes when the keyboard logs a new line)."""
     out = adb("logcat", "-d", "-s", "SwoopDiag:D", check=False)
     last = None
     for line in out.splitlines():
@@ -129,14 +132,15 @@ def read_keymap():
         if m:
             last = m
     if not last:
-        return None
+        return _last_km["v"]
     keys = {}
     for part in last.group(3).split():
         k, _, xy = part.partition("=")
         if "," in xy:
             x, y = xy.split(",")
             keys[k] = (int(x), int(y))
-    return Keymap(last.group(1), int(last.group(2)), keys)
+    _last_km["v"] = Keymap(last.group(1), int(last.group(2)), keys)
+    return _last_km["v"]
 
 
 def clear_log():
