@@ -52,7 +52,7 @@ class InputController(private val ed: EditorBridge, val stats: InputStats = Inpu
     fun startInput(info: FieldInfo) {
         field = info
         composing = null; lastGlide = null; shift = ShiftState.OFF; composingUnknown = true; adopt = 0
-        pending.clear()
+        clearPending("c1")
         selStart = info.initialSelStart; selEnd = info.initialSelEnd
         refresh()
         autoCaps()
@@ -67,7 +67,7 @@ class InputController(private val ed: EditorBridge, val stats: InputStats = Inpu
     private var autoShift = false
 
     /** The field loses the focus (onFinishInput): the word being tapped stays in the text as typed. */
-    fun finishInput() { endComposing(); lastGlide = null; pending.clear() }
+    fun finishInput() { endComposing(); lastGlide = null; clearPending("c2") }
 
     /**
      * onUpdateSelection. [candStart]/[candEnd] are the editor's composing region (-1 when none). True when the change was caused by this keyboard's
@@ -83,7 +83,7 @@ class InputController(private val ed: EditorBridge, val stats: InputStats = Inpu
         if (composing != null) ed.finishComposing()
         stats.foreignReports++
         composing = null; lastGlide = null
-        pending.clear()
+        clearPending("c3")
         selStart = newSelStart; selEnd = newSelEnd
         refresh()
         return false
@@ -174,7 +174,7 @@ class InputController(private val ed: EditorBridge, val stats: InputStats = Inpu
         val ok = if (useAction) ed.performAction(a) else ed.sendKey(KeyCodes.ENTER)
         if (!ok) { resync(); return }
         if (shift == ShiftState.ONCE) shift = ShiftState.OFF
-        refresh(); selStart = -1; selEnd = -1; pending.clear(); adopt = 2   // the next selection reports are the truth
+        refresh(); selStart = -1; selEnd = -1; clearPending("c4"); adopt = 2   // the next selection reports are the truth
         autoCaps()
     }
 
@@ -240,7 +240,7 @@ class InputController(private val ed: EditorBridge, val stats: InputStats = Inpu
             }
         }
         if (selStart >= 0 && predicted) { selEnd = selStart; ensureWindow() }
-        else { selStart = -1; selEnd = -1; pending.clear(); adopt = 2; refresh() }
+        else { selStart = -1; selEnd = -1; clearPending("move"); adopt = steps; refresh() }    // one report per arrow key reaches us, none of them predicted
     }
 
     /** The word before the cursor in the window, lowercase, for the language (null when there is none or it is not a plain word). */
@@ -314,14 +314,16 @@ class InputController(private val ed: EditorBridge, val stats: InputStats = Inpu
 
     private fun verifyBefore(tail: String): Boolean = ed.textBefore(tail.length) == tail && before.endsWith(tail)
 
-    internal fun pendingForTest(): String = pending.describe()
+    internal fun pendingForTest(): String = pending.describe() + " (last cleared by " + lastClear + ")"
+    private var lastClear = "never"
+    private fun clearPending(why: String) { pending.clear(); lastClear = why }
 
     private fun refresh() { before = ed.textBefore(WINDOW_BEFORE) ?: ""; after = ed.textAfter(WINDOW_AFTER) ?: "" }
 
     /** Something failed or surprised us: forget every assumption and re-read the editor. */
     private fun resync() {
         stats.resyncs++
-        composing = null; lastGlide = null; pending.clear(); composingUnknown = true
+        composing = null; lastGlide = null; clearPending("c5"); composingUnknown = true
         selStart = -1; selEnd = -1; adopt = 2
         refresh()
     }
