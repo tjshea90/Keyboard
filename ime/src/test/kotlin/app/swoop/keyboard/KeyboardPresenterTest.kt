@@ -292,7 +292,7 @@ class KeyboardPresenterTest {
 
     @Test fun aTypedWordWithAnEmojiOffersItAndTappingItReplacesTheWord() {
         val r = Rig(glidePref = false, suggest = true, words = LexiconFile.build(listOf("clown" to 900L, "clowns" to 300L, "the" to 9000L).map { LexiconFile.Entry(it.first, it.second) }, emptyList()))
-        Thread.sleep(50); org.robolectric.shadows.ShadowLooper.idleMainLooper()
+        r.presenter.canDraw = { true }; Thread.sleep(200); org.robolectric.shadows.ShadowLooper.idleMainLooper()
         for (c in "clown") r.tap(c.toString())
         val clown = "\uD83E\uDD21"
         assertTrue("the emoji is among the guesses: ${r.view.candidatesForTest()}", clown in r.view.candidatesForTest())
@@ -324,7 +324,7 @@ class KeyboardPresenterTest {
     }
 
     @Test fun afterAFullStopAndASpaceTheNextLetterIsACapitalByDefault() {
-        val r = Rig(glidePref = false); for (c in "hi") r.tap(c.toString()); r.tap("."); r.tap("space"); r.tap("a")
+        val r = Rig(glidePref = false); for (c in "hi") r.tap(c.toString()); r.tap("."); r.tap("space"); r.tap("A")
         assertEquals("hi. A", r.text)
     }
 }

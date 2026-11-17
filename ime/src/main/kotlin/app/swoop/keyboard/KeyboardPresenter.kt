@@ -58,6 +58,8 @@ class KeyboardPresenter(
     private var emojiLoading = false
     private val glyphPaint by lazy { android.graphics.Paint() }
     private val glyphOk = HashMap<String, Boolean>()
+    /** Whether the font can draw an emoji (tests replace it). */
+    var canDraw: (String) -> Boolean = { e -> try { glyphPaint.hasGlyph(e) } catch (_: Exception) { false } }
     private fun loadEmoji() {
         if (emojiMap != null || emojiLoading) return
         emojiLoading = true
@@ -67,7 +69,7 @@ class KeyboardPresenter(
     private fun emojiFor(word: String?): String? {
         if (!emojiOn || word == null || safeMode) return null
         val m = emojiMap ?: return null
-        return m.forWord(word) { e -> glyphOk.getOrPut(e) { try { glyphPaint.hasGlyph(e) } catch (_: Exception) { false } } }
+        return m.forWord(word) { e -> glyphOk.getOrPut(e) { canDraw(e) } }
     }
     /** The strip with the emoji for [word] as its last chip (three chips at most; an emoji already there stays where it is). */
     private fun withEmoji(strip: List<String>, word: String?): List<String> {
