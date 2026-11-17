@@ -13,7 +13,10 @@ enum class Page { LETTERS, SYMBOLS }
 object ImeLayout {
     private fun ch(s: String, w: Float = 1f) = KeySpec(s, Key.Ch(s), w)
     private fun chars(s: String): List<KeySpec> = s.map { ch(it.toString()) }
-    /** The globe: always on the bottom row, so a keyboard that misbehaves can always be left (plan 12 KB-106). Its label is only a name; the view draws a globe. */
+    /**
+     * The globe (switch keyboard). Owner, 2026-11-17: "remove the bottom left button to change keyboards": it is OFF by default now (Settings > Layout brings it back, and the crash-loop safe mode always shows it, plan 12 KB-106);
+     * without it, HOLDING the space bar opens the keyboard picker. Its label is only a name; the view draws a globe.
+     */
     const val GLOBE = "globe"
     private val globe = KeySpec(GLOBE, Key.NextKeyboard, 1f)
     private val back = KeySpec("⌫", Key.Backspace, 1.5f)
@@ -40,36 +43,50 @@ object ImeLayout {
     fun rowWeights(rows: List<List<KeySpec>>): List<Float> = if (hasNumberRow(rows)) List(rows.size) { if (it == 0) NUMBER_ROW_WEIGHT else 1f } else List(rows.size) { 1f }
     fun hasNumberRow(rows: List<List<KeySpec>>): Boolean = rows.size == 5
 
-    fun rows(page: Page, shift: Boolean, kind: FieldKind, actionLabel: String = "⏎", numberRow: Boolean = true): List<List<KeySpec>> {
-        if (kind == FieldKind.NUMBER || kind == FieldKind.PHONE) return keypad(kind, actionLabel)
+    /**
+     * The symbols that used to live behind the "123" key (owner: "Remove the 123 button because there are always numbers"): they open as a grid when the full stop or the comma is HELD (see KeysView), laid out
+     * in the rows people know. Every character of the old symbols page is here.
+     */
+    val symbolRows: List<List<String>> = listOf("@#$%&-+()/", "*\"':;!?_=~", "<>[]{}\\|").map { r -> r.map { it.toString() } }
+
+    /** Width of the space bar: as much of the row as the other keys leave (owner: "make the space bar wider. As wide as can fit"). */
+    const val ROW_UNITS = 10f
+
+    fun rows(page: Page, shift: Boolean, kind: FieldKind, actionLabel: String = "⏎", numberRow: Boolean = true, showGlobe: Boolean = false): List<List<KeySpec>> {
+        if (kind == FieldKind.NUMBER || kind == FieldKind.PHONE) return keypad(kind, actionLabel, showGlobe)
         val digits = if (numberRow) listOf(chars("1234567890")) else emptyList()
-        if (page == Page.SYMBOLS) return digits + listOf(
-            chars("@#$%&-+()/"),
-            chars("*\"':;!?_=~"),
-            chars("<>[]{}\\|") + back.let { KeySpec(it.label, it.key, 2f) },
-            listOf(KeySpec("abc", Key.ToLetters, 1.5f), globe, ch(","), KeySpec("space", Key.Ch(" "), 3.5f), ch("."), action(actionLabel, 2f)),
-        )
         fun letters(s: String) = chars(if (shift) s.uppercase() else s)
-        val bottom = when (kind) {
-            FieldKind.URL -> listOf(globe, KeySpec("123", Key.ToSymbols, 1.5f), ch("/"), KeySpec("space", Key.Ch(" "), 2f), ch("."), ch(".com", 1.5f), action(actionLabel, 2f))
-            FieldKind.EMAIL -> listOf(globe, KeySpec("123", Key.ToSymbols, 1.5f), ch("@"), KeySpec("space", Key.Ch(" "), 2.5f), ch("."), ch(".com", 1.5f), action(actionLabel, 1.5f))
-            else -> listOf(globe, KeySpec("123", Key.ToSymbols, 1.5f), ch(","), KeySpec("space", Key.Ch(" "), 3.5f), ch("."), action(actionLabel, 2f))
+        // the bottom row: [globe if asked] [one or two small keys] [space: the rest] [the full stop and the action key]
+        fun bottom(vararg fixed: KeySpec): List<KeySpec> {
+            val g = if (showGlobe) listOf(globe) else emptyList()
+            val used = (g + fixed).sumOf { it.weight.toDouble() }.toFloat()
+            val space = KeySpec("space", Key.Ch(" "), ROW_UNITS - used)
+            val head = fixed.takeWhile { it.label != "." && it.label != ".com" && it.key !== Key.Go }
+            val tail = fixed.drop(head.size)
+            return g + head + space + tail
+        }
+        val bottomRow = when (kind) {
+            FieldKind.URL -> bottom(ch("/"), ch("."), ch(".com", 1.5f), action(actionLabel, 1.6f))
+            FieldKind.EMAIL -> bottom(ch("@"), ch("."), ch(".com", 1.5f), action(actionLabel, 1.6f))
+            else -> bottom(ch(","), ch("."), action(actionLabel, 1.6f))
         }
         return digits + listOf(
             letters("qwertyuiop"),
             listOf(KeySpec("", null, 0.5f)) + letters("asdfghjkl") + KeySpec("", null, 0.5f),
             listOf(KeySpec("⇧", Key.Shift, 1.5f)) + letters("zxcvbnm") + back,
-            bottom,
+            bottomRow,
         )
     }
 
-    private fun keypad(kind: FieldKind, actionLabel: String): List<List<KeySpec>> {
+    private fun keypad(kind: FieldKind, actionLabel: String, showGlobe: Boolean): List<List<KeySpec>> {
         val phone = kind == FieldKind.PHONE
+        val g = if (showGlobe) listOf(KeySpec(GLOBE, Key.NextKeyboard, 1f)) else emptyList()
         return listOf(
             listOf(ch("1"), ch("2"), ch("3"), KeySpec("⌫", Key.Backspace, 1f)),
             listOf(ch("4"), ch("5"), ch("6"), ch(if (phone) "+" else "-")),
             listOf(ch("7"), ch("8"), ch("9"), ch(if (phone) "#" else ".")),
-            listOf(KeySpec(GLOBE, Key.NextKeyboard, 1f), ch("0"), if (phone) ch(",") else KeySpec("space", Key.Ch(" "), 1f), action(actionLabel, 1f)),
+            if (showGlobe) g + listOf(ch("0"), if (phone) ch(",") else KeySpec("space", Key.Ch(" "), 1f), action(actionLabel, 1f))
+            else listOf(ch("0", if (phone) 1.5f else 2f), if (phone) ch(",", 1f) else KeySpec("space", Key.Ch(" "), 1f), action(actionLabel, if (phone) 1.5f else 1f)),
         )
     }
 }
