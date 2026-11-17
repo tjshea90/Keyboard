@@ -6,7 +6,7 @@ import java.util.Random
 
 /**
  * "The word predictions should get much better over time based on my patterns" (N6), measured: a person with their own words and phrases types a few hundred sentences; the keyboard is asked, before it
- * has learned anything and again after, for the next word (nothing typed) and for the word after its first two letters. The hit rate must rise a lot. (Fixed seed; a small shipped list on a realistic scale.)
+ * has learned anything and again after, for the next word (nothing typed) and for the word after its first letter. The hit rate must rise a lot. (Fixed seed; a small shipped list on a realistic scale.)
  */
 class SuggesterLearningTest {
     private val common = listOf("the", "to", "and", "a", "of", "in", "is", "it", "you", "that", "for", "on", "with", "are", "this", "have", "not", "but", "we", "they", "at", "be", "was", "will", "can", "all", "so", "if", "my", "me", "good", "see", "go", "now", "out", "up", "get", "just", "time", "day", "morning", "night", "today", "tomorrow", "coming", "home", "work", "back", "later", "soon", "ready", "here", "there", "what", "when", "where", "why", "how")
@@ -42,7 +42,7 @@ class SuggesterLearningTest {
             if (i == 0) continue
             val p1 = s[i - 1]; val p2 = if (i >= 2) s[i - 2] else null
             sc.nextTotal++; if (Suggester.suggest(main, pm, keys, "", p1, p2, 3).words.any { it.equals(w, true) }) sc.nextHits++
-            if (w.length >= 4) { sc.compTotal++; if (Suggester.suggest(main, pm, keys, w.take(2), p1, p2, 3).words.any { it.equals(w, true) }) sc.compHits++ }
+            if (w.length >= 4) { sc.compTotal++; if (Suggester.suggest(main, pm, keys, w.take(1), p1, p2, 3).words.any { it.equals(w, true) }) sc.compHits++ }
         }
         return sc
     }
@@ -53,9 +53,9 @@ class SuggesterLearningTest {
         val pm = PersonalModel()
         for (s in sentences(300, 1)) for ((i, w) in s.withIndex()) pm.add(s.getOrNull(i - 1), w, 1f, s.getOrNull(i - 2))
         val after = measure(pm, test)
-        println("next word top-3: %.0f %% -> %.0f %%; completion after two letters: %.0f %% -> %.0f %%".format(100 * before.next, 100 * after.next, 100 * before.comp, 100 * after.comp))
+        println("next word top-3: %.0f %% -> %.0f %%; completion after the first letter: %.0f %% -> %.0f %%".format(100 * before.next, 100 * after.next, 100 * before.comp, 100 * after.comp))
         assertTrue("next word: ${before.next} -> ${after.next}", after.next >= before.next + 0.35f && after.next >= 0.7f)
-        assertTrue("completions: ${before.comp} -> ${after.comp}", after.comp >= before.comp + 0.15f && after.comp >= 0.85f)
+        assertTrue("completions: ${before.comp} -> ${after.comp}", after.comp >= before.comp + 0.15f && after.comp >= 0.8f)
     }
 
     @Test fun aFewSentencesAlreadyHelpAndTheKeyboardKeepsGettingBetter() {
