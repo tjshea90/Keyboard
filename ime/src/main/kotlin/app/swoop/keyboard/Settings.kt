@@ -28,6 +28,7 @@ object Prefs {
     // look
     const val NUMBERROW = "number_row"
     const val KEYHEIGHT = "key_height"
+    const val GLOBE = "show_globe"
     const val THEME = "theme"
     const val ACCENT = "accent"
     // feel
@@ -59,6 +60,8 @@ class Settings(private val p: SharedPreferences) {
     val spaceSlide get() = b(Prefs.SPACESLIDE, true)
     val learn get() = b(Prefs.LEARN, true)
     val numberRow get() = b(Prefs.NUMBERROW, true)
+    /** A key that switches keyboards, at the left of the space bar. Off by default: hold the space bar instead. */
+    val showGlobe get() = b(Prefs.GLOBE, false)
     val keyHeight get() = i(Prefs.KEYHEIGHT, 1).coerceIn(0, KEY_HEIGHTS.size - 1)
     val theme get() = i(Prefs.THEME, 0).coerceIn(0, THEMES.size - 1)
     val accent get() = i(Prefs.ACCENT, 0).coerceIn(0, ACCENTS.size - 1)

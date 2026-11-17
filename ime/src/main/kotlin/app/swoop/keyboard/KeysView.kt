@@ -69,6 +69,8 @@ class KeysView(context: Context) : View(context) {
 
     // ---- options (the settings screen writes them, the presenter hands them over)
     var numberRow = true; set(v) { if (field != v) { field = v; rebuildRows(); requestLayout() } }
+    /** The keyboard-switch key at the left of the space bar (off by default; safe mode turns it on). */
+    var showGlobe = false; set(v) { if (field != v) { field = v; rebuildRows(); requestLayout() } }
     var keyPreview = true
     var hapticsOn = true
     var trailOn = true
@@ -143,7 +145,7 @@ class KeysView(context: Context) : View(context) {
     /** Every option from the settings in one call (the keyboard opening, the settings preview). */
     fun applyOptions(s: Settings) {
         numberRow = s.numberRow; keyPreview = s.keyPreview; hapticsOn = s.haptics; soundOn = s.sound; trailOn = s.trail
-        keyHeightScale = s.keyHeightScale; accent = s.accentColor; themeMode = s.theme; spaceSlideOn = s.spaceSlide
+        keyHeightScale = s.keyHeightScale; accent = s.accentColor; themeMode = s.theme; spaceSlideOn = s.spaceSlide; showGlobe = s.showGlobe
     }
 
     // ------------------------------------------------------------------ what the service tells the view

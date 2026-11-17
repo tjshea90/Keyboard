@@ -95,7 +95,7 @@ class ImeLayoutTest {
 
     @Test fun numberAndPhoneFieldsGetAKeypadWhateverThePage() {
         val n = ImeLayout.rows(Page.LETTERS, true, FieldKind.NUMBER); assertEquals(4, n.size)
-        assertEquals(listOf("1", "2", "3", "⌫"), n[0].map { it.label }); assertEquals("0", n[3][1].label)
+        assertEquals(listOf("1", "2", "3", "⌫"), n[0].map { it.label }); assertEquals("0", n[3][0].label)
         val p = ImeLayout.rows(Page.LETTERS, false, FieldKind.PHONE); assertEquals(listOf("0", ",", "⏎"), p[3].map { it.label })
         assertEquals(listOf("globe", "0", ",", "⏎"), ImeLayout.rows(Page.LETTERS, false, FieldKind.PHONE, showGlobe = true)[3].map { it.label })
         assertTrue(keys(n).filterIsInstance<Key.Ch>().none { it.text.length == 1 && it.text[0].isLetter() })
