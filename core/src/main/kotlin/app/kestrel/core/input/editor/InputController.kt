@@ -231,6 +231,15 @@ class InputController(private val ed: EditorBridge) {
         return tok.lowercase()
     }
 
+    /** (the second last word, the last word) before the cursor, lowercase: the language's context for the next glide. Both null when the last thing is not a plain word; the first null when only one word precedes. */
+    fun previousTwo(): Pair<String?, String?> {
+        val toks = before.trimEnd().split(' ')
+        fun plain(t: String): String? = if (t.isNotEmpty() && t.length <= 24 && t.all { it.isLetter() || it == '\'' }) t.lowercase() else null
+        val last = toks.lastOrNull()?.let { plain(it) } ?: return null to null
+        val second = if (toks.size >= 2) plain(toks[toks.size - 2]) else null
+        return second to last
+    }
+
     // ------------------------------------------------------------------------------------------------------------ internals
 
     private fun typeComposing(t: String) {
