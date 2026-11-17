@@ -116,6 +116,8 @@ class SetupActivity : Activity() {
         with(u) {
             look.row(switchRow("Number row", "Keep the digits 1 to 0 above the letters at all times.", st.numberRow) { change(Prefs.NUMBERROW, it) })
             look.row(switchRow("Floating keyboard", "Shows a glowing bar on top of the keyboard. Press and hold it, then drag, to lift the keyboard off the bottom and move it anywhere. Drag a corner to resize it; double-tap the bar to dock it again.", st.floatEnabled) { change(Prefs.FLOAT_ON, it) })
+            look.row(switchRow("Keyboard-switch key", "A globe key at the left of the space bar. Without it, press and hold the space bar to switch keyboards.", st.showGlobe) { change(Prefs.GLOBE, it) })
+            look.row(note("Symbols: press and hold the full stop or the comma key to open a grid of symbols, slide to one and let go."))
             look.row(choiceRow("Key height", null, Settings.KEY_HEIGHTS, st.keyHeight) { change(Prefs.KEYHEIGHT, it) })
             look.row(choiceRow("Colours", "Automatic follows your phone's light or dark setting.", Settings.THEMES, st.theme) { change(Prefs.THEME, it, rebuild = true) })
             look.row(accentRow("Accent colour", "The glide trail, the lit keys and this screen.", Settings.ACCENTS, st.accent) { change(Prefs.ACCENT, it, rebuild = true) })
