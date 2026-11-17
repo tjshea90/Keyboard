@@ -56,7 +56,7 @@ class KeysServiceTest {
     @Test fun serviceCreatesItsViewAndSurvivesALifecycleWithoutAnEditor() {
         val s = Robolectric.setupService(KeysService::class.java)
         val view = s.onCreateInputView()
-        assertTrue(view is KeysView)
+        assertTrue(view is KeyboardRoot)
         s.onFinishInput(); s.onUpdateSelection(0, 0, 0, 0, -1, -1)          // no input connection: must not crash
         assertTrue(!s.onEvaluateFullscreenMode())
     }
@@ -74,7 +74,7 @@ class KeysServiceTest {
         repeat(5) {
             val s = Robolectric.setupService(KeysService::class.java)
             assertTrue(!s.safeMode)
-            val v = s.onCreateInputView() as KeysView
+            val v = (s.onCreateInputView() as KeyboardRoot).keys
             v.measure(android.view.View.MeasureSpec.makeMeasureSpec(1000, android.view.View.MeasureSpec.EXACTLY), android.view.View.MeasureSpec.makeMeasureSpec(0, android.view.View.MeasureSpec.UNSPECIFIED))
             v.layout(0, 0, v.measuredWidth, v.measuredHeight)
             v.draw(android.graphics.Canvas(android.graphics.Bitmap.createBitmap(1000, v.measuredHeight, android.graphics.Bitmap.Config.ARGB_8888)))

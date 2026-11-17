@@ -123,12 +123,22 @@ class KeysViewTest {
     }
 
     // ------------------------------------------------------------------ hold, bubble, slide
-    @Test fun heldTopRowLetterTypesItsDigitAndShowsItInTheBubble() {
-        val (v, r) = view(); val (x, y) = at(v, "e")
+    @Test fun theNumberRowIsOnTopOfTheLettersAndTypesDigits() {
+        val (v, r) = view(); assertTrue("digits above the letters", at(v, "5").second < at(v, "q").second)
+        for (d in "1234567890") tap(v, at(v, d.toString())); assertEquals("1234567890", r.keys.joinToString(""))
+        tap(v, at(v, "123")); assertNotNull("the number row stays on the symbols page", v.centerOf("0")); assertEquals(Page.SYMBOLS, v.pageForTest())
+    }
+    @Test fun withTheNumberRowANormalHoldOnALetterIsJustTheLetter() { val (v, r) = view(); val (x, y) = at(v, "e"); down(v, x, y); advance(KeysView.HOLD_MS + 50); up(v, x, y); assertEquals(listOf("e"), r.keys) }
+    @Test fun withoutTheNumberRowHeldTopRowLetterTypesItsDigitAndShowsItInTheBubble() {
+        val (v, r) = view(); v.numberRow = false
+        v.measure(View.MeasureSpec.makeMeasureSpec((564 * dp).toInt(), View.MeasureSpec.EXACTLY), View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED)); v.layout(0, 0, v.measuredWidth, v.measuredHeight)
+        assertNull(v.centerOf("5"))
+        val (x, y) = at(v, "e")
         down(v, x, y); assertEquals("e", v.bubbleTextForTest())
         advance(KeysView.HOLD_MS + 20); assertEquals("3", v.bubbleTextForTest())
         up(v, x, y); assertEquals(listOf("3"), r.keys)
     }
+    @Test fun theOptionsCanSwitchTheBubbleAndHapticsOff() { val (v, _) = view(); v.keyPreview = false; v.hapticsOn = false; val (x, y) = at(v, "h"); down(v, x, y); up(v, x, y) }
     @Test fun aQuickTapOnATopRowLetterIsTheLetter() { val (v, r) = view(); tap(v, at(v, "e")); advance(600); assertEquals(listOf("e"), r.keys) }
     @Test fun holdingAMiddleRowLetterDoesNothingSpecial() { val (v, r) = view(); val (x, y) = at(v, "g"); down(v, x, y); advance(900); up(v, x, y); assertEquals(listOf("g"), r.keys) }
     @Test fun slidingOverSpaceMovesTheCursorAndTypesNoSpace() {
@@ -166,6 +176,6 @@ class KeysViewTest {
     }
     @Test fun theTabletKeyboardIsAboutAQuarterOfThePortraitScreen() {
         val (v, _) = view(564); val dpH = v.height / dp
-        assertTrue("height $dpH dp", dpH in 200f..260f)
+        assertTrue("height $dpH dp", dpH in 240f..320f)
     }
 }

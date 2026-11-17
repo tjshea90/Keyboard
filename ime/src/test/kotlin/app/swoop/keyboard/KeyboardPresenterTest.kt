@@ -96,6 +96,13 @@ class KeyboardPresenterTest {
         assertEquals("$alt ", r.text)
     }
 
+    @Test fun aGlideStartsAfterAFewDpOfMovementNotAtTheEdgeOfTheKey() {
+        val r = Rig(); val (x, y) = r.view.centerOf("h")!!
+        r.ev(MotionEvent.ACTION_DOWN, x, y); assertFalse(r.view.isGliding)
+        r.ev(MotionEvent.ACTION_MOVE, x + 2 * dp, y); assertFalse("2 dp is a wobble, not a glide", r.view.isGliding)
+        r.ev(MotionEvent.ACTION_MOVE, x + 6 * dp, y); assertTrue("6 dp of movement starts the glide at once (the key is 50 dp wide)", r.view.isGliding)
+    }
+
     @Test fun aTapStillTypesLettersWithGlideOn() { val r = Rig(); r.tap("h"); r.tap("i"); assertEquals("hi", r.text) }
 
     @Test fun aGlideThatIsReallyATinyDragIsATap() {
