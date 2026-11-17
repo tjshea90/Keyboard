@@ -23,14 +23,12 @@ class TranslationEngine(
             return TranslateResult.failed("Too long to translate here. Shorten it or send it as it is.", false, "", ErrorCode.TOO_LONG)
         }
         var a = myMemory(text, way, cancelled)
-        var other: TranslateResult? = null
         if (!a.ok && !cancelled()) {
             val g = google(text, way, cancelled)
             a = if (g.ok) g else both(a, g)
         } else if (a.ok && way == Translation.Way.TO_MEXICAN && FriendlyTu.looksFormal(text, a.text) && !cancelled()) {
             // friendly tu: the answer talks to the other person as "usted"; ask the other service once
             val g = google(text, way, cancelled)
-            other = g
             if (g.ok && !FriendlyTu.looksFormal(text, g.text)) a = g
         }
         if (cancelled()) return TranslateResult.failed("Cancelled.", false, "", ErrorCode.CANCELLED)
