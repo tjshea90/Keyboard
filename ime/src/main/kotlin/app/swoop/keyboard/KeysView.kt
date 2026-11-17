@@ -447,12 +447,13 @@ class KeysView(context: Context) : View(context) {
         val r = dp(6f)
         // the toolbar: settings, clipboard, (translate)
         for (i in 0 until toolCount()) {
-            val box = toolBox(i); val id = toolId(i)
+            val tb = toolBox(i); val id = toolId(i)
             val lit = id == TOOL_TRANSLATE && translateOn
-            fill.color = if (i == toolDown) cLit else if (lit) cAccent else cSpecial
-            c.drawRoundRect(box, r, r, fill)
+            val rr = Math.min(tb.height(), dp(36f)) / 2f
+            icon.set(tb.centerX() - rr, tb.centerY() - rr, tb.centerX() + rr, tb.centerY() + rr)          // a square the icon is drawn in; a circle behind it only while pressed or lit (the photo's cyan button)
+            if (lit || i == toolDown) { fill.color = if (lit) cAccent else cSpecial; c.drawCircle(icon.centerX(), icon.centerY(), rr, fill) }
             val ink = if (lit) cAccentText else cText
-            when (id) { TOOL_SETTINGS -> drawGear(c, box, ink); TOOL_CLIPBOARD -> drawClipboard(c, box, ink); else -> drawTranslate(c, box, ink) }
+            when (id) { TOOL_SETTINGS -> drawGear(c, icon, ink); TOOL_CLIPBOARD -> drawClipboard(c, icon, ink); else -> drawTranslate(c, icon, ink) }
         }
         text.textSize = h * 0.45f
         val fm = text.fontMetrics
