@@ -224,4 +224,57 @@ class KeyboardRootTest {
         assertFalse(p.floating); assertEquals(View.VISIBLE, p.grip.visibility)
         assertTrue(r.floating)
     }
+
+    // ------------------------------------------------------------------ M8: squeeze the docked keyboard and move it
+
+    private fun two(v: View, action: Int, idx: Int, x0: Float, y0: Float, x1: Float, y1: Float) {
+        val props = Array(2) { MotionEvent.PointerProperties().apply { id = it; toolType = MotionEvent.TOOL_TYPE_FINGER } }
+        val coords = arrayOf(MotionEvent.PointerCoords().apply { x = x0; y = y0 }, MotionEvent.PointerCoords().apply { x = x1; y = y1 })
+        val t = SystemClock.uptimeMillis()
+        val a = if (action == MotionEvent.ACTION_POINTER_DOWN || action == MotionEvent.ACTION_POINTER_UP) action or (idx shl MotionEvent.ACTION_POINTER_INDEX_SHIFT) else action
+        v.dispatchTouchEvent(MotionEvent.obtain(t, t, a, 2, props, coords, 0, 0, 1f, 1f, 0, 0, 0, 0)); if (v is KeyboardRoot) layout(v)
+    }
+
+    @Test fun draggingTheRightArrowOfTheBarInwardsSqueezesTheKeyboardAndItIsSaved() {
+        val (r, c) = root(); val p = r.panelRect(); val y = p.top + r.grip.top + r.grip.height / 2f
+        touch(r, MotionEvent.ACTION_DOWN, p.right - 20 * dp, y)
+        touch(r, MotionEvent.ACTION_MOVE, p.right - 120 * dp, y); touch(r, MotionEvent.ACTION_MOVE, p.right - 160 * dp, y); touch(r, MotionEvent.ACTION_UP, p.right - 160 * dp, y)
+        val q = r.panelRect()
+        assertTrue("narrower: ${q.width()} of $sw", q.width() < sw - 100 * dp); assertEquals("the left edge stays", 0, q.left)
+        assertTrue(r.squeezed); assertTrue("the keys followed", r.keys.measuredWidth < sw - 100 * dp)
+        assertEquals(Settings(app).dockFrac, Math.round(q.width() * 1000f / sw)); assertTrue(c.geometry > 0)
+    }
+
+    @Test fun pinchingTheBarSqueezesFromBothSidesAndItNeverGetsNarrowerThanHalfTheScreen() {
+        val (r, _) = root(); val p = r.panelRect(); val y = p.top + r.grip.top + r.grip.height / 2f
+        two(r, MotionEvent.ACTION_DOWN, 0, 40f * dp, y, 40f * dp, y)
+        two(r, MotionEvent.ACTION_POINTER_DOWN, 1, 40f * dp, y, 372f * dp, y)
+        two(r, MotionEvent.ACTION_MOVE, 0, 120f * dp, y, 290f * dp, y)
+        val mid = r.panelRect(); assertTrue("squeezed from both sides: $mid", mid.left > 0 && mid.right < sw)
+        two(r, MotionEvent.ACTION_MOVE, 0, 200f * dp, y, 206f * dp, y)
+        assertEquals("not below half the screen", sw / 2f, r.panelRect().width().toFloat(), 2f)
+        two(r, MotionEvent.ACTION_POINTER_UP, 1, 200f * dp, y, 206f * dp, y)
+    }
+
+    @Test fun aSqueezedKeyboardSlidesLeftAndRightWithTheBarAndDoubleTapMakesItFullWidthAgain() {
+        val (r, _) = root { it.putInt(Prefs.DOCK_FRAC, 700); it.putInt(Prefs.DOCK_X, 0) }
+        assertTrue(r.squeezed); assertEquals(0, r.panelRect().left)
+        val p = r.panelRect(); val y = p.top + r.grip.top + r.grip.height / 2f; val cx = p.centerX().toFloat()
+        touch(r, MotionEvent.ACTION_DOWN, cx, y); touch(r, MotionEvent.ACTION_MOVE, cx + 30 * dp, y); touch(r, MotionEvent.ACTION_MOVE, cx + 90 * dp, y); touch(r, MotionEvent.ACTION_UP, cx + 90 * dp, y)
+        val moved = r.panelRect(); assertTrue("moved right: $moved", moved.left > 40 * dp); assertEquals("same width", p.width(), moved.width())
+        assertEquals(Settings(app).dockX, Math.round(moved.left * 1000f / (sw - moved.width())), 3)
+        val q = r.panelRect(); val cy = q.top + r.grip.top + r.grip.height / 2f
+        touch(r, MotionEvent.ACTION_DOWN, q.centerX().toFloat(), cy); touch(r, MotionEvent.ACTION_UP, q.centerX().toFloat(), cy)
+        touch(r, MotionEvent.ACTION_DOWN, q.centerX().toFloat(), cy); touch(r, MotionEvent.ACTION_UP, q.centerX().toFloat(), cy)
+        assertFalse(r.squeezed); assertEquals(sw, r.panelRect().width()); assertEquals(1000, Settings(app).dockFrac)
+    }
+
+    @Test fun theSqueezedKeyboardKeepsTypingAndOnlyItTakesTouches() {
+        val (r, _) = root { it.putInt(Prefs.DOCK_FRAC, 600); it.putInt(Prefs.DOCK_X, 1000) }
+        val got = ArrayList<String>(); r.keys.listener = object : KeysView.Listener { override fun onKey(key: app.kestrel.core.input.Key) { (key as? app.kestrel.core.input.Key.Ch)?.let { got.add(it.text) } }; override fun onCursor(steps: Int) {} }
+        val (x, y) = r.keys.centerOf("q")!!; val ox = r.keys.left + r.panelRect().left
+        val t = SystemClock.uptimeMillis(); r.dispatchTouchEvent(MotionEvent.obtain(t, t, MotionEvent.ACTION_DOWN, x + ox, y + r.panelRect().top + r.grip.height, 0)); r.dispatchTouchEvent(MotionEvent.obtain(t, t, MotionEvent.ACTION_UP, x + ox, y + r.panelRect().top + r.grip.height, 0))
+        assertEquals(listOf("q"), got)
+        val reg = r.touchRegion(); assertTrue(reg.contains(r.panelRect().centerX(), r.panelRect().centerY())); assertFalse("the left side belongs to the app", reg.contains(10, r.panelRect().centerY()))
+    }
 }

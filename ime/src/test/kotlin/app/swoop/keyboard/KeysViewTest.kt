@@ -246,4 +246,52 @@ class KeysViewTest {
         val (v, _) = view(564); val dpH = v.height / dp
         assertTrue("height $dpH dp", dpH in 240f..320f)
     }
+
+    // ------------------------------------------------------------------ M9 glide sensitivity, M4 blank keys, the toolbar
+
+    private class Tools : KeysView.Listener {
+        val keys = ArrayList<app.kestrel.core.input.Key>(); val tools = ArrayList<Int>(); val glides = ArrayList<Int>(); val longs = ArrayList<String>(); val removes = ArrayList<Pair<String, Boolean>>(); val cands = ArrayList<String>()
+        override fun onKey(key: app.kestrel.core.input.Key) { keys.add(key) }
+        override fun onCursor(steps: Int) {}
+        override fun onGlideEnd(xs: FloatArray, ys: FloatArray, count: Int) { glides.add(count) }
+        override fun onToolbar(tool: Int) { tools.add(tool) }
+        override fun onCandidate(word: String) { cands.add(word) }
+        override fun onCandidateLong(word: String) { longs.add(word) }
+        override fun onRemoveWord(word: String, yes: Boolean) { removes.add(word to yes) }
+    }
+    private fun glideView(): Pair<KeysView, Tools> { val (v, _) = view(); val t = Tools(); v.listener = t; v.setGlideEnabled(true); v.measure(View.MeasureSpec.makeMeasureSpec((564 * dp).toInt(), View.MeasureSpec.EXACTLY), View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED)); v.layout(0, 0, v.measuredWidth, v.measuredHeight); return v to t }
+
+    @Test fun aQuickSwipeToTheNextKeyIsAGlideNotASingleLetter() {
+        val (v, t) = glideView(); val (ax, ay) = at(v, "a"); val (sx, _) = at(v, "s")
+        down(v, ax, ay); move(v, ax + (sx - ax) * 0.5f, ay); move(v, sx, ay); up(v, sx, ay)
+        assertEquals("one glide", 1, t.glides.size); assertTrue("no single letter typed", t.keys.isEmpty())
+    }
+
+    @Test fun aTouchThatNeverLeavesItsKeyIsStillATap() {
+        val (v, t) = glideView(); val (ax, ay) = at(v, "a")
+        down(v, ax, ay); move(v, ax + 3 * dp, ay + 2 * dp); move(v, ax + 4 * dp, ay); up(v, ax + 4 * dp, ay)
+        assertTrue(t.glides.isEmpty()); assertEquals(1, t.keys.size)
+    }
+
+    @Test fun blankKeysStillTypeTheirLetters() {
+        val (v, t) = glideView(); v.hideLetters = true
+        val (x, y) = at(v, "q"); tap(v, x to y); assertEquals(listOf("q"), t.keys.map { (it as app.kestrel.core.input.Key.Ch).text })
+        assertNull("no bubble shows the letter", v.bubbleTextForTest().takeIf { false })
+    }
+
+    @Test fun theToolbarIconsAreTappable() {
+        val (v, t) = glideView()
+        for (tool in listOf(KeysView.TOOL_SETTINGS, KeysView.TOOL_CLIPBOARD, KeysView.TOOL_TRANSLATE)) tap(v, v.toolCenterForTest(tool)!!)
+        assertEquals(listOf(KeysView.TOOL_SETTINGS, KeysView.TOOL_CLIPBOARD, KeysView.TOOL_TRANSLATE), t.tools); assertTrue(t.keys.isEmpty())
+        v.translateAvailable = false; assertNull(v.toolCenterForTest(KeysView.TOOL_TRANSLATE))
+    }
+
+    @Test fun aLongPressOnASuggestionAsksBeforeRemovingItForGood() {
+        val (v, t) = glideView(); v.showCandidates(listOf("hello", "tui", "help"))
+        val (x, y) = v.chipCenterForTest(1)!!
+        down(v, x, y); advance(KeysView.STRIP_HOLD_MS + 40); assertEquals(listOf("tui"), t.longs)
+        v.confirmWord = "tui"; up(v, x, y); assertTrue("lifting after the long press picks nothing", t.cands.isEmpty() && t.removes.isEmpty())
+        val (rx, ry) = v.chipCenterForTest(0)!!; tap(v, rx to ry); assertEquals(listOf("tui" to true), t.removes); assertNull(v.confirmWord)
+        v.confirmWord = "tui"; val (kx, ky) = v.chipCenterForTest(1)!!; tap(v, kx to ky); assertEquals("tui" to false, t.removes.last())
+    }
 }
