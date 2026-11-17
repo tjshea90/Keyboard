@@ -2,9 +2,9 @@
 """Counts which word follows which in everyday English text and writes the pair file that `gradlew :tools:glideLexicon --args="--base en.klx --merge-pairs ..."` mixes into the word list
 (docs/DICTIONARY.md, "Casual pairs").
 
-Run it with `python3 -I` on TEXT that was downloaded outside the repository (one sentence or utterance per line, optionally .bz2 / .gz; a Tatoeba export has tab-separated columns: --tsv-column 2):
+Run it with `python3 -I` on TEXT that was downloaded outside the repository (one sentence or utterance per line, optionally .bz2 / .gz; a Tatoeba export has tab-separated columns id, language, sentence: --tsv-column 3):
 
-  python3 -I tools/glide/count_pairs.py --vocab vocab.txt --text eng_sentences.tsv.bz2 --tsv-column 2 --out pairs.txt --starters starters.txt
+  python3 -I tools/glide/count_pairs.py --vocab vocab.txt --text eng_sentences.tsv.bz2 --tsv-column 3 --out pairs.txt --starters starters.txt
 
 * A pair is two neighbouring words INSIDE one stretch of plain words: a full stop, comma, bracket, quote, dash or a number ends the stretch (the keyboard does the same: after "hello," it
   knows no word before, see InputController.twoBefore).
