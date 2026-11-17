@@ -17,7 +17,7 @@ class Suggestions(val words: List<String>, val typedKnown: Boolean, val autoCorr
  */
 object Suggester {
     /** How much of the probability comes from the word before (the decoder uses 0.4; a suggestion has no finger to lean on, so the context counts for more). */
-    const val CONTEXT_MIX = 0.6
+    const val CONTEXT_MIX = 0.75
     const val SWAP = 1.8f
     const val NEIGHBOUR = 2.2f
     const val MISSING = 2.8f
