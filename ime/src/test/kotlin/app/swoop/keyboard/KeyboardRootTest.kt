@@ -133,7 +133,9 @@ class KeyboardRootTest {
     }
 
     @Test fun aCornerDragResizesAndTheOppositeCornerStaysStill() {
-        val (r, c) = root(); val (gx, gy) = gripCentre(r); detach(r, gx, gy); touch(r, MotionEvent.ACTION_MOVE, gx, gy - 400f); touch(r, MotionEvent.ACTION_UP, gx, gy - 400f); layout(r)
+        val (r, c) = root(); val (gx, gy) = gripCentre(r); detach(r, gx, gy)
+        println("DEBUG1 floating=${r.floating} ${r.panelRect()} g=$gx,$gy"); touch(r, MotionEvent.ACTION_MOVE, gx, gy - 400f); println("DEBUG2 floating=${r.floating} ${r.panelRect()}"); touch(r, MotionEvent.ACTION_UP, gx, gy - 400f); layout(r)
+        println("DEBUG3 floating=${r.floating} ${r.panelRect()}")
         val before = r.panelRect()
         val (cx, cy) = corner(r, 3)
         println("DEBUG floating=${r.floating} panel=${r.panelRect()} corner=$cx,$cy sw=$sw sh=$sh")
