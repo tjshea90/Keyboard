@@ -69,6 +69,11 @@ jobs:
           ls -l /dev/kvm || { echo "::error::no /dev/kvm on this runner"; exit 1; }
           echo "cores: $(nproc), memory: $(free -m | awk '/Mem:/ {print $2}') MB"
 
+      - name: Driver self-test (no device)
+        run: |
+          python3 -I tools/sim/test_drive.py
+          python3 -I tools/sim/dailysim.py --selftest
+
       - name: Build Swoop (the debug build logs its key map for the driver)
         run: ./gradlew :ime:assembleDebug --console=plain
 

@@ -292,7 +292,7 @@ def type_round(rep, scene, field_value, tap_target, glide=True):
 
 class PageValue:
     def __call__(self):
-        return state().get("value", "")
+        return state().get("value", "").replace("\xa0", " ")          # a contenteditable box keeps its spaces as no-break spaces
 
     def clear(self):
         pass
@@ -604,7 +604,7 @@ def main():
         return 0
     if a.quick:
         global TAP_PHRASES, GLIDE_WORDS, FIELD_KINDS
-        TAP_PHRASES = TAP_PHRASES[:3]
+        TAP_PHRASES = [TAP_PHRASES[i] for i in (0, 1, 4, 5)]          # plain words, a digit (the keyboard stays on the symbols page), an apostrophe and a comma, a capital and a question mark
         GLIDE_WORDS = GLIDE_WORDS[:10]
         FIELD_KINDS = ["text", "textarea", "editable"]
     rep = Report(a.out)
