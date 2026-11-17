@@ -144,6 +144,8 @@ class KeyboardRoot(context: Context) : FrameLayout(context), GripBar.Host {
     private var wDp = 0f                                        // 0 = the default width for this screen
     private var hMul = 1f
     private var settings: Settings? = null
+    /** How far the keyboard was dragged since it detached: letting go near the bottom docks it only after a real drag, so a long press that is released at once leaves it floating. */
+    private var travelled = 0f
 
     // the corner grab
     private var resizeCorner = -1
@@ -258,6 +260,7 @@ class KeyboardRoot(context: Context) : FrameLayout(context), GripBar.Host {
         val ph = (GripBar.HEIGHT_DP * d).toInt() + keys.heightFor(pw - 2 * (FRAME_DP * d).toInt(), hMul) + (FRAME_DP * d).toInt() * 3 / 2
         val left = FloatingMath.clampPos((rawX - pw / 2f).toInt(), pw, w); val top = FloatingMath.clampPos((rawY - GripBar.HEIGHT_DP * d / 2f - FRAME_DP * d).toInt(), ph, h)
         posX = FloatingMath.frac(left, w - pw); posY = FloatingMath.frac(top, h - ph)
+        travelled = 0f
         setFloating(true)
     }
 
@@ -266,13 +269,14 @@ class KeyboardRoot(context: Context) : FrameLayout(context), GripBar.Host {
         val w = if (width > 0) width else screenW(); val h = if (height > 0) height else screenH()
         val r = panelRect(); val pw = r.width().coerceAtLeast(1); val ph = r.height().coerceAtLeast(1)
         val left = FloatingMath.clampPos(r.left + dx.toInt(), pw, w); val top = FloatingMath.clampPos(r.top + dy.toInt(), ph, h)
+        travelled += Math.abs(dx) + Math.abs(dy)
         posX = FloatingMath.frac(left, w - pw); posY = FloatingMath.frac(top, h - ph)
         requestLayout()
     }
 
     override fun gripDrop() {
         val r = panelRect()
-        if (FloatingMath.dropsToDock(r.bottom, if (height > 0) height else screenH(), d)) { gripDock(); return }
+        if (travelled > 48 * d && FloatingMath.dropsToDock(r.bottom, if (height > 0) height else screenH(), d)) { gripDock(); return }
         save(); host?.geometryChanged()
     }
 

@@ -49,7 +49,8 @@ class KeyboardRootTest {
         r.layout(0, 0, r.measuredWidth, r.measuredHeight)
     }
     private fun advance(ms: Long) { shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(ms)) }
-    private fun touch(v: View, a: Int, x: Float, y: Float) { val t = SystemClock.uptimeMillis(); v.dispatchTouchEvent(MotionEvent.obtain(t, t, a, x, y, 0)) }
+    /** One touch event; the window lays the keyboard out again before the next one, as it does on a device. */
+    private fun touch(v: View, a: Int, x: Float, y: Float) { val t = SystemClock.uptimeMillis(); v.dispatchTouchEvent(MotionEvent.obtain(t, t, a, x, y, 0)); if (v is KeyboardRoot) layout(v) }
     private fun gripCentre(r: KeyboardRoot): Pair<Float, Float> { val p = r.panelRect(); return (p.centerX().toFloat()) to (p.top + r.grip.top + r.grip.height / 2f) }
 
     /** Long press on the bar with the finger staying put, then [moves] as MOVE events, then lift; the root is laid out again after each step like the window would. */
@@ -74,10 +75,10 @@ class KeyboardRootTest {
         assertEquals("the window is the whole screen now", sh, r.height)
         // drag: the keyboard follows
         val before = r.panelRect()
-        touch(r, MotionEvent.ACTION_MOVE, gx - 100f, gy - 300f); layout(r)
+        touch(r, MotionEvent.ACTION_MOVE, gx - 50f, gy - 300f); layout(r)
         val after = r.panelRect()
-        assertEquals(-100, after.left - before.left); assertEquals(-300, after.top - before.top)
-        touch(r, MotionEvent.ACTION_UP, gx - 100f, gy - 300f); layout(r)
+        assertEquals(-50, after.left - before.left); assertEquals(-300, after.top - before.top)
+        touch(r, MotionEvent.ACTION_UP, gx - 50f, gy - 300f); layout(r)
         assertTrue("a drop in the middle keeps it floating", r.floating); assertEquals(1, c.geometry)
         assertTrue(Settings(app).floating)
     }
@@ -102,6 +103,11 @@ class KeyboardRootTest {
         val (r, _) = root(); val (gx, gy) = gripCentre(r)
         touch(r, MotionEvent.ACTION_DOWN, gx, gy); touch(r, MotionEvent.ACTION_MOVE, gx + 60 * dp, gy); advance(GripBar.LONG_PRESS_MS + 50); touch(r, MotionEvent.ACTION_UP, gx + 60 * dp, gy)
         assertFalse(r.floating)
+    }
+
+    @Test fun aLongPressReleasedAtOnceLeavesItFloatingEvenAtTheBottom() {
+        val (r, _) = root(); val (gx, gy) = gripCentre(r); detach(r, gx, gy); touch(r, MotionEvent.ACTION_UP, gx, gy)
+        assertTrue(r.floating); assertTrue(r.panelRect().bottom > sh - 40 * dp)
     }
 
     @Test fun aTapOrAShortHoldDoesNothing() {
