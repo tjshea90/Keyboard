@@ -8,6 +8,9 @@ enum class ShiftState { OFF, ONCE, LOCK }
  */
 class GlideTail(val text: String, val word: String)
 
+/** What a space (or punctuation) put in the place of a typo: [tail] is everything it inserted ("word "), [typed] what the person had typed. One Backspace right after takes it back. */
+class Correction(val typed: String, val word: String, val tail: String)
+
 /**
  * The input state machine (plan 6.4), the replacement of MiniKeyboardModel for a SYSTEM keyboard. The app's editor owns the text; this keeps only
  * a short window of it (about 64 units before the cursor, 16 after), where the cursor is, the word being tapped (composing), the last glide and
@@ -35,7 +38,12 @@ class InputController(private val ed: EditorBridge, val stats: InputStats = Inpu
     var selEnd = -1; private set
     /** The word being tapped, shown to the app as composing text; null when none. */
     var composing: String? = null; private set
-    var lastGlide: GlideTail? = null; private set
+    var lastGlide: GlideTail? = null
+        private set(value) { field = value; lastCorrection = null }     // anything that can invalidate the glide tail invalidates the correction tail too
+    /** The automatic fix a Backspace can still take back; null when anything else happened since. */
+    var lastCorrection: Correction? = null; private set
+    /** The correction the last Backspace took back (null when it took back none): read once by the learning code, which must hear about it. */
+    var revertedCorrection: Correction? = null; private set
     var shift = ShiftState.OFF; private set
 
     private val pending = Pending()
@@ -137,6 +145,24 @@ class InputController(private val ed: EditorBridge, val stats: InputStats = Inpu
     fun backspace() {
         settle()
         stats.backspaces++
+        revertedCorrection = null
+        val fix = lastCorrection
+        if (fix != null && composing == null && selStart == selEnd && verifyBefore(fix.tail)) {   // a space just replaced a typo: this Backspace puts the typo back (as the word being tapped)
+            val s0 = selStart; val e0 = selEnd
+            beginBatch()
+            var ok = ed.deleteSurrounding(fix.tail.length, 0)
+            if (ok) {
+                before = before.dropLast(fix.tail.length); moveSel(-fix.tail.length)
+                ok = ed.setComposingText(fix.typed)
+                if (ok) { composing = fix.typed; before = (before + fix.typed).takeLast(WINDOW_BEFORE); moveSel(fix.typed.length) }
+            }
+            endBatch(s0, e0)
+            lastGlide = null                        // (also clears lastCorrection)
+            if (!ok) { resync(); return }
+            revertedCorrection = fix
+            ensureWindow()
+            return
+        }
         val c = composing
         if (c != null) {
             val shorter = dropLastCodePoint(c)
@@ -227,6 +253,58 @@ class InputController(private val ed: EditorBridge, val stats: InputStats = Inpu
         return true
     }
 
+    /**
+     * A word from the strip was tapped while typing with taps (N4): it replaces the word at the cursor and a space follows. With no word at the cursor it is put in (after a space when the text does not
+     * end in one): the likely next word. False (nothing changed) when something is selected or the editor refused.
+     */
+    fun pickWord(word: String): Boolean {
+        if (word.isEmpty() || (selStart >= 0 && selStart != selEnd)) return false
+        settle()
+        val c = composing
+        val stem = wordBeforeCursor() ?: ""
+        var w = word
+        if (stem.isEmpty()) w = when (shift) { ShiftState.LOCK -> w.uppercase(); ShiftState.ONCE -> w.replaceFirstChar { it.uppercase() }; ShiftState.OFF -> w }
+        val s0 = selStart; val e0 = selEnd
+        beginBatch()
+        var ok = true
+        if (c != null) {                                                  // the word being tapped is replaced where it stands
+            ok = ed.setComposingText(w)
+            if (ok) { before = (before.dropLast(c.length) + w).takeLast(WINDOW_BEFORE); moveSel(w.length - c.length); composing = null; ed.finishComposing() }
+        } else if (stem.isNotEmpty()) {                                   // plain letters before the cursor (a word the person went back to): they are replaced
+            ok = verifyBefore(stem) && ed.deleteSurrounding(stem.length, 0)
+            if (ok) { before = before.dropLast(stem.length); moveSel(-stem.length); ok = commit(w) }
+        } else {
+            val needsLead = before.isNotEmpty() && !before.last().isWhitespace() && before.last() !in NO_SPACE_AFTER
+            ok = commit((if (needsLead) " " else "") + w)
+        }
+        if (ok) ok = commit(" ")
+        endBatch(s0, e0)
+        lastGlide = null
+        if (!ok) { resync(); return false }
+        stats.swaps++
+        if (shift == ShiftState.ONCE) shift = ShiftState.OFF
+        ensureWindow()
+        return true
+    }
+
+    /**
+     * The word being tapped is a typo and [boundary] (a space, or punctuation) ends it: [fix] goes in instead, then the boundary. One Backspace right after ([lastCorrection], [revertedCorrection]) puts the typed
+     * word back. Falls back to the plain key when there is no word being tapped.
+     */
+    fun typeCorrected(fix: String, boundary: String) {
+        val typed = composing
+        if (typed == null || fix.isEmpty() || (selStart >= 0 && selStart != selEnd)) { type(boundary); return }
+        settle()
+        val shown = if (typed.length > 1 && typed.all { it.isUpperCase() }) fix.uppercase() else if (typed.first().isUpperCase()) fix.replaceFirstChar { it.uppercase() } else fix
+        if (!ed.setComposingText(shown)) { resync(); type(boundary); return }
+        before = (before.dropLast(typed.length) + shown).takeLast(WINDOW_BEFORE)
+        moveSel(shown.length - typed.length)
+        composing = shown
+        type(boundary)
+        val tail = shown + boundary
+        if (composing == null && selStart == selEnd && before.endsWith(tail)) lastCorrection = Correction(typed, shown, tail)
+    }
+
     /** Moves the cursor [delta] characters (negative = left), e.g. from sliding a finger over the space key. A tapped word is finished first. */
     fun moveCursor(delta: Int) {
         if (delta == 0) return
@@ -253,6 +331,25 @@ class InputController(private val ed: EditorBridge, val stats: InputStats = Inpu
         else { selStart = -1; selEnd = -1; clearPending("move"); refresh() }    // one report per arrow key reaches us, none of them predicted: the next report is the truth
     }
 
+    /**
+     * The word the cursor stands at the end of, as typed (letters and apostrophes: the tapped word being composed, or plain text before the cursor); null when there is none, when the cursor is inside a word,
+     * when something is selected, or when the run of letters touches a digit (a code, not a word).
+     */
+    fun wordBeforeCursor(): String? {
+        if (selStart >= 0 && selStart != selEnd) return null
+        if (after.isNotEmpty() && (after[0].isLetter() || after[0] == '\'')) return null
+        var i = before.length
+        while (i > 0 && (before[i - 1].isLetter() || before[i - 1] == '\'')) i--
+        if (i == 0 && before.length >= WINDOW_BEFORE) return null          // the window may cut it
+        if (i > 0 && (before[i - 1].isDigit() || before[i - 1] == '@')) return null
+        val w = before.substring(i).trimStart('\'')
+        return if (w.isEmpty() || w.length > 24) null else w
+    }
+
+    /** (the second last, the last) plain word BEFORE the word [word] that ends at the cursor (as [wordBeforeCursor] gave it): the language's context for it. */
+    fun contextBefore(word: String): Pair<String?, String?> =
+        if (before.endsWith(word)) twoBefore(before.dropLast(word.length)) else null to null
+
     /** The word before the cursor in the window, lowercase, for the language (null when there is none or it is not a plain word). */
     fun previousWord(): String? {
         val tok = before.trimEnd().substringAfterLast(' ')
@@ -261,8 +358,10 @@ class InputController(private val ed: EditorBridge, val stats: InputStats = Inpu
     }
 
     /** (the second last word, the last word) before the cursor, lowercase: the language's context for the next glide. Both null when the last thing is not a plain word; the first null when only one word precedes. */
-    fun previousTwo(): Pair<String?, String?> {
-        val toks = before.trimEnd().split(' ')
+    fun previousTwo(): Pair<String?, String?> = twoBefore(before)
+
+    private fun twoBefore(text: String): Pair<String?, String?> {
+        val toks = text.trimEnd().split(' ')
         fun plain(t: String): String? = if (t.isNotEmpty() && t.length <= 24 && t.all { it.isLetter() || it == '\'' }) t.lowercase() else null
         val last = toks.lastOrNull()?.let { plain(it) } ?: return null to null
         val second = if (toks.size >= 2) plain(toks[toks.size - 2]) else null
