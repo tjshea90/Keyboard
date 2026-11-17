@@ -17,7 +17,7 @@ class AutoCapsTest {
     @Test fun afterANewlineShiftIsOn() { assertEquals(ShiftState.ONCE, Rig("one\n", caps = CapFlags.SENTENCES).c.shift) }
     @Test fun enterStartsANewParagraphSoShiftComesBack() {
         val r = Rig(caps = CapFlags.SENTENCES).typeAll("hi"); assertEquals(ShiftState.OFF, r.c.shift)
-        r.act { enter() }; assertEquals("hi\n", r.text); assertEquals(ShiftState.ONCE, r.c.shift)
+        r.act { enter() }; assertEquals("Hi\n", r.text); assertEquals(ShiftState.ONCE, r.c.shift)
     }
     @Test fun capsLockIsNeverSwitchedOffByTheField() { val r = Rig(caps = CapFlags.SENTENCES); r.act { lockShift() }; r.act { autoCaps() }; assertEquals(ShiftState.LOCK, r.c.shift) }
     @Test fun aDeadEditorMeansNoCapitals() { val r = Rig(caps = CapFlags.SENTENCES); r.act { setShift(ShiftState.OFF) }; r.ed.failing = true; r.c.autoCaps(); assertEquals(ShiftState.OFF, r.c.shift) }
