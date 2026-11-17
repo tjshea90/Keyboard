@@ -212,6 +212,7 @@ class KeyboardPresenter(
 
     fun onUpdateSelection(newSelStart: Int, newSelEnd: Int, candStart: Int, candEnd: Int) {
         val ours = controller.onSelectionUpdate(newSelStart, newSelEnd, candStart, candEnd)
+        if (Diag.enabled) Diag.d("sel report new=$newSelStart/$newSelEnd cand=$candStart/$candEnd ours=$ours believed=${controller.selStart}/${controller.selEnd} composing=${controller.composing != null}")
         view?.setShift(controller.shift)
         if (!ours) { learner.settle(); refreshSuggestions(); if (flow.isOn()) { val t = fieldText(); if (t != null && flow.fieldChanged(t, clock())) translator?.cancel() } }       // the person or the app moved the cursor or changed the text: new word, new guesses
     }
