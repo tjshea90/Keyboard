@@ -139,12 +139,19 @@ class KeysView(context: Context) : View(context) {
     private var cands: List<String> = emptyList()
     private var noWordUntil = 0L
     private var stripDown = -1
+    private var toolDown = -1
+    private var stripLong = false
     private val trail = Path()
     private val trailPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE; strokeCap = Paint.Cap.ROUND; strokeJoin = Paint.Join.ROUND }
     private val fadeStep = object : Runnable {
         override fun run() { if (SystemClock.uptimeMillis() - fadeStart < TRAIL_FADE_MS) { dyn(); postOnAnimation(this) } else { gn = 0; fadeStart = 0L; dyn() } }
     }
     private val noWordOff = Runnable { noWordUntil = 0L; dyn() }
+    /** A guess in the strip was held: ask to remove it for good (the person confirms with a tap). */
+    private val stripHold = Runnable {
+        val i = stripDown
+        if (i >= 0 && confirmWord == null && i in cands.indices) { stripLong = true; haptic(); listener?.onCandidateLong(cands[i]) }
+    }
 
     private val unlight = Runnable { litKey = null; dyn() }
     private val repeat = object : Runnable { override fun run() { down?.key?.let { listener?.onKey(it) }; handler.postDelayed(this, REPEAT_MS) } }
@@ -323,39 +330,89 @@ class KeysView(context: Context) : View(context) {
         c.drawText(bubbleText, box.centerX(), box.centerY() - (fm.ascent + fm.descent) / 2f, text)
     }
 
+    // ---- the strip: the toolbar icons at the left, the guesses in the rest
+    private fun toolCount() = if (translateAvailable) 3 else 2
+    private fun toolId(i: Int) = if (i == 0) TOOL_SETTINGS else if (i == 1) TOOL_CLIPBOARD else TOOL_TRANSLATE
+    private fun toolBox(i: Int): RectF { val w = dp(TOOL_W_DP); return RectF(pad + i * w, pad, pad + (i + 1) * w - gap, stripPx() - gap) }
+    private fun toolAt(x: Float, y: Float): Int {
+        if (y >= stripPx() + pad) return -1
+        for (i in 0 until toolCount()) { val r = toolBox(i); if (x >= r.left - gap / 2 && x < r.right + gap / 2) return i }
+        return -1
+    }
+    private fun chipsLeft() = pad + toolCount() * dp(TOOL_W_DP) + gap
+    /** What the chips show: the guesses, or, while a long press asks "remove this word for good?", the question's two answers. */
+    private fun chips(): List<String> { val w = confirmWord; return if (w != null) listOf(context.getString(R.string.strip_remove, w), context.getString(R.string.strip_keep)) else cands }
     private fun chipBoxes(): List<RectF> {
-        val h = stripPx(); val n = cands.size
+        val h = stripPx(); val list = chips(); val n = list.size
         if (h <= 0f || n == 0 || width <= 0) return emptyList()
-        val cw = (width - 2 * pad - gap * (n - 1)) / n
-        return List(n) { i -> RectF(pad + i * (cw + gap), pad, pad + i * (cw + gap) + cw, h - gap) }
+        val left = chipsLeft(); val cw = (width - pad - left - gap * (n - 1)) / n
+        return List(n) { i -> RectF(left + i * (cw + gap), pad, left + i * (cw + gap) + cw, h - gap) }
     }
     private fun chipAt(x: Float, y: Float): Int {
-        if (y >= stripPx() + pad || cands.isEmpty()) return -1
+        if (y >= stripPx() + pad || chips().isEmpty()) return -1
         for ((i, r) in chipBoxes().withIndex()) if (x >= r.left - gap / 2 && x < r.right + gap / 2) return i
         return -1
     }
 
     private fun drawStrip(c: Canvas) {
         val h = stripPx(); if (h <= 0f) return
+        val r = dp(6f)
+        // the toolbar: settings, clipboard, (translate)
+        for (i in 0 until toolCount()) {
+            val box = toolBox(i); val id = toolId(i)
+            val lit = id == TOOL_TRANSLATE && translateOn
+            fill.color = if (i == toolDown) cLit else if (lit) cAccent else cSpecial
+            c.drawRoundRect(box, r, r, fill)
+            val ink = if (lit) cAccentText else cText
+            when (id) { TOOL_SETTINGS -> drawGear(c, box, ink); TOOL_CLIPBOARD -> drawClipboard(c, box, ink); else -> drawTranslate(c, box, ink) }
+        }
         text.textSize = h * 0.45f
         val fm = text.fontMetrics
-        if (cands.isEmpty()) {
+        val list = chips()
+        val left = chipsLeft()
+        if (list.isEmpty()) {
             val miss = SystemClock.uptimeMillis() < noWordUntil
             val msg = if (miss) context.getString(R.string.strip_no_word) else if (glideEnabled && page == Page.LETTERS && (kind == FieldKind.TEXT || kind == FieldKind.SEARCH)) context.getString(R.string.strip_hint) else ""
             if (msg.isEmpty()) return
             text.color = if (miss) cAccent else cMuted; text.textSize = h * 0.38f
-            c.drawText(TextUtils.ellipsize(msg, text, width - dp(8f), TextUtils.TruncateAt.END).toString(), width / 2f, (h - gap) / 2f + pad - (fm.ascent + fm.descent) / 2f, text)
+            c.drawText(TextUtils.ellipsize(msg, text, width - left - dp(8f), TextUtils.TruncateAt.END).toString(), (left + width) / 2f, (h - gap) / 2f + pad - (fm.ascent + fm.descent) / 2f, text)
             return
         }
-        val r = dp(6f)
-        for ((i, w) in cands.withIndex()) {
-            val rect = chipBoxes()[i]
-            fill.color = if (i == stripDown) cLit else cKey
+        val boxes = chipBoxes()
+        for ((i, w) in list.withIndex()) {
+            val rect = boxes[i]
+            fill.color = if (i == stripDown) cLit else if (confirmWord != null && i == 0) cAccent else cKey
             c.drawRoundRect(rect, r, r, fill)
-            if (i == 0) { line.strokeWidth = dp(1.2f); line.color = cAccent; box.set(rect); box.inset(dp(0.6f), dp(0.6f)); c.drawRoundRect(box, r, r, line) }
-            text.color = cText
+            if (i == 0 && confirmWord == null) { line.strokeWidth = dp(1.2f); line.color = cAccent; box.set(rect); box.inset(dp(0.6f), dp(0.6f)); c.drawRoundRect(box, r, r, line) }
+            text.color = if (confirmWord != null && i == 0) cAccentText else cText
             c.drawText(TextUtils.ellipsize(w, text, rect.width() - dp(8f), TextUtils.TruncateAt.END).toString(), rect.centerX(), rect.centerY() - (fm.ascent + fm.descent) / 2f, text)
         }
+    }
+
+    /** A cog: a ring with eight teeth (no font symbol: the tablet's fonts may lack one). */
+    private fun drawGear(c: Canvas, b: RectF, ink: Int) {
+        val r = Math.min(b.width(), b.height()) * 0.20f
+        line.color = ink; line.strokeWidth = dp(2.2f)
+        c.drawCircle(b.centerX(), b.centerY(), r, line)
+        for (k in 0 until 8) { val a = Math.PI * k / 4.0; val cx = Math.cos(a).toFloat(); val sy = Math.sin(a).toFloat(); c.drawLine(b.centerX() + cx * r * 1.15f, b.centerY() + sy * r * 1.15f, b.centerX() + cx * r * 1.75f, b.centerY() + sy * r * 1.75f, line) }
+    }
+
+    /** A clipboard: a board, its clip and two lines of text. */
+    private fun drawClipboard(c: Canvas, b: RectF, ink: Int) {
+        val w = Math.min(b.width(), b.height()) * 0.52f; val h = w * 1.2f
+        line.color = ink; line.strokeWidth = dp(1.8f)
+        box2.set(b.centerX() - w / 2f, b.centerY() - h / 2f + dp(2f), b.centerX() + w / 2f, b.centerY() + h / 2f + dp(2f)); c.drawRoundRect(box2, dp(3f), dp(3f), line)
+        fill.color = ink; box.set(b.centerX() - w * 0.28f, box2.top - dp(2.5f), b.centerX() + w * 0.28f, box2.top + dp(2.5f)); c.drawRoundRect(box, dp(2f), dp(2f), fill)
+        c.drawLine(box2.left + w * 0.22f, box2.top + h * 0.45f, box2.right - w * 0.22f, box2.top + h * 0.45f, line)
+        c.drawLine(box2.left + w * 0.22f, box2.top + h * 0.72f, box2.right - w * 0.40f, box2.top + h * 0.72f, line)
+    }
+
+    /** The translate icon: "A" on an arrow that points to "ES" (a rounded box with the two letters; lit while translating is on). */
+    private fun drawTranslate(c: Canvas, b: RectF, ink: Int) {
+        text.color = ink; text.textSize = (b.bottom - b.top) * 0.36f; text.typeface = Typeface.DEFAULT_BOLD
+        val fm = text.fontMetrics
+        c.drawText("A\u2192ES", b.centerX(), b.centerY() - (fm.ascent + fm.descent) / 2f, text)
+        text.typeface = Typeface.DEFAULT
     }
 
     private fun drawTrail(c: Canvas) {
