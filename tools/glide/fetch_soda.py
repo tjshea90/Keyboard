@@ -3,7 +3,7 @@
 
 Runs only on a CI runner with the network (dispatch-only workflow .github/workflows/count-pairs.yml); the text stays on the runner and is never committed:
 
-  python3 -I tools/glide/fetch_soda.py --out soda.txt --dialogues 250000
+  python3 tools/glide/fetch_soda.py --out soda.txt --dialogues 250000      (plain python3: the pip packages live outside the isolated mode's path)
 
 Needs `pip install huggingface_hub pyarrow`. The dataset repository is listed first (file names change), the parquet files that hold a `dialogue` column are read in order until
 --dialogues dialogues were written. Anything unexpected is printed and ends the script with a non-zero status (the workflow step is best-effort).

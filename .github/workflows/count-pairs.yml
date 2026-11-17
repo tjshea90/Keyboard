@@ -49,7 +49,7 @@ jobs:
         if: ${{ inputs.soda_dialogues != '0' }}
         run: |
           python3 -m pip install --quiet huggingface_hub pyarrow
-          python3 -I tools/glide/fetch_soda.py --out "$RUNNER_TEMP/src/soda.txt" --dialogues "${{ inputs.soda_dialogues }}"
+          python3 tools/glide/fetch_soda.py --out "$RUNNER_TEMP/src/soda.txt" --dialogues "${{ inputs.soda_dialogues }}"
           ls -l "$RUNNER_TEMP/src"
 
       - name: Count the pairs
@@ -57,10 +57,10 @@ jobs:
           set -o pipefail
           T="$RUNNER_TEMP/src/eng_sentences.tsv.bz2"
           S="$RUNNER_TEMP/src/soda.txt"
-          python3 -I tools/glide/count_pairs.py --vocab "$LM/vocab.txt" --text "$T" --tsv-column 3 --out "$LM/pairs_tatoeba.txt" --starters "$LM/starters_tatoeba.txt" 2>&1 | tee "$LM/stats.txt"
+          python3 -I tools/glide/count_pairs.py --vocab "$LM/vocab.txt" --text "$T" --tsv-column 3 --min-count 2 --top-k 150 --out "$LM/pairs_tatoeba.txt" --starters "$LM/starters_tatoeba.txt" 2>&1 | tee "$LM/stats.txt"
           if [ -f "$S" ]; then
-            python3 -I tools/glide/count_pairs.py --vocab "$LM/vocab.txt" --text "$S" --out "$LM/pairs_soda.txt" --starters "$LM/starters_soda.txt" 2>&1 | tee -a "$LM/stats.txt"
-            python3 -I tools/glide/count_pairs.py --vocab "$LM/vocab.txt" --text "$T" --tsv-column 3 --text "$S" --out "$LM/pairs_both.txt" --starters "$LM/starters_both.txt" 2>&1 | tee -a "$LM/stats.txt"
+            python3 -I tools/glide/count_pairs.py --vocab "$LM/vocab.txt" --text "$S" --min-count 2 --top-k 150 --out "$LM/pairs_soda.txt" --starters "$LM/starters_soda.txt" 2>&1 | tee -a "$LM/stats.txt"
+            python3 -I tools/glide/count_pairs.py --vocab "$LM/vocab.txt" --text "$T" --tsv-column 3 --text "$S" --min-count 2 --top-k 150 --out "$LM/pairs_both.txt" --starters "$LM/starters_both.txt" 2>&1 | tee -a "$LM/stats.txt"
           fi
           rm -f "$LM/vocab.txt"
           ls -l "$LM"
