@@ -483,6 +483,8 @@ class KeysView(context: Context) : View(context) {
     }
     fun bubbleTextForTest(): String? = if (bubbleKey != null) bubbleText else null
     fun pageForTest(): Page = page
+    fun candidatesForTest(): List<String> = cands
+    fun chipCenterForTest(i: Int): Pair<Float, Float>? { val r = chipBoxes().getOrNull(i) ?: return null; return r.centerX() to r.centerY() }
 
     companion object {
         /** Sliding over the space key: the finger must move this far sideways before it is a cursor slide and not a space, and every step of this width moves the cursor one character. */
