@@ -150,11 +150,15 @@ if [ -n "$GEOM" ]; then
   adb shell input swipe $SX $SY $SX $SY 1000; sleep 2; shot picker
   T2="$(field_text)"; [ "$T2" = "$T" ] && ok "holding the space bar typed no space" || echo "  info  field before '$T' after the hold '$T2'"
   adb shell input keyevent KEYCODE_BACK; sleep 1                 # (closes the keyboard picker if Android showed one)
+  # Android 16 does not show a picker when there is a next keyboard: it switches to it (the stock keyboard here), exactly what a globe key does. Choose Swoop again before the floating stage.
+  adb shell ime set "$COMP" >/dev/null 2>&1; sleep 2
+  if [ "$(adb shell settings get secure default_input_method | tr -d '\r')" = "$COMP" ]; then ok "Swoop is the chosen keyboard again after the hold on the space bar"; else bad "Swoop could not be chosen again after the space bar hold"; fi
 
   # ---- 8 floating (N3): long press the neon bar; the window becomes the whole screen, only the panel takes touches, the app behind is not resized
   adb shell input tap $TAP; sleep 3                                # the field again: the docked keyboard shows
   GX=$(key grip | cut -d' ' -f1); GY=$(key grip | cut -d' ' -f2)
   adb shell input swipe $GX $GY $GX $GY 900; sleep 2.5
+  adb logcat -d | grep -a SwoopDiag > "$OUT/swoopdiag-float.txt" 2>/dev/null; grep -q "floating -> true" "$OUT/swoopdiag-float.txt" && ok "the keyboard itself logged that it floated" || bad "the keyboard never logged a float (the long press did not reach its bar)"
   adb shell dumpsys window windows > "$OUT/dumpsys-window-float.txt"; shot floating
   python3 -I tools/emu/float_check.py "$OUT/dumpsys-window-float.txt" "$SCREEN_PX" > "$OUT/float-check.txt" 2>&1; FC=$?
   cat "$OUT/float-check.txt"
