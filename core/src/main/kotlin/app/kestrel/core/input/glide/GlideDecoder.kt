@@ -55,7 +55,7 @@ class GlideParams(
     /** How much of the probability comes from the word before (when the pair is known). */
     val bigramMix: Float = 0.4f,
     /** A path shorter than this many pitches is a tap, not a glide. */
-    val minLength: Float = 1.2f,
+    val minLength: Float = 0.45f,
     /** First / last letter may be matched this many samples away from the very end of the path. */
     val slack: Int = 1,
     /** A thumb lands a little beside where it aims, the same way along the whole path: the best [biasKeep] words are judged a second time with the path moved by [biasGain] of its mean offset from the word's letters. */

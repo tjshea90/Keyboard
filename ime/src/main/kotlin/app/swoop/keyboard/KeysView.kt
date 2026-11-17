@@ -453,6 +453,7 @@ class KeysView(context: Context) : View(context) {
         when (e.actionMasked) {
             MotionEvent.ACTION_DOWN -> { requestUnbufferedDispatch(e); activeId = e.getPointerId(0); pressDown(e.getX(0), e.getY(0)) }   // unbuffered: every touch sample at once, not batched to the frame (a fast trail)
             MotionEvent.ACTION_POINTER_DOWN -> {
+                if (gliding) return true                          // a glide in progress is never cut short by a second touch (a resting palm)
                 // the second thumb: the letter the first one holds is typed NOW (in the order they were pressed), then the new finger is the tracked one
                 finishHeldLetter()
                 val i = e.actionIndex; activeId = e.getPointerId(i); pressDown(e.getX(i), e.getY(i))
@@ -564,6 +565,19 @@ class KeysView(context: Context) : View(context) {
     private fun movedFar(x: Float, y: Float): Boolean { val dx = x - downX; val dy = y - downY; return dx * dx + dy * dy > dp(GLIDE_START_DP) * dp(GLIDE_START_DP) }
     private fun pathPitches(): Float { var len = 0f; for (i in 1 until gn) len += Math.hypot((gx[i] - gx[i - 1]).toDouble(), (gy[i] - gy[i - 1]).toDouble()).toFloat(); return len / pitch() }
 
+    /**
+     * Owner, 2026-11-17: "always glide unless I am clearly only pressing one key". A touch is a tap only when every point of it stayed on the key it went down on (plus a margin of
+     * [TAP_MARGIN_PITCH] key widths for a thumb that rolls) or the whole path is shorter than [MIN_GLIDE_PITCHES] pitches. Before, a quick swipe to the NEXT key ("as", "it", "no") was shorter than
+     * 1.2 pitches, counted as a tap and typed one letter.
+     */
+    private fun stayedOnKey(k: KeySpec?): Boolean {
+        if (k == null) return true
+        val b = boxOf(k) ?: return pathPitches() < MIN_GLIDE_PITCHES
+        val m = pitch() * TAP_MARGIN_PITCH
+        for (i in 0 until gn) if (gx[i] < b.left - m || gx[i] > b.right + m || gy[i] < b.top - m || gy[i] > b.bottom + m) return pathPitches() < MIN_GLIDE_PITCHES
+        return true
+    }
+
     private fun beginGlide() {
         lastPreviewAt = SystemClock.uptimeMillis(); lastPreviewN = 0
         clearHold(); gliding = true; down = null; pressedLetter = null
@@ -582,7 +596,7 @@ class KeysView(context: Context) : View(context) {
     private fun endGlide() {
         gliding = false; armed = false
         val k = glideDown; glideDown = null
-        if (pathPitches() < MIN_GLIDE_PITCHES) {         // a tap that slid a little: the key it went down on
+        if (stayedOnKey(k)) {                            // a tap that slid a little (the finger never left its own key): the key it went down on
             gn = 0; dyn()
             if (k?.key != null) { light(k); emit(k.key!!) }
             return
@@ -634,7 +648,9 @@ class KeysView(context: Context) : View(context) {
         /** A finger that has moved this far (dp) from where it went down has started a glide (a short drag that ends up under 1.2 key widths is still a tap). */
         const val GLIDE_START_DP = 5f
         /** A path shorter than this (in key pitches) is a tap that slid a little, not a glide. */
-        const val MIN_GLIDE_PITCHES = 1.2f
+        const val MIN_GLIDE_PITCHES = 0.45f
+        /** A path that never strays further than this (key widths) outside the key it started on is a tap. */
+        const val TAP_MARGIN_PITCH = 0.22f
         const val TRAIL_FADE_MS = 260L
         const val NO_WORD_MS = 1500L
         /** The live guess while gliding: at most this often, and only after this many new touch points. */
