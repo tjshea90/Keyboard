@@ -56,5 +56,14 @@ class ClipboardPanelTest {
         assertEquals(listOf("keep"), s.items.map { it.text })
     }
     @Test fun withHistoryOffThePanelOffersToTurnItOn() { val (p, _, c) = panel("x", on = false); assertEquals(0, p.cardCountForTest()); tap(p, p.turnOnCenterForTest()); assertEquals(1, c.turnedOn) }
+    @Test @Config(qualifiers = "night-w412dp-h915dp-xxhdpi", sdk = [29]) fun thePanelIsDrawnInTheKeyboardsColoursAndShowsTheCards() {
+        val (p, s, _) = panel("See you at 6 pm at the station", "https://example.com/a/very/long/address/that/does/not/fit/on/one/line/at/all", "123 Main Street", "ok", "Thanks, I will call you tomorrow morning about the thing we talked about yesterday")
+        s.setPinned("ok", true)
+        val b = android.graphics.Bitmap.createBitmap(p.width, p.height, android.graphics.Bitmap.Config.ARGB_8888)
+        p.draw(android.graphics.Canvas(b))
+        System.getenv("SWOOP_LOOK_DIR")?.let { d -> java.io.File(d).mkdirs(); java.io.File(d, "clipboard-dark.png").outputStream().use { o -> b.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, o) } }
+        val (cx, cy) = p.cardCenterForTest(0)!!
+        assertTrue("a card is painted where the touch code puts it", b.getPixel(cx.toInt(), cy.toInt()) != b.getPixel(2, 2))
+    }
     @Test fun aTapOnTheMenuOutsideAnyCardDoesNotPaste() { val (p, _, c) = panel("x"); tap(p, 5f to 5f); assertFalse(c.pasted.isNotEmpty()) }
 }
