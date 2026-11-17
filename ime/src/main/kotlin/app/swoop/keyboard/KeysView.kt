@@ -233,15 +233,23 @@ class KeysView(context: Context) : View(context) {
 
     private fun applyPalette() {
         dark = when (themeMode) { 1 -> true; 2 -> false; else -> (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES }
-        cBg = if (dark) 0xFF1B1D20.toInt() else 0xFFD3D6DB.toInt()
-        cKey = if (dark) 0xFF3C4043.toInt() else 0xFFFFFFFF.toInt()
-        cSpecial = if (dark) 0xFF2B2E31.toInt() else 0xFFB9BEC6.toInt()
-        cLit = if (dark) 0xFF6B7280.toInt() else 0xFF9AA3AE.toInt()
-        cText = if (dark) 0xFFE8EAED.toInt() else 0xFF202124.toInt()
-        cMuted = if (dark) 0xFF9AA0A6.toInt() else 0xFF5F6368.toInt()
-        cAccent = accent; cAccentText = 0xFFFFFFFF.toInt()
+        // Owner M1: the dark colours are measured from the photo (Gboard, dark teal): background 0d1d1d, letter keys 253535, Shift / Backspace / comma / full stop 35494a, ?123 a4cedc,
+        // text f1ffff, digit hints 9babab, Enter and the lit translate icon in the accent colour (cyan 00dde6 by default).
+        cBg = if (dark) 0xFF0D1D1D.toInt() else 0xFFE4EDED.toInt()
+        cKey = if (dark) 0xFF253535.toInt() else 0xFFFFFFFF.toInt()
+        cSpecial = if (dark) 0xFF35494A.toInt() else 0xFFC4D4D5.toInt()
+        cLit = if (dark) 0xFF4D6A6B.toInt() else 0xFF9FB8BA.toInt()
+        cText = if (dark) 0xFFF1FFFF.toInt() else 0xFF0D1D1D.toInt()
+        cMuted = if (dark) 0xFF9BABAB.toInt() else 0xFF566B6C.toInt()
+        cAccent = accent
+        cAccentText = if (luma(accent) > 0.5f) 0xFF062020.toInt() else 0xFFFFFFFF.toInt()      // dark ink on the bright accents, white ink on the dark ones
+        cPale = if (dark) 0xFFA4CEDC.toInt() else 0xFF9CC7D6.toInt()
+        cPaleText = 0xFF0D1D1D.toInt()
         cBubble = if (dark) 0xFF0C161D.toInt() else 0xFFFFFFFF.toInt()
     }
+
+    private fun luma(c: Int): Float = (0.299f * ((c shr 16) and 0xFF) + 0.587f * ((c shr 8) and 0xFF) + 0.114f * (c and 0xFF)) / 255f
+    private fun lighten(c: Int, f: Float): Int { fun ch(v: Int) = (v + (255 - v) * f).toInt().coerceIn(0, 255); return (c and 0xFF000000.toInt()) or (ch((c shr 16) and 0xFF) shl 16) or (ch((c shr 8) and 0xFF) shl 8) or ch(c and 0xFF) }
 
     override fun onConfigurationChanged(newConfig: Configuration) { super.onConfigurationChanged(newConfig); applyPalette(); invalidate() }
 
