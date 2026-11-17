@@ -49,7 +49,7 @@ class KeysViewTest {
     private fun up(v: View, x: Float, y: Float) { v.dispatchTouchEvent(ev(MotionEvent.ACTION_UP, x, y)) }
     private fun tap(v: View, p: Pair<Float, Float>) { down(v, p.first, p.second); up(v, p.first, p.second) }
     private fun at(v: KeysView, label: String) = v.centerOf(label) ?: throw AssertionError("no key '$label'")
-    private fun wait(ms: Long) { shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(ms)) }
+    private fun advance(ms: Long) { shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(ms)) }
 
     private fun two(v: View, action: Int, idx: Int, x0: Float, y0: Float, x1: Float, y1: Float): Boolean {
         val props = Array(2) { MotionEvent.PointerProperties().apply { id = it; toolType = MotionEvent.TOOL_TYPE_FINGER } }
@@ -92,10 +92,10 @@ class KeysViewTest {
     @Test fun backspaceFiresAtOnceRepeatsWhileHeldAndStopsWhenLifted() {
         val (v, r) = view(); val (x, y) = at(v, "⌫")
         down(v, x, y); assertEquals(listOf("<bs>"), r.keys)
-        wait(KeysView.REPEAT_FIRST_MS - 50); assertEquals(1, r.keys.size)
-        wait(100); assertEquals(2, r.keys.size)
-        wait(KeysView.REPEAT_MS * 3); assertEquals(5, r.keys.size)
-        up(v, x, y); val n = r.keys.size; wait(500); assertEquals("repeat must stop at lift, and the lift itself types nothing", n, r.keys.size)
+        advance(KeysView.REPEAT_FIRST_MS - 50); assertEquals(1, r.keys.size)
+        advance(100); assertEquals(2, r.keys.size)
+        advance(KeysView.REPEAT_MS * 3); assertEquals(5, r.keys.size)
+        up(v, x, y); val n = r.keys.size; advance(500); assertEquals("repeat must stop at lift, and the lift itself types nothing", n, r.keys.size)
     }
     @Test fun theActionKeyReportsGoAndShowsItsLabel() {
         val (v, r) = view(action = "Search"); tap(v, at(v, "Search")); assertEquals(listOf("<go>"), r.keys)
@@ -116,11 +116,11 @@ class KeysViewTest {
     @Test fun heldTopRowLetterTypesItsDigitAndShowsItInTheBubble() {
         val (v, r) = view(); val (x, y) = at(v, "e")
         down(v, x, y); assertEquals("e", v.bubbleTextForTest())
-        wait(KeysView.HOLD_MS + 20); assertEquals("3", v.bubbleTextForTest())
+        advance(KeysView.HOLD_MS + 20); assertEquals("3", v.bubbleTextForTest())
         up(v, x, y); assertEquals(listOf("3"), r.keys)
     }
-    @Test fun aQuickTapOnATopRowLetterIsTheLetter() { val (v, r) = view(); tap(v, at(v, "e")); wait(600); assertEquals(listOf("e"), r.keys) }
-    @Test fun holdingAMiddleRowLetterDoesNothingSpecial() { val (v, r) = view(); val (x, y) = at(v, "g"); down(v, x, y); wait(900); up(v, x, y); assertEquals(listOf("g"), r.keys) }
+    @Test fun aQuickTapOnATopRowLetterIsTheLetter() { val (v, r) = view(); tap(v, at(v, "e")); advance(600); assertEquals(listOf("e"), r.keys) }
+    @Test fun holdingAMiddleRowLetterDoesNothingSpecial() { val (v, r) = view(); val (x, y) = at(v, "g"); down(v, x, y); advance(900); up(v, x, y); assertEquals(listOf("g"), r.keys) }
     @Test fun slidingOverSpaceMovesTheCursorAndTypesNoSpace() {
         val (v, r) = view(); val (x, y) = at(v, "space")
         down(v, x, y); move(v, x + 5 * dp, y); assertEquals(0, r.cursor)           // under the start distance: still a press
