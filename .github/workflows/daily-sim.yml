@@ -64,7 +64,7 @@ jobs:
           ls -l /dev/kvm || { echo "::error::no /dev/kvm on this runner"; exit 1; }
           echo "cores: $(nproc), memory: $(free -m | awk '/Mem:/ {print $2}') MB"
 
-      - name: Build Swoop (debug: it logs its key map for the driver)
+      - name: Build Swoop (the debug build logs its key map for the driver)
         run: ./gradlew :ime:assembleDebug --console=plain
 
       - name: Build Kestrel G debug for x86_64 (the real engine, GeckoView) from the Browser branch
