@@ -50,4 +50,17 @@ class FieldInfosTest {
         val f = FieldInfos.from(EditorInfo().apply { inputType = T; initialSelStart = 4; initialSelEnd = 9 })
         assertEquals(4, f.initialSelStart); assertEquals(9, f.initialSelEnd)
     }
+
+    /** docs/KESTREL-LINK.md: the Kestrel browser marks its address-and-search box with a private option; the box then learns, glides and guesses like a search box but takes no automatic capitals, spaces or fixes. */
+    @Test fun theKestrelAddressBoxIsTheOmniboxAndNobodyElseIs() {
+        fun info(type: Int, opts: Int, private: String?) = FieldInfos.from(EditorInfo().also { it.inputType = type; it.imeOptions = opts; it.privateImeOptions = private })
+        val box = info(T, EditorInfo.IME_ACTION_GO, "other.app.x=1,app.kestrel.omnibox=1")
+        assertEquals(FieldKind.OMNIBOX, box.kind); assertEquals(ImeActions.GO, box.imeAction)
+        assertEquals("words are tapped as composing text and guessed", true, box.composingAllowed); assertEquals("and learned", true, box.learningAllowed); assertEquals("no automatic capitals", 0, box.capsFlags)
+        assertEquals("a private tab asks for no learning with the standard flag", false, info(T, EditorInfo.IME_ACTION_GO or EditorInfo.IME_FLAG_NO_PERSONALIZED_LEARNING, FieldInfos.OMNIBOX_OPTION).learningAllowed)
+        assertEquals("without the option an address bar stays a URL field", FieldKind.URL, info(T or InputType.TYPE_TEXT_VARIATION_URI, 0, null).kind)
+        assertEquals("the option does nothing in a password field", FieldKind.PASSWORD, info(T or InputType.TYPE_TEXT_VARIATION_PASSWORD, 0, FieldInfos.OMNIBOX_OPTION).kind)
+        assertEquals("a look-alike option is not the option", FieldKind.TEXT, info(T, 0, "app.kestrel.omnibox=2,xapp.kestrel.omnibox=1").kind)
+        assertEquals("no option, no change", FieldKind.TEXT, info(T, 0, "").kind)
+    }
 }
