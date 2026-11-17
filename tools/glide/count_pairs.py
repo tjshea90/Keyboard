@@ -43,6 +43,8 @@ def main():
     ap.add_argument("--min-count", type=int, default=3)
     ap.add_argument("--top-k", type=int, default=60)
     ap.add_argument("--max-lines", type=int, default=0, help="stop after this many lines of each file (0 = all)")
+    ap.add_argument("--holdout-every", type=int, default=0, help="every N-th sentence is NOT counted but written to --holdout-out (a clean test set for the pairs)")
+    ap.add_argument("--holdout-out", default=None)
     a = ap.parse_args()
 
     vocab = set()
@@ -53,7 +55,8 @@ def main():
                 vocab.add(w)
     pairs = collections.Counter()
     starters = collections.Counter()
-    sentences = tokens = skipped = 0
+    sentences = tokens = skipped = held = 0
+    hold = open(a.holdout_out, "w", encoding="utf-8") if a.holdout_out and a.holdout_every else None
     for path in a.text:
         n = 0
         with open_text(path) as fh:
@@ -61,7 +64,7 @@ def main():
                 n += 1
                 if a.max_lines and n > a.max_lines:
                     break
-                if a.tsv_column:
+                if a.tsv_column and "\t" in line:            # a tab-separated export (Tatoeba): the sentence column; a plain line (SODA) is the sentence itself
                     cols = line.rstrip("\n").split("\t")
                     if len(cols) < a.tsv_column:
                         continue
@@ -72,6 +75,11 @@ def main():
                     if NAMES.intersection(re.findall(r"[a-z']+", line)):
                         skipped += 1
                         continue
+                if hold is not None and sentences % a.holdout_every == 0:
+                    hold.write(line.strip() + "\n")
+                    held += 1
+                    sentences += 1
+                    continue
                 sentences += 1
                 for seg in SPLIT.split(line):
                     toks = [t.strip("'") for t in seg.split()]
@@ -104,8 +112,10 @@ def main():
         with open(a.starters, "w", encoding="utf-8") as out:
             for w, c in starters.most_common(60):
                 out.write("%s %d\n" % (w, c))
-    print("sentences %d (skipped %d with a name), tokens %d, distinct pairs %d, kept %d (min-count %d, top-k %d), first words %d" %
-          (sentences, skipped, tokens, len(pairs), kept, a.min_count, a.top_k, len(by_first)), file=sys.stderr)
+    if hold is not None:
+        hold.close()
+    print("sentences %d (skipped %d with a name, %d held out), tokens %d, distinct pairs %d, kept %d (min-count %d, top-k %d), first words %d" %
+          (sentences, skipped, held, tokens, len(pairs), kept, a.min_count, a.top_k, len(by_first)), file=sys.stderr)
 
 
 if __name__ == "__main__":
