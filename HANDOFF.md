@@ -29,7 +29,7 @@ docs/ research/ TASKS.md CHECKPOINT.md BUILDLOG.md INBOX.md OUTBOX.md .checkpoin
 ## 4. Build, test, ship
 - `./gradlew --offline :core:test` (JVM tests: the main safety net) | `./gradlew :ime:testDebugUnitTest` | `./gradlew :ime:lintDebug` | `bash tools/test_handoff.sh` (self-test of the save/release tooling, also run by every `ckpt`).
 - Release (GitHub builds and signs; local builds are tests only): bump `versionCode`/`versionName` in `ime/build.gradle.kts` -> `bash ship.sh "note"` -> dispatch `.github/workflows/android.yml` via `mcp__github__actions_run_trigger` (`run_workflow`, `ref` = the session branch, inputs `full_build=true`, `note`) -> wait in a background loop -> the Release shows the APK -> `bash tools/record-release.sh swoop-v<version> "same note"` -> give the owner the Release link as plain tappable text on its own line. Never ship a tag twice. A tag PUSH from the sandbox is refused (the workflow creates it).
-- **No release APK exists until KB-003** (private signing key). Until then `signing/CERT_SHA256` is `UNSET` and `verify-apk.sh` refuses every release APK; CI may build debug/unsigned artifacts for tests only.
+- Signing: the PUBLIC dev key in `signing/dev/` (owner decision 2026-11-17), pinned in `signing/CERT_SHA256`; never regenerate it.
 
 ## 5. Things that bite
 - **The Browser repo is READ-ONLY.** In this sandbox it is checked out next to this repo. Never `cd` into it (its own hooks, if loaded, would commit and push there); use `git -C /home/user/Browser ...` or absolute paths. Copy files, never link them. Same for LinkMeter.

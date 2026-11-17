@@ -16,7 +16,7 @@ A small, fast Android keyboard with **glide typing that keeps learning from you*
 1. Open the latest **Release** of this repository on the device and tap the `.apk` file (allow installs from your browser when Android asks).
 2. Open the Swoop app: it explains how to switch the keyboard on and choose it.
 
-Every Release is built and signed by GitHub Actions with one private signing key, so later versions update in place. Check the SHA-256 in the Release text against the file if you want to be sure.
+Every Release is built and signed by GitHub Actions (with the dev key committed in `signing/dev/`, so later versions update in place). Only install Swoop APKs from this repository's Releases: because the signing key is public, an APK from anywhere else could be signed to look like an update. The SHA-256 is in each Release text.
 
 ## Privacy
 The app asks for **no permissions** (CI fails if that ever changes without a decision). It does not use the internet. What it learns stays in its private storage; the only way data leaves is the Export button you press. See `docs/IF-THE-KEYBOARD-BREAKS.md` for plain-words help.
