@@ -75,7 +75,7 @@ class ImeLayoutTest {
         for (kind in FieldKind.values()) {
             assertTrue("$kind off by default", keys(ImeLayout.rows(Page.LETTERS, false, kind)).none { it === Key.NextKeyboard })
             val rows = ImeLayout.rows(Page.LETTERS, false, kind, showGlobe = true)
-            assertTrue("$kind on when asked", keys(rows).any { it === Key.NextKeyboard }); assertEquals("$kind: bottom left", Key.NextKeyboard, rows.last().first().key)
+            assertTrue("$kind on when asked", keys(rows).any { it === Key.NextKeyboard }); assertTrue("$kind: at the left end of the bottom row", rows.last().take(2).any { it.key === Key.NextKeyboard })
         }
     }
 

@@ -118,12 +118,18 @@ class KeysViewTest {
         tap(v, at(v, "Q")); assertEquals("Q", r.keys.last())
         v.setShift(ShiftState.OFF); assertNotNull(v.centerOf("q"))
     }
-    @Test fun thereIsNoOneTwoThreeKeyAndTheSpaceBarIsTheWidestKeyOfTheBottomRow() {
-        val (v, _) = view(); assertNull(v.centerOf("123")); assertNull("no globe by default", v.centerOf("globe"))
+    @Test fun theOneTwoThreeKeyPagesToTheSymbolsAndBackAndIsNotReported() {
+        val (v, r) = view(); assertNull("no globe by default", v.centerOf("globe"))
+        tap(v, at(v, "123")); assertEquals(Page.SYMBOLS, v.pageForTest()); assertTrue(r.keys.isEmpty())
+        tap(v, at(v, "@")); tap(v, at(v, "abc")); assertEquals(Page.LETTERS, v.pageForTest()); assertEquals(listOf("@"), r.keys)
+    }
+
+    @Test fun theSpaceBarIsTheWidestKeyOfTheBottomRow() {
+        val (v, _) = view()
         val sp = at(v, "space"); val comma = at(v, ","); val dot = at(v, "."); val go = at(v, "⏎")
         assertTrue("space is in the middle", comma.first < sp.first && sp.first < dot.first && dot.first < go.first)
         val spaceW = (dot.first - sp.first) * 2; val keyW = (at(v, "q").first - at(v, "w").first).let { Math.abs(it) }
-        assertTrue("the space bar is about six keys wide: $spaceW vs $keyW", spaceW > keyW * 5f)
+        assertTrue("the space bar is about five keys wide: $spaceW vs $keyW", spaceW > keyW * 4f)
     }
 
     @Test fun holdingTheFullStopOpensTheSymbolsGridAndALetGoOnASymbolTypesIt() {
