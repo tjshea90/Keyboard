@@ -82,7 +82,8 @@ class Settings(private val p: SharedPreferences) {
     /** A key that switches keyboards, at the left of the space bar. Off by default: hold the space bar instead. */
     val showGlobe get() = b(Prefs.GLOBE, false)
     val keyHeight get() = i(Prefs.KEYHEIGHT, 1).coerceIn(0, KEY_HEIGHTS.size - 1)
-    val theme get() = i(Prefs.THEME, 0).coerceIn(0, THEMES.size - 1)
+    /** Dark unless the person chose another: the photo the layout is modelled on is the dark theme, and a phone or tablet left in day mode would otherwise show a light keyboard. */
+    val theme get() = i(Prefs.THEME, DEFAULT_THEME).coerceIn(0, THEMES.size - 1)
     /** Cyan (the photo's Enter key) unless the person chose another. */
     val accent get() = i(Prefs.ACCENT, 1).coerceIn(0, ACCENTS.size - 1)
     val keyPreview get() = b(Prefs.PREVIEW, true)
