@@ -432,6 +432,79 @@ def scene_private(rep):
         time.sleep(1.0)
 
 
+PAGES = ["https://en.wikipedia.org/wiki/Android_(operating_system)", "https://news.ycombinator.com/", "https://lite.cnn.com/", "https://developer.mozilla.org/en-US/docs/Web/CSS",
+         "https://developer.android.com/guide", "https://docs.python.org/3/tutorial/index.html", "https://kotlinlang.org/docs/home.html", "https://lobste.rs/", "https://apnews.com/",
+         "https://archive.org/", "https://pypi.org/project/requests/", "https://slashdot.org/", "https://github.com/mozilla/gecko-dev", "https://duckduckgo.com/?q=kestrel+browser+android"]
+
+
+def load_numbers(line):
+    m = re.search(r"paint=(-?\d+)ms done=(-?\d+)ms blocked=(\d+).*?ok=(\w+)", line)
+    return (int(m.group(1)), int(m.group(2)), int(m.group(3)), m.group(4)) if m else None
+
+
+def scene_pages(rep, minutes):
+    """Real sites, one after the other, the way a person opens them: how long to the first paint and to the end of the load, how many requests the shields blocked, did it load."""
+    end = time.time() + minutes * 60
+    paints, dones = [], []
+    for url in PAGES:
+        if time.time() > end:
+            rep.row("pages", "INFO", "stopped after the time limit of %d minutes" % minutes)
+            break
+        n0 = len(health_lines())
+        open_url(url)
+        secs, line = wait_page_loaded(n0, timeout=100.0)
+        host = url.split("/")[2]
+        if secs is None:
+            rep.row("page " + host, "FAIL", "no 'page loaded' line within 100 s (last Health line: %s)" % line[-100:])
+            shot(rep, "page-%s-fail" % host)
+            continue
+        nums = load_numbers(line)
+        if nums:
+            paint, done, blocked, ok = nums
+            if paint >= 0:
+                paints.append(paint)
+            dones.append(done)
+            rep.row("page " + host, "OK" if ok == "true" else "WARN", "first paint %s ms, loaded %s ms, %d requests blocked, ok=%s" % (paint, done, blocked, ok))
+            rep.event("page", host=host, paint_ms=paint, done_ms=done, blocked=blocked, ok=ok)
+        else:
+            rep.row("page " + host, "INFO", line[-140:])
+        time.sleep(2.0)
+        shot(rep, "page-%s" % host)
+        # a person scrolls: two flicks down
+        w, h = screen()
+        for _ in range(2):
+            drive.inject([(w // 2, int(h * 0.75)), (w // 2, int(h * 0.45)), (w // 2, int(h * 0.25))], per_chunk=2, pause=0.02)
+            time.sleep(0.8)
+    if dones:
+        dones.sort()
+        paints.sort()
+        rep.row("pages summary", "INFO", "%d pages: first paint median %s ms (slowest %s), load finished median %s ms (slowest %s)" % (
+            len(dones), paints[len(paints) // 2] if paints else None, paints[-1] if paints else None, dones[len(dones) // 2], dones[-1]))
+
+
+VIDEOS = ["https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4",
+          "https://test-videos.co.uk/vids/bigbuckbunny/mp4/h264/720/Big_Buck_Bunny_720_10s_5MB.mp4"]
+
+
+def scene_video(rep, seconds=45):
+    """A film: does it start, how long does it take, do the player's own Health lines mention stalls or errors."""
+    w, h = screen()
+    for url in VIDEOS:
+        n0 = len(health_lines())
+        t0 = time.time()
+        open_url(url)
+        time.sleep(seconds)
+        new = health_lines()[n0:]
+        keep = [l.split("KestrelHealth")[-1].strip() for l in new if re.search(r"player|film|video|stall|buffer|stats|inline|hand", l, re.I)]
+        bad = [l for l in keep if re.search(r"error|fail|stall|rebuffer|timeout", l, re.I)]
+        rep.row("video " + url.rsplit("/", 1)[-1][:30], "WARN" if bad else "INFO", "%d player lines in %ds%s; first: %s" % (len(keep), seconds, ("; PROBLEMS: " + " | ".join(bad[:2])[:200]) if bad else "", (keep[0][:140] if keep else "none")))
+        for l in keep[-6:]:
+            rep.fact("video line: " + l[:170])
+        shot(rep, "video-%d" % len(rep.rows))
+        sh("input keyevent KEYCODE_BACK", check=False)
+        time.sleep(1.5)
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--out", default="sim-out")
@@ -467,6 +540,12 @@ def main():
             scene_address(rep)
             scene_private(rep)
             scene_memory(rep, "after typing")
+        if a.suite in ("pages", "all"):
+            scene_pages(rep, a.minutes)
+            scene_memory(rep, "after pages")
+        if a.suite in ("video", "all"):
+            scene_video(rep)
+            scene_memory(rep, "after video")
     except Exception as e:
         rep.row("run", "FAIL", "the run itself broke: %s" % str(e)[:160])
     finally:
