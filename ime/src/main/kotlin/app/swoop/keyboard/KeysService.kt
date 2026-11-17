@@ -31,10 +31,12 @@ class KeysService : InputMethodService() {
         presenter.onNextKeyboard = { nextKeyboard() }
     }
 
-    override fun onCreateInputView(): View = KeysView(this).also { v ->
+    override fun onCreateInputView(): View = KeyboardRoot(this).let { root ->
+        val v = root.keys
         presenter.view = v
         v.onFirstDraw = { try { guard.healthy() } catch (_: Exception) { } }
         v.addOnLayoutChangeListener { _, l, t, r, b, ol, ot, or, ob -> if (r - l != or - ol || b - t != ob - ot) presenter.prepareGlide() }
+        root
     }
 
     /** The globe key: the next keyboard; if Android will not switch (a single keyboard, or no permission) the picker. */
