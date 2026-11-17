@@ -26,7 +26,7 @@ class SuggesterRareTest {
     private fun s(typed: String, pm: PersonalModel? = null, n: Int = 3, prev: String? = null) = Suggester.suggest(main, pm, keys, typed, prev, null, n)
 
     @Test fun commonCompletionsComeBeforeRareOnes() {
-        val r = s("tu", n = 8).words
+        val r = s("tu", n = 12).words
         assertEquals("turn", r.first())
         assertTrue("$r", r.indexOf("tuesday") < r.indexOf("tui") && r.indexOf("tube") < r.indexOf("tui") && r.indexOf("tune") < r.indexOf("tui"))
         assertFalse("the strip of three shows common words only: ${s("tu").words}", s("tu").words.any { it in setOf("tui", "tuk", "tung", "tuba") })
@@ -46,14 +46,14 @@ class SuggesterRareTest {
         repeat(40) { pm.add(null, "tui", 1f) }
         val withUse = s("tu", pm).words
         assertTrue("a word used 40 times is offered: $withUse", "tui" in withUse)
-        assertTrue("and above the rare ones nobody uses: ${s("tu", pm, 8).words}", s("tu", pm, 8).words.let { it.indexOf("tui") < it.indexOf("tuk") && it.indexOf("tui") < it.indexOf("tuba") })
+        assertTrue("and above the rare ones nobody uses: ${s("tu", pm, 12).words}", s("tu", pm, 12).words.let { it.indexOf("tui") < it.indexOf("tuk") && it.indexOf("tui") < it.indexOf("tuba") })
         assertFalse("without the use it is not on the strip", "tui" in s("tu").words)
     }
 
     @Test fun aFewUsesLiftARareWordPastOtherRareWords() {
         val pm = PersonalModel()
         repeat(3) { pm.add(null, "tuba", 1f) }
-        val r = s("tu", pm, 8).words
+        val r = s("tu", pm, 12).words
         assertTrue("$r", r.indexOf("tuba") < r.indexOf("tuk") && r.indexOf("tuba") < r.indexOf("tung"))
     }
 

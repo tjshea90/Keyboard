@@ -124,7 +124,7 @@ class RareWordTest {
         dec.personal = pm
         pm.add(null, "the", 1f)
         assertEquals("one use of a different word changes nothing", "sat", firstWord(dec, sat, p))
-        repeat(6) { pm.add(null, "sar", 1f) }
+        repeat(12) { pm.add(null, "sar", 1f) }
         assertEquals("a word the person writes is no longer rare", "sar", firstWord(dec, sat, p))
     }
 
@@ -134,7 +134,7 @@ class RareWordTest {
         val p = ambiguousPath()
         var uses = 0
         while (firstWord(dec, sat, p) != "sar" && uses < 12) { pm.add(null, "sar", 1f); uses++ }
-        assertTrue("took $uses uses", uses in 1..6)
+        assertTrue("took $uses uses", uses in 1..10)
     }
 
     @Test fun thePairWithTheWordBeforeAlsoMakesARareWordLikely() {

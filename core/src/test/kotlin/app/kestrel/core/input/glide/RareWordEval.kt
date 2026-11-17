@@ -87,11 +87,11 @@ object RareWordEval {
         val base = GlideEval.paramsFrom(a)
         val d = GlideParams()
         val params = GlideParams(
-            samples = base.samples, endReach2 = base.endReach2, visitCap = base.visitCap, missLimit2 = base.missLimit2, keep = base.keep, quickEnds = base.quickEnds, quickPrior = base.quickPrior,
+            samples = base.samples, endReach2 = base.endReach2, visitCap = base.visitCap, missLimit2 = base.missLimit2, keep = a["keep"]?.toInt() ?: d.keep, quickEnds = base.quickEnds, quickPrior = a["quickPrior"]?.toFloat() ?: d.quickPrior,
             shapeW = base.shapeW, endW = base.endW, lmW = base.lmW, lmA = base.lmA, lmMin = base.lmMin, lmMax = base.lmMax, bigramMix = base.bigramMix, minLength = base.minLength, slack = base.slack,
             biasKeep = base.biasKeep, biasGain = base.biasGain, biasW = base.biasW, maxPerLetter = base.maxPerLetter, confGain = base.confGain, confCap = base.confCap, confMaxGap = base.confMaxGap,
             patGain = base.patGain, patCap = base.patCap, patMaxGap = base.patMaxGap,
-            rareFloor = a["rareFloor"]?.toFloat() ?: d.rareFloor, rareW = a["rareW"]?.toFloat() ?: d.rareW, rareCap = a["rareCap"]?.toFloat() ?: d.rareCap,
+            rareFloor = a["rareFloor"]?.toFloat() ?: d.rareFloor, rareW = a["rareW"]?.toFloat() ?: d.rareW, rareCap = a["rareCap"]?.toFloat() ?: d.rareCap, rareMaxPerLetter = a["rareMaxPerLetter"]?.toFloat() ?: d.rareMaxPerLetter, rareFitSpan = a["rareFitSpan"]?.toFloat() ?: d.rareFitSpan,
         )
         for (nm in (a["noise"] ?: "calm,normal,sloppy,bad").split(',')) {
             val noise = GlideEval.noiseFrom(a + mapOf("noise" to nm))
