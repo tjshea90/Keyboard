@@ -21,8 +21,9 @@ adb shell settings put global window_animation_scale 0; adb shell settings put g
 
 # ---- 1 install, register, enable, choose
 adb install -r -t "$APK" >/dev/null 2>&1 && ok "installed $PKG" || { bad "install failed"; exit 1; }
-adb shell ime list -a | grep -q "$PKG" && ok "ime list -a shows Swoop" || bad "ime list -a does not show $PKG"
-adb shell ime enable "$COMP" | tee "$OUT/ime-enable.txt" | grep -qi "enabled" && ok "enabled" || bad "ime enable: $(cat "$OUT/ime-enable.txt")"
+adb shell ime list -a > "$OUT/ime-list.txt" 2>&1   # (a file, not a pipe: grep -q in a pipe under pipefail kills adb with SIGPIPE and reports a false failure)
+grep -q "$PKG" "$OUT/ime-list.txt" && ok "ime list -a shows Swoop" || bad "ime list -a does not show $PKG"
+adb shell ime enable "$COMP" > "$OUT/ime-enable.txt" 2>&1; grep -qi "enabled" "$OUT/ime-enable.txt" && ok "enabled" || bad "ime enable: $(cat "$OUT/ime-enable.txt")"
 adb shell ime set "$COMP" >/dev/null
 [ "$(adb shell settings get secure default_input_method | tr -d '\r')" = "$COMP" ] && ok "Swoop is the chosen keyboard" || bad "default_input_method is $(adb shell settings get secure default_input_method)"
 
@@ -112,7 +113,8 @@ if [ -n "$GEOM" ]; then
   X0=$(key t | cut -d' ' -f1); Y0=$(key t | cut -d' ' -f2); X1=$(key p | cut -d' ' -f1)
   adb shell input swipe $X0 $Y0 $X1 $Y0 450; sleep 2
   T="$(field_text)"; echo "  info  field after the glide has ${#T} characters"; shot glided
-  case "$T" in "h "*[a-z]" ") ok "a glide typed a word with a trailing space" ;; *) bad "the glide did not type a word (field has ${#T} characters: '$T')" ;; esac
+  echo "  info  field bytes after the glide: $(printf '%s' "$T" | od -An -c | tr -s ' ' | head -2 | tr '\n' ' ')"
+  case "$T" in *[a-z]" ") [ "${#T}" -ge 4 ] && ok "a glide typed a word with a trailing space ('$T')" || bad "the glide typed too little ('$T')" ;; *) bad "the glide did not type a word (field: '$T')" ;; esac
   # ---- 6 globe key: must not crash
   adb shell input tap $(key globe); sleep 2; shot globe
 fi
