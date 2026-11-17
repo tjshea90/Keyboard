@@ -55,6 +55,11 @@ class KeysService : InputMethodService() {
 
     override fun onFinishInput() { presenter.finishInput(); super.onFinishInput() }
 
+    /** The keyboard goes away (Back, another app): what was learned is written now, so a killed process loses nothing. */
+    override fun onFinishInputView(finishingInput: Boolean) { presenter.saveLearned(); super.onFinishInputView(finishingInput) }
+    override fun onWindowHidden() { presenter.saveLearned(); super.onWindowHidden() }
+    override fun onDestroy() { presenter.saveLearned(); super.onDestroy() }
+
     /** Android tells us every selection change, ours and everybody else's; the controller tells them apart (plan 6.4). */
     override fun onUpdateSelection(oldSelStart: Int, oldSelEnd: Int, newSelStart: Int, newSelEnd: Int, candidatesStart: Int, candidatesEnd: Int) {
         super.onUpdateSelection(oldSelStart, oldSelEnd, newSelStart, newSelEnd, candidatesStart, candidatesEnd)

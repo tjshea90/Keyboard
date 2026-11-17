@@ -78,6 +78,9 @@ class KeyboardPresenter(
 
     fun finishInput() { session.settle(); learner.settle(); suggestSeq++; controller.finishInput(); if (!safeMode) glide.engine.saveLearned() }
 
+    /** Writes what was learned (cheap when nothing changed). */
+    fun saveLearned() { if (!safeMode) try { glide.engine.saveLearned() } catch (_: Exception) { } }
+
     fun onUpdateSelection(newSelStart: Int, newSelEnd: Int, candStart: Int, candEnd: Int) {
         val ours = controller.onSelectionUpdate(newSelStart, newSelEnd, candStart, candEnd)
         view?.setShift(controller.shift)
