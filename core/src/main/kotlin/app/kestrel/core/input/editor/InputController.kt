@@ -82,7 +82,7 @@ class InputController(private val ed: EditorBridge, val stats: InputStats = Inpu
         }
         // the same selection as believed: usually only the composing region changed; but an app that replaced the text and left the cursor where it was looks the same, so with no own edit outstanding the window is checked
         if (newSelStart == selStart && newSelEnd == selEnd && (!pending.isEmpty() || windowStillTrue())) return true
-        if (selStart < 0 || adopt > 0) {                                           // the first reports after an unknown state are the truth (and the text may have changed with them)
+        if (selStart < 0) {                                           // the first reports after an unknown state are the truth (and the text may have changed with them)
             if (adopt > 0) adopt--
             selStart = newSelStart; selEnd = newSelEnd; refresh()
             if (composing != null && candStart < 0) composing = null                // the editor no longer shows the word being tapped
@@ -184,7 +184,7 @@ class InputController(private val ed: EditorBridge, val stats: InputStats = Inpu
         val ok = if (useAction) ed.performAction(a) else ed.sendKey(KeyCodes.ENTER)
         if (!ok) { resync(); return }
         if (shift == ShiftState.ONCE) shift = ShiftState.OFF
-        refresh(); selStart = -1; selEnd = -1; clearPending("c4"); adopt = 2   // the next selection reports are the truth
+        refresh(); selStart = -1; selEnd = -1; clearPending("c4");   // the next selection reports are the truth
         autoCaps()
     }
 
@@ -250,7 +250,7 @@ class InputController(private val ed: EditorBridge, val stats: InputStats = Inpu
             }
         }
         if (selStart >= 0 && predicted) { selEnd = selStart; ensureWindow() }
-        else { selStart = -1; selEnd = -1; clearPending("move"); adopt = steps + 2; refresh() }    // one report per arrow key reaches us, none of them predicted
+        else { selStart = -1; selEnd = -1; clearPending("move"); refresh() }    // one report per arrow key reaches us, none of them predicted
     }
 
     /** The word before the cursor in the window, lowercase, for the language (null when there is none or it is not a plain word). */
@@ -334,7 +334,7 @@ class InputController(private val ed: EditorBridge, val stats: InputStats = Inpu
     private fun resync() {
         stats.resyncs++
         composing = null; lastGlide = null; clearPending("c5"); composingUnknown = true
-        selStart = -1; selEnd = -1; adopt = 2
+        selStart = -1; selEnd = -1
         refresh()
     }
 
