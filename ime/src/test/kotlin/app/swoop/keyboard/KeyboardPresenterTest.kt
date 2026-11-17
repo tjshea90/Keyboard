@@ -49,7 +49,7 @@ class KeyboardPresenterTest {
             act.setContentView(et)
             info.inputType = inputType; info.imeOptions = imeOptions
             ic = et.onCreateInputConnection(info)!!
-            presenter = KeyboardPresenter(app, { ic }, host, { it.run() })
+            presenter = KeyboardPresenter(app, { ic }, { host }, { it.run() })
             presenter.view = view
             presenter.startInput(info)
             relayout(); presenter.prepareGlide()
@@ -111,6 +111,20 @@ class KeyboardPresenterTest {
         r.tap("a"); assertTrue(r.text.endsWith("a"))
         assertEquals("", r.memory())
         assertTrue("no strip of guesses in a password field", r.view.candidatesForTest().isEmpty())
+    }
+
+    @Test fun theGlobeKeyAsksTheServiceForTheNextKeyboardAndTypesNothing() {
+        val r = Rig(); var asked = 0; r.presenter.onNextKeyboard = { asked++ }
+        r.tap("globe"); assertEquals(1, asked); assertEquals("", r.text)
+    }
+
+    @Test fun safeModeIsPlainKeysOnlyAndNeverTouchesTheEngine() {
+        val r = Rig(); r.presenter.safeMode = true
+        val exploding = KeyboardPresenter(app, { r.ic }, { throw AssertionError("safe mode must not even create the glide engine") }, { it.run() })
+        exploding.safeMode = true; exploding.view = r.view; exploding.startInput(r.info)
+        r.glide("hello"); assertTrue("no glide in safe mode: ${r.text}", r.text != "hello ")
+        r.tap("a"); assertTrue(r.text.endsWith("a")); exploding.finishInput()
+        assertTrue(r.view.candidatesForTest().isEmpty())
     }
 
     @Test fun glideCanBeSwitchedOffInSettings() {

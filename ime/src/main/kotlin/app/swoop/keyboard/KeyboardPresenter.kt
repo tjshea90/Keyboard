@@ -19,16 +19,21 @@ import app.kestrel.core.input.glide.GlideSession
 class KeyboardPresenter(
     private val context: Context,
     connection: () -> InputConnection?,
-    private val glide: GlideHost,
+    private val glideProvider: () -> GlideHost,
     private val post: (Runnable) -> Unit,
     stats: app.kestrel.core.input.editor.InputStats = Engine.inputStats,
     now: () -> Long = { SystemClock.uptimeMillis() },
 ) : KeysView.Listener, GlideSession.Ui {
     val controller = InputController(InputConnectionBridge(connection), stats)
     private var glideOn = false
-    private val session = GlideSession(controller, { if (glideOn) glide.engine else null }, now) { h -> glide.saveHabit(h) }
+    private val session = GlideSession(controller, { if (glideOn) glide.engine else null }, now) { h -> if (!safeMode) glide.saveHabit(h) }
     private var lastShiftTap = Long.MIN_VALUE / 2   // "never": a first tap shortly after boot must not count as a double tap
     private val clock = now
+    private val glide: GlideHost get() = glideProvider()
+    /** True while the crash-loop guard has put the keyboard in safe mode: plain keys only, nothing that loads or learns. */
+    var safeMode = false
+    /** The globe key: the service switches to the next keyboard. */
+    var onNextKeyboard: () -> Unit = {}
 
     var view: KeysView? = null
         set(v) { field = v; v?.listener = this; session.ui = this; prepareGlide() }
@@ -41,7 +46,7 @@ class KeyboardPresenter(
         val field = FieldInfos.from(info)
         session.settle()
         controller.startInput(field)
-        glideOn = prefs().getBoolean(Prefs.GLIDE, true) && field.kind != FieldKind.PASSWORD
+        glideOn = !safeMode && prefs().getBoolean(Prefs.GLIDE, true) && field.kind != FieldKind.PASSWORD
         view?.let {
             it.reset()
             it.setField(field.kind, ImeLayout.actionLabel(field.imeAction, field.noEnterAction))
@@ -51,7 +56,7 @@ class KeyboardPresenter(
         prepareGlide()
     }
 
-    fun finishInput() { session.settle(); controller.finishInput(); glide.engine.saveLearned() }
+    fun finishInput() { session.settle(); controller.finishInput(); if (!safeMode) glide.engine.saveLearned() }
 
     fun onUpdateSelection(newSelStart: Int, newSelEnd: Int, candStart: Int, candEnd: Int) {
         controller.onSelectionUpdate(newSelStart, newSelEnd, candStart, candEnd)
@@ -61,7 +66,7 @@ class KeyboardPresenter(
     /** The decoder needs the real key positions: known once the keys view has a size (and again when it changes). Cheap when nothing changed. */
     fun prepareGlide() {
         val v = view ?: return
-        if (!glideOn && v.width <= 0) return
+        if (safeMode || (!glideOn && v.width <= 0)) return
         glide.prepare(v.glideKeys(), "${v.width}x${v.height}")
     }
 
@@ -73,6 +78,7 @@ class KeyboardPresenter(
             is Key.Ch -> controller.type(key.text)
             Key.Backspace -> controller.backspace()
             Key.Go -> controller.enter()
+            Key.NextKeyboard -> onNextKeyboard()
             Key.Shift -> {
                 val now = clock()
                 if (now - lastShiftTap < DOUBLE_TAP_MS) controller.lockShift() else controller.tapShift()

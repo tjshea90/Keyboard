@@ -61,6 +61,28 @@ class KeysServiceTest {
         assertTrue(!s.onEvaluateFullscreenMode())
     }
 
+    @Test fun threeStartsWithoutAHealthyDrawPutTheServiceInSafeMode() {
+        java.io.File(app.filesDir, "crash_guard.txt").delete()
+        val a = Robolectric.setupService(KeysService::class.java); assertTrue(!a.safeMode)
+        val b = Robolectric.setupService(KeysService::class.java); assertTrue(!b.safeMode)
+        val c = Robolectric.setupService(KeysService::class.java); assertTrue("the third unhealthy start in a minute", c.safeMode)
+        java.io.File(app.filesDir, "crash_guard.txt").delete()
+    }
+
+    @Test fun aServiceThatDrewItsKeysIsHealthyAndNeverEntersSafeMode() {
+        java.io.File(app.filesDir, "crash_guard.txt").delete()
+        repeat(5) {
+            val s = Robolectric.setupService(KeysService::class.java)
+            assertTrue(!s.safeMode)
+            val v = s.onCreateInputView() as KeysView
+            v.measure(android.view.View.MeasureSpec.makeMeasureSpec(1000, android.view.View.MeasureSpec.EXACTLY), android.view.View.MeasureSpec.makeMeasureSpec(0, android.view.View.MeasureSpec.UNSPECIFIED))
+            v.layout(0, 0, v.measuredWidth, v.measuredHeight)
+            v.draw(android.graphics.Canvas(android.graphics.Bitmap.createBitmap(1000, v.measuredHeight, android.graphics.Bitmap.Config.ARGB_8888)))
+            org.robolectric.Shadows.shadowOf(android.os.Looper.getMainLooper()).idle()
+        }
+        java.io.File(app.filesDir, "crash_guard.txt").delete()
+    }
+
     @Test fun setupActivityOpensAndTellsWhereTheOwnerStands() {
         val a = Robolectric.buildActivity(SetupActivity::class.java).setup().get()
         assertEquals("Set up Swoop", a.title.toString())

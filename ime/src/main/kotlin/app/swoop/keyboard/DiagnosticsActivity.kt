@@ -40,8 +40,9 @@ class DiagnosticsActivity : Activity() {
     private fun refresh() { body.text = current() }
 
     private fun current(): String {
+        if (Engine.safeMode) return Diagnostics.text(this, Engine.inputStats, "", false, true)     // safe mode must not even load the engine
         val host = Engine.host(this)
-        return Diagnostics.text(this, Engine.inputStats, host.engine.stats.line(), host.engine.ready)
+        return Diagnostics.text(this, Engine.inputStats, host.engine.stats.line(), host.engine.ready, false)
     }
 
     private fun copy() {

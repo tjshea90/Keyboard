@@ -68,6 +68,7 @@ class SetupActivity : Activity() {
         col.addView(Button(this).apply { text = getString(R.string.setup_import); setOnClickListener { flow.importFromFile() } })
         col.addView(Button(this).apply { text = getString(R.string.setup_diag_button); setOnClickListener { startActivity(Intent(this@SetupActivity, DiagnosticsActivity::class.java)) } })
         col.addView(text(14f, getString(R.string.setup_fallback)))
+        col.addView(Button(this).apply { text = getString(R.string.setup_back_button); setOnClickListener { chooseKeyboard() } })
         col.addView(text(14f, getString(R.string.setup_back)))
         val scroll = ScrollView(this).apply { addView(col) }
         // Android 15+ draws apps edge to edge: keep the content out from under the system bars (API 29 never needs this).

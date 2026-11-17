@@ -30,7 +30,7 @@ class KeysViewTest {
 
     private class Rec : KeysView.Listener {
         val keys = ArrayList<String>(); var cursor = 0
-        override fun onKey(key: Key) { keys.add(when (key) { is Key.Ch -> key.text; Key.Backspace -> "<bs>"; Key.Go -> "<go>"; Key.Shift -> "<shift>"; else -> key.toString() }) }
+        override fun onKey(key: Key) { keys.add(when (key) { is Key.Ch -> key.text; Key.Backspace -> "<bs>"; Key.Go -> "<go>"; Key.Shift -> "<shift>"; Key.NextKeyboard -> "<next>"; else -> key.toString() }) }
         override fun onCursor(steps: Int) { cursor += steps }
     }
 
@@ -101,6 +101,11 @@ class KeysViewTest {
         advance(100); assertEquals(2, r.keys.size)
         advance(KeysView.REPEAT_MS * 3); assertEquals(5, r.keys.size)
         up(v, x, y); val n = r.keys.size; advance(500); assertEquals("repeat must stop at lift, and the lift itself types nothing", n, r.keys.size)
+    }
+    @Test fun theGlobeKeyIsOnEveryPageAndReportsNextKeyboard() {
+        val (v, r) = view(); tap(v, at(v, "globe")); assertEquals(listOf("<next>"), r.keys)
+        tap(v, at(v, "123")); tap(v, at(v, "globe")); assertEquals(listOf("<next>", "<next>"), r.keys)
+        val (n, rn) = view(kind = FieldKind.NUMBER); tap(n, at(n, "globe")); assertEquals(listOf("<next>"), rn.keys)
     }
     @Test fun theActionKeyReportsGoAndShowsItsLabel() {
         val (v, r) = view(action = "Search"); tap(v, at(v, "Search")); assertEquals(listOf("<go>"), r.keys)

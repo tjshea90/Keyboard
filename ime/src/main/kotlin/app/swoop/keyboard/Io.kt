@@ -19,6 +19,8 @@ object Io {
 object Engine {
     /** The keyboard's own counters, shared with the Diagnostics screen (numbers only). */
     val inputStats = app.kestrel.core.input.editor.InputStats()
+    /** True while the keyboard runs in safe mode (the crash-loop guard); shown in Diagnostics. */
+    @Volatile var safeMode = false
     @Volatile private var host: GlideHost? = null
     fun host(context: android.content.Context): GlideHost = host ?: synchronized(this) { host ?: GlideHost(context.applicationContext).also { host = it } }
 }

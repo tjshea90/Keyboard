@@ -49,6 +49,9 @@ class KeysView(context: Context) : View(context) {
     }
 
     var listener: Listener? = null
+    /** Called once, after the keys were drawn for the first time (the crash-loop guard counts that start as healthy). */
+    var onFirstDraw: (() -> Unit)? = null
+    private var drewOnce = false
 
     private val density = resources.displayMetrics.density
     private fun dp(v: Float) = v * density
@@ -187,6 +190,7 @@ class KeysView(context: Context) : View(context) {
     override fun onDraw(c: Canvas) {
         layoutKeys()
         c.drawColor(cBg)
+        if (!drewOnce) { drewOnce = true; post { onFirstDraw?.invoke() } }
         val r = dp(6f)
         for ((i, row) in rows.withIndex()) for ((j, k) in row.withIndex()) {
             val key = k.key ?: continue
@@ -203,6 +207,7 @@ class KeysView(context: Context) : View(context) {
             }
             c.drawRoundRect(box, r, r, fill)
             text.color = if (key === Key.Go || (key === Key.Shift && shift == ShiftState.LOCK)) cAccentText else cText
+            if (key === Key.NextKeyboard) { drawGlobe(c, box); continue }
             val label = if (key === Key.Shift) (if (shift == ShiftState.LOCK) "⇪" else "⇧") else k.label
             text.textSize = (kb.bottom - kb.top) * (if (label.length > 1) 0.30f else 0.44f)
             val fm = text.fontMetrics
@@ -220,6 +225,17 @@ class KeysView(context: Context) : View(context) {
         if (!gliding) drawBubble(c)
         drawTrail(c)
     }
+
+    /** The globe on the next-keyboard key: a circle, an equator and two meridians (no font symbol: the tablet's fonts may lack one). */
+    private fun drawGlobe(c: Canvas, b: RectF) {
+        val r = Math.min(b.width(), b.height()) * 0.24f
+        line.color = cText; line.strokeWidth = dp(1.6f)
+        c.drawCircle(b.centerX(), b.centerY(), r, line)
+        c.drawLine(b.centerX() - r, b.centerY(), b.centerX() + r, b.centerY(), line)
+        box2.set(b.centerX() - r * 0.45f, b.centerY() - r, b.centerX() + r * 0.45f, b.centerY() + r); c.drawOval(box2, line)
+        c.drawLine(b.centerX(), b.centerY() - r, b.centerX(), b.centerY() + r, line)
+    }
+    private val box2 = RectF()
 
     private fun drawBubble(c: Canvas) {
         val k = bubbleKey ?: return

@@ -10,7 +10,7 @@ import app.kestrel.core.input.editor.InputStats
  * no typed text, no word, no field content ever reaches it, so the owner can paste it into a chat (plan 11.6).
  */
 object Diagnostics {
-    fun text(context: Context, input: InputStats, glideLine: String, glideReady: Boolean): String {
+    fun text(context: Context, input: InputStats, glideLine: String, glideReady: Boolean, safeMode: Boolean = false): String {
         val mi = Debug.MemoryInfo(); try { Debug.getMemoryInfo(mi) } catch (_: Exception) { }
         val rt = Runtime.getRuntime()
         val pkg = try { context.packageManager.getPackageInfo(context.packageName, 0) } catch (e: Exception) { null }
@@ -21,6 +21,7 @@ object Diagnostics {
             appendLine("Android ${Build.VERSION.RELEASE} (API ${Build.VERSION.SDK_INT}), ${Build.MODEL}")
             appendLine("keyboard switched on: ${SetupActivity.isEnabled(context)}, chosen now: ${SetupActivity.isCurrent(context)}")
             appendLine("memory: process ${mi.totalPss / 1024} MB, java heap ${(rt.totalMemory() - rt.freeMemory()) / (1024 * 1024)} of ${rt.maxMemory() / (1024 * 1024)} MB")
+            appendLine("safe layout (crash-loop guard): ${if (safeMode) "ON - plain keys only" else "off"}")
             appendLine("glide engine ready: $glideReady")
             appendLine(if (glideLine.isBlank()) "glide: no glide yet" else "glide: $glideLine")
             appendLine("input: ${input.line()}")
