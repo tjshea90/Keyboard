@@ -19,6 +19,8 @@
     <string name="setup_fallback">If the buttons do not open the right screen on your tablet: Settings &gt; System &gt; Languages and input &gt; On-screen keyboard &gt; Manage keyboards, switch Swoop on; then tap in any text box and use the keyboard icon at the bottom right (or the notification Choose input method) to pick Swoop.</string>
     <string name="setup_back">To go back at any time: tap the keyboard icon (or the Choose input method notification) while typing and pick your old keyboard.</string>
     <string name="strip_hint">slide over the letters to type a word</string>
+    <string name="strip_remove">Remove \u201C%1$s\u201D for good</string>
+    <string name="strip_keep">Keep</string>
     <string name="strip_no_word">no word fits - try again</string>
 
     <string name="setup_glide_switch">Glide typing (slide over the letters to type a word)</string>

@@ -27,6 +27,12 @@ object Prefs {
     const val LEARN = "learn_typing"
     // look
     const val NUMBERROW = "number_row"
+    const val HIDE_LETTERS = "hide_letters"
+    const val CLIPBOARD = "clipboard_history"
+    const val TRANSLATE = "translate_enabled"
+    const val EMOJI_SUGGEST = "emoji_suggestions"
+    const val DOCK_FRAC = "dock_frac_x1000"
+    const val DOCK_X = "dock_x"
     const val KEYHEIGHT = "key_height"
     const val GLOBE = "show_globe"
     const val THEME = "theme"
@@ -60,6 +66,18 @@ class Settings(private val p: SharedPreferences) {
     val spaceSlide get() = b(Prefs.SPACESLIDE, true)
     val learn get() = b(Prefs.LEARN, true)
     val numberRow get() = b(Prefs.NUMBERROW, true)
+    /** Letters are not drawn (a blank panel that still types the letters under it). */
+    val hideLetters get() = b(Prefs.HIDE_LETTERS, false)
+    /** The clipboard history (the clipboard icon in the toolbar keeps what was copied for an hour; pinned items stay). */
+    val clipboardHistory get() = b(Prefs.CLIPBOARD, true)
+    /** The translate icon in the toolbar (English to Mexican Spanish, only when switched on there). */
+    val translateEnabled get() = b(Prefs.TRANSLATE, true)
+    /** A word with an emoji (clown) offers the emoji among the guesses. */
+    val emojiSuggestions get() = b(Prefs.EMOJI_SUGGEST, true)
+    /** How wide the docked keyboard is, in thousandths of the screen (1000 = full width), and where it stands (0..1000 of the free room). */
+    val dockFrac get() = i(Prefs.DOCK_FRAC, 1000).coerceIn(500, 1000)
+    val dockX get() = i(Prefs.DOCK_X, 500).coerceIn(0, 1000)
+    fun saveDock(frac: Int, x: Int) { p.edit().putInt(Prefs.DOCK_FRAC, frac).putInt(Prefs.DOCK_X, x).apply() }
     /** A key that switches keyboards, at the left of the space bar. Off by default: hold the space bar instead. */
     val showGlobe get() = b(Prefs.GLOBE, false)
     val keyHeight get() = i(Prefs.KEYHEIGHT, 1).coerceIn(0, KEY_HEIGHTS.size - 1)

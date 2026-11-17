@@ -48,6 +48,8 @@ class KeysView(context: Context) : View(context) {
         fun onCandidate(word: String) {}
         /** A guess in the strip was PRESSED AND HELD (owner: long press a recommended word to delete it for good). */
         fun onCandidateLong(word: String) {}
+        /** The person answered "remove this word for good?" ([yes]) for a word they had held in the strip. */
+        fun onRemoveWord(word: String, yes: Boolean) {}
         /** An icon of the toolbar at the left of the strip was tapped ([TOOL_SETTINGS], [TOOL_CLIPBOARD], [TOOL_TRANSLATE]). */
         fun onToolbar(tool: Int) {}
     }
@@ -197,7 +199,7 @@ class KeysView(context: Context) : View(context) {
 
     /** Everything in flight stops (the keyboard closed or the field changed). */
     fun reset() {
-        handler.removeCallbacks(repeat); handler.removeCallbacks(unlight); handler.removeCallbacks(hold); handler.removeCallbacks(spaceHold); popup = null; spaceIsDown = false; spaceHeld = false; handler.removeCallbacks(noWordOff); removeCallbacks(fadeStep)
+        handler.removeCallbacks(repeat); handler.removeCallbacks(unlight); handler.removeCallbacks(hold); handler.removeCallbacks(spaceHold); handler.removeCallbacks(stripHold); toolDown = -1; stripLong = false; confirmWord = null; popup = null; spaceIsDown = false; spaceHeld = false; handler.removeCallbacks(noWordOff); removeCallbacks(fadeStep)
         armed = false; gliding = false; gn = 0; fadeStart = 0L; cands = emptyList(); noWordUntil = 0L; stripDown = -1
         activeId = -1; down = null; pressedLetter = null; litKey = null; holdAlt = null; bubbleKey = null; spaceDown = false; sliding = false
         invalidate()
@@ -267,7 +269,7 @@ class KeysView(context: Context) : View(context) {
         val lit = litKey
         if (lit != null) { val kb = boxOf(lit); if (kb != null) drawKey(c, lit, kb, true, rows[0].contains(lit)) }
         drawStrip(c)
-        if (!gliding && keyPreview) drawBubble(c)
+        if (!gliding && keyPreview && !hideLetters) drawBubble(c)
         if (trailOn) drawTrail(c)
         drawPopup(c)
     }
@@ -544,7 +546,12 @@ class KeysView(context: Context) : View(context) {
     private fun pressDown(x: Float, y: Float) {
         handler.removeCallbacks(repeat); clearHold()
         armed = false; gliding = false; stripDown = -1
-        if (stripPx() > 0f && y < stripPx() + pad) { stripDown = chipAt(x, y); dyn(); return }   // a guess in the strip was touched
+        if (y < stripPx() + pad) {                                    // the strip was touched: a toolbar icon or a guess
+            toolDown = toolAt(x, y); stripDown = if (toolDown >= 0) -1 else chipAt(x, y); stripLong = false
+            if (toolDown >= 0) haptic()
+            if (stripDown >= 0 && confirmWord == null) handler.postDelayed(stripHold, STRIP_HOLD_MS)
+            dyn(); return
+        }
         removeCallbacks(fadeStep); gn = 0; fadeStart = 0L
         val k = keyAt(x, y); down = k; light(k)
         spaceDown = spaceSlideOn && (k?.key as? Key.Ch)?.text == " "; sliding = false; slideStartX = x; slideAnchorX = x
@@ -561,7 +568,7 @@ class KeysView(context: Context) : View(context) {
     private fun pressMove(e: MotionEvent, i: Int) {
         val x = e.getX(i); val y = e.getY(i)
         popup?.let { p -> val ns = popupSelect(p, x, y); if (ns != p.sel) { p.sel = ns; dyn() }; return }
-        if (stripDown >= 0) return
+        if (stripDown >= 0 || toolDown >= 0) return
         if (armed) {                                     // a letter: nothing happens until the finger leaves its key (a glide) or lifts (a tap)
             for (h in 0 until e.historySize) addPoint(e.getHistoricalX(i, h), e.getHistoricalY(i, h))
             addPoint(x, y)
@@ -592,9 +599,14 @@ class KeysView(context: Context) : View(context) {
         }
         if (spaceHeld) { spaceHeld = false; spaceIsDown = false; spaceDown = false; sliding = false; down = null; litKey = null; dyn(); return }    // the picker was opened: no space is typed
         spaceIsDown = false
+        handler.removeCallbacks(stripHold)
+        if (toolDown >= 0) { val t = toolAt(x, y); val was = toolDown; toolDown = -1; dyn(); if (t == was) listener?.onToolbar(toolId(was)); return }
         if (stripDown >= 0) {
             val c = chipAt(x, y); val was = stripDown; stripDown = -1; dyn()
-            if (c == was && c in cands.indices) listener?.onCandidate(cands[c])
+            if (stripLong) { stripLong = false; return }             // the long press already asked its question
+            val cw = confirmWord
+            if (c == was && cw != null) { confirmWord = null; listener?.onRemoveWord(cw, c == 0) }
+            else if (c == was && c in cands.indices) listener?.onCandidate(cands[c])
             return
         }
         if (gliding) { for (h in 0 until e.historySize) addPoint(e.getHistoricalX(i, h), e.getHistoricalY(i, h)); addPoint(x, y); endGlide(); return }
@@ -615,7 +627,7 @@ class KeysView(context: Context) : View(context) {
     }
 
     private fun pressCancel() {
-        handler.removeCallbacks(repeat); handler.removeCallbacks(spaceHold); clearHold(); popup = null; spaceIsDown = false; spaceHeld = false; down = null; pressedLetter = null; armed = false; stripDown = -1; spaceDown = false; sliding = false; litKey = null; dyn()
+        handler.removeCallbacks(stripHold); toolDown = -1; handler.removeCallbacks(repeat); handler.removeCallbacks(spaceHold); clearHold(); popup = null; spaceIsDown = false; spaceHeld = false; down = null; pressedLetter = null; armed = false; stripDown = -1; spaceDown = false; sliding = false; litKey = null; dyn()
         if (gliding) { gliding = false; fadeStart = SystemClock.uptimeMillis(); postOnAnimation(fadeStep) }
     }
 
@@ -682,7 +694,11 @@ class KeysView(context: Context) : View(context) {
         when (key) {
             Key.ToSymbols -> { page = Page.SYMBOLS; rebuildRows() }
             Key.ToLetters -> { page = Page.LETTERS; rebuildRows() }
-            else -> listener?.onKey(key)
+            else -> {
+                listener?.onKey(key)
+                // Owner, 2026-11-17 (like Gboard): after ONE special character the keyboard goes straight back to the letters (digits stay: they are typed from the number row too; Backspace and Shift change nothing)
+                if (page == Page.SYMBOLS && key is Key.Ch && !(key.text.length == 1 && key.text[0].isDigit())) { page = Page.LETTERS; rebuildRows() }
+            }
         }
     }
 
@@ -699,6 +715,7 @@ class KeysView(context: Context) : View(context) {
     fun candidatesForTest(): List<String> = cands
     fun popupOpenForTest(): Boolean = popup != null
     fun popupCellCenterForTest(ch: String): Pair<Float, Float>? { val p = popup ?: return null; val i = p.chars.indexOf(ch); return if (i < 0) null else p.cells[i].let { it.centerX() to it.centerY() } }
+    fun toolCenterForTest(tool: Int): Pair<Float, Float>? { for (i in 0 until toolCount()) if (toolId(i) == tool) return toolBox(i).let { it.centerX() to it.centerY() }; return null }
     fun chipCenterForTest(i: Int): Pair<Float, Float>? { val r = chipBoxes().getOrNull(i) ?: return null; return r.centerX() to r.centerY() }
 
     companion object {
@@ -716,7 +733,13 @@ class KeysView(context: Context) : View(context) {
         private const val TOP_ROW = "qwertyuiop"
         private const val DIGITS = "1234567890"
         /** The strip of guesses above the keys (glide typing on). */
-        const val STRIP_H_DP = 30f
+        const val STRIP_H_DP = 36f
+        /** One toolbar icon is this wide. */
+        const val TOOL_W_DP = 40f
+        const val STRIP_HOLD_MS = 500L
+        const val TOOL_SETTINGS = 1
+        const val TOOL_CLIPBOARD = 2
+        const val TOOL_TRANSLATE = 3
         /** A finger that has moved this far (dp) from where it went down has started a glide (a short drag that ends up under 1.2 key widths is still a tap). */
         const val GLIDE_START_DP = 5f
         /** A path shorter than this (in key pitches) is a tap that slid a little, not a glide. */
