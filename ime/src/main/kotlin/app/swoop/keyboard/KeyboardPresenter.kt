@@ -10,6 +10,8 @@ import app.kestrel.core.input.editor.FieldKind
 import app.kestrel.core.input.editor.InputController
 import app.kestrel.core.input.glide.GlideResult
 import app.kestrel.core.input.glide.GlideSession
+import app.kestrel.core.input.glide.Suggestions
+import app.kestrel.core.input.glide.TypingLearner
 
 /**
  * Everything the keyboard does, minus the Android service plumbing: the keys view reports taps and glides, this decides (InputController for the text,
@@ -27,6 +29,17 @@ class KeyboardPresenter(
     val controller = InputController(InputConnectionBridge(connection), stats)
     private var glideOn = false
     private val session = GlideSession(controller, { if (glideOn) glide.engine else null }, now) { h -> if (!safeMode) glide.saveHabit(h) }
+    private var learnOn = false
+    private var suggestOn = false
+    private var autoFixOn = false
+    private val learner = TypingLearner(controller, { if (learnOn && !safeMode) glide.engine else null }, now)
+    /** Bumped for every request to the engine: an answer for an older one is dropped. */
+    private var suggestSeq = 0
+    /** The engine's latest answer for the word being tapped (so a space can apply its automatic fix) and the typed word shown in quotes in the strip, when it is. */
+    private var latest: Suggestions? = null
+    private var literalShown: String? = null
+    /** The typed word whose automatic fix the person just took back: it is not fixed again, whatever the engine still thinks. */
+    private var noFixFor: String? = null
     private var lastShiftTap = Long.MIN_VALUE / 2   // "never": a first tap shortly after boot must not count as a double tap
     private val clock = now
     private val glide: GlideHost get() = glideProvider()
@@ -44,23 +57,31 @@ class KeyboardPresenter(
 
     fun startInput(info: EditorInfo) {
         val field = FieldInfos.from(info)
-        session.settle()
+        session.settle(); learner.settle()
         controller.startInput(field)
-        glideOn = !safeMode && prefs().getBoolean(Prefs.GLIDE, true) && field.kind != FieldKind.PASSWORD
+        val p = prefs()
+        glideOn = !safeMode && p.getBoolean(Prefs.GLIDE, true) && field.kind != FieldKind.PASSWORD
+        learnOn = !safeMode && p.getBoolean(Prefs.LEARN, true) && field.learningAllowed
+        suggestOn = !safeMode && p.getBoolean(Prefs.SUGGEST, true) && field.composingAllowed
+        autoFixOn = suggestOn && p.getBoolean(Prefs.AUTOFIX, true)
+        latest = null; literalShown = null; noFixFor = null; suggestSeq++
         view?.let {
             it.reset()
             it.setField(field.kind, ImeLayout.actionLabel(field.imeAction, field.noEnterAction))
             it.setGlideEnabled(glideOn)
+            it.setSuggestionsEnabled(suggestOn)
             it.setShift(controller.shift)
         }
         prepareGlide()
+        refreshSuggestions()
     }
 
-    fun finishInput() { session.settle(); controller.finishInput(); if (!safeMode) glide.engine.saveLearned() }
+    fun finishInput() { session.settle(); learner.settle(); suggestSeq++; controller.finishInput(); if (!safeMode) glide.engine.saveLearned() }
 
     fun onUpdateSelection(newSelStart: Int, newSelEnd: Int, candStart: Int, candEnd: Int) {
-        controller.onSelectionUpdate(newSelStart, newSelEnd, candStart, candEnd)
+        val ours = controller.onSelectionUpdate(newSelStart, newSelEnd, candStart, candEnd)
         view?.setShift(controller.shift)
+        if (!ours) { learner.settle(); refreshSuggestions() }       // the person or the app moved the cursor or changed the text: new word, new guesses
     }
 
     /** The decoder needs the real key positions: known once the keys view has a size (and again when it changes). Cheap when nothing changed. */
@@ -74,8 +95,10 @@ class KeyboardPresenter(
 
     override fun onKey(key: Key) {
         session.beforeKey(key)
+        val fix = autoFixFor(key)
+        learner.beforeKey(key, fix)
         when (key) {
-            is Key.Ch -> controller.type(key.text)
+            is Key.Ch -> if (fix != null) controller.typeCorrected(fix, key.text) else controller.type(key.text)
             Key.Backspace -> controller.backspace()
             Key.Go -> controller.enter()
             Key.NextKeyboard -> onNextKeyboard()
@@ -87,13 +110,56 @@ class KeyboardPresenter(
             else -> Unit
         }
         session.afterKey(key)
+        learner.afterKey()
+        controller.revertedCorrection?.let { noFixFor = it.typed }
         view?.setShift(controller.shift)
+        refreshSuggestions()
     }
 
-    override fun onCursor(steps: Int) { session.settle(); controller.moveCursor(steps); view?.setShift(controller.shift) }
+    override fun onCursor(steps: Int) { session.settle(); learner.settle(); controller.moveCursor(steps); view?.setShift(controller.shift); refreshSuggestions() }
+
+    // ------------------------------------------------------------------ word suggestions while tapping (N4) and the automatic fix
+
+    /** The word an automatic fix will put in when [key] ends the word being tapped: the engine's latest answer for exactly this word, only for a space or sentence punctuation, never for one just taken back. */
+    private fun autoFixFor(key: Key): String? {
+        if (!autoFixOn || key !is Key.Ch || key.text !in FIX_AT) return null
+        val typed = controller.composing ?: return null
+        if (typed == noFixFor) return null
+        val l = latest ?: return null
+        return if (l.typed == typed) l.autoCorrect else null
+    }
+
+    /** Asks the engine what to offer for the word at the cursor (or the likely next word); the answer is shown only if it still fits what is on screen. */
+    private fun refreshSuggestions() {
+        if (!suggestOn || safeMode) return
+        if (controller.lastGlide != null || view?.isGliding == true) return          // the strip shows a glide's other guesses
+        val typed = controller.wordBeforeCursor()
+        val b = controller.before
+        val startsWord = typed == null && controller.selStart == controller.selEnd && (b.isEmpty() || b.last().isWhitespace())
+        if (typed == null && !startsWord) { latest = null; literalShown = null; suggestSeq++; view?.clearCandidates(); return }
+        val (p2, p1) = if (typed != null) controller.contextBefore(typed) else controller.previousTwo()
+        val my = ++suggestSeq
+        glide.engine.suggest(typed ?: "", p1, p2, 3) { res -> post(Runnable { if (my == suggestSeq) applySuggestions(res) }) }
+    }
+
+    private fun applySuggestions(res: Suggestions) {
+        if (!suggestOn || controller.lastGlide != null || view?.isGliding == true) return
+        if ((controller.wordBeforeCursor() ?: "") != res.typed) return                // the text moved on while the engine worked
+        latest = res
+        val strip = ArrayList<String>(3)
+        literalShown = null
+        if (res.typed.isNotEmpty() && !res.typedKnown) {
+            val lit = "\u201C" + res.typed + "\u201D"
+            if (res.autoCorrect != null) { strip.add(res.autoCorrect); strip.add(lit) } else strip.add(lit)
+            literalShown = lit
+        }
+        for (w in res.words) if (strip.size < 3 && strip.none { it.equals(w, ignoreCase = true) }) strip.add(w)
+        if (strip.isEmpty()) view?.clearCandidates() else view?.showCandidates(strip)
+    }
 
     override fun onGlideMove(xs: FloatArray, ys: FloatArray, count: Int) {
         if (!glideOn) return
+        if (suggestSeq != -1) { suggestSeq++; latest = null }                             // a glide began: no tap suggestion may land on the strip now
         val (p2, p1) = session.context()
         glide.engine.preview(xs, ys, count, p1, p2) { res -> post(Runnable { if (view?.isGliding == true) session.onPreview(res) }) }
     }
@@ -105,19 +171,41 @@ class KeyboardPresenter(
         glide.engine.decode(xs, ys, count, p1, p2) { res: GlideResult -> post(Runnable { session.onDecoded(res, p1, p2); view?.setShift(controller.shift) }) }
     }
 
-    override fun onCandidate(word: String) { session.pick(word); view?.setShift(controller.shift) }
+    override fun onCandidate(word: String) {
+        if (controller.lastGlide != null) session.pick(word)
+        else if (suggestOn) {
+            val typed = controller.wordBeforeCursor()
+            val w = if (word == literalShown && typed != null) typed else word      // the typed word in quotes: keep it as it is (and learn it)
+            session.settle()
+            latest = null; literalShown = null; suggestSeq++
+            learner.pick(w)
+            noFixFor = null
+        }
+        view?.setShift(controller.shift)
+        refreshSuggestions()
+    }
 
     // ------------------------------------------------------------------ GlideSession.Ui -> the view
 
     override fun showCandidates(words: List<String>) { view?.showCandidates(words) }
-    override fun clearCandidates() { view?.clearCandidates() }
+    override fun clearCandidates() { if (!suggestOn) view?.clearCandidates() }   // (with suggestions on, the next answer replaces the strip: no flicker)
     override fun showNoWord() { view?.showNoWord() }
 
-    private companion object { const val DOUBLE_TAP_MS = 350L }
+    private companion object {
+        const val DOUBLE_TAP_MS = 350L
+        /** The keys after which an automatic fix may happen: the space and the punctuation that ends a sentence or a clause. */
+        val FIX_AT = setOf(" ", ".", ",", "!", "?", ";", ":")
+    }
 }
 
 /** The keyboard's few settings (SharedPreferences, private to the app). */
 object Prefs {
     const val FILE = "swoop"
     const val GLIDE = "glide_typing"
+    /** Word suggestions while typing with taps (the strip also works without glide typing). */
+    const val SUGGEST = "suggestions"
+    /** Learn from what is typed (words, word pairs, corrections): the most important setting. */
+    const val LEARN = "learn_typing"
+    /** Fix an obvious typo when the space is pressed (one Backspace takes it back). */
+    const val AUTOFIX = "auto_fix"
 }
