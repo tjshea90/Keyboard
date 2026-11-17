@@ -28,6 +28,14 @@ object RareWordEval {
         return List(n) { val r = rnd.nextDouble() * s; var lo = 0; var hi = ids.size - 1; while (lo < hi) { val mid = (lo + hi) ushr 1; if (cum[mid] < r) lo = mid + 1 else hi = mid }; yardstick.text(ids[lo]) }
     }
 
+    /** Words uniformly out of the [top] most common of [yardstick] that [lex] also knows: a harder mix than real use (as many middling words as very common ones). */
+    fun midWords(yardstick: BinaryLexicon, lex: BinaryLexicon, n: Int, seed: Long, top: Int = 15000, minLetters: Int = 3): List<String> {
+        val ids = (0 until yardstick.size).filter { id -> distinct(yardstick, id) >= minLetters && lex.idOf(yardstick.text(id)).let { it >= 0 && lex.text(it) == yardstick.text(id) } }
+            .sortedByDescending { yardstick.logProb(it) }.take(top)
+        val rnd = Random(seed)
+        return List(n) { yardstick.text(ids[rnd.nextInt(ids.size)]) }
+    }
+
     /** Valid but uncommon words of [lex] (probability between [lo] and [hi] nats), uniformly. */
     fun rareWords(lex: BinaryLexicon, n: Int, seed: Long, lo: Float = -16f, hi: Float = Rarity.FLOOR, minLetters: Int = 4): List<String> {
         val ids = (0 until lex.size).filter { lex.logProb(it) in lo..hi && distinct(lex, it) >= minLetters && lex.text(it).all { c -> c in 'a'..'z' } }
@@ -67,7 +75,7 @@ object RareWordEval {
         val keys = GlideEval.keysFor()
         val n = a["n"]?.toInt() ?: 3000
         val seed = a["seed"]?.toLong() ?: 1L
-        val common = commonWords(old, new, n, seed * 7919)
+        val common = if (a["pop"] == "mid") midWords(old, new, n, seed * 7919) else commonWords(old, new, n, seed * 7919)
         val rare = rareWords(new, a["nr"]?.toInt() ?: 1500, seed * 31)
         val base = GlideEval.paramsFrom(a)
         val d = GlideParams()
