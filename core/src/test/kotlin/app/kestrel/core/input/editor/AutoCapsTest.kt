@@ -27,7 +27,7 @@ class InputStatsTest {
     @Test fun countersCountPressesAndRepairsAndHoldNoText() {
         val r = Rig("abc"); val s = r.c.stats
         r.typeAll("de"); r.act { backspace() }; r.act { commitGlide("hello") }; r.c.swapGlide("world"); r.sync(); r.act { enter() }; r.act { moveCursor(-1) }
-        assertEquals(2, s.keys); assertEquals(1, s.backspaces); assertEquals(1, s.glides); assertEquals(1, s.swaps); assertEquals(1, s.enters); assertEquals(1, s.cursorMoves)
+        assertEquals("keys 2, backspaces 1, enters 1, glides 1, picks 1, cursor moves 1, foreign changes 0, resyncs 0", s.line())
         r.ed.userMove(0); r.sync(); assertEquals(1, s.foreignReports)
         r.ed.failing = true; r.c.type("x"); assertEquals(1, s.resyncs)
         val line = s.line(); assertEquals(false, line.contains("hello") || line.contains("abc") || line.contains("world"))
