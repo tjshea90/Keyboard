@@ -22,3 +22,14 @@ class AutoCapsTest {
     @Test fun capsLockIsNeverSwitchedOffByTheField() { val r = Rig(caps = CapFlags.SENTENCES); r.act { lockShift() }; r.act { autoCaps() }; assertEquals(ShiftState.LOCK, r.c.shift) }
     @Test fun aDeadEditorMeansNoCapitals() { val r = Rig(caps = CapFlags.SENTENCES); r.act { setShift(ShiftState.OFF) }; r.ed.failing = true; r.c.autoCaps(); assertEquals(ShiftState.OFF, r.c.shift) }
 }
+
+class InputStatsTest {
+    @Test fun countersCountPressesAndRepairsAndHoldNoText() {
+        val r = Rig("abc"); val s = r.c.stats
+        r.typeAll("de"); r.act { backspace() }; r.act { commitGlide("hello") }; r.c.swapGlide("world"); r.sync(); r.act { enter() }; r.act { moveCursor(-1) }
+        assertEquals(2, s.keys); assertEquals(1, s.backspaces); assertEquals(1, s.glides); assertEquals(1, s.swaps); assertEquals(1, s.enters); assertEquals(1, s.cursorMoves)
+        r.ed.userMove(0); r.sync(); assertEquals(1, s.foreignReports)
+        r.ed.failing = true; r.c.type("x"); assertEquals(1, s.resyncs)
+        val line = s.line(); assertEquals(false, line.contains("hello") || line.contains("abc") || line.contains("world"))
+    }
+}

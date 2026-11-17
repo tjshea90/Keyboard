@@ -24,7 +24,7 @@ class GlideTail(val text: String, val word: String)
  *
  * All offsets are UTF-16 units. Single-threaded: call from the keyboard's UI thread only.
  */
-class InputController(private val ed: EditorBridge) {
+class InputController(private val ed: EditorBridge, val stats: InputStats = InputStats()) {
     var field: FieldInfo = FieldInfo(); private set
     /** The text before the cursor (at most [WINDOW_BEFORE] units; the composing word, if any, is at its end). */
     var before = ""; private set
@@ -79,6 +79,7 @@ class InputController(private val ed: EditorBridge) {
         if (selStart < 0) { selStart = newSelStart; selEnd = newSelEnd; refresh(); return true } // the first report after an unknown state is the truth (and the text may have changed with it)
         // somebody else moved the cursor or edited the text
         if (composing != null) ed.finishComposing()
+        stats.foreignReports++
         composing = null; lastGlide = null
         pending.clear()
         selStart = newSelStart; selEnd = newSelEnd
@@ -95,6 +96,7 @@ class InputController(private val ed: EditorBridge) {
     /** A key was tapped whose label is [key]: a letter, a digit, punctuation, ".com". Letters follow the shift state. */
     fun type(key: String) {
         if (key.isEmpty()) return
+        stats.keys++
         settle()
         val t = if (shift != ShiftState.OFF && isSingleCodePoint(key)) key.uppercase() else key
         if (isLetter(t) || (composing != null && isWordConnector(t))) {
@@ -122,6 +124,7 @@ class InputController(private val ed: EditorBridge) {
     /** One press of Backspace. A tapped word loses its last letter; the word a glide just added goes whole; otherwise the editor deletes (selection or one character). */
     fun backspace() {
         settle()
+        stats.backspaces++
         val c = composing
         if (c != null) {
             val shorter = dropLastCodePoint(c)
@@ -162,6 +165,7 @@ class InputController(private val ed: EditorBridge) {
     /** Enter: the field's own action when it has one, else a real Enter key. The text after it is unknown, so the window is re-read. */
     fun enter() {
         settle()
+        stats.enters++
         endComposing(); lastGlide = null
         val a = field.imeAction
         val useAction = !field.noEnterAction && a != ImeActions.UNSPECIFIED && a != ImeActions.NONE
@@ -181,6 +185,7 @@ class InputController(private val ed: EditorBridge) {
         val needsLead = before.isNotEmpty() && !before.last().isWhitespace() && before.last() !in NO_SPACE_AFTER
         val tail = (if (needsLead) " " else "") + w + " "
         if (!commit(tail)) return
+        stats.glides++
         lastGlide = GlideTail(tail, w)
         if (shift == ShiftState.ONCE) shift = ShiftState.OFF
         ensureWindow()
@@ -205,6 +210,7 @@ class InputController(private val ed: EditorBridge) {
         endBatch(s0, e0)
         if (!ok) { lastGlide = null; resync(); return false }
         lastGlide = GlideTail(newTail, w)
+        stats.swaps++
         ensureWindow()
         return true
     }
@@ -213,6 +219,7 @@ class InputController(private val ed: EditorBridge) {
     fun moveCursor(delta: Int) {
         if (delta == 0) return
         settle()
+        stats.cursorMoves++
         endComposing(); lastGlide = null
         val left = delta < 0
         val steps = minOf(Math.abs(delta), 64)
@@ -306,6 +313,7 @@ class InputController(private val ed: EditorBridge) {
 
     /** Something failed or surprised us: forget every assumption and re-read the editor. */
     private fun resync() {
+        stats.resyncs++
         composing = null; lastGlide = null; pending.clear(); composingUnknown = true
         selStart = -1; selEnd = -1
         refresh()

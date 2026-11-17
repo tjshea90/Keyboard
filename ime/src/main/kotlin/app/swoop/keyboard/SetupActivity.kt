@@ -66,6 +66,7 @@ class SetupActivity : Activity() {
         col.addView(text(14f, getString(R.string.setup_learning_text)))
         col.addView(Button(this).apply { text = getString(R.string.setup_export); setOnClickListener { flow.exportNow() } })
         col.addView(Button(this).apply { text = getString(R.string.setup_import); setOnClickListener { flow.importFromFile() } })
+        col.addView(Button(this).apply { text = getString(R.string.setup_diag_button); setOnClickListener { startActivity(Intent(this@SetupActivity, DiagnosticsActivity::class.java)) } })
         col.addView(text(14f, getString(R.string.setup_fallback)))
         col.addView(text(14f, getString(R.string.setup_back)))
         val scroll = ScrollView(this).apply { addView(col) }

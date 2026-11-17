@@ -17,6 +17,8 @@ object Io {
 
 /** The one glide engine of this process, shared by the keyboard service and the Setup screen (export / import work on the same learned memory). */
 object Engine {
+    /** The keyboard's own counters, shared with the Diagnostics screen (numbers only). */
+    val inputStats = app.kestrel.core.input.editor.InputStats()
     @Volatile private var host: GlideHost? = null
     fun host(context: android.content.Context): GlideHost = host ?: synchronized(this) { host ?: GlideHost(context.applicationContext).also { host = it } }
 }

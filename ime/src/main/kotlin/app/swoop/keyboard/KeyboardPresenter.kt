@@ -21,9 +21,10 @@ class KeyboardPresenter(
     connection: () -> InputConnection?,
     private val glide: GlideHost,
     private val post: (Runnable) -> Unit,
+    stats: app.kestrel.core.input.editor.InputStats = Engine.inputStats,
     now: () -> Long = { SystemClock.uptimeMillis() },
 ) : KeysView.Listener, GlideSession.Ui {
-    val controller = InputController(InputConnectionBridge(connection))
+    val controller = InputController(InputConnectionBridge(connection), stats)
     private var glideOn = false
     private val session = GlideSession(controller, { if (glideOn) glide.engine else null }, now) { h -> glide.saveHabit(h) }
     private var lastShiftTap = Long.MIN_VALUE / 2   // "never": a first tap shortly after boot must not count as a double tap
