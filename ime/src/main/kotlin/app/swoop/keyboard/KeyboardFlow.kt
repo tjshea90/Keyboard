@@ -3,6 +3,7 @@ package app.swoop.keyboard
 import android.app.Activity
 import android.content.ContentValues
 import android.content.Intent
+import android.net.Uri
 import android.os.Environment
 import android.provider.MediaStore
 import app.kestrel.core.input.glide.LearnedExport
@@ -76,6 +77,15 @@ class KeyboardFlow(private val a: Activity, private val glide: GlideHost, privat
         if (requestCode != REQ_IMPORT) return false
         val uri = data?.data
         if (resultCode != Activity.RESULT_OK || uri == null) return true
+        importUri(uri)
+        return true
+    }
+
+    /**
+     * Reads an export from [uri] (a file the person picked, or what the Kestrel browser handed over), shows what is in it and adds it after a yes. [done] runs when everything is over (yes, no or a refused file),
+     * on the UI thread: the hand-over screen closes itself then.
+     */
+    fun importUri(uri: Uri, done: () -> Unit = {}) {
         val cr = a.contentResolver
         Io.exec {
             val read: Any = try {
@@ -83,15 +93,15 @@ class KeyboardFlow(private val a: Activity, private val glide: GlideHost, privat
                 val text = String(bytes, Charsets.UTF_8)
                 if (LearnedExport.read(text) == null) a.getString(R.string.flow_not_export) else text
             } catch (e: TooBig) { a.getString(R.string.flow_too_big) } catch (e: Exception) { a.getString(R.string.flow_read_failed) }
-            Io.ui { if (read is String && read.startsWith(LearnedExport.MAGIC)) confirm(read) else host.say(read.toString()) }
+            Io.ui { if (read is String && read.startsWith(LearnedExport.MAGIC)) confirm(read, done) else { host.say(read.toString()); done() } }
         }
-        return true
     }
 
-    private fun confirm(text: String) {
-        val s = LearnedExport.read(text)?.summary ?: run { host.say(a.getString(R.string.flow_not_export)); return }
+    private fun confirm(text: String, done: () -> Unit = {}) {
+        val s = LearnedExport.read(text)?.summary ?: run { host.say(a.getString(R.string.flow_not_export)); done(); return }
         host.ask(a.getString(R.string.flow_import_title), a.getString(R.string.flow_import_message, s.describe()), a.getString(R.string.flow_import_yes), a.getString(R.string.flow_import_no)) { ok ->
             if (ok) Io.exec { importNow(text) }
+            done()
         }
     }
 
