@@ -249,7 +249,11 @@ class KeysView(context: Context) : View(context) {
     }
 
     private fun luma(c: Int): Float = (0.299f * ((c shr 16) and 0xFF) + 0.587f * ((c shr 8) and 0xFF) + 0.114f * (c and 0xFF)) / 255f
-    private fun lighten(c: Int, f: Float): Int { fun ch(v: Int) = (v + (255 - v) * f).toInt().coerceIn(0, 255); return (c and 0xFF000000.toInt()) or (ch((c shr 16) and 0xFF) shl 16) or (ch((c shr 8) and 0xFF) shl 8) or ch(c and 0xFF) }
+    private fun mix(v: Int, f: Float): Int = (v + (255 - v) * f).toInt().coerceIn(0, 255)
+    private fun lighten(c: Int, f: Float): Int {
+        val alpha = c and 0xFF000000.toInt()
+        return alpha or (mix((c shr 16) and 0xFF, f) shl 16) or (mix((c shr 8) and 0xFF, f) shl 8) or mix(c and 0xFF, f)
+    }
 
     override fun onConfigurationChanged(newConfig: Configuration) { super.onConfigurationChanged(newConfig); applyPalette(); invalidate() }
 
