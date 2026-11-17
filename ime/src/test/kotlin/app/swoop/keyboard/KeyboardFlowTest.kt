@@ -57,7 +57,7 @@ class KeyboardFlowTest {
 
     @Test fun aFileThatIsNotAnExportIsRefusedAndTheMemoryIsUntouched() {
         clean(); val h = host(); h.engine.learn(null, "hello", 2f, null); h.engine.saveLearned(); val before = saved()
-        var summary: LearnedExport.Summary? = LearnedExport.Summary(1, 1, 1, 1, 1, 1, 1)
+        var summary: LearnedExport.Summary? = LearnedExport.Summary(1, 1, 1, 1, 1, 1, 1, false, true)
         h.engine.importText("this is not an export\nw hello 99\n", false, h.own, { }) { summary = it }
         assertNull(summary); assertEquals(before, saved())
     }
