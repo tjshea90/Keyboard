@@ -72,9 +72,9 @@ class SetupActivity : Activity() {
         tryCard.addView(root, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { leftMargin = u.dp(6f); rightMargin = u.dp(6f); bottomMargin = u.dp(6f) })
         with(u) {
             tryCard.row(EditText(this@SetupActivity).apply {
-                hint = "Tap here to type with your real keyboard"; setHintTextColor(muted); setTextColor(text); minLines = 2
+                hint = "Tap here to type with your real keyboard"; setHintTextColor(u.muted); setTextColor(u.text); minLines = 2
                 inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_MULTI_LINE or InputType.TYPE_TEXT_FLAG_CAP_SENTENCES
-                background = null; setPadding(dp(16f), dp(14f), dp(16f), dp(14f))
+                background = null; setPadding(u.dp(16f), u.dp(14f), u.dp(16f), u.dp(14f))
             })
         }
         col.addView(tryCard)
