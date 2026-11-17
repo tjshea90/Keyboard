@@ -7,10 +7,13 @@ import android.os.Looper
 import android.os.SystemClock
 import android.view.MotionEvent
 import android.view.View
+import app.kestrel.core.input.ImeLayout
+import app.kestrel.core.input.Page
 import app.kestrel.core.input.editor.FieldKind
 import app.kestrel.core.input.editor.ShiftState
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -126,8 +129,8 @@ class KeysViewLookTest {
         val v = view(w = 412)
         val (px, py) = v.centerOf("?123")!!; fun tapAt(x: Float, y: Float) { touch(v, MotionEvent.ACTION_DOWN, x, y); touch(v, MotionEvent.ACTION_UP, x, y) }
         tapAt(px, py); render(v, "photo-dark-symbols1")
-        val (mx, my) = v.centerOf(app.kestrel.core.input.ImeLayout.MORE_SYMBOLS)!!; tapAt(mx, my); render(v, "photo-dark-symbols2")
-        assertEquals(app.kestrel.core.input.Page.SYMBOLS2, v.pageForTest())
+        val (mx, my) = v.centerOf(ImeLayout.MORE_SYMBOLS)!!; tapAt(mx, my); render(v, "photo-dark-symbols2")
+        assertEquals(Page.SYMBOLS2, v.pageForTest())
     }
 
     @Test @Config(qualifiers = "night", sdk = [29]) fun theTabletWidthIsDrawnToo() { render(view(w = 564), "photo-dark-tablet"); render(view(w = 564, action = "Search"), "photo-dark-tablet-search") }
