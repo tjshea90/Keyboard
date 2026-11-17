@@ -64,3 +64,9 @@ So far i like the keyboard.
 ```
 I typed a word in brave browser and it predicted the wrong word. when i pressed the correct word in the box of suggested words, it didn't change the word in the url bar. Remove the 123 button because there are always numbers, remove the bottom left button to change keyboards, and make the space bar wider. As wide as can fit. See what predictive engines are online to help teach the keyboard to make it as accurate as possible at predicting words in glide type 
 ```
+
+## 2026-11-17T05:00:10Z
+```
+Forget the 123 button change because i need a way to get to the special symbols 
+Stop where you can and save progress and checkpoint because your usage is about to run out 
+```
