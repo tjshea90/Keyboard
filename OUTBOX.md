@@ -102,3 +102,32 @@
 ## 2026-11-17T01:43:24Z
 > You sent nine requests. Per my own rule I'm writing them into `TASKS.md` in your words first, then working through them in an order I'll state below. I'm starting with the view work (numbers row, instant glide, faster trail, quicker key pop-up), then suggestions and learning, then options and the settings redesign. The floating keyboard goes last because it's the largest.
 <!-- sha:48ec47c49a87 -->
+
+## 2026-11-17T02:31:42Z
+> **Swoop 0.2.0-alpha1 is built, signed by GitHub and published.** It installs over the first alpha because the signing certificate is the same:
+>
+> https://github.com/tjshea90/Keyboard/releases/tag/swoop-v0.2.0-alpha1
+>
+> **What's in it, against your list:**
+> 1. **Numbers row** is always on top, on the letters and the symbols page.
+> 2. **Faster trail:** it is drawn on its own small layer and touches are delivered unbuffered.
+> 3. **Floating keyboard:** not in this build. I'm on it now.
+> 4. **Word suggestions with taps**, even with glide typing off. Tap a word in the strip to use it. A typed word that isn't a word shows in quotes so you can keep it.
+> 5. **Instant glide:** it starts after about 5 dp of movement instead of at the key edge.
+> 6. **Learning:** it learns your words, word pairs, three-word habits and corrections in every app. It also learns from a word you erase and retype, and from words you pick from the strip. A space fixes an obvious typo, one Backspace takes it back, and that word is never changed again. In my simulated test, next-word hits went from 0% to 96% after 300 sentences, and the first-letter completion hit rate from 63% to 98%.
+> 7. **Options:** space after punctuation, double space for a full stop, capitals after a full stop, capital I, slide on the space bar, key pop-up, vibration, key sound, key height and light/dark/automatic colours.
+> 8. **New settings screen:** a status card, a live copy of the keyboard that follows every change, and grouped cards with six accent colours. It also has Export, Import and Forget.
+> 9. **Key pop-up:** it is removed at the moment of lift, before the key is sent to the app.
+>
+> **Not tested on your devices:** I can't run your tablet or phone here. Everything above is checked by automated tests (core 271, app 102, lint clean) and by a rendered picture of the settings screen. I haven't verified how fast the trail and pop-up feel, or how it behaves on Android 16. Please tell me what's slow or wrong.
+>
+> **Space after punctuation:** a bare address typed in a message, like `example.com`, can't be told apart from `ok.thanks`, so it gets a space. Address fields, anything with `@` or `/`, numbers and abbreviations like `e.g` are left alone, and there is a switch.
+>
+> **Open items:**
+> - **N3 (floating keyboard, neon bar):** in progress.
+> - **Your device check of the 0.2.0 items:** waiting on you.
+> - **2-hourly wake-up after usage cut-offs:** still your call.
+> - **Reading the LinkMeter repo for translation:** still your call, needed later.
+>
+> Back to the floating keyboard.
+<!-- sha:90b2e9b73e95 -->
