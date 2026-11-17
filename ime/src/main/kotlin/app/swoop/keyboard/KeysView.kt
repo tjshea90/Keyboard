@@ -415,7 +415,13 @@ class KeysView(context: Context) : View(context) {
     // ---- the strip: the toolbar icons at the left, the guesses in the rest
     private fun toolCount() = if (translateAvailable) 3 else 2
     private fun toolId(i: Int) = if (i == 0) TOOL_SETTINGS else if (i == 1) TOOL_CLIPBOARD else TOOL_TRANSLATE
-    private fun toolBox(i: Int): RectF { val w = dp(TOOL_W_DP); return RectF(pad + i * w, pad, pad + (i + 1) * w - gap, stripPx() - gap) }
+    /** With nothing beside the toolbar (no guesses, no message) its icons are spread evenly across the strip, like the photo; with guesses they sit small at the left and the guesses fill the rest. */
+    private fun spread(): Boolean = chips().isEmpty() && SystemClock.uptimeMillis() >= noWordUntil
+    private val icon = RectF()
+    private fun toolBox(i: Int): RectF {
+        if (spread()) { val w = (width - 2 * pad) / toolCount().toFloat(); return RectF(pad + i * w, pad, pad + (i + 1) * w, stripPx() - gap) }
+        val w = dp(TOOL_W_DP); return RectF(pad + i * w, pad, pad + (i + 1) * w - gap, stripPx() - gap)
+    }
     private fun toolAt(x: Float, y: Float): Int {
         if (y >= stripPx() + pad) return -1
         for (i in 0 until toolCount()) { val r = toolBox(i); if (x >= r.left - gap / 2 && x < r.right + gap / 2) return i }
