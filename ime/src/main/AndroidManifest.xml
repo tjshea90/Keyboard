@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Swoop keyboard. PERMISSIONS: INTERNET only (translate toolbar button, plan 9.2: only code in app.swoop.keyboard.translate may use the network, two hosts,
-     HTTPS only); tools/expected-permissions.txt is the list CI compares the built APK against. No ACCESS_NETWORK_STATE. Exported components: the IME service (the system binds it, protected by BIND_INPUT_METHOD)
+     HTTPS only); tools/expected-permissions.txt is the list CI compares the built APK against. No network-state permission. Exported components: the IME service (the system binds it, protected by BIND_INPUT_METHOD)
      and the setup activity (launcher + the keyboard's settings screen). Nothing else may be exported without a plan-9.2 reason. -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
