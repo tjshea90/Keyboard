@@ -159,7 +159,7 @@ class KeysViewTest {
 
     @Test fun slidingOnTheSpaceBarMovesTheCursorAndNeverOpensThePicker() {
         val (v, r) = view(); val (x, y) = at(v, "space")
-        down(v, x, y); move(v, x + 40 * dp, y); advance(KeysView.SPACE_HOLD_MS + 100); up(v, x + 40 * dp, y)
+        down(v, x, y); move(v, x + 15 * dp, y); move(v, x + 50 * dp, y); advance(KeysView.SPACE_HOLD_MS + 100); up(v, x + 50 * dp, y)
         assertTrue(r.cursor > 0); assertTrue(r.keys.none { it == "<next>" })
     }
 
