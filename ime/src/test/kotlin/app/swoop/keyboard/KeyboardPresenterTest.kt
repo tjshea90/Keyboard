@@ -36,7 +36,7 @@ class KeyboardPresenterTest {
     private val dp get() = app.resources.displayMetrics.density
     private val list = LexiconFile.build(listOf("for" to 900L, "fir" to 300L, "fur" to 100L, "hello" to 500L, "world" to 800L, "there" to 700L).map { LexiconFile.Entry(it.first, it.second) }, emptyList())
 
-    private inner class Rig(inputType: Int = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_MULTI_LINE, imeOptions: Int = 0, glidePref: Boolean = true, suggest: Boolean = false, autoFix: Boolean = false, words: ByteArray = list, val inline: Boolean = false, extra: (android.content.SharedPreferences.Editor) -> Unit = {}) {
+    private inner class Rig(inputType: Int = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_MULTI_LINE, imeOptions: Int = 0, glidePref: Boolean = true, suggest: Boolean = false, autoFix: Boolean = false, words: ByteArray = list, val sameProcess: Boolean = false, extra: (android.content.SharedPreferences.Editor) -> Unit = {}) {
         val act: Activity = Robolectric.buildActivity(Activity::class.java).setup().get()
         val et = EditText(act)
         val info = EditorInfo()
@@ -53,7 +53,7 @@ class KeyboardPresenterTest {
             info.inputType = inputType; info.imeOptions = imeOptions
             val base = et.onCreateInputConnection(info)!!
             // Robolectric does not route key events from an InputConnection into the EditText: Backspace is done as the delete it stands for
-            // [inline]: an editor in the keyboard's OWN process on Android 10 runs the calls inline, so its report of the new cursor position arrives INSIDE the edit call (before the call returns to the keyboard)
+            // [sameProcess]: an editor in the keyboard's OWN process on Android 10 runs the calls inline, so its report of the new cursor position arrives INSIDE the edit call (before the call returns to the keyboard)
             ic = object : android.view.inputmethod.InputConnectionWrapper(base, true) {
                 override fun sendKeyEvent(event: android.view.KeyEvent): Boolean {
                     if (event.keyCode == android.view.KeyEvent.KEYCODE_DEL && event.action == android.view.KeyEvent.ACTION_DOWN) return deleteSurroundingText(1, 0)
@@ -76,8 +76,8 @@ class KeyboardPresenterTest {
             view.layout(0, 0, view.measuredWidth, view.measuredHeight)
         }
         fun report() { presenter.onUpdateSelection(et.selectionStart, et.selectionEnd, BaseInputConnection.getComposingSpanStart(et.text), BaseInputConnection.getComposingSpanEnd(et.text)) }
-        private fun inlineReport() { if (inline) report() }
-        fun ev(a: Int, x: Float, y: Float) { val t = SystemClock.uptimeMillis(); view.dispatchTouchEvent(MotionEvent.obtain(t, t, a, x, y, 0)); if (!inline) report() }
+        private fun inlineReport() { if (sameProcess) report() }
+        fun ev(a: Int, x: Float, y: Float) { val t = SystemClock.uptimeMillis(); view.dispatchTouchEvent(MotionEvent.obtain(t, t, a, x, y, 0)); if (!sameProcess) report() }
         fun tap(label: String) { val (x, y) = view.centerOf(label)!!; ev(MotionEvent.ACTION_DOWN, x, y); ev(MotionEvent.ACTION_UP, x, y) }
         /** The finger draws [word] over the keys (straight lines between the letters' centres, a point every few pixels) and lifts. */
         fun glide(word: String) {
@@ -283,7 +283,7 @@ class KeyboardPresenterTest {
      * text and then counted its own edit a second time (the trace on the emulator showed the text window one character too long after every key).
      */
     @Test fun anEditorInTheKeyboardsOwnProcessReportsInsideTheEditCallAndNothingGoesWrong() {
-        val r = Rig(inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_CAP_SENTENCES or InputType.TYPE_TEXT_FLAG_MULTI_LINE, glidePref = true, suggest = true, inline = true)
+        val r = Rig(inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_CAP_SENTENCES or InputType.TYPE_TEXT_FLAG_MULTI_LINE, glidePref = true, suggest = true, sameProcess = true)
         r.tap("h"); r.tap("i"); r.tap("\u232B"); r.tap("?123"); r.tap("?"); r.tap("a")
         assertEquals("the space after ? and the capital, as on every other Android", "H? A", r.text)
         r.tap("."); r.tap("space"); r.tap("b")
@@ -293,7 +293,7 @@ class KeyboardPresenterTest {
     }
 
     @Test fun aGlideAndAStripPickWorkInAnEditorThatReportsInsideTheEditCall() {
-        val r = Rig(inline = true); r.glide("for")
+        val r = Rig(sameProcess = true); r.glide("for")
         assertEquals("for ", r.text); assertEquals("for ", r.presenter.controller.before); assertNotNull("the glide can still be replaced from the strip", r.presenter.controller.lastGlide)
         val cands = r.view.candidatesForTest()
         val alt = cands.drop(1).firstOrNull() ?: return
