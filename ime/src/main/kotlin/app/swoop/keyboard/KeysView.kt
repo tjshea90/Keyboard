@@ -277,7 +277,7 @@ class KeysView(context: Context) : View(context) {
     fun glideKeys(): GlideKeys? {
         if (width <= 0 || height <= 0) return null
         val letters = ImeLayout.rows(Page.LETTERS, false, FieldKind.TEXT, "⏎", numberRow)
-        val b = MiniKeyboardGeometry.boxes(letters, width - 2 * pad, height - 2 * pad - stripPx(), gap, 0f, ImeLayout.rowWeights(letters)).map { r -> r.map { KeyBox(it.left + pad, it.top + pad + stripPx(), it.right + pad, it.bottom + pad + stripPx()) } }
+        val b = MiniKeyboardGeometry.slots(letters, width - 2 * pad, height - 2 * pad - stripPx(), gapX(), gapY(), 0f, ImeLayout.rowWeights(letters)).map { r -> r.map { KeyBox(it.left + pad, it.top + pad + stripPx(), it.right + pad, it.bottom + pad + stripPx()) } }
         return try { GlideKeys.from(letters, b) } catch (e: IllegalArgumentException) { null }
     }
 
