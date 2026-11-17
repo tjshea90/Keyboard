@@ -121,6 +121,18 @@ print(t.group(1) if t else "")
 PY
 }
 
+show_keyboard(){      # tap the try-it field until the keyboard really shows (a tap on an already focused field may not bring it back: take the focus off it first when it does not)
+  local try
+  for try in 1 2 3 4; do
+    dump; T2="$(find_edit)"; [ -n "$T2" ] && TAP="$T2"
+    adb shell input tap $TAP; sleep 3
+    adb shell dumpsys input_method > "$OUT/dumpsys-ime-try.txt"
+    if grep -q "mInputShown=true" "$OUT/dumpsys-ime-try.txt"; then return 0; fi
+    adb shell input swipe 400 330 400 350 100; sleep 1
+  done
+  return 1
+}
+
 # ---- 3 type by tapping keys
 if [ -n "$GEOM" ]; then
   for c in h i; do adb shell input tap $(key $c); sleep 0.4; done
@@ -155,16 +167,12 @@ if [ -n "$GEOM" ]; then
   if [ "$(adb shell settings get secure default_input_method | tr -d '\r')" = "$COMP" ]; then ok "Swoop is the chosen keyboard again after the hold on the space bar"; else bad "Swoop could not be chosen again after the space bar hold"; fi
 
   # ---- 8 floating (N3): long press the neon bar; the window becomes the whole screen, only the panel takes touches, the app behind is not resized
+  # the DARK look (the photo is the dark theme): night mode on, the keyboard shown, a screenshot; then back to day mode
+  adb shell cmd uimode night yes >/dev/null 2>&1; sleep 3
+  show_keyboard && { shot night-keyboard; ok "the keyboard shows in night mode (screenshot night-keyboard.png)"; } || bad "the keyboard did not show in night mode"
+  adb shell cmd uimode night no >/dev/null 2>&1; sleep 3
   # the field again, until the docked keyboard really shows (after the keyboard switch the field has moved and a tap on a focused field may not bring the keyboard back: unfocus it first when it does not)
-  KB_BACK=0
-  for try in 1 2 3 4; do
-    dump; T2="$(find_edit)"; [ -n "$T2" ] && TAP="$T2"
-    adb shell input tap $TAP; sleep 3
-    adb shell dumpsys input_method > "$OUT/dumpsys-ime-try.txt"
-    if grep -q "mInputShown=true" "$OUT/dumpsys-ime-try.txt"; then KB_BACK=1; break; fi
-    adb shell input swipe 400 330 400 350 100; sleep 1            # a touch on the title area takes the focus off the field
-  done
-  [ "$KB_BACK" -eq 1 ] && ok "the docked keyboard is showing again for the floating stage (try $try)" || bad "the keyboard could not be brought back for the floating stage"
+  show_keyboard && ok "the docked keyboard is showing again for the floating stage" || bad "the keyboard could not be brought back for the floating stage"
   GX=$(key grip | cut -d' ' -f1); GY=$(key grip | cut -d' ' -f2)
   adb shell input swipe $GX $GY $GX $GY 900; sleep 2.5
   adb logcat -d | grep -a SwoopDiag > "$OUT/swoopdiag-float.txt" 2>/dev/null; grep -q "floating -> true" "$OUT/swoopdiag-float.txt" && ok "the keyboard itself logged that it floated" || bad "the keyboard never logged a float (the long press did not reach its bar)"
