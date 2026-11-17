@@ -68,29 +68,43 @@ for b in blocks:
         if m: frame = tuple(map(int, m.groups())); break
 if not frame: sys.exit(1)
 l, t_, r, b_ = frame
-dp = dens / 160.0; pad = 3 * dp; gap = 3 * dp; strip = 30 * dp
+dp = dens / 160.0; pad = 3 * dp; gap = 3 * dp; strip = 30 * dp; grip = 18 * dp
 W = r - l; H = b_ - t_
-rowH = (H - strip - 2 * pad - 3 * gap) / 4
-def row_y(i): return t_ + pad + strip + i * (rowH + gap) + rowH / 2
-def row_x(weights):
-    total = sum(weights); n = len(weights); unit = (W - 2 * pad - gap * (n - 1)) / total
+# the keys view starts under the neon bar; rows: digits (weight 0.72), q.., a.., z.., bottom (1 each)
+weights = [0.72, 1, 1, 1, 1]
+usable = H - grip - strip - 2 * pad - 4 * gap
+def row_y(i):
+    y = t_ + grip + pad + strip
+    for k in range(i): y += usable * weights[k] / sum(weights) + gap
+    return y + usable * weights[i] / sum(weights) / 2
+def row_x(ws):
+    total = sum(ws); n = len(ws); unit = (W - 2 * pad - gap * (n - 1)) / total
     xs = []; x = l + pad
-    for w in weights: xs.append(x + w * unit / 2); x += w * unit + gap
+    for w in ws: xs.append(x + w * unit / 2); x += w * unit + gap
     return xs
 rows = [
-    ("qwertyuiop", row_x([1] * 10), 0),
-    ("asdfghjkl", row_x([.5] + [1] * 9 + [.5])[1:-1], 1),
-    ("zxcvbnm", row_x([1.5] + [1] * 7 + [1.5])[1:-1], 2),
+    ("qwertyuiop", row_x([1] * 10), 1),
+    ("asdfghjkl", row_x([.5] + [1] * 9 + [.5])[1:-1], 2),
+    ("zxcvbnm", row_x([1.5] + [1] * 7 + [1.5])[1:-1], 3),
 ]
 out = {}
 for letters, xs, ri in rows:
     for ch, x in zip(letters, xs): out[ch] = (int(x), int(row_y(ri)))
 bx = row_x([1, 1.5, 1, 3.5, 1, 2])           # the bottom row: globe, 123, comma, space, dot, action
-out['globe'] = (int(bx[0]), int(row_y(3))); out['space'] = (int(bx[3]), int(row_y(3))); out['back'] = (int(row_x([1.5] + [1] * 7 + [1.5])[-1]), int(row_y(2)))
+out['globe'] = (int(bx[0]), int(row_y(4))); out['space'] = (int(bx[3]), int(row_y(4))); out['back'] = (int(row_x([1.5] + [1] * 7 + [1.5])[-1]), int(row_y(3)))
+out['grip'] = (int(l + W / 2), int(t_ + grip / 2))
 print(frame, H / dp, ' '.join('%s=%d,%d' % (k, v[0], v[1]) for k, v in out.items()))
 PY
 )" || GEOM=""
-if [ -z "$GEOM" ]; then bad "could not find the keyboard window frame"; sed -n '1,5p' "$OUT/dumpsys-window.txt" >/dev/null; else ok "keyboard window: ${GEOM%% h*}... (${GEOM:0:60})"; fi
+if [ -z "$GEOM" ]; then bad "could not find the keyboard window frame"; else ok "keyboard window: ${GEOM:0:60}"; fi
+# the keyboard window must be only as tall as the keyboard (0.2.0-alpha1 had a bug: an overlay view made it the whole screen). dp height of the window vs the screen:
+SCREEN_DP="$(adb shell wm size | grep -oE '[0-9]+x[0-9]+' | tail -1 | cut -dx -f2)"
+WIN_DP="$(echo "$GEOM" | awk '{print $5}')"
+python3 -I - "${WIN_DP:-0}" "${SCREEN_DP:-0}" "${DENS:-160}" <<'PY' && ok "the keyboard window is as tall as the keyboard, not the screen (${WIN_DP} dp)" || bad "the keyboard window is far too tall (${WIN_DP} dp; screen $SCREEN_DP px)"
+import sys
+win_dp = float(sys.argv[1]); scr_px = float(sys.argv[2]); dens = float(sys.argv[3])
+sys.exit(0 if 150 < win_dp < 0.55 * scr_px / (dens / 160.0) else 1)
+PY
 key(){ echo "$GEOM" | tr ' ' '\n' | grep "^$1=" | head -1 | cut -d= -f2 | tr ',' ' '; }
 field_text(){ dump; python3 -I - "$OUT/ui.xml" <<'PY'
 import re, sys
