@@ -161,6 +161,18 @@ class InputController(private val ed: EditorBridge, val stats: InputStats = Inpu
 
     fun space() { type(" ") }
 
+    /** Puts [text] in at the cursor exactly as it is (a clipboard item): it replaces a selection, ends the word being tapped, and the glide before it is no longer undoable. False when the editor refused. */
+    fun paste(text: String): Boolean {
+        if (text.isEmpty()) return false
+        settle()
+        endComposing()
+        lastGlide = null
+        val ok = commit(text)
+        ensureWindow()
+        autoCaps()
+        return ok
+    }
+
     /** The previous character is sentence punctuation that touches a word or a number, and the word is not part of an address, an abbreviation or a number: a space belongs after it. */
     private fun needsAutoSpace(): Boolean {
         if (selStart >= 0 && selStart != selEnd) return false
