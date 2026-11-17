@@ -125,7 +125,7 @@ class SetupActivity : Activity() {
         col.addView(u.sectionTitle("Layout and look"))
         val look = u.card()
         with(u) {
-            look.row(switchRow("Number row", "Keep the digits 1 to 0 above the letters at all times.", st.numberRow) { change(Prefs.NUMBERROW, it) })
+            look.row(switchRow("Number row", "Off: the digits are the small numbers on the top row (hold a key to type one). On: a row of digits above the letters.", st.numberRow) { change(Prefs.NUMBERROW, it) })
             look.row(switchRow("Hide the letters", "Draws blank keys. The keys are still there and still type the letters they always did, so you can type by feel with nothing showing.", st.hideLetters) { change(Prefs.HIDE_LETTERS, it) })
             look.row(switchRow("Floating keyboard", "Shows a glowing bar on top of the keyboard. Press and hold it, then drag, to lift the keyboard off the bottom and move it anywhere. Drag a corner to resize it; double-tap the bar to dock it again.", st.floatEnabled) { change(Prefs.FLOAT_ON, it) })
             look.row(switchRow("Keyboard-switch key", "A globe key at the left of the space bar. Without it, press and hold the space bar to switch keyboards.", st.showGlobe) { change(Prefs.GLOBE, it) })

@@ -65,7 +65,8 @@ class Settings(private val p: SharedPreferences) {
     val doubleSpace get() = b(Prefs.DOUBLESPACE, true)
     val spaceSlide get() = b(Prefs.SPACESLIDE, true)
     val learn get() = b(Prefs.LEARN, true)
-    val numberRow get() = b(Prefs.NUMBERROW, true)
+    /** Off by default (the photo): the digits are the small hints on the top row, and a held top-row key types its digit. */
+    val numberRow get() = b(Prefs.NUMBERROW, false)
     /** Letters are not drawn (a blank panel that still types the letters under it). */
     val hideLetters get() = b(Prefs.HIDE_LETTERS, false)
     /** The clipboard history (the clipboard icon in the toolbar keeps what was copied for an hour; pinned items stay). */
@@ -82,7 +83,8 @@ class Settings(private val p: SharedPreferences) {
     val showGlobe get() = b(Prefs.GLOBE, false)
     val keyHeight get() = i(Prefs.KEYHEIGHT, 1).coerceIn(0, KEY_HEIGHTS.size - 1)
     val theme get() = i(Prefs.THEME, 0).coerceIn(0, THEMES.size - 1)
-    val accent get() = i(Prefs.ACCENT, 0).coerceIn(0, ACCENTS.size - 1)
+    /** Cyan (the photo's Enter key) unless the person chose another. */
+    val accent get() = i(Prefs.ACCENT, 1).coerceIn(0, ACCENTS.size - 1)
     val keyPreview get() = b(Prefs.PREVIEW, true)
     val haptics get() = b(Prefs.HAPTIC, true)
     val sound get() = b(Prefs.SOUND, false)
@@ -111,7 +113,7 @@ class Settings(private val p: SharedPreferences) {
         /** 0 = follows the phone's light / dark setting. */
         val THEMES = listOf("Automatic", "Dark", "Light")
         val ACCENTS = listOf(
-            Accent("Blue", 0xFF1F6FEB.toInt()), Accent("Cyan", 0xFF00D8F0.toInt()), Accent("Green", 0xFF2BE37A.toInt()),
+            Accent("Blue", 0xFF1F6FEB.toInt()), Accent("Cyan", 0xFF00DDE6.toInt()), Accent("Green", 0xFF2BE37A.toInt()),
             Accent("Pink", 0xFFFF4FB8.toInt()), Accent("Orange", 0xFFFF9020.toInt()), Accent("Violet", 0xFFA574FF.toInt()),
         )
     }
