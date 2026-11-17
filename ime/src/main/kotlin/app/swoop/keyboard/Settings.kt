@@ -113,6 +113,8 @@ class Settings(private val p: SharedPreferences) {
         val KEY_HEIGHT_SCALE = floatArrayOf(0.85f, 1f, 1.15f, 1.3f)
         /** 0 = follows the phone's light / dark setting. */
         val THEMES = listOf("Automatic", "Dark", "Light")
+        /** Index into [THEMES] used until the person chooses: Dark (the photo's look). */
+        const val DEFAULT_THEME = 1
         val ACCENTS = listOf(
             Accent("Blue", 0xFF1F6FEB.toInt()), Accent("Cyan", 0xFF00DDE6.toInt()), Accent("Green", 0xFF2BE37A.toInt()),
             Accent("Pink", 0xFFFF4FB8.toInt()), Accent("Orange", 0xFFFF9020.toInt()), Accent("Violet", 0xFFA574FF.toInt()),
