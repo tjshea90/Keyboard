@@ -408,3 +408,14 @@
 ## 2026-11-17T18:53:42Z
 > Noted: fast Wi-Fi is the normal case, and the 5 Mbit hotspot is the exception. The simulation runs I've dispatched so far already used the unlimited link. I'm making that the default and recording your message in the task list.
 <!-- sha:8f300f1d448a -->
+
+## 2026-11-17T18:54:30Z
+> Understood: fast Wi-Fi is the normal case, so everything is now judged at full speed first, and the 5 Mbit hotspot is only an optional second pass.
+>
+> - **Recorded:** your message is in the task list, with the decision attached.
+> - **Simulation default:** it now runs at full speed unless told otherwise. On the real tablet the limit at full speed is the processor, graphics and 2 GB of RAM, not the link. The page, video and typing results I judge are therefore the processor-bound ones: first paint and load-finished times, UI stalls, dropped frames and memory.
+> - **Already the case:** the quick keyboard-plus-browser run in progress is a full-speed run, so nothing needs redoing.
+> - **Kestrel:** it has its own fast-Wi-Fi profile, which the Browser session built earlier. I'm not touching it.
+>
+> The in-progress run is still typing on the emulator. I'll read its report when the scheduled wake-up fires (about 19:01 UTC), fix what it shows, then run the real-sites and video pass at full speed.
+<!-- sha:51ed6aeb010d -->
