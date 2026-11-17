@@ -200,7 +200,10 @@ class KeysView(context: Context) : View(context) {
 
     fun showCandidates(words: List<String>) { cands = words; noWordUntil = 0L; dyn() }
     fun clearCandidates() { if (cands.isNotEmpty() || noWordUntil != 0L) { cands = emptyList(); noWordUntil = 0L; dyn() } }
-    fun showNoWord() { cands = emptyList(); noWordUntil = SystemClock.uptimeMillis() + NO_WORD_MS; handler.removeCallbacks(noWordOff); handler.postDelayed(noWordOff, NO_WORD_MS); dyn() }
+    private var notice: String? = null
+    /** A short message in the strip (translating, an error) for a few seconds. */
+    fun showNotice(msg: String) { notice = msg; cands = emptyList(); noWordUntil = SystemClock.uptimeMillis() + NOTICE_MS; handler.removeCallbacks(noWordOff); handler.postDelayed(noWordOff, NOTICE_MS); dyn() }
+    fun showNoWord() { notice = null; cands = emptyList(); noWordUntil = SystemClock.uptimeMillis() + NO_WORD_MS; handler.removeCallbacks(noWordOff); handler.postDelayed(noWordOff, NO_WORD_MS); dyn() }
     val isGliding: Boolean get() = gliding
     /** The strip above the keys always exists now: the toolbar (settings, clipboard, translate) lives at its left, the guesses fill the rest. */
     private fun stripPx() = dp(STRIP_H_DP)
@@ -382,7 +385,7 @@ class KeysView(context: Context) : View(context) {
         val left = chipsLeft()
         if (list.isEmpty()) {
             val miss = SystemClock.uptimeMillis() < noWordUntil
-            val msg = if (miss) context.getString(R.string.strip_no_word) else if (glideEnabled && page == Page.LETTERS && (kind == FieldKind.TEXT || kind == FieldKind.SEARCH)) context.getString(R.string.strip_hint) else ""
+            val msg = if (miss) (notice ?: context.getString(R.string.strip_no_word)) else if (glideEnabled && page == Page.LETTERS && (kind == FieldKind.TEXT || kind == FieldKind.SEARCH)) context.getString(R.string.strip_hint) else ""
             if (msg.isEmpty()) return
             text.color = if (miss) cAccent else cMuted; text.textSize = h * 0.38f
             c.drawText(TextUtils.ellipsize(msg, text, width - left - dp(8f), TextUtils.TruncateAt.END).toString(), (left + width) / 2f, (h - gap) / 2f + pad - (fm.ascent + fm.descent) / 2f, text)
@@ -758,6 +761,7 @@ class KeysView(context: Context) : View(context) {
         const val TAP_MARGIN_PITCH = 0.22f
         const val TRAIL_FADE_MS = 260L
         const val NO_WORD_MS = 1500L
+        const val NOTICE_MS = 5000L
         /** The live guess while gliding: at most this often, and only after this many new touch points. */
         const val PREVIEW_MS = 110L
         const val PREVIEW_POINTS = 4

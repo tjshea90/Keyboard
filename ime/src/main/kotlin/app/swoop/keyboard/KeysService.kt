@@ -31,6 +31,7 @@ class KeysService : InputMethodService() {
         presenter.safeMode = safeMode
         presenter.onNextKeyboard = { nextKeyboard() }
         presenter.onOpenSettings = { openSettings() }
+        presenter.onTranslateMessage = { m -> root?.keys?.showNotice(m) }
         presenter.onToggleClipboard = { toggleClipboard() }
         try { (getSystemService(CLIPBOARD_SERVICE) as android.content.ClipboardManager).addPrimaryClipChangedListener(clipListener) } catch (_: Exception) { }
     }

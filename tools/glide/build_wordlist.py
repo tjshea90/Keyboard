@@ -144,6 +144,8 @@ def main():
     ap.add_argument('--scowl-seen', type=int, default=95, help='SCOWL sizes up to this are admitted when a frequency source has seen the word')
     ap.add_argument('--wf-new', type=float, default=5e-6, help='a word that is not in SCOWL needs at least this wordfreq frequency ...')
     ap.add_argument('--hd-new', type=int, default=300, help='... and at least this many OpenSubtitles occurrences')
+    ap.add_argument('--short2', type=float, default=1.5e-5, help='a 2-letter word needs at least this wordfreq frequency')
+    ap.add_argument('--short3', type=float, default=1e-6, help='a 3-letter word needs at least this wordfreq frequency')
     ap.add_argument('--total', type=int, default=TOTAL)
     a = ap.parse_args()
 
@@ -177,16 +179,21 @@ def main():
         if "'" in w and not (CONTRACTION.match(w) and (not w.endswith("'s") or w[:-2] in S_OK)):
             continue
         if level <= a.scowl_all:
-            # very short Scrabble-only words ("xu", "oe") are the ones any glide matches by accident: they need a sign of real use
-            if len(w) <= 2 and w not in ('a', 'i') and f < 3e-6 and hd.get(w, 0) < 2000:
-                continue
-            if len(w) == 3 and f < 1e-7 and hd.get(w, 0) < 30 and sy.get(w, 0) < 100000 and w not in extras:
-                continue
             vocab[w] = 'scowl%d' % level
         elif (f > 0 or w in sy) and (level <= 80 or hd.get(w, 0) >= 5):
-            if len(w) <= 3 and f < 1e-6:
-                continue
             vocab[w] = 'scowl%d+seen' % level
+    # a glide over two or three letters matches a lot of junk by accident, so short words need real use (the dictionary alone does not make "xu" or "tui" a word to offer)
+    for w in list(vocab):
+        n = len(w.replace("'", ""))
+        if w in extras or n >= 4:
+            continue
+        f = wf.get(w, 0.0)
+        if n == 1 and w not in ('a', 'i'):
+            del vocab[w]
+        elif n == 2 and f < a.short2:
+            del vocab[w]
+        elif n == 3 and f < a.short3:
+            del vocab[w]
     # words SCOWL does not have: slang, brands, web names, texting words
     for w, f in wf.items():
         if w in vocab or w in sc:
@@ -198,8 +205,6 @@ def main():
         if re.search(r'(.)\1\1', w):
             continue
         if f < a.wf_new or hd.get(w, 0) < a.hd_new:
-            continue
-        if len(w) == 2 and f < 2e-5:
             continue
         vocab[w] = 'new'
     for w in extras:
