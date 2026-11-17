@@ -46,7 +46,7 @@ class DictionaryActivity : Activity() {
             hint = getString(R.string.dict_hint); setSingleLine(); imeOptions = EditorInfo.IME_ACTION_DONE
             inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS or InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD   // (a plain box: no learning about the dictionary search itself)
             setTextColor(u.text); setHintTextColor(u.muted); textSize = 17f
-            background = u.shape(u.card, 12f, u.line, 1f); setPadding(u.dp(14f), u.dp(12f), u.dp(14f), u.dp(12f))
+            background = u.shape(u.card, 12f, u.stroke, 1f); setPadding(u.dp(14f), u.dp(12f), u.dp(14f), u.dp(12f))
             addTextChangedListener(object : TextWatcher {
                 override fun afterTextChanged(s: Editable?) { search(s?.toString() ?: "") }
                 override fun beforeTextChanged(s: CharSequence?, a: Int, b: Int, c: Int) {}
