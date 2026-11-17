@@ -53,6 +53,7 @@ TAP_PHRASES = [
     "How are you doing?",
     "thanks so much for your help",
 ]
+FIELD_KINDS = ["text", "search", "textarea", "editable", "url", "email"]
 GLIDE_WORDS = ["hello", "world", "thanks", "tomorrow", "because", "something", "going", "weather", "please", "important", "people", "about",
                "would", "really", "friends", "morning", "browser", "keyboard", "youtube", "google"]
 
@@ -305,7 +306,7 @@ def scene_memory(rep, tag):
 
 def scene_fields(rep):
     w, h = screen()
-    kinds = ["text", "search", "textarea", "editable", "url", "email"]
+    kinds = FIELD_KINDS
     for kind in kinds:
         reset()
         open_url("http://localhost:%d/f/%s" % (PORT, kind))
@@ -536,12 +537,18 @@ def main():
     ap.add_argument("--suite", default="typing")
     ap.add_argument("--net", default="hotspot")
     ap.add_argument("--minutes", type=int, default=15)
+    ap.add_argument("--quick", action="store_true", help="fewer phrases, words and field kinds (a run of about 10 minutes instead of 30)")
     ap.add_argument("--selftest", action="store_true")
     a = ap.parse_args()
     if a.selftest:
         assert edit_distance("kitten", "sitting") == 3 and words_hit(["a", "b"], "a b ") == (2, 2) and words_hit(["a", "b"], "a x") == (1, 2)
         print("selftest ok")
         return 0
+    if a.quick:
+        global TAP_PHRASES, GLIDE_WORDS, FIELD_KINDS
+        TAP_PHRASES = TAP_PHRASES[:3]
+        GLIDE_WORDS = GLIDE_WORDS[:10]
+        FIELD_KINDS = ["text", "textarea", "editable"]
     rep = Report(a.out)
     srv = None
     try:
