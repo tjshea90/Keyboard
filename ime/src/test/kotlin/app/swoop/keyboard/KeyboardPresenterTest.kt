@@ -288,4 +288,42 @@ class KeyboardPresenterTest {
         assertFalse(r.view.numberRow); assertEquals(1.3f, r.view.keyHeightScale, 0f); assertEquals(2, r.view.themeMode); assertEquals(Settings.ACCENTS[3].color, r.view.accent)
         assertFalse(r.view.hapticsOn); assertFalse(r.view.keyPreview); assertTrue(r.view.soundOn); assertFalse(r.view.trailOn)
     }
+
+    @Test fun aTypedWordWithAnEmojiOffersItAndTappingItReplacesTheWord() {
+        val r = Rig(glidePref = false, suggest = true, words = LexiconFile.build(listOf("clown" to 900L, "clowns" to 300L, "the" to 9000L).map { LexiconFile.Entry(it.first, it.second) }, emptyList()))
+        Thread.sleep(50); org.robolectric.shadows.ShadowLooper.idleMainLooper()
+        for (c in "clown") r.tap(c.toString())
+        val clown = "\uD83E\uDD21"
+        assertTrue("the emoji is among the guesses: ${r.view.candidatesForTest()}", clown in r.view.candidatesForTest())
+        val i = r.view.candidatesForTest().indexOf(clown); val (x, y) = r.view.chipCenterForTest(i)!!
+        r.ev(MotionEvent.ACTION_DOWN, x, y); r.ev(MotionEvent.ACTION_UP, x, y)
+        assertEquals("the written word is gone, the emoji is in", "$clown ", r.text)
+        assertEquals("the emoji is not learned as a word", "", r.memory().lines().filter { it.contains(clown) }.joinToString())
+    }
+
+    @Test fun emojiSuggestionsCanBeSwitchedOff() {
+        val r = Rig(glidePref = false, suggest = true, extra = { it.putBoolean(Prefs.EMOJI_SUGGEST, false) }, words = LexiconFile.build(listOf("clown" to 900L, "the" to 9000L).map { LexiconFile.Entry(it.first, it.second) }, emptyList()))
+        Thread.sleep(50); org.robolectric.shadows.ShadowLooper.idleMainLooper()
+        for (c in "clown") r.tap(c.toString())
+        assertTrue(r.view.candidatesForTest().none { app.kestrel.core.input.glide.EmojiMap.isEmoji(it) })
+    }
+
+    @Test fun aWordRemovedWithALongPressIsNeverOfferedAgain() {
+        val r = Rig(glidePref = true, suggest = true)
+        r.presenter.onRemoveWord("hello", true)
+        r.glide("hello")
+        assertTrue("hello is not among the guesses: ${r.view.candidatesForTest()}", "hello" !in r.view.candidatesForTest())
+        assertTrue(File(app.filesDir, "user_dictionary.txt").readText().contains("-hello"))
+    }
+
+    @Test fun pastingAClipboardItemPutsItInAtTheCursor() {
+        val r = Rig(glidePref = false); for (c in "hi ") r.tap(if (c == ' ') "space" else c.toString())
+        r.presenter.pasteText("a pasted line"); r.report()
+        assertEquals("hi a pasted line", r.text)
+    }
+
+    @Test fun afterAFullStopAndASpaceTheNextLetterIsACapitalByDefault() {
+        val r = Rig(glidePref = false); for (c in "hi") r.tap(c.toString()); r.tap("."); r.tap("space"); r.tap("a")
+        assertEquals("hi. A", r.text)
+    }
 }
