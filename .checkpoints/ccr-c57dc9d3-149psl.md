@@ -1,21 +1,22 @@
-# CHECKPOINT 253 — read me first, then TASKS.md
+# CHECKPOINT 272 — read me first, then TASKS.md
 
-**Written:** 2026-11-17T04:47:14Z · **tests:** all 1 fast checks green (gradle suite: see ship.sh)
-**Branch:** `ccr-c57dc9d3-149psl` · **builds on:** `f0abec1` (this checkpoint is the commit after it)
+**Written:** 2026-11-17T04:57:48Z · **tests:** all 1 fast checks green (gradle suite: see ship.sh)
+**Branch:** `ccr-c57dc9d3-149psl` · **builds on:** `57ca466` (this checkpoint is the commit after it)
 
 ## Just done
-owner's new requests (Brave strip tap does nothing, remove 123 and globe keys, wider space bar, research online predictive engines) written into TASKS.md as N10-N14 in his words
+N10-N14 done in code and tests: glide survives an address bar's inline completion + verified replaceRecent fallback; no 123 key (hold . or , for a symbols grid); globe off by default (hold space = picker, Settings switch, safe mode on); space bar 6.4 units; research/PREDICTION-SOURCES.md written; core 286, ime 127, lint ok
 
 ## Do this next
-N10 first: reproduce with FakeEditor (inline autocomplete = selection after the glide + rewritten text): core InputController.swapGlide must work with a selection that starts at the glide end and onSelectionUpdate must keep lastGlide when before still ends with the glide tail; add controller.replaceRecent(old, word) verified fallback and use it in KeyboardPresenter.onCandidate when session.pick fails; then N11-N13 (ImeLayout bottom row, symbols grid on hold of '.', GLOBE setting, hold space = picker, KeysView), N14 research doc via a research helper; update tools/emu/smoke.sh bottom row geometry; release 0.3.0-alpha1.
+(1) tools/emu/smoke.sh: bottom row geometry is now [',' 1][space 6.4][. 1][action 1.6]: update bx weights and key space/back positions; replace the globe tap with a hold-space (adb input swipe x y x y 900) then BACK; add a hold-'.' grid check by screenshot only; dispatch emu-smoke.yml; (2) small win from the research: Suggester should restore apostrophes (typed im -> I'm, dont -> don't) as a zero-penalty fix; (3) then version 0.3.0-alpha1 (code 4), ship.sh, android.yml, record, tell the owner; (4) ask the owner which research items to build (harness with real swipes first).
 
 *(resuming? CLAUDE.md's "FIRST ACTION OF EVERY SESSION" says how; the briefing is tools/resume.sh. Do that first, or autosave may stay off all session.)*
 
 ## Uncommitted right now
-     M TASKS.md
+    (nothing — the tree is clean as of this checkpoint)
 
 ## Last ten checkpoints
 ```
+  7fd6628 ckpt 253: owner's new requests (Brave strip tap does nothing, remove 123 and globe keys,
   8ea6088 ckpt 249: RELEASE swoop-v0.2.1-alpha1 (code 3) published (run 44009075923 green, pinned 
   6f0e9b4 ckpt 245: swoop-v0.2.1-alpha1 (code 3) gated and android.yml dispatched (floating keyboa
   a7d984f ckpt 244: gated swoop-v0.2.1-alpha1 (ime code 3) and pushed it: handoff self-test, unit 
@@ -25,8 +26,7 @@ N10 first: reproduce with FakeEditor (inline autocomplete = selection after the 
   242c789 ckpt 228: emulator smoke extended: key geometry for the number row + neon bar, assertion
   79037e0 ckpt 224: FOUND AND FIXED a bug in 0.2.0-alpha1: the overlay layer (match_parent View) m
   61c5916 ckpt 212: RELEASE swoop-v0.2.0-alpha1 published (run 44002995655 green, certificate veri
-  52a512f ckpt 205: release swoop-v0.2.0-alpha1 (code 2) gated, pushed and android.yml dispatched 
 ```
 
-(3 automatic checkpoint(s) since the last deliberate one — the
+(18 automatic checkpoint(s) since the last deliberate one — the
 session was still mid-step. `git diff` against it shows what changed.)
