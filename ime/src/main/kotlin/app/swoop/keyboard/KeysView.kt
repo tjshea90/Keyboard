@@ -262,15 +262,15 @@ class KeysView(context: Context) : View(context) {
 
     /** The height this keyboard has when [w] pixels wide and its rows are [mul] times as tall as the settings say (the floating keyboard asks this to turn a corner drag into a height). */
     fun heightFor(w: Int, mul: Float): Int {
-        // a key is about as tall as a letter key is wide (a thumb-sized target), within sensible bounds on a phone and on the tablet
-        val rowH = ((w - 2 * pad) / 10f).coerceIn(dp(40f), dp(52f)) * keyHeightScale * mul
-        return (stripPx() + rowH * ImeLayout.rowWeights(rows).sum() + (rows.size - 1) * gap + 2 * pad).toInt()
+        // the photo's keys are taller than wide (1.6 to 1) on a phone: a row is 1.35 key pitches tall, within sensible bounds on a phone (about 54 dp) and on the tablet (56 dp)
+        val rowH = (((w - 2 * pad) / 10f) * ROW_H_PITCHES).coerceIn(dp(ROW_H_MIN_DP), dp(ROW_H_MAX_DP)) * keyHeightScale * mul
+        return (stripPx() + rowH * ImeLayout.rowWeights(rows).sum() + (rows.size - 1) * gapY(w.toFloat()) + 2 * pad).toInt()
     }
 
     private fun layoutKeys() {
         if (rectsW == width && rectsH == height && rects.isNotEmpty()) return
         rectsW = width; rectsH = height
-        rects = MiniKeyboardGeometry.boxes(rows, width - 2 * pad, height - 2 * pad - stripPx(), gap, 0f, ImeLayout.rowWeights(rows)).map { r -> r.map { KeyBox(it.left + pad, it.top + pad + stripPx(), it.right + pad, it.bottom + pad + stripPx()) } }
+        rects = MiniKeyboardGeometry.slots(rows, width - 2 * pad, height - 2 * pad - stripPx(), gapX(), gapY(), 0f, ImeLayout.rowWeights(rows)).map { r -> r.map { KeyBox(it.left + pad, it.top + pad + stripPx(), it.right + pad, it.bottom + pad + stripPx()) } }
     }
 
     /** The 26 letter keys' centres as laid out now (the same function that draws them), for the glide decoder (KB-103). Null before the first layout. */
