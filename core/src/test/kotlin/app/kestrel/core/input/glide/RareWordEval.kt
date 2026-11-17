@@ -82,7 +82,9 @@ object RareWordEval {
         val keys = GlideEval.keysFor()
         val n = a["n"]?.toInt() ?: 3000
         val seed = a["seed"]?.toLong() ?: 1L
-        val common = if (a["pop"] == "mid") midWords(old, new, n, seed * 7919) else commonWords(old, new, n, seed * 7919)
+        // who says which words people type: the old list by default, or any other list (truth=<en.klx>, e.g. one made from subtitle counts only)
+        val truth = a["truth"]?.let { load(it) } ?: old
+        val common = (if (a["pop"] == "mid") midWords(truth, new, n * 2, seed * 7919) else commonWords(truth, new, n * 2, seed * 7919)).filter { old.idOf(it) >= 0 }.take(n)
         val rare = rareWords(new, a["nr"]?.toInt() ?: 1500, seed * 31)
         val base = GlideEval.paramsFrom(a)
         val d = GlideParams()
