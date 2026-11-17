@@ -165,7 +165,7 @@ fi
 
 # ---- 7 no crash
 adb logcat -d > "$OUT/logcat.txt"
-echo "---- SwoopDiag (geometry only) ----"; grep SwoopDiag "$OUT/logcat.txt" | sed 's/^.*SwoopDiag: //' | head -60; echo "----")
+echo "---- SwoopDiag (geometry only) ----"; grep SwoopDiag "$OUT/logcat.txt" | sed 's/^.*SwoopDiag: //' | head -60; echo "----"
 if grep -E "FATAL EXCEPTION|AndroidRuntime: .*$PKG|Process: $PKG" "$OUT/logcat.txt" | head -3 | grep -q .; then bad "the app crashed (see logcat.txt)"; grep -E -A8 "FATAL EXCEPTION" "$OUT/logcat.txt" | head -20; else ok "no crash in logcat"; fi
 
 echo; echo "emulator smoke: $FAILS failure(s)"
