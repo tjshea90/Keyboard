@@ -25,14 +25,21 @@ object FieldInfos {
             }
             else -> FieldKind.TEXT
         }
+        // The Kestrel browser marks its address-and-search box in privateImeOptions (any app may send such options; the only effect here is a layout and typing style, nothing is shared).
+        val omnibox = cls == InputType.TYPE_CLASS_TEXT && kind != FieldKind.PASSWORD && hasOmniboxOption(e.privateImeOptions)
+        val fieldKind = if (omnibox) FieldKind.OMNIBOX else kind
         return FieldInfo(
-            kind = kind,
+            kind = fieldKind,
             imeAction = action,                      // EditorInfo.IME_ACTION_* and ImeActions use the same numbers
             noEnterAction = (e.imeOptions and EditorInfo.IME_FLAG_NO_ENTER_ACTION) != 0,
             noPersonalizedLearning = (e.imeOptions and EditorInfo.IME_FLAG_NO_PERSONALIZED_LEARNING) != 0,
             noSuggestions = noSuggestions,
-            capsFlags = if (cls == InputType.TYPE_CLASS_TEXT && kind != FieldKind.PASSWORD && kind != FieldKind.EMAIL && kind != FieldKind.URL) e.inputType and CapFlags.ALL else 0,
+            capsFlags = if (cls == InputType.TYPE_CLASS_TEXT && fieldKind != FieldKind.PASSWORD && fieldKind != FieldKind.EMAIL && fieldKind != FieldKind.URL && fieldKind != FieldKind.OMNIBOX) e.inputType and CapFlags.ALL else 0,
             initialSelStart = e.initialSelStart, initialSelEnd = e.initialSelEnd,
         )
     }
+
+    /** The private option the Kestrel browser sets on its address-and-search box (docs/KESTREL-LINK.md): "app.kestrel.omnibox=1" among the comma-separated options. */
+    const val OMNIBOX_OPTION = "app.kestrel.omnibox=1"
+    fun hasOmniboxOption(privateImeOptions: String?): Boolean = privateImeOptions != null && privateImeOptions.split(',').any { it.trim() == OMNIBOX_OPTION }
 }

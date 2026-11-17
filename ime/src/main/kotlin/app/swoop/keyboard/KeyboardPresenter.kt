@@ -183,15 +183,15 @@ class KeyboardPresenter(
         glideOn = !safeMode && st.glide && field.kind != FieldKind.PASSWORD
         learnOn = !safeMode && st.learn && field.learningAllowed
         suggestOn = !safeMode && st.suggest && field.composingAllowed
-        autoFixOn = suggestOn && st.autoFix
-        capitalizeI = !safeMode && st.capitalizeI && field.composingAllowed
+        autoFixOn = suggestOn && st.autoFix && field.kind != FieldKind.OMNIBOX            // (never rewrite what is typed into an address box)
+        capitalizeI = !safeMode && st.capitalizeI && field.composingAllowed && field.kind != FieldKind.OMNIBOX
         doubleSpaceOn = !safeMode && st.doubleSpace
-        emojiOn = !safeMode && st.emojiSuggestions && field.composingAllowed
+        emojiOn = !safeMode && st.emojiSuggestions && field.composingAllowed && field.kind != FieldKind.OMNIBOX
         if (emojiOn) loadEmoji()
         controller.autoSpace = !safeMode && st.autoSpace
         controller.autoCapsOn = st.autoCaps; controller.sentenceCaps = st.autoCaps
         latest = null; literalShown = null; noFixFor = null; suggestSeq++
-        flow.leaveField(); translator?.cancel(); translateAllowed = !safeMode && field.kind != FieldKind.PASSWORD && st.translateEnabled
+        flow.leaveField(); translator?.cancel(); translateAllowed = !safeMode && field.kind != FieldKind.PASSWORD && field.kind != FieldKind.OMNIBOX && st.translateEnabled
         view?.let {
             it.reset()
             it.applyOptions(st)
