@@ -26,7 +26,7 @@ class KeyboardPresenter(
     val controller = InputController(InputConnectionBridge(connection))
     private var glideOn = false
     private val session = GlideSession(controller, { if (glideOn) glide.engine else null }, now) { h -> glide.saveHabit(h) }
-    private var lastShiftTap = 0L
+    private var lastShiftTap = Long.MIN_VALUE / 2   // "never": a first tap shortly after boot must not count as a double tap
     private val clock = now
 
     var view: KeysView? = null
