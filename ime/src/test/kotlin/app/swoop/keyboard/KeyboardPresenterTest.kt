@@ -262,7 +262,9 @@ class KeyboardPresenterTest {
 
     @Test fun aLetterAfterPunctuationGetsItsSpaceAndTheSwitchTurnsItOff() {
         val r = Rig(glidePref = false); for (c in "hello") r.tap(c.toString()); r.tap("."); r.tap("w")
-        assertEquals("hello. w", r.text)
+        assertEquals("the new sentence starts with a capital by default", "hello. W", r.text)
+        val lower = Rig(glidePref = false, extra = { it.putBoolean(Prefs.AUTOCAPS, false) }); for (c in "hello") lower.tap(c.toString()); lower.tap("."); lower.tap("w")
+        assertEquals("hello. w", lower.text)
         val off = Rig(glidePref = false, extra = { it.putBoolean(Prefs.AUTOSPACE, false) }); for (c in "hello") off.tap(c.toString()); off.tap("."); off.tap("w")
         assertEquals("hello.w", off.text)
     }

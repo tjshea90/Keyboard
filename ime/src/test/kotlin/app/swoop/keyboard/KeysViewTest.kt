@@ -82,7 +82,7 @@ class KeysViewTest {
         assertEquals(listOf("a"), r.keys)
     }
     @Test fun aNonLetterKeyTypesTheKeyUnderTheFingerAtLiftSoASlipCanBeCorrectedBySliding() {
-        val (v, r) = view(); val (gx, gy) = at(v, "⏎"); val (px, _) = at(v, ".")
+        val (v, r) = view(); val (gx, gy) = at(v, ","); val (px, _) = at(v, ".")
         down(v, gx, gy); move(v, px, gy); up(v, px, gy)
         assertEquals(listOf("."), r.keys)
     }
@@ -120,8 +120,19 @@ class KeysViewTest {
     }
     @Test fun theOneTwoThreeKeyPagesToTheSymbolsAndBackAndIsNotReported() {
         val (v, r) = view(); assertNull("no globe by default", v.centerOf("globe"))
-        tap(v, at(v, "123")); assertEquals(Page.SYMBOLS, v.pageForTest()); assertTrue(r.keys.isEmpty())
-        tap(v, at(v, "@")); tap(v, at(v, "abc")); assertEquals(Page.LETTERS, v.pageForTest()); assertEquals(listOf("@"), r.keys)
+        tap(v, at(v, "?123")); assertEquals(Page.SYMBOLS, v.pageForTest()); assertTrue(r.keys.isEmpty())
+        tap(v, at(v, "abc")); assertEquals(Page.LETTERS, v.pageForTest()); assertTrue("the paging keys are not reported", r.keys.isEmpty())
+    }
+
+    @Test fun afterOneSpecialCharacterTheKeyboardGoesStraightBackToTheLetters() {      // M5, like Gboard
+        val (v, r) = view()
+        tap(v, at(v, "?123")); assertEquals(Page.SYMBOLS, v.pageForTest())
+        tap(v, at(v, "?")); assertEquals(listOf("?"), r.keys); assertEquals("back on the letters at once", Page.LETTERS, v.pageForTest())
+        tap(v, at(v, "q")); assertEquals(listOf("?", "q"), r.keys)
+        tap(v, at(v, "?123")); tap(v, at(v, "@")); assertEquals(Page.LETTERS, v.pageForTest())
+        tap(v, at(v, "?123")); tap(v, at(v, "space")); assertEquals("space also ends the symbols page", Page.LETTERS, v.pageForTest())
+        tap(v, at(v, "?123")); tap(v, at(v, "5")); assertEquals("a digit does not (the number row is on both pages)", Page.SYMBOLS, v.pageForTest())
+        tap(v, at(v, "⌫")); assertEquals("Backspace changes nothing", Page.SYMBOLS, v.pageForTest())
     }
 
     @Test fun theSpaceBarIsTheWidestKeyOfTheBottomRow() {
