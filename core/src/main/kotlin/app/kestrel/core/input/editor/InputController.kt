@@ -240,7 +240,7 @@ class InputController(private val ed: EditorBridge, val stats: InputStats = Inpu
             }
         }
         if (selStart >= 0 && predicted) { selEnd = selStart; ensureWindow() }
-        else { selStart = -1; selEnd = -1; clearPending("move"); adopt = steps; refresh() }    // one report per arrow key reaches us, none of them predicted
+        else { selStart = -1; selEnd = -1; clearPending("move"); adopt = steps + 2; refresh() }    // one report per arrow key reaches us, none of them predicted
     }
 
     /** The word before the cursor in the window, lowercase, for the language (null when there is none or it is not a plain word). */
