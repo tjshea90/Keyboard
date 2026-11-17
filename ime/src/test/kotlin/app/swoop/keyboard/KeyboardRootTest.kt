@@ -124,6 +124,17 @@ class KeyboardRootTest {
         assertTrue(r.floating)
     }
 
+    /** Found on the emulator: a finger held still after the lift-off made the panel creep up a pixel at a time (rounding in the stored position, an estimated height). */
+    @Test fun aFingerHeldStillNeverMovesTheFloatingKeyboard() {
+        val (r, _) = root(); val (gx, gy) = gripCentre(r); detach(r, gx, gy)
+        val before = r.panelRect()
+        repeat(60) { touch(r, MotionEvent.ACTION_MOVE, gx, gy) }
+        assertEquals(before, r.panelRect())
+        repeat(60) { layout(r) }
+        assertEquals(before, r.panelRect())
+        touch(r, MotionEvent.ACTION_UP, gx, gy); assertEquals(before, r.panelRect())
+    }
+
     @Test fun aTapOrAShortHoldDoesNothing() {
         val (r, _) = root(); val (gx, gy) = gripCentre(r)
         touch(r, MotionEvent.ACTION_DOWN, gx, gy); advance(120); touch(r, MotionEvent.ACTION_UP, gx, gy); assertFalse(r.floating)
