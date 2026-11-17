@@ -138,6 +138,16 @@ class KeysViewTest {
         advance(KeysView.HOLD_MS + 20); assertEquals("3", v.bubbleTextForTest())
         up(v, x, y); assertEquals(listOf("3"), r.keys)
     }
+    @Test fun theBubbleIsGoneTheMomentTheFingerLiftsBeforeTheKeyIsSentToTheApp() {
+        val (v, r) = view(); val (x, y) = at(v, "h")
+        val seen = ArrayList<String?>()
+        v.listener = object : KeysView.Listener { override fun onKey(key: app.kestrel.core.input.Key) { seen.add(v.bubbleTextForTest()); r.keys.add((key as app.kestrel.core.input.Key.Ch).text) } }
+        down(v, x, y); assertEquals("h", v.bubbleTextForTest())
+        up(v, x, y)
+        assertNull("no bubble when the app gets the key (the app can be slow)", seen.single()); assertNull(v.bubbleTextForTest())
+        assertEquals(listOf("h"), r.keys)
+    }
+
     @Test fun theOptionsCanSwitchTheBubbleAndHapticsOff() { val (v, _) = view(); v.keyPreview = false; v.hapticsOn = false; val (x, y) = at(v, "h"); down(v, x, y); up(v, x, y) }
     @Test fun aQuickTapOnATopRowLetterIsTheLetter() { val (v, r) = view(); tap(v, at(v, "e")); advance(600); assertEquals(listOf("e"), r.keys) }
     @Test fun holdingAMiddleRowLetterDoesNothingSpecial() { val (v, r) = view(); val (x, y) = at(v, "g"); down(v, x, y); advance(900); up(v, x, y); assertEquals(listOf("g"), r.keys) }
