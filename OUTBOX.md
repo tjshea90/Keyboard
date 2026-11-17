@@ -148,3 +148,7 @@
 ## 2026-11-17T02:56:38Z
 > The emulator run is going. I'll read the result when the timer finishes.
 <!-- sha:7b80250bf59a -->
+
+## 2026-11-17T03:03:36Z
+> The emulator run is going. The new diagnostics should show where the long press on the neon bar stops.
+<!-- sha:d55f213ef129 -->
