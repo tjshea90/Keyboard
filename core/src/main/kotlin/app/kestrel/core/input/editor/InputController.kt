@@ -71,6 +71,12 @@ class InputController(editor: EditorBridge, val stats: InputStats = InputStats()
      * report of that very edit: [expect] matches it as soon as the edit is noted. What no edit explains is handled like a late report at the next opportunity ([drainEarly]). (An editor in another process never gets here.)
      */
     private val early = ArrayList<IntArray>(4)
+    /**
+     * True once a report has come inside one of our calls: this editor reports inline, so an edit it did not report inside its call will never be reported (an edit that changed nothing, a composing region that stayed
+     * where it was). Nothing is then left waiting in [pending] (an entry that is never answered would make a later move of the cursor to the same offset look like our own edit), and every report that comes OUTSIDE a
+     * call is somebody else's. Forgotten at the start of every field (the next editor may be in another process).
+     */
+    private var inlineEditor = false
 
     // ------------------------------------------------------------------------------------------------------------ session
 
@@ -78,7 +84,7 @@ class InputController(editor: EditorBridge, val stats: InputStats = InputStats()
     fun startInput(info: FieldInfo) {
         field = info
         composing = null; lastGlide = null; shift = ShiftState.OFF; composingUnknown = true; adopt = 0
-        clearPending("c1"); early.clear()
+        clearPending("c1"); early.clear(); inlineEditor = false
         selStart = info.initialSelStart; selEnd = info.initialSelEnd
         refresh()
         autoCaps()
@@ -107,7 +113,10 @@ class InputController(editor: EditorBridge, val stats: InputStats = InputStats()
      * own edits, false when the user or the app moved or changed the text (everything assumed about the old text was dropped).
      */
     fun onSelectionUpdate(newSelStart: Int, newSelEnd: Int, candStart: Int = -1, candEnd: Int = -1): Boolean {
-        if (inCall > 0) { early.add(intArrayOf(newSelStart, newSelEnd, candStart, candEnd)); return true }         // inside our own edit call: the report of that edit, matched when the edit is noted
+        if (inCall > 0) {                                                       // inside our own edit call: the report of that edit, matched when the edit is noted
+            if (!inlineEditor) { inlineEditor = true; clearPending("inline") }
+            early.add(intArrayOf(newSelStart, newSelEnd, candStart, candEnd)); return true
+        }
         if (early.isNotEmpty()) drainEarly()
         if (candStart >= 0 && composing == null) composingUnknown = true           // the editor shows a composing word this keyboard does not know about
         if (pending.matchAndDrop(newSelStart, newSelEnd)) {
@@ -524,7 +533,7 @@ class InputController(editor: EditorBridge, val stats: InputStats = InputStats()
     /** The editor will report the selection ([s], [e]) for an edit just made, unless it already did, inside the call ([early]): then there is nothing to wait for (the oldest match wins, older reports are explained too). */
     private fun expect(s: Int, e: Int) {
         for (k in early.indices) { val r = early[k]; if (r[0] == s && r[1] == e) { repeat(k + 1) { early.removeAt(0) }; return } }
-        pending.push(s, e)
+        if (!inlineEditor) pending.push(s, e)
     }
 
     /** Reports that arrived inside a call and that no edit explained are taken now like any report (a foreign change is noticed, an unknown selection is adopted). */

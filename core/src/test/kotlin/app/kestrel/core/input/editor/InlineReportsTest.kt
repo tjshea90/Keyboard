@@ -57,6 +57,14 @@ class InlineReportsTest {
         r.act { enter() }; r.typeAll("y"); assertEquals("abX\nyc", r.text); assertEquals("abX\ny", r.c.before)
     }
 
+    @Test fun noEntryIsLeftWaitingForAReportThatAnInlineEditorNeverSends() {
+        val r = rig("line one", caps = 0)                    // the cursor stands at the end
+        r.ed.userMove(0); r.sync()                           // the person taps the start of the text
+        r.act { backspace() }                                // nothing before the cursor: nothing changes and nothing is reported
+        r.typeAll("ab"); r.ed.userMove(0); r.sync(); r.check()   // the person taps the start again: that is NOT the keyboard's own edit
+        assertEquals("", r.c.before); assertEquals(0, r.c.selStart)
+    }
+
     @Test fun aChangeNoEditExplainsInsideACallIsNoticedAtTheNextKey() {
         // a text watcher in the app appends "!" the moment "c" has been typed and the editor reports both states inside the call: the keyboard explains the first with its own edit, and the second one repairs its picture at the next key
         val r = rig(caps = 0); r.typeAll("ab")
