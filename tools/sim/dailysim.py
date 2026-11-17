@@ -191,6 +191,32 @@ def keyboard_showing():
     return "mInputShown=true" in sh("dumpsys input_method | grep mInputShown", check=False)
 
 
+def device_ok(timeout=25):
+    """True when the emulator answers a trivial command within [timeout] seconds (a hung Android makes every adb call wait for minutes)."""
+    try:
+        r = subprocess.run([drive.ADB, "shell", "true"], capture_output=True, timeout=timeout)
+        return r.returncode == 0
+    except Exception:
+        return False
+
+
+def recover_device(rep, why, wait=180):
+    """After a hang (an adb call that timed out, Android's own watchdog restarting system_server): wait for the system to come back and say so in the report. False when it does not."""
+    rep.row("emulator", "WARN", "no answer (%s): waiting up to %d s for Android to come back" % (why[:90], wait))
+    end = time.time() + wait
+    while time.time() < end:
+        if device_ok(20):
+            try:
+                if "1" in adb("shell", "getprop sys.boot_completed", check=False, timeout=20):
+                    rep.row("emulator", "INFO", "answers again")
+                    return True
+            except Exception:
+                pass
+        time.sleep(5)
+    rep.row("emulator", "FAIL", "did not come back within %d s" % wait)
+    return False
+
+
 def shot(rep, name):
     try:
         data = adb("exec-out", "screencap", "-p", text=False, timeout=60)
@@ -444,7 +470,12 @@ def scene_address(rep):
              ("glide", ["browser", "keyboard", "google"], "browser keyboard google ")]
     for mode, what, expected in tests:
         scene = "address %s %s" % (mode, what if isinstance(what, str) else " ".join(what))
+        open_url("http://localhost:%d/" % PORT)           # start every test from the plain local page: after a heavy page the bar can be tucked away
+        time.sleep(3.0)
         node = find_edit(ui_dump(), "type address", "type a url", "search")
+        if node is None:
+            time.sleep(2.0)
+            node = find_edit(ui_dump(), "type address", "type a url", "search")
         if node is None:
             rep.row(scene, "FAIL", "no address box found in Kestrel's screen")
             shot(rep, "address-nobox")
@@ -526,39 +557,52 @@ def load_numbers(line):
     return (int(m.group(1)), int(m.group(2)), int(m.group(3)), m.group(4)) if m else None
 
 
+def _one_page(rep, url, paints, dones):
+    n0 = len(health_lines())
+    open_url(url)
+    secs, line = wait_page_loaded(n0, timeout=100.0)
+    host = url.split("/")[2]
+    if secs is None:
+        rep.row("page " + host, "FAIL", "no 'page loaded' line within 100 s (last Health line: %s)" % line[-100:])
+        shot(rep, "page-%s-fail" % host)
+        return
+    nums = load_numbers(line)
+    if nums:
+        paint, done, blocked, ok = nums
+        if paint >= 0:
+            paints.append(paint)
+        dones.append(done)
+        rep.row("page " + host, "OK" if ok == "true" else "WARN", "first paint %s ms, loaded %s ms, %d requests blocked, ok=%s" % (paint, done, blocked, ok))
+        rep.event("page", host=host, paint_ms=paint, done_ms=done, blocked=blocked, ok=ok)
+    else:
+        rep.row("page " + host, "INFO", line[-140:])
+    time.sleep(2.0)
+    shot(rep, "page-%s" % host)
+    # a person scrolls: two flicks down
+    w, h = screen()
+    for _ in range(2):
+        drive.inject([(w // 2, int(h * 0.75)), (w // 2, int(h * 0.45)), (w // 2, int(h * 0.25))], per_chunk=2, pause=0.02)
+        time.sleep(0.8)
+
+
 def scene_pages(rep, minutes):
-    """Real sites, one after the other, the way a person opens them: how long to the first paint and to the end of the load, how many requests the shields blocked, did it load."""
+    """Real sites, one after the other, the way a person opens them: how long to the first paint and to the end of the load, how many requests the shields blocked, did it load.
+    A site that hangs the emulator is a finding of its own (the run waits for Android to come back and goes on)."""
     end = time.time() + minutes * 60
     paints, dones = [], []
-    for url in PAGES:
+    for i, url in enumerate(PAGES):
         if time.time() > end:
             rep.row("pages", "INFO", "stopped after the time limit of %d minutes" % minutes)
             break
-        n0 = len(health_lines())
-        open_url(url)
-        secs, line = wait_page_loaded(n0, timeout=100.0)
-        host = url.split("/")[2]
-        if secs is None:
-            rep.row("page " + host, "FAIL", "no 'page loaded' line within 100 s (last Health line: %s)" % line[-100:])
-            shot(rep, "page-%s-fail" % host)
-            continue
-        nums = load_numbers(line)
-        if nums:
-            paint, done, blocked, ok = nums
-            if paint >= 0:
-                paints.append(paint)
-            dones.append(done)
-            rep.row("page " + host, "OK" if ok == "true" else "WARN", "first paint %s ms, loaded %s ms, %d requests blocked, ok=%s" % (paint, done, blocked, ok))
-            rep.event("page", host=host, paint_ms=paint, done_ms=done, blocked=blocked, ok=ok)
-        else:
-            rep.row("page " + host, "INFO", line[-140:])
-        time.sleep(2.0)
-        shot(rep, "page-%s" % host)
-        # a person scrolls: two flicks down
-        w, h = screen()
-        for _ in range(2):
-            drive.inject([(w // 2, int(h * 0.75)), (w // 2, int(h * 0.45)), (w // 2, int(h * 0.25))], per_chunk=2, pause=0.02)
-            time.sleep(0.8)
+        try:
+            _one_page(rep, url, paints, dones)
+        except Exception as e:
+            host = url.split("/")[2]
+            rep.row("page " + host, "FAIL", "the step broke: %s %s" % (type(e).__name__, str(e)[:100]))
+            if not recover_device(rep, "%s while loading %s" % (type(e).__name__, host)):
+                break
+        if i % 4 == 3:
+            scene_memory(rep, "after %d pages" % (i + 1))
     if dones:
         dones.sort()
         paints.sort()
@@ -570,23 +614,30 @@ VIDEOS = ["https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/Big
           "https://test-videos.co.uk/vids/bigbuckbunny/mp4/h264/720/Big_Buck_Bunny_720_10s_5MB.mp4"]
 
 
+def _one_film(rep, url, seconds):
+    n0 = len(health_lines())
+    open_url(url)
+    time.sleep(seconds)
+    new = health_lines()[n0:]
+    keep = [l.split("KestrelHealth")[-1].strip() for l in new if re.search(r"player|film|video|stall|buffer|stats|inline|hand", l, re.I)]
+    bad = [l for l in keep if re.search(r"error|fail|stall|rebuffer|timeout", l, re.I)]
+    rep.row("video " + url.rsplit("/", 1)[-1][:30], "WARN" if bad else "INFO", "%d player lines in %ds%s; first: %s" % (len(keep), seconds, ("; PROBLEMS: " + " | ".join(bad[:2])[:200]) if bad else "", (keep[0][:140] if keep else "none")))
+    for l in keep[-8:]:
+        rep.fact("video line: " + l[:200])
+    shot(rep, "video-%d" % len(rep.rows))
+    sh("input keyevent KEYCODE_BACK", check=False)
+    time.sleep(1.5)
+
+
 def scene_video(rep, seconds=45):
     """A film: does it start, how long does it take, do the player's own Health lines mention stalls or errors."""
-    w, h = screen()
     for url in VIDEOS:
-        n0 = len(health_lines())
-        t0 = time.time()
-        open_url(url)
-        time.sleep(seconds)
-        new = health_lines()[n0:]
-        keep = [l.split("KestrelHealth")[-1].strip() for l in new if re.search(r"player|film|video|stall|buffer|stats|inline|hand", l, re.I)]
-        bad = [l for l in keep if re.search(r"error|fail|stall|rebuffer|timeout", l, re.I)]
-        rep.row("video " + url.rsplit("/", 1)[-1][:30], "WARN" if bad else "INFO", "%d player lines in %ds%s; first: %s" % (len(keep), seconds, ("; PROBLEMS: " + " | ".join(bad[:2])[:200]) if bad else "", (keep[0][:140] if keep else "none")))
-        for l in keep[-6:]:
-            rep.fact("video line: " + l[:170])
-        shot(rep, "video-%d" % len(rep.rows))
-        sh("input keyevent KEYCODE_BACK", check=False)
-        time.sleep(1.5)
+        try:
+            _one_film(rep, url, seconds)
+        except Exception as e:
+            rep.row("video " + url.rsplit("/", 1)[-1][:30], "FAIL", "the step broke: %s %s" % (type(e).__name__, str(e)[:100]))
+            if not recover_device(rep, "%s during a film" % type(e).__name__):
+                break
 
 
 def main():
