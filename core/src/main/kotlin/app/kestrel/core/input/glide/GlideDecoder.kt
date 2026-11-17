@@ -88,6 +88,12 @@ class GlideParams(
     val rareFloor: Float = Rarity.FLOOR,
     val rareW: Float = 1.0f,
     val rareCap: Float = 7f,
+    /**
+     * ... and a rare word is not offered at all unless the finger's path fits it: its cost per letter may be at most [maxPerLetter] for a word just under the floor, shrinking to
+     * [rareMaxPerLetter] for a word [rareFitSpan] nats or more below it. A glide that fits nothing says so; it does not type the nearest rare word (the keyboard used to offer "tui").
+     */
+    val rareMaxPerLetter: Float = 1.1f,
+    val rareFitSpan: Float = 2f,
 )
 
 /** What counts as a rare word (shared by the glide decoder and the tap suggester). ln-probabilities are on the scale of the shipped list: -12.5 is about rank 13 000 of 140 000. */
@@ -209,7 +215,12 @@ class GlideDecoder(private val keys: GlideKeys, private val p: GlideParams = Gli
         for (h in 0 until heapN) {
             val lex = lexicons[heapLex[h]]; val id = heapId[h]
             val letters = distinctLetters(lex, id)
-            if (costs[h] / letters > p.maxPerLetter) continue
+            val per = costs[h] / letters
+            if (per > p.maxPerLetter) continue
+            if (rare[h] > 0f && p.rareW > 0f) { // a rare word needs a path that really fits it
+                val d = Math.min(1f, Rarity.below(priors[h], p.rareFloor, p.rareCap) / p.rareFitSpan)
+                if (per > p.maxPerLetter - (p.maxPerLetter - p.rareMaxPerLetter) * d) continue
+            }
             out.add(GlideCandidate(lex.text(id), -costs[h] + lm * priors[h] - rare[h], costs[h], priors[h], letters))
         }
         out.sortByDescending { it.score }
