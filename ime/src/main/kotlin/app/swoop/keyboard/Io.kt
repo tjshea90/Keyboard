@@ -23,4 +23,6 @@ object Engine {
     @Volatile var safeMode = false
     @Volatile private var host: GlideHost? = null
     fun host(context: android.content.Context): GlideHost = host ?: synchronized(this) { host ?: GlideHost(context.applicationContext).also { host = it } }
+    /** Tests: a new test has a new app and a new files folder, so the process-wide host of an earlier test must not be reused. */
+    internal fun resetForTest() { synchronized(this) { host = null } }
 }

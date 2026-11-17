@@ -25,7 +25,7 @@ import java.io.File
 @Config(sdk = [29])
 class ReceiveLearnedActivityTest {
     private val app get() = RuntimeEnvironment.getApplication()
-    private fun clean() { for (n in listOf("glide_personal.txt", "glide_habit.txt", "own_words.txt")) File(app.filesDir, n).delete() }
+    private fun clean() { Engine.resetForTest(); for (n in listOf("glide_personal.txt", "glide_habit.txt", "own_words.txt")) File(app.filesDir, n).delete() }
     private fun saved() = File(app.filesDir, "glide_personal.txt").let { if (it.isFile) it.readText() else "" }
     private fun export(): Uri {
         val text = LearnedExport.write(PersonalModel().also { it.add(null, "kestrelword", 4f, null) }, floatArrayOf(0.1f, 0.2f), UserWords(800).also { it.add("fromkestrel", 3) })
