@@ -24,7 +24,7 @@ class DiagnosticsTest {
     @Test fun theTextHasVersionsMemoryAndEveryCounter() {
         val s = InputStats(); s.keys = 12; s.glides = 3; s.backspaces = 2; s.resyncs = 1
         val t = Diagnostics.text(app, s, "glides 3, no match 0", true)
-        assertTrue(t.startsWith("Swoop 0.1.0-alpha1 (code 1)")); assertTrue(t.contains("API 29")); assertTrue(t.contains("memory: process"))
+        val pi = app.packageManager.getPackageInfo(app.packageName, 0); assertTrue(t, t.startsWith("Swoop ${pi.versionName} (code ${pi.longVersionCode})")); assertTrue(t.contains("API 29")); assertTrue(t.contains("memory: process"))
         assertTrue(t.contains("glide: glides 3, no match 0")); assertTrue(t.contains("keys 12")); assertTrue(t.contains("glides 3")); assertTrue(t.contains("resyncs 1"))
         assertTrue(t.contains("glide engine ready: true"))
     }
