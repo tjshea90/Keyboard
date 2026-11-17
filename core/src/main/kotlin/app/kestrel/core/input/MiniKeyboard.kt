@@ -132,6 +132,7 @@ class MiniKeyboardModel {
             Key.Shift -> if (shiftLock) { shiftLock = false; shift = false } else shift = !shift
             Key.ToSymbols -> { symbols = true; shift = shiftLock; glideTail = null }
             Key.ToLetters -> symbols = false
+            Key.NextKeyboard -> {}                                                                   // (only the system keyboard has it)
             Key.Go -> { val t = text.trim(); if (t.isNotEmpty()) return KeyResult.Submit(t) }
         }
         return KeyResult.None
