@@ -285,8 +285,8 @@ class KeyboardPresenterTest {
     }
 
     @Test fun theViewTakesItsLookFromTheSettings() {
-        val r = Rig(extra = { it.putBoolean(Prefs.NUMBERROW, false).putInt(Prefs.KEYHEIGHT, 3).putInt(Prefs.THEME, 2).putInt(Prefs.ACCENT, 3).putBoolean(Prefs.HAPTIC, false).putBoolean(Prefs.PREVIEW, false).putBoolean(Prefs.SOUND, true).putBoolean(Prefs.TRAIL, false) })
-        assertFalse(r.view.numberRow); assertEquals(1.3f, r.view.keyHeightScale, 0f); assertEquals(2, r.view.themeMode); assertEquals(Settings.ACCENTS[3].color, r.view.accent)
+        val r = Rig(extra = { it.putBoolean(Prefs.NUMBERROW, true).putInt(Prefs.KEYHEIGHT, 3).putInt(Prefs.THEME, 2).putInt(Prefs.ACCENT, 3).putBoolean(Prefs.HAPTIC, false).putBoolean(Prefs.PREVIEW, false).putBoolean(Prefs.SOUND, true).putBoolean(Prefs.TRAIL, false) })
+        assertTrue(r.view.numberRow); assertEquals(1.3f, r.view.keyHeightScale, 0f); assertEquals(2, r.view.themeMode); assertEquals(Settings.ACCENTS[3].color, r.view.accent)
         assertFalse(r.view.hapticsOn); assertFalse(r.view.keyPreview); assertTrue(r.view.soundOn); assertFalse(r.view.trailOn)
     }
 
