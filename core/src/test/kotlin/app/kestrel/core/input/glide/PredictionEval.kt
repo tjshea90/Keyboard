@@ -10,7 +10,7 @@ import java.util.Random
  *  - keystroke saving: letters not typed because the word was tapped on the strip at the first moment it showed,
  *  - typo repair: a word typed with one realistic slip (a neighbouring key, a letter left out, a letter doubled, two letters swapped) is on the strip / put in by the space, and a word typed RIGHT is never
  *    changed (the failure people hate most).
- * Run by [PredictionYardstickTest] (with stated floors) and by hand: java -cp <core main>:<core test>:<kotlin stdlib> app.kestrel.core.input.glide.PredictionEval [verbose] [klx=<file>] [corpus=<file> [limit=N]] [glide [glides=N]]
+ * Run by [PredictionYardstickTest] (with stated floors) and by hand: java -cp <core main>:<core test>:<kotlin stdlib> app.kestrel.core.input.glide.PredictionEval [verbose] [klx=<file>] [corpus=<file> [limit=N]] [glide [glides=N]] [notypos]
  */
 object PredictionEval {
     class Tally(val name: String) {
@@ -44,7 +44,7 @@ object PredictionEval {
 
     private fun contextOf(s: List<String>, i: Int): Pair<String?, String?> = (if (i >= 1) s[i - 1] else null) to (if (i >= 2) s[i - 2] else null)
 
-    fun run(main: BinaryLexicon, pm: PersonalModel?, keys: GlideKeys, sentences: List<List<String>>, searches: List<List<String>>, verbose: Boolean = false): Result {
+    fun run(main: BinaryLexicon, pm: PersonalModel?, keys: GlideKeys, sentences: List<List<String>>, searches: List<List<String>>, verbose: Boolean = false, withTypos: Boolean = true): Result {
         val notes = ArrayList<String>()
         val next = Tally("next word (nothing typed)")
         val comp = arrayOf(Tally("completion after 1 letter"), Tally("completion after 2 letters"), Tally("completion after 3 letters"))
@@ -82,7 +82,7 @@ object PredictionEval {
         val tn = Tally("typo: a neighbouring key"); val tm = Tally("typo: a letter left out"); val td = Tally("typo: a letter doubled"); val ts = Tally("typo: two letters swapped")
         val fix = IntArray(4)
         var changed = 0; var rights = 0
-        for (s in sentences) for ((i, w) in s.withIndex()) {
+        if (withTypos) for (s in sentences) for ((i, w) in s.withIndex()) {
             val (p1, p2) = contextOf(s, i)
             if (w.length >= 3 && w.all { it in 'a'..'z' }) {
                 val r = Suggester.suggest(main, pm, keys, w, p1, p2, 3)
@@ -178,7 +178,7 @@ object PredictionEval {
         val limit = args.firstOrNull { it.startsWith("limit=") }?.substring(6)?.toInt() ?: 5000
         val sentences = if (corpus != null) EvalCorpus.parse(java.io.File(corpus).readLines().take(limit).joinToString("\n")) else EvalCorpus.sentences
         val searches = if (corpus != null) emptyList() else EvalCorpus.searches
-        val r = run(lex, null, keys, sentences, searches, verbose)
+        val r = run(lex, null, keys, sentences, searches, verbose, withTypos = !args.contains("notypos"))
         println("sentences: ${sentences.size}, words: ${sentences.sumOf { it.size }}, searches: ${searches.size}")
         println(report(r))
         if (args.contains("glide")) for (nz in listOf(SimNoise.NORMAL, SimNoise.SLOPPY)) println(glideInContext(lex, keys, sentences, nz, maxSentences = args.firstOrNull { it.startsWith("glides=") }?.substring(7)?.toInt() ?: 600).toString())
