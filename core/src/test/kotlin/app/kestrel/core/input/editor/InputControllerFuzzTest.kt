@@ -70,7 +70,7 @@ class InputControllerFuzzTest {
             }
             r.sync(); r.check()
         } catch (e: Throwable) {
-            System.getenv("SWOOP_TRACE_FILE")?.let { java.io.File(it).writeText(traceLines.takeLast(40).joinToString("\n")) }
+            System.getenv("SWOOP_TRACE_FILE")?.let { java.io.File(it).writeText(traceLines.drop((System.getenv("SWOOP_TRACE_FROM") ?: "-1").toIntOrNull()?.takeIf { it >= 0 } ?: maxOf(0, traceLines.size - 40)).take(40).joinToString("\n")) }
             throw AssertionError("first foreign report: $firstForeign [${r.firstForeignInfo}]; seed $seed (lazy=$lazy external=$external flaky=$flaky) start='${start.take(20).replace("\n", "\\n")}' first ops: ${log.take(10)} last ops: ${log.takeLast(8)} text='${r.text.takeLast(40).replace("\n", "\\n")}': ${e.message}", e)
         }
     }
