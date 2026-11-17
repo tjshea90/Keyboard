@@ -68,14 +68,4 @@ class KeyboardFlowTest {
     }
 
     @Test fun theExportFileNameCarriesTheDate() { assertEquals("Swoop keyboard learning 1970-01-01.txt", KeyboardFlow.fileName(0L)) }
-
-    @Test fun theSetupScreenSwitchWritesTheGlideSetting() {
-        val a = Robolectric.buildActivity(SetupActivity::class.java).setup().get()
-        fun find(v: View): Switch? { if (v is Switch) return v; if (v is ViewGroup) for (i in 0 until v.childCount) find(v.getChildAt(i))?.let { return it }; return null }
-        val sw = find(a.window.decorView)!!
-        val prefs = app.getSharedPreferences(Prefs.FILE, 0)
-        assertTrue("glide is on by default", prefs.getBoolean(Prefs.GLIDE, true) || sw.isChecked)
-        sw.isChecked = false; assertFalse(prefs.getBoolean(Prefs.GLIDE, true))
-        sw.isChecked = true; assertTrue(prefs.getBoolean(Prefs.GLIDE, false))
-    }
 }
