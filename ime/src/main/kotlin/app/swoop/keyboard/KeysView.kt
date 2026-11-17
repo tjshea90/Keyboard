@@ -111,6 +111,7 @@ class KeysView(context: Context) : View(context) {
     private var litKey: KeySpec? = null
     private var holdAlt: String? = null         // the finger stayed on a top-row letter: its digit
     private var bubbleKey: KeySpec? = null; private var bubbleText = ""
+    private var spaceIsDown = false; private var spaceHeld = false
     private var spaceDown = false; private var sliding = false; private var slideStartX = 0f; private var slideAnchorX = 0f
     private var downX = 0f; private var downY = 0f
 
@@ -136,6 +137,8 @@ class KeysView(context: Context) : View(context) {
     private val unlight = Runnable { litKey = null; dyn() }
     private val repeat = object : Runnable { override fun run() { down?.key?.let { listener?.onKey(it) }; handler.postDelayed(this, REPEAT_MS) } }
     private val hold = Runnable { holdFired() }
+    /** The space bar was held (and not slid): the keyboard picker opens (the globe key is gone by default). */
+    private val spaceHold = Runnable { if (spaceIsDown && !sliding) { spaceHeld = true; haptic(); dyn(); listener?.onKey(Key.NextKeyboard) } }
 
     init {
         contentDescription = context.getString(R.string.app_name)
@@ -180,7 +183,7 @@ class KeysView(context: Context) : View(context) {
     }
 
     private fun rebuildRows() {
-        rows = ImeLayout.rows(page, shift != ShiftState.OFF, kind, actionLabel, numberRow)
+        rows = ImeLayout.rows(page, shift != ShiftState.OFF, kind, actionLabel, numberRow, showGlobe)
         rectsW = -1
         invalidate()
     }
@@ -391,8 +394,57 @@ class KeysView(context: Context) : View(context) {
     private fun haptic() { if (hapticsOn) performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP) }
     private fun click() { if (soundOn) try { (context.getSystemService(Context.AUDIO_SERVICE) as android.media.AudioManager).playSoundEffect(android.media.AudioManager.FX_KEYPRESS_STANDARD) } catch (_: Exception) { } }
     private fun clearHold() { handler.removeCallbacks(hold); holdAlt = null; bubbleKey = null }
+    // ---- the symbols grid: HOLD the full stop or the comma (the 123 key is gone: owner, 2026-11-17)
+    private class SymbolPopup(val owner: KeySpec, val chars: List<String>, val cells: List<RectF>, val panel: RectF) { var sel = -1 }
+    private var popup: SymbolPopup? = null
+
+    private fun isSymbolKey(k: KeySpec?): Boolean {
+        val t = (k?.key as? Key.Ch)?.text ?: return false
+        return (t == "." || t == ",") && kind != FieldKind.NUMBER && kind != FieldKind.PHONE
+    }
+
+    private fun boxOf(k: KeySpec): KeyBox? { layoutKeys(); for ((i, row) in rows.withIndex()) for ((j, kk) in row.withIndex()) if (kk === k) return rects[i][j]; return null }
+
+    private fun openPopup(k: KeySpec) {
+        val kb = boxOf(k) ?: return
+        val grid = ImeLayout.symbolRows
+        val cols = grid.maxOf { it.size }
+        val cw = minOf(dp(44f), (width - 2 * pad) / cols.toFloat()); val chh = dp(46f); val m = dp(6f)
+        val pw = cw * cols + 2 * m; val ph = chh * grid.size + 2 * m
+        val left = (kb.centerX - pw / 2f).coerceIn(0f, maxOf(0f, width - pw)); val top = maxOf(0f, kb.top - ph - dp(8f))
+        val cells = ArrayList<RectF>(); val chars = ArrayList<String>()
+        for ((r, row) in grid.withIndex()) {
+            val x0 = left + m + (cols - row.size) * cw / 2f
+            for ((c, ch) in row.withIndex()) { cells.add(RectF(x0 + c * cw, top + m + r * chh, x0 + (c + 1) * cw, top + m + (r + 1) * chh)); chars.add(ch) }
+        }
+        popup = SymbolPopup(k, chars, cells, RectF(left, top, left + pw, top + ph))
+        bubbleKey = null; holdAlt = null
+        haptic(); dyn()
+    }
+
+    private fun popupSelect(p: SymbolPopup, x: Float, y: Float): Int {
+        for ((i, r) in p.cells.withIndex()) if (x >= r.left - dp(2f) && x < r.right + dp(2f) && y >= r.top - dp(2f) && y < r.bottom + dp(2f)) return i
+        return -1
+    }
+
+    private fun drawPopup(c: Canvas) {
+        val p = popup ?: return
+        val r = dp(12f)
+        fill.color = cBubble; c.drawRoundRect(p.panel, r, r, fill)
+        line.strokeWidth = dp(1.4f); line.color = cAccent; c.drawRoundRect(p.panel, r, r, line)
+        for ((i, cell) in p.cells.withIndex()) {
+            val on = i == p.sel
+            if (on) { fill.color = cAccent; box.set(cell); box.inset(dp(2f), dp(2f)); c.drawRoundRect(box, dp(8f), dp(8f), fill) }
+            text.color = if (on) cAccentText else cText; text.textSize = cell.height() * 0.52f
+            val fm = text.fontMetrics
+            c.drawText(p.chars[i], cell.centerX(), cell.centerY() - (fm.ascent + fm.descent) / 2f, text)
+        }
+    }
+
     private fun holdFired() {
-        val k = pressedLetter ?: down ?: return
+        val k0 = pressedLetter ?: down ?: return
+        if (isSymbolKey(k0)) { openPopup(k0); return }
+        val k = k0
         val alt = altOf(k) ?: return
         holdAlt = alt; bubbleKey = k; bubbleText = alt; dyn(); haptic()
     }
