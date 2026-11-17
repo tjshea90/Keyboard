@@ -5,10 +5,13 @@ import android.content.Context
 import android.content.res.Configuration
 import android.graphics.Canvas
 import android.graphics.Paint
+import android.graphics.Path
+import android.os.SystemClock
 import android.graphics.RectF
 import android.graphics.Typeface
 import android.os.Handler
 import android.os.Looper
+import android.text.TextUtils
 import android.view.HapticFeedbackConstants
 import android.view.MotionEvent
 import android.view.View
@@ -36,6 +39,12 @@ class KeysView(context: Context) : View(context) {
         fun onKey(key: Key)
         /** The finger slid over the space key: the text cursor moves this many characters (negative = left). */
         fun onCursor(steps: Int)
+        /** A glide is in progress: [count] touch points so far (the arrays are the view's own: copy what you need before returning). Called at most every [PREVIEW_MS] ms. */
+        fun onGlideMove(xs: FloatArray, ys: FloatArray, count: Int) {}
+        /** A glide ended: the whole path (copied). The strip stays empty until the owner calls [showCandidates]. */
+        fun onGlideEnd(xs: FloatArray, ys: FloatArray, count: Int) {}
+        /** A guess in the strip was tapped. */
+        fun onCandidate(word: String) {}
     }
 
     var listener: Listener? = null
@@ -72,6 +81,25 @@ class KeysView(context: Context) : View(context) {
     private var bubbleKey: KeySpec? = null; private var bubbleText = ""
     private var spaceDown = false; private var sliding = false; private var slideStartX = 0f; private var slideAnchorX = 0f
 
+    // ---- glide (KB-103)
+    private var glideEnabled = false
+    private var armed = false                   // the finger went down on a letter: it may turn into a glide
+    private var gliding = false
+    private var glideDown: KeySpec? = null
+    private var downBox: KeyBox? = null
+    private var gx = FloatArray(256); private var gy = FloatArray(256); private var gn = 0
+    private var fadeStart = 0L
+    private var lastPreviewAt = 0L; private var lastPreviewN = 0
+    private var cands: List<String> = emptyList()
+    private var noWordUntil = 0L
+    private var stripDown = -1
+    private val trail = Path()
+    private val trailPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE; strokeCap = Paint.Cap.ROUND; strokeJoin = Paint.Join.ROUND }
+    private val fadeStep = object : Runnable {
+        override fun run() { if (SystemClock.uptimeMillis() - fadeStart < TRAIL_FADE_MS) { invalidate(); postOnAnimation(this) } else { gn = 0; fadeStart = 0L; invalidate() } }
+    }
+    private val noWordOff = Runnable { noWordUntil = 0L; invalidate() }
+
     private val unlight = Runnable { litKey = null; invalidate() }
     private val repeat = object : Runnable { override fun run() { down?.key?.let { listener?.onKey(it) }; handler.postDelayed(this, REPEAT_MS) } }
     private val hold = Runnable { holdFired() }
@@ -92,9 +120,19 @@ class KeysView(context: Context) : View(context) {
         kind = newKind; actionLabel = newActionLabel; page = Page.LETTERS; rebuildRows()
     }
 
+    /** Glide typing on or off (off in password fields: the guesses would show what is being typed). Switching it changes the height: the strip of guesses sits above the keys. */
+    fun setGlideEnabled(on: Boolean) { if (glideEnabled != on) { glideEnabled = on; if (!on) { cands = emptyList(); gn = 0 }; rectsW = -1; requestLayout(); invalidate() } }
+
+    fun showCandidates(words: List<String>) { cands = words; noWordUntil = 0L; invalidate() }
+    fun clearCandidates() { if (cands.isNotEmpty() || noWordUntil != 0L) { cands = emptyList(); noWordUntil = 0L; invalidate() } }
+    fun showNoWord() { cands = emptyList(); noWordUntil = SystemClock.uptimeMillis() + NO_WORD_MS; handler.removeCallbacks(noWordOff); handler.postDelayed(noWordOff, NO_WORD_MS); invalidate() }
+    val isGliding: Boolean get() = gliding
+    private fun stripPx() = if (glideEnabled) dp(STRIP_H_DP) else 0f
+
     /** Everything in flight stops (the keyboard closed or the field changed). */
     fun reset() {
-        handler.removeCallbacks(repeat); handler.removeCallbacks(unlight); handler.removeCallbacks(hold)
+        handler.removeCallbacks(repeat); handler.removeCallbacks(unlight); handler.removeCallbacks(hold); handler.removeCallbacks(noWordOff); removeCallbacks(fadeStep)
+        armed = false; gliding = false; gn = 0; fadeStart = 0L; cands = emptyList(); noWordUntil = 0L; stripDown = -1
         activeId = -1; down = null; pressedLetter = null; litKey = null; holdAlt = null; bubbleKey = null; spaceDown = false; sliding = false
         invalidate()
     }
@@ -125,21 +163,21 @@ class KeysView(context: Context) : View(context) {
         val w = MeasureSpec.getSize(widthMeasureSpec)
         // a key is about as tall as a letter key is wide (a thumb-sized target), within sensible bounds on a phone and on the tablet
         val rowH = ((w - 2 * pad) / 10f).coerceIn(dp(44f), dp(58f))
-        val h = (rows.size * rowH + (rows.size - 1) * gap + 2 * pad).toInt()
+        val h = (stripPx() + rows.size * rowH + (rows.size - 1) * gap + 2 * pad).toInt()
         setMeasuredDimension(w, h)
     }
 
     private fun layoutKeys() {
         if (rectsW == width && rectsH == height && rects.isNotEmpty()) return
         rectsW = width; rectsH = height
-        rects = MiniKeyboardGeometry.boxes(rows, width - 2 * pad, height - 2 * pad, gap).map { r -> r.map { KeyBox(it.left + pad, it.top + pad, it.right + pad, it.bottom + pad) } }
+        rects = MiniKeyboardGeometry.boxes(rows, width - 2 * pad, height - 2 * pad - stripPx(), gap).map { r -> r.map { KeyBox(it.left + pad, it.top + pad + stripPx(), it.right + pad, it.bottom + pad + stripPx()) } }
     }
 
     /** The 26 letter keys' centres as laid out now (the same function that draws them), for the glide decoder (KB-103). Null before the first layout. */
     fun glideKeys(): GlideKeys? {
         if (width <= 0 || height <= 0) return null
         val letters = ImeLayout.rows(Page.LETTERS, false, FieldKind.TEXT)
-        val b = MiniKeyboardGeometry.boxes(letters, width - 2 * pad, height - 2 * pad, gap).map { r -> r.map { KeyBox(it.left + pad, it.top + pad, it.right + pad, it.bottom + pad) } }
+        val b = MiniKeyboardGeometry.boxes(letters, width - 2 * pad, height - 2 * pad - stripPx(), gap).map { r -> r.map { KeyBox(it.left + pad, it.top + pad + stripPx(), it.right + pad, it.bottom + pad + stripPx()) } }
         return try { GlideKeys.from(letters, b) } catch (e: IllegalArgumentException) { null }
     }
 
@@ -177,7 +215,9 @@ class KeysView(context: Context) : View(context) {
                 }
             }
         }
-        drawBubble(c)
+        drawStrip(c)
+        if (!gliding) drawBubble(c)
+        drawTrail(c)
     }
 
     private fun drawBubble(c: Canvas) {
@@ -194,6 +234,51 @@ class KeysView(context: Context) : View(context) {
         text.color = cText; text.textSize = h * 0.6f
         val fm = text.fontMetrics
         c.drawText(bubbleText, box.centerX(), box.centerY() - (fm.ascent + fm.descent) / 2f, text)
+    }
+
+    private fun chipBoxes(): List<RectF> {
+        val h = stripPx(); val n = cands.size
+        if (h <= 0f || n == 0 || width <= 0) return emptyList()
+        val cw = (width - 2 * pad - gap * (n - 1)) / n
+        return List(n) { i -> RectF(pad + i * (cw + gap), pad, pad + i * (cw + gap) + cw, h - gap) }
+    }
+    private fun chipAt(x: Float, y: Float): Int {
+        if (y >= stripPx() + pad || cands.isEmpty()) return -1
+        for ((i, r) in chipBoxes().withIndex()) if (x >= r.left - gap / 2 && x < r.right + gap / 2) return i
+        return -1
+    }
+
+    private fun drawStrip(c: Canvas) {
+        val h = stripPx(); if (h <= 0f) return
+        text.textSize = h * 0.45f
+        val fm = text.fontMetrics
+        if (cands.isEmpty()) {
+            val miss = SystemClock.uptimeMillis() < noWordUntil
+            val msg = if (miss) context.getString(R.string.strip_no_word) else if (page == Page.LETTERS && (kind == FieldKind.TEXT || kind == FieldKind.SEARCH)) context.getString(R.string.strip_hint) else ""
+            if (msg.isEmpty()) return
+            text.color = if (miss) cAccent else cMuted; text.textSize = h * 0.38f
+            c.drawText(TextUtils.ellipsize(msg, text, width - dp(8f), TextUtils.TruncateAt.END).toString(), width / 2f, (h - gap) / 2f + pad - (fm.ascent + fm.descent) / 2f, text)
+            return
+        }
+        val r = dp(6f)
+        for ((i, w) in cands.withIndex()) {
+            val rect = chipBoxes()[i]
+            fill.color = if (i == stripDown) cLit else cKey
+            c.drawRoundRect(rect, r, r, fill)
+            if (i == 0) { line.strokeWidth = dp(1.2f); line.color = cAccent; box.set(rect); box.inset(dp(0.6f), dp(0.6f)); c.drawRoundRect(box, r, r, line) }
+            text.color = cText
+            c.drawText(TextUtils.ellipsize(w, text, rect.width() - dp(8f), TextUtils.TruncateAt.END).toString(), rect.centerX(), rect.centerY() - (fm.ascent + fm.descent) / 2f, text)
+        }
+    }
+
+    private fun drawTrail(c: Canvas) {
+        if (gn < 2) return
+        val alpha = if (gliding || fadeStart == 0L) 1f else (1f - (SystemClock.uptimeMillis() - fadeStart).toFloat() / TRAIL_FADE_MS).coerceIn(0f, 1f)
+        if (alpha <= 0f) return
+        trail.reset(); trail.moveTo(gx[0], gy[0])
+        for (i in 1 until gn) trail.lineTo(gx[i], gy[i])
+        trailPaint.strokeWidth = dp(8f); trailPaint.color = (cAccent and 0x00FFFFFF) or ((80 * alpha).toInt() shl 24); c.drawPath(trail, trailPaint)
+        trailPaint.strokeWidth = dp(2.5f); trailPaint.color = (cAccent and 0x00FFFFFF) or ((235 * alpha).toInt() shl 24); c.drawPath(trail, trailPaint)
     }
 
     // ------------------------------------------------------------------ touch
