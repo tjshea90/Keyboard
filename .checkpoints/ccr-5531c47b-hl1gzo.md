@@ -1,13 +1,13 @@
-# CHECKPOINT 332 — read me first, then TASKS.md
+# CHECKPOINT 338 — read me first, then TASKS.md
 
-**Written:** 2026-11-17T18:54:17Z · **tests:** all 1 fast checks green (gradle suite: see ship.sh)
-**Branch:** `ccr-5531c47b-hl1gzo` · **builds on:** `aa21a9d` (this checkpoint is the commit after it)
+**Written:** 2026-11-17T19:09:17Z · **tests:** all 1 fast checks green (gradle suite: see ship.sh)
+**Branch:** `ccr-5531c47b-hl1gzo` · **builds on:** `91f3f27` (this checkpoint is the commit after it)
 
 ## Just done
-OWNER (R17e): 'Most of the time i won't have the 5mbit speed cap' recorded in TASKS.md; daily-sim.yml and dailysim.py now default to net=full (fast wifi is the normal case; the hotspot imitation stays an optional second pass); judge page-load / video / typing at FULL speed first (the tablet's CPU / GPU / RAM are the limit then, not the link). Kestrel side: panel bar no longer claims Swoop is up while the person is still choosing it (MiniNav.swoopNotUp, tested), Kestrel lint (:app:lintRelease) and tooling self-test green, SW2 note for the other Browser session written in the Browser TASKS.md. Quick daily-sim run 44150728400 (typing, net full) still running; a send_later wake (trig_01Fxk8gu37CvhccEPFTVxvTJ, 19:01Z) will bring me back to read it.
+KB-406 prediction yardstick built (EvalCorpus: 168 original everyday sentences + 40 searches; PredictionEval: next word, completions after 1-3 letters as the strip shows them, keystrokes saved, 4 kinds of typo, right-word-changed; PredictionYardstickTest) and its FIRST NUMBERS recorded in research/LEARNING_RESULTS.md: next word in 3 = 24%, strip after 1 letter = 49%, KSR 46%, typos put right 90%, 0 right words spoiled. Weak spot = context (data: only 242k written-English pairs). Daily-sim run 44150728400 still in progress at 19:10Z (24 min in).
 
 ## Do this next
-when the wake fires (or sooner): read run 44150728400 (artifacts -> python3 -I /home/user/Browser/tools/emu/fetch_artifact.py <url> <EMPTY dir>; console.txt, report.md, lab-server.jsonl); fix what it shows; then dispatch daily-sim suite=all net=full (default) quick=false for real pages + films at full speed; optional hotspot pass last; then releases: Swoop 0.5.0-alpha4 (ime/build.gradle.kts code 9, bash ship.sh) and Kestrel alpha68 code 169 (Browser repo, absolute paths only, no android.yml run queued there first); delete the send_later trigger if it is no longer needed
+READ daily-sim run 44150728400 as soon as it ends (mcp__github__actions_list list_workflow_run_artifacts resource_id 44150728400 repo Keyboard; download_workflow_run_artifact; python3 -I /home/user/Browser/tools/emu/fetch_artifact.py <url> <empty scratchpad dir>; read console.txt report.md lab-server.jsonl). THEN: fix what it shows; dispatch daily-sim suite=all net=full quick=false; then bigram upgrade (casual pairs from Tatoeba/SODA built on a GitHub runner, never raw data in the repo) judged by PredictionEval; then releases Swoop alpha4 (code 9) and Kestrel alpha68 (code 169, check no android.yml run queued in Browser first).
 
 *(resuming? CLAUDE.md's "FIRST ACTION OF EVERY SESSION" says how; the briefing is tools/resume.sh. Do that first, or autosave may stay off all session.)*
 
@@ -16,6 +16,7 @@ when the wake fires (or sooner): read run 44150728400 (artifacts -> python3 -I /
 
 ## Last ten checkpoints
 ```
+  9a770b8 ckpt 332: OWNER (R17e): 'Most of the time i won't have the 5mbit speed cap' recorded in 
   ac28c95 ckpt 328: Keyboard test suites green again after today's work (3 policy / ordering fixes
   73e11f5 ckpt 324: daily-sim driver fixed after the first runs (runs 44145772330 / 44146747558 / 
   1e98758 ckpt 320: R17b4 Kestrel hand-over coded + tested in the Browser repo on my branch (HandO
@@ -25,8 +26,7 @@ when the wake fires (or sooner): read run 44150728400 (artifacts -> python3 -I /
   fb4a7e9 ckpt 316: R17c1 started (new files only, nothing in the Browser repo touched): .github/w
   7272fbb ckpt 315: R17b3 Swoop side: new FieldKind.OMNIBOX (core FieldInfo/ImeLayout): Kestrel's 
   6efe83a ckpt 314: OWNER REQUEST 17 captured in TASKS.md (R17a signing stays public = decided; R1
-  ef73fe8 ckpt 313: Handoff manifest saved by the context-handoff plugin (.handoff/handoff.md + .j
 ```
 
-(3 automatic checkpoint(s) since the last deliberate one — the
+(5 automatic checkpoint(s) since the last deliberate one — the
 session was still mid-step. `git diff` against it shows what changed.)
