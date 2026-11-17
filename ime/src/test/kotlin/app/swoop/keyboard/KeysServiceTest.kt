@@ -50,7 +50,7 @@ class KeysServiceTest {
 
     @Test fun noPermissionsAreRequested() {
         val pi = app.packageManager.getPackageInfo(app.packageName, PackageManager.GET_PERMISSIONS)
-        assertTrue("the keyboard must request no permission yet (tools/expected-permissions.txt): ${pi.requestedPermissions?.toList()}", pi.requestedPermissions == null || pi.requestedPermissions!!.isEmpty())
+        assertEquals("the keyboard requests INTERNET and nothing else (tools/expected-permissions.txt; only the translate package uses it)", listOf("android.permission.INTERNET"), pi.requestedPermissions?.toList() ?: emptyList<String>())
     }
 
     @Test fun serviceCreatesItsViewAndSurvivesALifecycleWithoutAnEditor() {

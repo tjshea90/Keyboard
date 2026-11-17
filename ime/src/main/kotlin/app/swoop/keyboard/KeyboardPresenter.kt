@@ -21,7 +21,7 @@ import app.kestrel.core.input.glide.TypingLearner
  */
 class KeyboardPresenter(
     private val context: Context,
-    connection: () -> InputConnection?,
+    private val connection: () -> InputConnection?,
     private val glideProvider: () -> GlideHost,
     private val post: (Runnable) -> Unit,
     stats: app.kestrel.core.input.editor.InputStats = Engine.inputStats,
@@ -108,11 +108,63 @@ class KeyboardPresenter(
     /** A clipboard card was tapped: its text goes in at the cursor. */
     fun pasteText(text: String) { session.settle(); learner.settle(); controller.paste(text); view?.setShift(controller.shift); refreshSuggestions() }
 
+    // ------------------------------------------------------------------ translate (M7): Enter translates the box to Mexican Spanish, Enter again sends
+
+    private val flow = app.kestrel.core.translate.TranslateFlow(autoOffMs = 10 * 60_000L)
+    private var translator: app.swoop.keyboard.translate.Translator? = null
+    /** A short message for the strip (an error or a hint); shown until the next suggestion. */
+    var onTranslateMessage: (String) -> Unit = {}
+
+    private fun fieldText(): String? {
+        val c = connection() ?: return null
+        val b = c.getTextBeforeCursor(MAX_FIELD, 0) ?: return null
+        val a = c.getTextAfterCursor(MAX_FIELD, 0) ?: ""
+        return b.toString() + a.toString()
+    }
+
+    private fun replaceField(text: String) {
+        val c = connection() ?: return
+        c.beginBatchEdit()
+        c.deleteSurroundingText(MAX_FIELD, MAX_FIELD)
+        c.commitText(text, 1)
+        c.endBatchEdit()
+    }
+
+    private fun toggleTranslate() {
+        if (translateAllowed.not()) { onTranslateMessage(context.getString(R.string.translate_not_here)); return }
+        flow.setOn(!flow.isOn(), clock())
+        view?.translateOn = flow.isOn()
+        if (flow.isOn()) onTranslateMessage(context.getString(R.string.translate_on_hint)) else translator?.cancel()
+    }
+    private var translateAllowed = true
+
+    /** Enter with translating on. True when the flow took the key (translating, or a message shown); false means "do the normal Enter". */
+    private fun translateEnter(): Boolean {
+        if (!flow.isOn()) return false
+        val field = fieldText() ?: return false
+        when (flow.enter(field, clock())) {
+            app.kestrel.core.translate.TranslateFlow.Do.SEND -> { controller.enter(); flow.sent(); view?.translateOn = flow.isOn(); return true }
+            app.kestrel.core.translate.TranslateFlow.Do.NOTHING -> return true
+            app.kestrel.core.translate.TranslateFlow.Do.TOO_LONG -> { onTranslateMessage(flow.why()); return true }
+            app.kestrel.core.translate.TranslateFlow.Do.TRANSLATE -> {
+                val n = flow.start(field, clock())
+                val t = translator ?: app.swoop.keyboard.translate.Translator().also { translator = it }
+                onTranslateMessage(context.getString(R.string.translate_working))
+                t.translate(field) { res -> post(Runnable {
+                    val out = flow.answer(n, fieldText() ?: "", res, clock())
+                    if (out != null) { session.settle(); learner.settle(); replaceField(out); onTranslateMessage(context.getString(R.string.translate_done, flow.by())) }
+                    else onTranslateMessage(flow.why())
+                }) }
+                return true
+            }
+        }
+    }
+
     override fun onToolbar(tool: Int) {
         when (tool) {
             KeysView.TOOL_SETTINGS -> onOpenSettings()
             KeysView.TOOL_CLIPBOARD -> onToggleClipboard()
-            KeysView.TOOL_TRANSLATE -> onToggleTranslate()
+            KeysView.TOOL_TRANSLATE -> { toggleTranslate(); onToggleTranslate() }
         }
     }
 
@@ -137,6 +189,7 @@ class KeyboardPresenter(
         controller.autoSpace = !safeMode && st.autoSpace
         controller.autoCapsOn = st.autoCaps; controller.sentenceCaps = st.autoCaps
         latest = null; literalShown = null; noFixFor = null; suggestSeq++
+        flow.leaveField(); translator?.cancel(); translateAllowed = !safeMode && field.kind != FieldKind.PASSWORD && st.translateEnabled
         view?.let {
             it.reset()
             it.applyOptions(st)
@@ -158,7 +211,7 @@ class KeyboardPresenter(
     fun onUpdateSelection(newSelStart: Int, newSelEnd: Int, candStart: Int, candEnd: Int) {
         val ours = controller.onSelectionUpdate(newSelStart, newSelEnd, candStart, candEnd)
         view?.setShift(controller.shift)
-        if (!ours) { learner.settle(); refreshSuggestions() }       // the person or the app moved the cursor or changed the text: new word, new guesses
+        if (!ours) { learner.settle(); refreshSuggestions(); if (flow.isOn()) { val t = fieldText(); if (t != null && flow.fieldChanged(t, clock())) translator?.cancel() } }       // the person or the app moved the cursor or changed the text: new word, new guesses
     }
 
     /** The decoder needs the real key positions: known once the keys view has a size (and again when it changes). Cheap when nothing changed. */
@@ -177,7 +230,7 @@ class KeyboardPresenter(
         when (key) {
             is Key.Ch -> if (fix != null) controller.typeCorrected(fix, key.text) else if (key.text == " " && doubleSpaceOn && clock() - lastSpaceAt < DOUBLE_SPACE_MS && controller.doubleSpace()) { /* ". " is in */ } else controller.type(key.text)
             Key.Backspace -> controller.backspace()
-            Key.Go -> controller.enter()
+            Key.Go -> if (!translateEnter()) controller.enter()
             Key.NextKeyboard -> onNextKeyboard()
             Key.Shift -> {
                 val now = clock()
@@ -279,6 +332,7 @@ class KeyboardPresenter(
 
     private companion object {
         const val DOUBLE_TAP_MS = 350L
+        const val MAX_FIELD = 6000
         /** A second space this soon after the first makes a full stop. */
         const val DOUBLE_SPACE_MS = 600L
         val I_ENDINGS = setOf("m", "ll", "ve", "d")

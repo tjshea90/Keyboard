@@ -33,6 +33,10 @@
     <string name="dict_letters_only">Only letters a to z can be added or removed.</string>
     <string name="dict_cannot_add">That word cannot be added.</string>
     <string name="dict_removed">\u201C%1$s\u201D removed. It will not be suggested again.</string>
+    <string name="translate_on_hint">Translating is on: type in English, press Enter to turn it into Mexican Spanish, press Enter again to send.</string>
+    <string name="translate_not_here">Translating is not available in this box.</string>
+    <string name="translate_working">Translating\u2026</string>
+    <string name="translate_done">Translated (%1$s). Enter sends it.</string>
     <string name="clip_title">Clipboard</string>
     <string name="clip_clear">Clear all</string>
     <string name="clip_pin">Pin</string>
