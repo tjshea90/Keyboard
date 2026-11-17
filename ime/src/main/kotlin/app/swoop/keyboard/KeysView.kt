@@ -61,8 +61,15 @@ class KeysView(context: Context) : View(context) {
 
     private val density = resources.displayMetrics.density
     private fun dp(v: Float) = v * density
+    /** The gap inside the strip of guesses. */
     private val gap = dp(3f)
-    private val pad = dp(3f)
+    private val pad = dp(5f)
+    /**
+     * The gaps between the keys (the photo, owner M1): across a row a gap is about 14 % of the key pitch (3 to 8 dp), and the rows are one and a half times as far apart as the keys are across.
+     * They scale with the keyboard's width, so the squeezed docked keyboard and the floating one keep their proportions.
+     */
+    private fun gapX(w: Float = width.toFloat()): Float = (((w - 2 * pad) / 10f) * GAP_FRAC).coerceIn(dp(3f), dp(8f))
+    private fun gapY(w: Float = width.toFloat()): Float = gapX(w) * GAP_Y_MUL
     private val handler = Handler(Looper.getMainLooper())
 
     /**
