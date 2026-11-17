@@ -12,10 +12,13 @@ import java.util.Random
  * Words are drawn the way people use them: by the frequency of the OLD list (the previous word list is a fixed yardstick that does not change when the new one does), and only those both lists know.
  */
 object RareWordEval {
-    class Stats(val n: Int, val top1: Int, val top3: Int, val steals: Int, val rareFirst: Int, val millis: Double) {
+    class Stats(val n: Int, val top1: Int, val top3: Int, val steals: Int, val rareFirst: Int, val millis: Double, val deepSteals: Int = 0) {
         fun pct(x: Int) = 100.0 * x / n.coerceAtLeast(1)
-        override fun toString() = "n=$n top1=%.1f%% top3=%.1f%% rareSteals=%d (%.2f%%) rareFirstAny=%d decode %.2f ms".format(pct(top1), pct(top3), steals, pct(steals), rareFirst, millis)
+        override fun toString() = "n=$n top1=%.1f%% top3=%.1f%% rareSteals=%d (%.2f%%) deepSteals=%d rareFirstAny=%d decode %.2f ms".format(pct(top1), pct(top3), steals, pct(steals), deepSteals, rareFirst, millis)
     }
+
+    /** Very rare: below this the word is in the long tail (rank beyond about 30 000 of 140 000). */
+    const val DEEP = -14f
 
     fun isRare(lex: BinaryLexicon, word: String, floor: Float = Rarity.FLOOR): Boolean { val id = lex.idOf(word); return id < 0 || lex.logProb(id) < floor }
 
@@ -50,7 +53,7 @@ object RareWordEval {
         var shown = 0
         val sim = GestureSim(keys, Random(seed))
         val dec = GlideDecoder(keys, params)
-        var n = 0; var t1 = 0; var t3 = 0; var steals = 0; var rareFirst = 0; var nanos = 0L
+        var n = 0; var t1 = 0; var t3 = 0; var steals = 0; var deep = 0; var rareFirst = 0; var nanos = 0L
         for ((i, w) in words.withIndex()) {
             val path = sim.path(w, noise) ?: continue
             val t0 = System.nanoTime()
@@ -64,10 +67,10 @@ object RareWordEval {
             if (c.any { String(GlideLetters.keyOf(it.text)) == key }) t3++
             if (first != null && !hit1 && isRare(judge, first.text)) {
                 rareFirst++
-                if (!isRare(judge, w)) { steals++; if (shown++ < debug) println("      STEAL meant '%s' (lp %.1f) got %s lm %.2f".format(w, judge.logProb(judge.idOf(w)), c.joinToString(" | ") { "%s cost %.2f prior %.1f score %.2f".format(it.text, it.cost, it.prior, it.score) }, dec.lastLm)) }
+                if (!isRare(judge, w)) { steals++; if (isRare(judge, first.text, DEEP)) deep++; if (shown++ < debug) println("      STEAL meant '%s' (lp %.1f) got %s lm %.2f".format(w, judge.logProb(judge.idOf(w)), c.joinToString(" | ") { "%s cost %.2f prior %.1f score %.2f".format(it.text, it.cost, it.prior, it.score) }, dec.lastLm)) }
             }
         }
-        return Stats(n, t1, t3, steals, rareFirst, nanos / 1e6 / n.coerceAtLeast(1))
+        return Stats(n, t1, t3, steals, rareFirst, nanos / 1e6 / n.coerceAtLeast(1), deep)
     }
 
     fun load(path: String): BinaryLexicon = LexiconFile.read(File(path).readBytes())
