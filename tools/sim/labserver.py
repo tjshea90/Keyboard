@@ -87,7 +87,9 @@ class H(http.server.BaseHTTPRequestHandler):
             return self._send("<!doctype html><title>Search</title><body style='font:22px sans-serif'><h3>Search results for</h3><p>%s</p>" % (v.replace("<", "&lt;")))
         if u.path == "/log":
             g = lambda k: (q.get(k) or [""])[0]
-            STATE.update(value=g("v"), events=int(g("n") or 0), comp=int(g("comp") or 0), last=g("ev"), kind=g("kind"))
+            n = int(g("n") or 0)
+            if g("ev") == "load" or g("kind") != STATE.get("kind") or n >= STATE.get("events", 0):          # the page numbers its events: one that arrives late (the reports travel on separate requests) must not overwrite a newer value
+                STATE.update(value=g("v"), events=n, comp=int(g("comp") or 0), last=g("ev"), kind=g("kind"))
             log({"ev": g("ev"), "kind": g("kind"), "n": g("n"), "comp": g("comp"), "it": g("it"), "isComposing": g("comp_"), "value": g("v")})
             return self._send("ok", "text/plain")
         if u.path == "/state":
