@@ -20,8 +20,6 @@ PAGE = """<!doctype html><html><head><meta charset="utf-8"><meta name="viewport"
  body { font: 20px sans-serif; margin: 0; background: #fff; color: #111 }
  #hdr { height: 36px; line-height: 36px; padding: 0 10px; background: #def; font-size: 15px }
  #f { display: block; width: 96%%; margin: 8px 2%%; height: 42vh; font-size: 24px; padding: 8px; box-sizing: border-box; border: 2px solid #468 }
- input#f, div#f { height: 64px }
- textarea#f, div#f.big { height: 42vh }
  #out { margin: 8px; font: 14px monospace; white-space: pre-wrap; color: #555 }
 </style></head><body>
 <div id="hdr">Typing lab: %(kind)s</div>
