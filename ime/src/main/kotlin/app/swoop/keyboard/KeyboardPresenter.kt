@@ -177,6 +177,7 @@ class KeyboardPresenter(
 
     fun startInput(info: EditorInfo) {
         val field = FieldInfos.from(info)
+        if (Diag.enabled) Diag.d("startInput kind=${field.kind} noLearn=${field.noPersonalizedLearning} noSuggest=${field.noSuggestions} caps=${field.capsFlags} action=${field.imeAction} pkgIsKestrel=${info.packageName?.startsWith("app.kestrel.browser") == true} omnibox=${FieldInfos.hasOmniboxOption(info.privateImeOptions)}")     // (debug builds: facts only, never text)
         session.settle(); learner.settle()
         controller.startInput(field)
         val st = Settings(context)
