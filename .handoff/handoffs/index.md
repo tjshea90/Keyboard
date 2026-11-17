@@ -1,0 +1,1 @@
+2026-11-17T17:55:06.289Z | swoop keyboard, kestrel link, glide typing, translate spanish, gboard layout, alpha3 release, floating keyboard, learned data | Goal: one big update of the Swoop Android keyboard and link to the Kestrel browser. 16 owner items: Gboard-photo layout; | 2026-11-17/handoff-2026-11-17T17-55-06-289Z.md
