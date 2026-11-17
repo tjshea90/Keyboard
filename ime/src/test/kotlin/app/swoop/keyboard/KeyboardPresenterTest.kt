@@ -265,7 +265,7 @@ class KeyboardPresenterTest {
         for (suggest in listOf(false, true)) {
             val r = Rig(glidePref = true, suggest = suggest)
             r.tap("h"); r.tap("i"); r.tap("\u232B"); r.tap("?123"); r.tap("?"); r.tap("a")
-            assertEquals("suggest=$suggest", "H? A", r.text)
+            assertEquals("suggest=$suggest", "h? A", r.text)      // (this plain test field has no capital-at-start flag; the real Android 10 emulator printed H?a here: see TASKS Q-SMARTSPACE)
         }
     }
 
