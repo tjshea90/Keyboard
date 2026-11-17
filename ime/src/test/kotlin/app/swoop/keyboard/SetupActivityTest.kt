@@ -82,9 +82,10 @@ class SetupActivityTest {
     }
 
     @Test fun anAccentColourRebuildsTheScreenInThatColour() {
-        val a = launch(); tapText(a, "Pink")
-        // the dots have no text: choose through the setting the dot sets
-        Settings(app).set(Prefs.ACCENT, 3); assertEquals(Settings.ACCENTS[3].color, Settings(app).accentColor)
+        val a = launch()
+        val dot = ArrayList<View>(); a.window.decorView.findViewsWithText(dot, "Pink accent", View.FIND_VIEWS_WITH_CONTENT_DESCRIPTION)
+        assertEquals(1, dot.size); assertTrue(dot[0].performClick())
+        assertEquals(3, Settings(app).accent); assertEquals(Settings.ACCENTS[3].color, Settings(app).accentColor)
         val b = Robolectric.buildActivity(SetupActivity::class.java).setup().get(); draw(b, "settings-pink")
     }
 
