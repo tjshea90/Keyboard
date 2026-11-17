@@ -250,6 +250,7 @@ class KeyboardPresenter(
             else -> Unit
         }
         if (key is Key.Ch && key.text == " ") lastSpaceAt = clock()
+        if (Diag.enabled && key is Key.Ch) traceKey(key, fix != null, "after")
         session.afterKey(key)
         learner.afterKey()
         controller.revertedCorrection?.let { noFixFor = it.typed }
