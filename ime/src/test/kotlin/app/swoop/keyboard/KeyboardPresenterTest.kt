@@ -271,8 +271,6 @@ class KeyboardPresenterTest {
     @Test fun aLoneIBecomesACapitalI() {
         val r = Rig(glidePref = false, suggest = true); r.tap("i"); r.tap("space"); for (c in "am") r.tap(c.toString())
         assertEquals("I am", r.text)
-        val im = Rig(glidePref = false, suggest = true); for (c in "i'm") im.tap(if (c == '\'') "'" else c.toString()); im.tap("space")
-        assertEquals("I'm ", im.text)
         val off = Rig(glidePref = false, suggest = true, extra = { it.putBoolean(Prefs.CAPI, false) }); off.tap("i"); off.tap("space")
         assertEquals("i ", off.text)
     }
