@@ -174,6 +174,11 @@ class SetupActivity : Activity() {
         }
         setContentView(sv)
         window.statusBarColor = u.bg; window.navigationBarColor = u.bg
+        // the title bar in the colours of the screen (a colours choice made while this screen is open does not restart it; the theme set in onCreate covers the next start)
+        actionBar?.let { ab ->
+            ab.setBackgroundDrawable(android.graphics.drawable.ColorDrawable(u.bg))
+            ab.title = android.text.SpannableString(getString(R.string.setup_title)).apply { setSpan(android.text.style.ForegroundColorSpan(u.text), 0, length, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE) }
+        }
         sv.systemUiVisibility = if (u.dark) 0 else (View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR or (if (Build.VERSION.SDK_INT >= 26) View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR else 0))
         sv.post { sv.scrollTo(0, keepAt) }
         refreshState(); refreshLearned()
