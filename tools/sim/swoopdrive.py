@@ -105,6 +105,30 @@ def tap(x, y):
     shell("input tap %d %d" % (x, y))
 
 
+def inject_taps(points, hold=0.04, gap=0.10):
+    """A run of taps at human speed in ONE shell call: press, [hold] seconds, lift, [gap] seconds, the next one. (`input tap` costs 0.3 s a key; a thumb taps 5 to 8 keys a second.)"""
+    path, mx, my = touch_device()
+    sw, sh = screen_size()
+    blob = b""
+    for (x, y) in points:
+        rx, ry = int(round(x / sw * mx)), int(round(y / sh * my))
+        blob += _ev(3, 0x2f, 0) + _ev(3, 0x39, 1) + _ev(3, 0x35, rx) + _ev(3, 0x36, ry) + _ev(3, 0x3a, 100) + _ev(0, 0, 0)       # down
+        blob += _ev(3, 0x39, -1) + _ev(0, 0, 0)                                                                                 # up
+    with tempfile.TemporaryDirectory() as td:
+        f = os.path.join(td, "st.bin")
+        open(f, "wb").write(blob)
+        adb("push", f, "/data/local/tmp/st.bin")
+    down = 6 * 24
+    up = 2 * 24
+    cmds = []
+    at = 0
+    for _ in points:
+        cmds.append("dd if=/data/local/tmp/st.bin of=%s bs=24 skip=%d count=6 2>/dev/null; sleep %s; dd if=/data/local/tmp/st.bin of=%s bs=24 skip=%d count=2 2>/dev/null; sleep %s" % (path, at // 24, hold, path, (at + down) // 24, gap))
+        at += down + up
+    cmds.append("rm -f /data/local/tmp/st.bin")
+    shell("; ".join(cmds), timeout=60 + len(points))
+
+
 # ---------------------------------------------------------------------------------------------------------------------------------------------- the key map
 _KEYMAP = re.compile(r"SwoopDiag: keymap page=(\w+) shift=(\d) (.*)$")
 
@@ -174,6 +198,24 @@ def tap_char(km, c):
         raise KeyError("no key %r on the %s page" % (c, km.page))
     tap(*xy)
     time.sleep(0.10)
+
+
+def type_text_fast(text, km=None, hold=0.04, gap=0.10):
+    """Letters and spaces only (the letters page stays up): all the taps of [text] in one call, at human speed. Returns the number of characters that could not be tapped."""
+    km = km or wait_keymap("letters", need=["k61"])
+    if km is None:
+        raise RuntimeError("the keyboard is not showing (no key map)")
+    pts, missing = [], 0
+    for c in text:
+        xy = km.char(c.lower() if c.isalpha() else c)
+        if xy is None:
+            missing += 1
+        else:
+            pts.append(xy)
+    if pts:
+        inject_taps(pts, hold=hold, gap=gap)
+    time.sleep(0.4)
+    return missing
 
 
 def type_text(text, per_key_pause=0.0, log=None):

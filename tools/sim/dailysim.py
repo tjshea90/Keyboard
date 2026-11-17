@@ -228,7 +228,7 @@ def type_round(rep, scene, field_value, tap_target, glide=True):
         if reset_field:
             reset_field()
         t0 = time.time()
-        miss = drive.type_text(ph)
+        miss = drive.type_text_fast(ph) if all(c.isalpha() and c.islower() or c == ' ' for c in ph) else drive.type_text(ph)     # plain words at a human 6 keys a second, anything with a capital or a symbol key by key
         time.sleep(0.8)
         got = field_value()
         d = edit_distance(ph.lower(), got.lower().rstrip())
