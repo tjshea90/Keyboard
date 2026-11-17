@@ -98,3 +98,7 @@
 > - The Diagnostics numbers from the tablet and phone, to clear this stage (G1).
 > - Whether I may set up a 2-hourly wake-up after usage cut-offs.
 <!-- sha:f5db3abdeec3 -->
+
+## 2026-11-17T01:43:24Z
+> You sent nine requests. Per my own rule I'm writing them into `TASKS.md` in your words first, then working through them in an order I'll state below. I'm starting with the view work (numbers row, instant glide, faster trail, quicker key pop-up), then suggestions and learning, then options and the settings redesign. The floating keyboard goes last because it's the largest.
+<!-- sha:48ec47c49a87 -->
