@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # smoke.sh - run by .github/workflows/emu-smoke.yml INSIDE a booted Android emulator (adb works). The first proof that Swoop works on a real Android:
 #   1 it registers as a keyboard, can be enabled and chosen   2 tapping a text field shows it   3 real touches on its keys type letters
-#   4 a swipe over the letters glides a word in   5 Backspace removes   6 the globe key does not crash   7 no crash anywhere (logcat).
+#   4 a swipe over the letters glides a word in   5 Backspace removes   6 holding the space bar (keyboard picker) does not crash   7 no crash anywhere (logcat).
 # Typed text is never logged here beyond the fixed test words. Artifacts (logcat, screenshots) go to $OUT.
 set -uo pipefail
 PKG="${SWOOP_PKG:-app.swoop.keyboard.debug}"
