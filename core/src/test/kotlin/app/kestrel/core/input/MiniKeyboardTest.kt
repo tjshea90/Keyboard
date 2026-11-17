@@ -10,6 +10,15 @@ import org.junit.Test
 class MiniKeyboardTest {
     private fun typed(m: MiniKeyboardModel, s: String) { for (c in s) m.press(Key.Ch(c.toString())) }
 
+    @Test fun afterOneSpecialCharacterTheMiniKeyboardGoesBackToTheLettersAndDigitsStay() {      // M5, like Gboard
+        val m = MiniKeyboardModel(); m.open("")
+        m.press(Key.ToSymbols); assertTrue(m.symbols); m.press(Key.Ch("?")); assertFalse("back on the letters at once", m.symbols)
+        m.press(Key.ToSymbols); m.press(Key.Ch("5")); assertTrue("a digit keeps the page", m.symbols); m.press(Key.Ch("7")); assertTrue(m.symbols)
+        m.press(Key.Backspace); assertTrue("Backspace changes nothing", m.symbols)
+        m.press(Key.Ch(".")); assertFalse(m.symbols)
+        m.press(Key.ToSymbols); m.press(Key.Ch(" ")); assertFalse("a space also ends the symbols page", m.symbols)
+    }
+
     @Test fun theFirstKeyReplacesTheSelectedAddress() {
         val m = MiniKeyboardModel(); m.open("https://doraby.com/")
         assertTrue(m.allSelected)
