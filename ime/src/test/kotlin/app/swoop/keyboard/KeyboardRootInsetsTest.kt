@@ -6,7 +6,6 @@ import android.view.View
 import android.view.WindowInsets
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
-import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -38,7 +37,20 @@ class KeyboardRootInsetsTest {
         assertNotNull("the keyboard's colour is painted under the bar too", panel.background)
         assertEquals(96, panel.paddingBottom)
         root.dispatchApplyWindowInsets(bar(0))
-        assertEquals("and back when the bar goes (a different navigation mode)", plain, heightOf(root)); assertNull(panel.background)
+        assertEquals("and back when the bar goes (a different navigation mode)", plain, heightOf(root))
+    }
+
+    /**
+     * The bar row (the glowing bar with the squeeze arrows) is part of the panel, and the panel paints the keyboard's own colour behind it, docked or not. With no background it showed the keyboard WINDOW's colour,
+     * white on a phone in day mode: a white strip above the dark keys (found on the Android 10 emulator in day mode, with the dark colours as the default).
+     */
+    @Test fun theDockedPanelAlwaysPaintsTheKeyboardsOwnColourAndFollowsAChangeOfColours() {
+        val root = KeyboardRoot(app); val panel = root.getChildAt(0)
+        fun paint(): Int = (panel.background as android.graphics.drawable.ColorDrawable).color
+        root.applySettings(Settings(app))                                   // day mode here, and the dark colours are the default
+        assertEquals("the dark teal of the photo behind the bar row and the keys", 0xFF0D1D1D.toInt(), paint()); assertEquals(root.keys.backgroundColor, paint())
+        root.keys.themeMode = 2                                              // the person picks Light in Settings
+        assertEquals(0xFFE4EDED.toInt(), paint())
     }
 
     @Test fun aBarAtTheSideOfASidewaysPhoneIsRespectedToo() {
