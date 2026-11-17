@@ -104,7 +104,7 @@ class KeysViewLookTest {
 
 
     /** Owner M1: the dark letters page IS the photo (Gboard, dark teal). The colours below were measured from the photo; the geometry is checked in ImeLayoutTest. */
-    @Test @Config(qualifiers = "night", sdk = [29]) fun theDarkLettersPageHasThePhotosColours() {
+    @Test @Config(qualifiers = "night-xxhdpi", sdk = [29]) fun theDarkLettersPageHasThePhotosColours() {
         val v = view(w = 412, action = "\u23CE"); val b = render(v, "photo-dark-phone")
         assertEquals("background", 0xFF0D1D1D.toInt(), corner(b))
         assertEquals("a letter key", 0xFF253535.toInt(), pixelAtKey(b, v, "w", dx = -12 * dp))
@@ -122,10 +122,10 @@ class KeysViewLookTest {
         assertEquals("Z stands under S like the photo", sx, zx, 0.5f); assertTrue(qx < sx)
         // the round keys are really round: the corner of the Enter key's box is the background, its middle is not
         val (ex, ey) = v.centerOf("\u23CE")!!
-        assertEquals("the corner of the Enter key's box is outside the round key", 0xFF0D1D1D.toInt(), b.getPixel((ex + 36 * dp).toInt(), (ey - 26 * dp).toInt() + 60).let { it })
+        assertEquals("the corner of the Enter key's box is outside the round key", 0xFF0D1D1D.toInt(), b.getPixel((ex + 24 * dp).toInt(), (ey - 24 * dp).toInt() + 60))
     }
 
-    @Test @Config(qualifiers = "night", sdk = [29]) fun theSymbolsPagesAreDrawnToo() {
+    @Test @Config(qualifiers = "night-xxhdpi", sdk = [29]) fun theSymbolsPagesAreDrawnToo() {
         val v = view(w = 412)
         val (px, py) = v.centerOf("?123")!!; fun tapAt(x: Float, y: Float) { touch(v, MotionEvent.ACTION_DOWN, x, y); touch(v, MotionEvent.ACTION_UP, x, y) }
         tapAt(px, py); render(v, "photo-dark-symbols1")
@@ -133,7 +133,7 @@ class KeysViewLookTest {
         assertEquals(Page.SYMBOLS2, v.pageForTest())
     }
 
-    @Test @Config(qualifiers = "night", sdk = [29]) fun theTabletWidthIsDrawnToo() { render(view(w = 564), "photo-dark-tablet"); render(view(w = 564, action = "Search"), "photo-dark-tablet-search") }
+    @Test @Config(qualifiers = "night-xxhdpi", sdk = [29]) fun theTabletWidthIsDrawnToo() { render(view(w = 564), "photo-dark-tablet"); render(view(w = 564, action = "Search"), "photo-dark-tablet-search") }
 
     @Test fun thePhoneWidthStillGivesWholeKeys() { val v = view(w = 411); render(v, "light-phone"); val (x0, _) = v.centerOf("q")!!; val (x1, _) = v.centerOf("w")!!; assertTrue(x1 - x0 > 30 * dp) }
 }
