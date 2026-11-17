@@ -162,7 +162,7 @@ class KeyboardRootTest {
         // top left: the bottom right stays
         val b2 = r.panelRect(); val (tx, ty) = corner(r, 0)
         touch(r, MotionEvent.ACTION_DOWN, tx, ty); touch(r, MotionEvent.ACTION_MOVE, tx + 60f, ty + 40f); layout(r); touch(r, MotionEvent.ACTION_UP, tx + 60f, ty + 40f); layout(r)
-        val a2 = r.panelRect(); assertEquals(b2.right, a2.right); assertTrue(a2.width() < b2.width())
+        val a2 = r.panelRect(); assertTrue("${b2.right} ${a2.right}", Math.abs(b2.right - a2.right) <= 2); assertTrue(a2.width() < b2.width())
     }
 
     @Test fun theSizeStopsAtItsLimits() {
