@@ -80,9 +80,14 @@ class KeysViewTest {
         down(v, ax, ay); move(v, sx, ay); up(v, sx, ay)
         assertEquals(listOf("a"), r.keys)
     }
-    @Test fun aFingerThatSlidesOffANonLetterKeyTypesNothing() {
+    @Test fun aNonLetterKeyTypesTheKeyUnderTheFingerAtLiftSoASlipCanBeCorrectedBySliding() {
         val (v, r) = view(); val (gx, gy) = at(v, "⏎"); val (px, _) = at(v, ".")
         down(v, gx, gy); move(v, px, gy); up(v, px, gy)
+        assertEquals(listOf("."), r.keys)
+    }
+    @Test fun aFingerThatSlidesOffTheKeyboardTypesNothing() {
+        val (v, r) = view(); val (gx, gy) = at(v, "⏎")
+        down(v, gx, gy); move(v, gx, -80f); up(v, gx, -80f)
         assertTrue(r.keys.isEmpty())
     }
     @Test fun aCancelledTouchTypesNothing() { val (v, r) = view(); val p = at(v, "q"); down(v, p.first, p.second); v.dispatchTouchEvent(ev(MotionEvent.ACTION_CANCEL, p.first, p.second)); assertTrue(r.keys.isEmpty()) }
@@ -124,7 +129,8 @@ class KeysViewTest {
     @Test fun slidingOverSpaceMovesTheCursorAndTypesNoSpace() {
         val (v, r) = view(); val (x, y) = at(v, "space")
         down(v, x, y); move(v, x + 5 * dp, y); assertEquals(0, r.cursor)           // under the start distance: still a press
-        move(v, x + 10.5f * dp + 3 * 11 * dp, y); assertEquals(3, r.cursor)
+        move(v, x + 11f * dp, y); assertEquals("crossing the start distance only starts the slide", 0, r.cursor)
+        move(v, x + 11f * dp + 3 * 11 * dp, y); assertEquals(3, r.cursor)
         move(v, x - 40 * dp, y); assertTrue(r.cursor < 0)
         up(v, x - 40 * dp, y); assertTrue("a cursor slide types no space", r.keys.isEmpty())
     }
