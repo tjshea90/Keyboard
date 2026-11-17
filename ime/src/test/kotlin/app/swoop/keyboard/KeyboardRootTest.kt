@@ -136,6 +136,7 @@ class KeyboardRootTest {
         val (r, c) = root(); val (gx, gy) = gripCentre(r); detach(r, gx, gy); touch(r, MotionEvent.ACTION_MOVE, gx, gy - 400f); touch(r, MotionEvent.ACTION_UP, gx, gy - 400f); layout(r)
         val before = r.panelRect()
         val (cx, cy) = corner(r, 3)
+        println("DEBUG floating=${r.floating} panel=${r.panelRect()} corner=$cx,$cy sw=$sw sh=$sh")
         assertEquals(3, r.cornerAt(cx, cy))
         touch(r, MotionEvent.ACTION_DOWN, cx, cy); touch(r, MotionEvent.ACTION_MOVE, cx + 120f, cy + 90f); layout(r); touch(r, MotionEvent.ACTION_UP, cx + 120f, cy + 90f); layout(r)
         val after = r.panelRect()
