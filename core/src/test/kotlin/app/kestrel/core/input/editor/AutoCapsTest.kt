@@ -20,6 +20,23 @@ class AutoCapsTest {
         r.act { enter() }; assertEquals("Hi\n", r.text); assertEquals(ShiftState.ONCE, r.c.shift)
     }
     @Test fun capsLockIsNeverSwitchedOffByTheField() { val r = Rig(caps = CapFlags.SENTENCES); r.act { lockShift() }; r.act { autoCaps() }; assertEquals(ShiftState.LOCK, r.c.shift) }
+    @Test fun aBoxThatAskedForNothingStillCapitalisesAfterASentenceEnd() {      // owner 2026-11-17: by default
+        assertEquals(ShiftState.ONCE, Rig("Hello there. ").c.shift)
+        assertEquals(ShiftState.ONCE, Rig("Really? ").c.shift)
+        assertEquals(ShiftState.ONCE, Rig("Stop! ").c.shift)
+        assertEquals(ShiftState.OFF, Rig("Hello there ").c.shift)
+        assertEquals(ShiftState.OFF, Rig("Hello there.").c.shift)           // no space yet: "3.5", "e.g." and "www.x" stay lowercase
+        assertEquals(ShiftState.OFF, Rig("").c.shift)                      // an empty box did not ask
+    }
+    @Test fun typingAFullStopAndASpaceTurnsShiftOnAndALetterSpendsIt() {
+        val r = Rig("").typeAll("hi.")
+        assertEquals(ShiftState.OFF, r.c.shift); r.typeAll(" "); assertEquals(ShiftState.ONCE, r.c.shift)
+        r.typeAll("a"); assertEquals("hi. A", r.text); assertEquals(ShiftState.OFF, r.c.shift)
+    }
+    @Test fun theSettingTurnsItOffAndEmailUrlAndPasswordFieldsNeverAsk() {
+        val off = Rig("Hi. ", kind = FieldKind.TEXT); off.c.autoCapsOn = false; off.act { setShift(ShiftState.OFF) }; off.c.autoCaps(); assertEquals(ShiftState.OFF, off.c.shift)
+        for (k in listOf(FieldKind.EMAIL, FieldKind.URL, FieldKind.PASSWORD, FieldKind.NUMBER)) assertEquals(k.name, ShiftState.OFF, Rig("Hi. ", kind = k).c.shift)
+    }
     @Test fun aDeadEditorMeansNoCapitals() { val r = Rig(caps = CapFlags.SENTENCES); r.act { setShift(ShiftState.OFF) }; r.ed.failing = true; r.c.autoCaps(); assertEquals(ShiftState.OFF, r.c.shift) }
 }
 
