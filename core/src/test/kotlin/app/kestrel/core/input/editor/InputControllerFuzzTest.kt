@@ -57,6 +57,7 @@ class InputControllerFuzzTest {
                 if (lazy) { repeat(rnd.nextInt(3)) { r.deliverOne() } } else { r.sync(); r.check() }
             }
             r.sync(); r.check()
+            if (!external && !flaky) assertEquals("with no change by the user or the app NO report may look foreign", 0, r.foreign)
         } catch (e: Throwable) {
             throw AssertionError("seed $seed (lazy=$lazy external=$external flaky=$flaky) start='${start.take(20).replace("\n", "\\n")}' ops: ${log.takeLast(12)} text='${r.text.takeLast(40).replace("\n", "\\n")}': ${e.message}", e)
         }
