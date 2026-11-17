@@ -214,3 +214,31 @@
 >
 > I'm now running the Android emulator test on the new layout before shipping.
 <!-- sha:24f68d5c0ded -->
+
+## 2026-11-17T05:03:47Z
+> The 123 key is back with its symbols page, and everything is saved and pushed (checkpoint 282). The tests pass (core 287, app 128, lint clean). Nothing is built or released yet, so your current install doesn't have any of this.
+>
+> **Done in code:**
+> - **123 key:** it's back, and the space bar is now 4.9 of 10 units wide. I also kept a shortcut: holding the full stop or the comma opens a grid of the same symbols. Say if you'd rather I remove it.
+> - **Brave address bar:**
+>   - **Cause (likely):** Brave and Chrome complete what you type inline. The keyboard saw that as a change it didn't make and forgot the word it had just glided, so tapping the suggested word did nothing.
+>   - **Fix:** the keyboard now remembers the glided word through that, and has a safe fallback that replaces the last word with the one you tapped. The simulated address bar tests pass.
+>   - **Not run:** Brave itself.
+> - **Keyboard-switch key:** removed by default. Hold the space bar to switch keyboards. A Settings switch brings the globe key back, and the crash-loop safe mode always shows it.
+> - **Contractions:** typing `dont` or `im` now becomes `don't` or `I'm`. `ill` only becomes `I'll` when the contraction is about 20 times more likely.
+>
+> **Prediction research (`research/PREDICTION-SOURCES.md`):**
+> - **Constraint:** the keyboard can't use any live online service, because it has no internet permission and never sends your typing anywhere. So "online" can only mean data and open-source designs used when the app is built.
+> - **Real swipes to test against:** the best find is FUTO's public collection of about a million real swipe recordings (MIT licence).
+> - **Recommended first step:** run our decoder on those swipes and tune it against the numbers. We've only tested on simulated swipes so far.
+> - **Better word data:** after that, move the word statistics toward casual chat English.
+> - **Caveat:** a helper agent collected all of this. I didn't open the pages myself, and the document lists what could not be verified.
+>
+> **Next step (already written into the checkpoint):** run the emulator test with the 123 layout, then ship 0.3.0-alpha1 and send you the link.
+>
+> **Open items for you:**
+> - Which research items should I build first?
+> - Do you want the 2-hourly wake-up after usage cut-offs? It would resume the work automatically.
+> - Do you want me to read the LinkMeter repo, which the translation feature needs later?
+> - Your device check of 0.2.1, especially the floating bar and the trail speed.
+<!-- sha:372ec790951a -->
