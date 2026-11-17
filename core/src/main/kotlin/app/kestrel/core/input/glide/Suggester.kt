@@ -137,7 +137,7 @@ object Suggester {
             }
             if (prevId >= 0) {
                 val s = main.successors(prevId)
-                val order = s.sortedByDescending { main.bigramLogProb(prevId, it) }.take(12)
+                val order = s.sortedByDescending { main.bigramLogProb(prevId, it) }.filter { val t = main.text(it).lowercase(); t !in VULGAR || (pm?.weightOf(t) ?: 0f) > 0f }.take(12)
                 for (id in order) { val w = main.text(id).lowercase(); if (w !in out) { out[w] = logP(main, pm, id, null, prevId, prev, prev2, total); shown[w] = main.text(id) } }
             }
         }
@@ -146,6 +146,16 @@ object Suggester {
     }
 
     private val STARTERS = listOf("I", "The", "I'm", "It", "We")
+
+    /**
+     * The vulgar words and slurs the strip never OFFERS on its own as the next word ("pink" -> "pussy" came from the book pairs). The person can still type them, glide them and pick them out of the letters
+     * they typed, and a word they use themselves (the personal model has it) is theirs: this only keeps a family tablet from suggesting one out of nowhere.
+     */
+    val VULGAR: Set<String> = setOf(
+        "fuck", "fucks", "fucked", "fucker", "fuckers", "fucking", "motherfucker", "shit", "shits", "shitty", "bullshit", "bitch", "bitches", "cunt", "cunts", "whore", "whores", "slut", "sluts",
+        "nigger", "niggers", "nigga", "niggas", "faggot", "faggots", "fag", "fags", "retard", "retarded", "retards", "bastard", "bastards", "dick", "dicks", "cock", "cocks", "pussy", "pussies",
+        "asshole", "assholes", "piss", "pissed", "tits", "titties", "boobs", "cum", "cumming", "blowjob", "handjob", "porn", "slutty",
+    )
 
     /** ln P(word | the words before): its own share (plus the person's use and recent use), mixed with how likely it is after them. [id] < 0 = not in the shipped list: only what the person wrote counts. */
     private fun logP(main: BinaryLexicon, pm: PersonalModel?, id: Int, own: String?, prevId: Int, prev: String?, prev2: String?, total: Double): Float {
