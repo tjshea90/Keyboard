@@ -17,7 +17,7 @@ object FriendlyTu {
         "esperan", "trae", "traen", "pasa", "pasan", "pudo", "pudieron", "quisiera", "quisieran", "sera", "seria"
     )
 
-    private val USTED = Regex("(?iu)(^|[^\\p{L}])(usted|le gustaria|le gustaría|disculpe|permitame|permítame|por favor, senor|señor|senora|señora)([^\\p{L}]|$)")
+    private val USTED = Regex("(?iu)(^|[^\\p{L}])(usted|disculpe|perm\u00edtame|permitame)([^\\p{L}]|$)")
 
     /** Does the English talk to somebody ("you", "your", "u", an imperative question)? Only such texts are checked. */
     fun addressesYou(english: String): Boolean {
@@ -32,7 +32,7 @@ object FriendlyTu {
     }
 
     fun containsFormalMarker(spanish: String): Boolean {
-        val s = spanish.lowercase(Locale("es"))
+        val s = spanish.lowercase(Locale.forLanguageTag("es"))
         if (USTED.containsMatchIn(s)) return true
         // "¿Puede ...", "¿Quiere ...": opening question mark (or start of a sentence after it) then a formal verb
         var i = 0
