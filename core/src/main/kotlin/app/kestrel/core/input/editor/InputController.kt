@@ -235,7 +235,6 @@ class InputController(private val ed: EditorBridge, val stats: InputStats = Inpu
         endComposing(); lastGlide = null
         val left = delta < 0
         val steps = minOf(Math.abs(delta), 64)
-        val s0 = selStart
         var predicted = selStart >= 0 && selStart == selEnd   // a selection collapses to one end and the selected text joins the window: re-read instead of predicting
         for (i in 0 until steps) {
             if (!ed.sendKey(if (left) KeyCodes.DPAD_LEFT else KeyCodes.DPAD_RIGHT)) { resync(); return }
@@ -251,13 +250,7 @@ class InputController(private val ed: EditorBridge, val stats: InputStats = Inpu
             }
         }
         if (selStart >= 0 && predicted) { selEnd = selStart; ensureWindow() }
-        else {
-            // the window cannot say how far the cursor really went (the field may end here). Assume every key moved it by one, as an own edit with one report per key; a wrong guess
-            // (the cursor was already at the end) is repaired by the next report. The text window is read live. Only when the selection was unknown or a range stays unknown.
-            clearPending("move")
-            if (s0 >= 0 && s0 == selEnd) { var p = s0; repeat(steps) { p = maxOf(0, p + (if (left) -1 else 1)); pending.push(p, p) }; selStart = p; selEnd = p } else { selStart = -1; selEnd = -1 }
-            refresh()
-        }
+        else { selStart = -1; selEnd = -1; clearPending("move"); refresh() }    // one report per arrow key reaches us, none of them predicted: the next report is the truth
     }
 
     /** The word before the cursor in the window, lowercase, for the language (null when there is none or it is not a plain word). */
