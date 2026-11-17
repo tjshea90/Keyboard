@@ -77,6 +77,10 @@ class Report:
         self.rows.append((scene, status, detail))
         print("  %-5s %-34s %s" % (status, scene, detail), flush=True)
         self.event(scene, status=status, detail=detail)
+        try:
+            self.write()          # the report on disk is always current: a run that is cut off or killed by a step timeout still leaves everything it found
+        except Exception:
+            pass
 
     def fact(self, text):
         self.facts.append(text)
