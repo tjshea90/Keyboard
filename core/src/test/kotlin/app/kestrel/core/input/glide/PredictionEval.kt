@@ -10,7 +10,7 @@ import java.util.Random
  *  - keystroke saving: letters not typed because the word was tapped on the strip at the first moment it showed,
  *  - typo repair: a word typed with one realistic slip (a neighbouring key, a letter left out, a letter doubled, two letters swapped) is on the strip / put in by the space, and a word typed RIGHT is never
  *    changed (the failure people hate most).
- * Run by [PredictionYardstickTest] (with stated floors) and by hand: java -cp <core main>:<core test>:<kotlin stdlib> app.kestrel.core.input.glide.PredictionEval [verbose] [klx=<file>] [corpus=<file> [limit=N]] [glide [glides=N]] [notypos]
+ * Run by [PredictionYardstickTest] (with stated floors) and by hand: java -cp <core main>:<core test>:<kotlin stdlib> app.kestrel.core.input.glide.PredictionEval [verbose] [klx=<file>] [corpus=<file> [limit=N]] [glide [glides=N]] [notypos] [probe=word,word@prev]
  */
 object PredictionEval {
     class Tally(val name: String) {
@@ -174,6 +174,16 @@ object PredictionEval {
         val klx = args.firstOrNull { it.startsWith("klx=") }?.substring(4)           // klx=<file>: measure another compiled list than the shipped one
         val lex = if (klx != null) LexiconFile.read(java.io.File(klx).readBytes()) else GlideEval.loadLexicon()
         val keys = GlideEval.keysFor(564f, 160f)
+        val probe = args.firstOrNull { it.startsWith("probe=") }?.substring(6)              // probe=helo,wierd or probe=helo@prev: what the strip would offer for these typed words (and the word before, after @)
+        if (probe != null) {
+            for (item in probe.split(',')) {
+                val w = item.substringBefore('@'); val prev = item.substringAfter('@', "").ifEmpty { null }
+                val id = lex.idOf(w)
+                val r = Suggester.suggest(lex, null, keys, w, prev, null, 5)
+                println("%-12s prev=%-8s inList=%-5s lp=%-6s typedKnown=%-5s autoCorrect=%-10s strip=%s".format(w, prev, id >= 0 && lex.text(id) == w, if (id >= 0) "%.1f".format(lex.logProb(id)) else "-", r.typedKnown, r.autoCorrect, r.words))
+            }
+            return
+        }
         val corpus = args.firstOrNull { it.startsWith("corpus=") }?.substring(7)       // corpus=<file>: one sentence per line instead of the built-in everyday sentences (e.g. a held-out sample)
         val limit = args.firstOrNull { it.startsWith("limit=") }?.substring(6)?.toInt() ?: 5000
         val sentences = if (corpus != null) EvalCorpus.parse(java.io.File(corpus).readLines().take(limit).joinToString("\n")) else EvalCorpus.sentences
