@@ -63,7 +63,7 @@ class GripBar(context: Context) : View(context) {
         fun gripSqueezed(): Boolean = false
     }
     var host: Host? = null
-    var accent = 0xFF1F6FEB.toInt(); set(v) { field = v; invalidate() }
+    var accent = 0xFF00DDE6.toInt(); set(v) { field = v; invalidate() }
     var floating = false; set(v) { field = v; invalidate() }
 
     private val d = resources.displayMetrics.density

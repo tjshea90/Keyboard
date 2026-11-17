@@ -115,7 +115,7 @@ class KeysView(context: Context) : View(context) {
     val colAccentText: Int get() = cAccentText
     /** The colour behind the keys (the floating frame is painted in it too). */
     val backgroundColor: Int get() = cBg
-    var accent = 0xFF1F6FEB.toInt(); set(v) { field = v; applyPalette(); invalidate(); dyn() }
+    var accent = 0xFF00DDE6.toInt(); set(v) { field = v; applyPalette(); invalidate(); dyn() }
 
     // ---- what is shown
     private var page = Page.LETTERS
@@ -455,7 +455,11 @@ class KeysView(context: Context) : View(context) {
             val lit = id == TOOL_TRANSLATE && translateOn
             val rr = Math.min(tb.height(), dp(36f)) / 2f
             icon.set(tb.centerX() - rr, tb.centerY() - rr, tb.centerX() + rr, tb.centerY() + rr)          // a square the icon is drawn in; a circle behind it only while pressed or lit (the photo's cyan button)
-            if (lit || i == toolDown) { fill.color = if (lit) cAccent else cSpecial; c.drawCircle(icon.centerX(), icon.centerY(), rr, fill) }
+            if (lit || i == toolDown) {
+                fill.color = if (lit) cAccent else cSpecial
+                if (id == TOOL_TRANSLATE) { box.set(icon.centerX() - rr * 1.45f, icon.centerY() - rr, icon.centerX() + rr * 1.45f, icon.centerY() + rr); c.drawRoundRect(box, rr, rr, fill) }
+                else c.drawCircle(icon.centerX(), icon.centerY(), rr, fill)
+            }
             val ink = if (lit) cAccentText else cText
             when (id) { TOOL_SETTINGS -> drawGear(c, icon, ink); TOOL_CLIPBOARD -> drawClipboard(c, icon, ink); else -> drawTranslate(c, icon, ink) }
         }
@@ -482,12 +486,23 @@ class KeysView(context: Context) : View(context) {
         }
     }
 
-    /** A cog: a ring with eight teeth (no font symbol: the tablet's fonts may lack one). */
+    /** A cog: eight teeth round a body with a hole, drawn (no font symbol: the tablet's fonts may lack one). */
     private fun drawGear(c: Canvas, b: RectF, ink: Int) {
-        val r = Math.min(b.width(), b.height()) * 0.20f
-        line.color = ink; line.strokeWidth = dp(2.2f)
-        c.drawCircle(b.centerX(), b.centerY(), r, line)
-        for (k in 0 until 8) { val a = Math.PI * k / 4.0; val cx = Math.cos(a).toFloat(); val sy = Math.sin(a).toFloat(); c.drawLine(b.centerX() + cx * r * 1.15f, b.centerY() + sy * r * 1.15f, b.centerX() + cx * r * 1.75f, b.centerY() + sy * r * 1.75f, line) }
+        val cx = b.centerX(); val cy = b.centerY()
+        val r = Math.min(b.width(), b.height()) * 0.36f; val body = r * 0.76f; val hole = r * 0.32f
+        val d = Math.toRadians(15.0); val t = Math.toRadians(8.5)
+        ico.reset(); ico.fillType = Path.FillType.EVEN_ODD
+        for (k in 0 until 8) {
+            val a = Math.PI / 4.0 * k
+            val x1 = (cx + Math.cos(a - d) * body).toFloat(); val y1 = (cy + Math.sin(a - d) * body).toFloat()
+            if (k == 0) ico.moveTo(x1, y1) else ico.lineTo(x1, y1)
+            ico.lineTo((cx + Math.cos(a - t) * r).toFloat(), (cy + Math.sin(a - t) * r).toFloat())
+            ico.lineTo((cx + Math.cos(a + t) * r).toFloat(), (cy + Math.sin(a + t) * r).toFloat())
+            ico.lineTo((cx + Math.cos(a + d) * body).toFloat(), (cy + Math.sin(a + d) * body).toFloat())
+        }
+        ico.close(); ico.addCircle(cx, cy, hole, Path.Direction.CCW)
+        fill.color = ink; c.drawPath(ico, fill)
+        ico.fillType = Path.FillType.WINDING
     }
 
     /** A clipboard: a board, its clip and two lines of text. */
@@ -500,12 +515,20 @@ class KeysView(context: Context) : View(context) {
         c.drawLine(box2.left + w * 0.22f, box2.top + h * 0.72f, box2.right - w * 0.40f, box2.top + h * 0.72f, line)
     }
 
-    /** The translate icon: "A" on an arrow that points to "ES" (a rounded box with the two letters; lit while translating is on). */
+    /** The translate icon: an A, an arrow and ES (English to Spanish), drawn with lines for the arrow (no font symbol). */
     private fun drawTranslate(c: Canvas, b: RectF, ink: Int) {
-        text.color = ink; text.textSize = (b.bottom - b.top) * 0.36f; text.typeface = Typeface.DEFAULT_BOLD
-        val fm = text.fontMetrics
-        c.drawText("A\u2192ES", b.centerX(), b.centerY() - (fm.ascent + fm.descent) / 2f, text)
-        text.typeface = Typeface.DEFAULT
+        val h = b.height()
+        text.color = ink; text.typeface = Typeface.DEFAULT_BOLD; text.textSize = h * 0.40f; text.textAlign = Paint.Align.LEFT
+        val fm = text.fontMetrics; val base = b.centerY() - (fm.ascent + fm.descent) / 2f
+        val wA = text.measureText("A"); val wEs = text.measureText("ES"); val arrow = h * 0.30f; val g = h * 0.08f
+        var x = b.centerX() - (wA + g + arrow + g + wEs) / 2f
+        c.drawText("A", x, base, text); x += wA + g
+        line.color = ink; line.strokeWidth = dp(1.8f)
+        val ay = b.centerY(); c.drawLine(x, ay, x + arrow, ay, line)
+        c.drawLine(x + arrow - h * 0.08f, ay - h * 0.08f, x + arrow, ay, line); c.drawLine(x + arrow - h * 0.08f, ay + h * 0.08f, x + arrow, ay, line)
+        x += arrow + g
+        c.drawText("ES", x, base, text)
+        text.textAlign = Paint.Align.CENTER; text.typeface = Typeface.DEFAULT
     }
 
     private fun drawTrail(c: Canvas) {
