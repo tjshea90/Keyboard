@@ -98,7 +98,7 @@ PY
 )" || GEOM=""
 if [ -z "$GEOM" ]; then bad "could not find the keyboard window frame"; else ok "keyboard window: ${GEOM:0:60}"; fi
 # the keyboard window must be only as tall as the keyboard (0.2.0-alpha1 had a bug: an overlay view made it the whole screen). dp height of the window vs the screen:
-SCREEN_DP="$(adb shell wm size | grep -oE '[0-9]+x[0-9]+' | tail -1 | cut -dx -f2)"
+SCREEN_PX="$(adb shell wm size | grep -oE '[0-9]+x[0-9]+' | tail -1 | cut -dx -f2)"; SCREEN_DP="$SCREEN_PX"
 WIN_DP="$(echo "$GEOM" | awk '{print $5}')"
 python3 -I - "${WIN_DP:-0}" "${SCREEN_DP:-0}" "${DENS:-160}" <<'PY' && ok "the keyboard window is as tall as the keyboard, not the screen (${WIN_DP} dp)" || bad "the keyboard window is far too tall (${WIN_DP} dp; screen $SCREEN_DP px)"
 import sys
@@ -132,6 +132,20 @@ if [ -n "$GEOM" ]; then
   case "$T" in *[a-z]" ") [ "${#T}" -ge 4 ] && ok "a glide typed a word with a trailing space ('$T')" || bad "the glide typed too little ('$T')" ;; *) bad "the glide did not type a word (field: '$T')" ;; esac
   # ---- 6 globe key: must not crash
   adb shell input tap $(key globe); sleep 2; shot globe
+  adb shell input keyevent KEYCODE_BACK; sleep 1                 # (closes the keyboard picker if Android showed one)
+
+  # ---- 8 floating (N3): long press the neon bar; the window becomes the whole screen, only the panel takes touches, the app behind is not resized
+  adb shell input tap $TAP; sleep 3                                # the field again: the docked keyboard shows
+  GX=$(key grip | cut -d' ' -f1); GY=$(key grip | cut -d' ' -f2)
+  adb shell input swipe $GX $GY $GX $GY 900; sleep 2.5
+  adb shell dumpsys window windows > "$OUT/dumpsys-window-float.txt"; shot floating
+  python3 -I tools/emu/float_check.py "$OUT/dumpsys-window-float.txt" "$SCREEN_PX" > "$OUT/float-check.txt" 2>&1; FC=$?
+  cat "$OUT/float-check.txt"
+  [ "$FC" -eq 0 ] && ok "a long press on the neon bar floated the keyboard (the window is the whole screen)" || bad "the keyboard did not float after a long press on the bar (float_check exit $FC)"
+  # the field behind the floating keyboard must still take a tap, and the keyboard must stay up
+  adb shell input tap $TAP; sleep 1
+  adb shell dumpsys input_method > "$OUT/dumpsys-ime-float.txt"
+  grep -q "mInputShown=true" "$OUT/dumpsys-ime-float.txt" && ok "the floating keyboard stays up while the field behind it is tapped" || bad "the keyboard went away when the field behind it was tapped"
 fi
 
 # ---- 7 no crash
