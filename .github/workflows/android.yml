@@ -121,6 +121,8 @@ jobs:
         with:
           persist-credentials: false
       - uses: ./.github/actions/setup-build
+        with:
+          gradle-cache: 'false'   # a quiet log after the publish step: its error message is the last thing in the job log
 
       - name: Build the release APK (R8, signed with the dev key in signing/dev)
         run: ./gradlew :ime:assembleRelease --console=plain

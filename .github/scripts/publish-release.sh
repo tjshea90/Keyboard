@@ -4,6 +4,9 @@
 # GitHub creates the tag itself (`--target <sha>`): a tag PUSH from the Claude sandbox is refused (403), so nothing ever pushes one.
 # Needs GH_TOKEN (the workflow's token, contents: write). Optional env: NOTE (what changed).
 set -euo pipefail
+# a failure names itself in the job log (an annotation), so the reason is visible without opening the whole step output
+trap 'rc=$?; echo "::error title=publish-release.sh failed::line $LINENO: $BASH_COMMAND (exit $rc)"' ERR
+gh --version | head -1
 cd "$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 . tools/appinfo.sh
 
