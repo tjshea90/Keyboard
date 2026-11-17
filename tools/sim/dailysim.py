@@ -236,11 +236,10 @@ def type_round(rep, scene, field_value, tap_target, glide=True):
         ok += 1 if d == 0 else 0
         rep.row(scene + " tap '%s'" % ph[:24], "OK" if d == 0 else "WARN", "got %r (distance %d, %.1fs%s)" % (got[:50], d, time.time() - t0, ", %d keys missing" % miss if miss else ""))
         # clear for the next phrase: select all + delete through the page (long Backspace is slow): the driver uses repeated Backspace through the keyboard
-        for _ in range(len(got) + 2):
-            km2 = drive.read_keymap() or km
-            if "back" in km2.keys:
-                drive.tap(*km2.keys["back"])
-        time.sleep(0.5)
+        km2 = drive.read_keymap() or km
+        if "back" in km2.keys:
+            drive.inject_taps([km2.keys["back"]] * (len(got) + 2), hold=0.03, gap=0.06)
+        time.sleep(0.6)
     rep.row(scene + " tap summary", "INFO", "%d of %d phrases exact" % (ok, tot))
     if not glide:
         return
