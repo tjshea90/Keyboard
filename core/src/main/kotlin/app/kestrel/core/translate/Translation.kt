@@ -157,7 +157,7 @@ object Translation {
 
     private const val HEX = "0123456789ABCDEF"
 
-    /** application/x-www-form-urlencoded, UTF-8 (written here so that the core imports nothing from java.net). */
+    /** application/x-www-form-urlencoded, UTF-8 (written here so that the core imports no networking package). */
     fun enc(s: String): String {
         val sb = StringBuilder()
         for (b in s.toByteArray(Charsets.UTF_8)) {

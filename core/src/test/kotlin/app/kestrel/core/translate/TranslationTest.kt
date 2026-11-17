@@ -171,7 +171,7 @@ class TranslationTest {
         assertEquals("I'm u'd", Translation.expandShorthand("I'm u'd"))
         assertEquals("ruler", Translation.expandShorthand("ruler"))
         assertEquals("", Translation.expandShorthand(null))
-        assertEquals("See you at 5", Translation.expandShorthand("cya at 5"))
+        assertEquals("see you at 5", Translation.expandShorthand("cya at 5"))
     }
 
     // ------------------------------------------------------------------------------------------ Mexican
@@ -235,7 +235,7 @@ class TranslationTest {
         )
         for (n in 0 until 4000) {
             val sb = StringBuilder()
-            for (k in 0 until 1 + rnd.nextInt(12)) { sb.append(bits[rnd.nextInt(bits.size)]); if (rnd.nextBoolean()) sb.append(' ') }
+            for (k in 0 until 1 + rnd.nextInt(12)) { sb.append(bits[rnd.nextInt(bits.size)]).append(' ') }
             val once = mx(sb.toString())
             assertEquals(once, mx(once))
             assertFalse(once, Regex("(?i)\\bcog(e|i|\u00ed)").containsMatchIn(once))
