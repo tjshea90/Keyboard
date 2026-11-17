@@ -122,6 +122,25 @@ object PredictionEval {
         return Result(next, comp[0], comp[1], comp[2], shown[0], shown[1], shown[2], ksr, allKeys, saved, tn, tm, td, ts, fix, changed, rights, sNext, sComp, if (sKeys == 0) 0.0 else sSaved.toDouble() / sKeys, nextEmpty, nextShort, notes)
     }
 
+    /**
+     * Gliding running text: every word of the sentences is glided by the simulated thumb ([noise]) with the words before it as context, the way a person glides a message. Counts the first guess and the first three.
+     * (GlideEval draws its contexts out of the list's own pairs, which proves nothing about pairs that were added from other text; this one uses sentences nobody trained on.)
+     */
+    fun glideInContext(lex: BinaryLexicon, keys: GlideKeys, sentences: List<List<String>>, noise: SimNoise, seed: Long = 5, maxSentences: Int = 600): Tally {
+        val sim = GestureSim(keys, Random(seed))
+        val dec = GlideDecoder(keys, GlideParams())
+        val lexicons = listOf<GlideLexicon>(lex)
+        val t = Tally("glide in a sentence, ${noise.name}")
+        for (s in sentences.take(maxSentences)) for ((i, w) in s.withIndex()) {
+            if (w.length < 2 || lex.idOf(w) < 0) continue
+            val path = sim.path(w, noise) ?: continue
+            val c = dec.decode(path.xs, path.ys, path.xs.size, lexicons, if (i >= 1) s[i - 1] else null, 3, if (i >= 2) s[i - 2] else null)
+            val key = String(GlideLetters.keyOf(w))
+            t.add(c.isNotEmpty() && String(GlideLetters.keyOf(c[0].text)) == key, c.any { String(GlideLetters.keyOf(it.text)) == key })
+        }
+        return t
+    }
+
     /** One realistic slip: 0 a neighbouring key instead of an inner letter, 1 an inner letter left out, 2 an inner letter doubled, 3 two inner letters swapped. Null when the word cannot take that slip. */
     fun slip(w: String, kind: Int, keys: GlideKeys, rnd: Random): String? {
         val n = w.length
@@ -162,6 +181,7 @@ object PredictionEval {
         val r = run(lex, null, keys, sentences, searches, verbose)
         println("sentences: ${sentences.size}, words: ${sentences.sumOf { it.size }}, searches: ${searches.size}")
         println(report(r))
+        for (nz in listOf(SimNoise.NORMAL, SimNoise.SLOPPY)) println(glideInContext(lex, keys, sentences, nz).toString())
         if (verbose) for (n in r.notes) println(n)
     }
 }
