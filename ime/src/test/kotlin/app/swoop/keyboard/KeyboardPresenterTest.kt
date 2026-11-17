@@ -79,6 +79,8 @@ class KeyboardPresenterTest {
         private fun inlineReport() { if (sameProcess) report() }
         fun ev(a: Int, x: Float, y: Float) { val t = SystemClock.uptimeMillis(); view.dispatchTouchEvent(MotionEvent.obtain(t, t, a, x, y, 0)); if (!sameProcess) report() }
         fun tap(label: String) { val (x, y) = view.centerOf(label)!!; ev(MotionEvent.ACTION_DOWN, x, y); ev(MotionEvent.ACTION_UP, x, y) }
+        /** A letter key whatever the shift state shows on it (capitals while Shift is on). */
+        fun tapLetter(c: String) { tap(if (view.centerOf(c) != null) c else c.uppercase()) }
         /** The finger draws [word] over the keys (straight lines between the letters' centres, a point every few pixels) and lifts. */
         fun glide(word: String) {
             val pts = ArrayList<Pair<Float, Float>>()
@@ -284,9 +286,9 @@ class KeyboardPresenterTest {
      */
     @Test fun anEditorInTheKeyboardsOwnProcessReportsInsideTheEditCallAndNothingGoesWrong() {
         val r = Rig(inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_CAP_SENTENCES or InputType.TYPE_TEXT_FLAG_MULTI_LINE, glidePref = true, suggest = true, sameProcess = true)
-        r.tap("h"); r.tap("i"); r.tap("\u232B"); r.tap("?123"); r.tap("?"); r.tap("a")
+        r.tapLetter("h"); r.tapLetter("i"); r.tap("\u232B"); r.tap("?123"); r.tap("?"); r.tapLetter("a")
         assertEquals("the space after ? and the capital, as on every other Android", "H? A", r.text)
-        r.tap("."); r.tap("space"); r.tap("b")
+        r.tap("."); r.tap("space"); r.tapLetter("b")
         assertEquals("H? A. B", r.text)
         assertEquals("the keyboard's picture of the text is the text", r.text, r.presenter.controller.before)
         assertEquals(r.text.length, r.presenter.controller.selStart); assertEquals(r.text.length, r.presenter.controller.selEnd)
