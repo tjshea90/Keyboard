@@ -37,3 +37,7 @@
 >
 > Next I'll do the emulator test in CI, then the tap-typing decoder and word suggestions.
 <!-- sha:46edfced5400 -->
+
+## 2026-11-17T00:53:55Z
+> The repo is public now, so before the signing step I'm checking three things: that it really is public, how the earlier full CI build ended, and what the Browser's emulator workflow looks like (read-only).
+<!-- sha:1ddc9971f101 -->
