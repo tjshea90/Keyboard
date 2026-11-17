@@ -822,8 +822,15 @@ class KeysView(context: Context) : View(context) {
         const val SPACE_HOLD_MS = 600L
         private const val TOP_ROW = "qwertyuiop"
         private const val DIGITS = "1234567890"
-        /** The strip of guesses above the keys (glide typing on). */
-        const val STRIP_H_DP = 36f
+        /** The strip above the keys: the toolbar icons (settings, clipboard, translate) and the guesses. */
+        const val STRIP_H_DP = 40f
+        /** The photo's geometry: the gap across a row is this share of the key pitch, the gap between rows this many times the gap across, a row is this many pitches tall (within the dp bounds), a letter key's corner is this share of its width. */
+        const val GAP_FRAC = 0.14f
+        const val GAP_Y_MUL = 1.5f
+        const val ROW_H_PITCHES = 1.35f
+        const val ROW_H_MIN_DP = 44f
+        const val ROW_H_MAX_DP = 56f
+        const val KEY_R_FRAC = 0.22f
         /** One toolbar icon is this wide. */
         const val TOOL_W_DP = 40f
         const val STRIP_HOLD_MS = 500L
