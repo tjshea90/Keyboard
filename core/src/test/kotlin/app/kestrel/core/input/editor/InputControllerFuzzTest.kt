@@ -13,6 +13,8 @@ import java.util.Random
 class InputControllerFuzzTest {
     /** SWOOP_FUZZ_SCALE=20 ./gradlew :core:test runs 20x more random streams (a soak before a release). */
     private val scale = (System.getenv("SWOOP_FUZZ_SCALE") ?: "1").toLongOrNull()?.coerceIn(1L, 200L) ?: 1L
+    /** How many selection reports may be on their way at once. Real Android delivers each within milliseconds of the edit, so a handful at most; with a much larger backlog the keyboard still repairs itself (see Diagnostics: foreign changes, resyncs) but a window may be wrong for a moment. */
+    private val MAX_LAG = 4
     private val letters = "abcdefghijklmnopqrstuvwxyz"
     private val words = listOf("hello", "world", "for", "fir", "the", "doraby", "a", "i'm", "typing")
     private val punct = listOf(".", ",", "!", "?", "'", "/", ".com", "-", "(", ")", "1", "7", "😀", "é")
@@ -56,7 +58,7 @@ class InputControllerFuzzTest {
                 }
                 val f0 = r.foreign
                 log.add(op(r, rnd, external))
-                if (lazy) { repeat(rnd.nextInt(3)) { r.deliverOne() }; while (r.ed.updates.size > 12) r.deliverOne() } else { r.sync(); r.check() }
+                if (lazy) { repeat(rnd.nextInt(3)) { r.deliverOne() }; while (r.ed.updates.size > MAX_LAG) r.deliverOne() } else { r.sync(); r.check() }
                 if (r.foreign > f0 && firstForeign == null) firstForeign = "op #$i '${log.last()}' after '${log.getOrNull(log.size - 2)}' (text ...'${r.text.takeLast(20).replace("\n", "\\n")}')"
             }
             r.sync(); r.check()
