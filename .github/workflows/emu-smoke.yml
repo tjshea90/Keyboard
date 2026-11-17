@@ -1,0 +1,54 @@
+# Emulator smoke test (KB-100 / KB-703 lite): the first proof that Swoop works on a REAL Android (API 29 = the tablet's version) on a GitHub runner with KVM.
+# Dispatch-only (never a push trigger). It builds the debug APK, boots an emulator, and runs tools/emu/smoke.sh: registers, enable/choose, show, tap keys,
+# glide, Backspace, globe key, no crash. Logs and screenshots of the EMULATOR (never of anyone's real screen) are kept as workflow artifacts.
+name: Emulator smoke test
+
+on:
+  workflow_dispatch:
+    inputs:
+      api:
+        description: 'Android API level of the emulator (29 = the tablet, 36 = Android 16)'
+        type: string
+        default: '29'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: emu-smoke-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-build
+      - name: Build the debug APK
+        run: ./gradlew :ime:assembleDebug --console=plain
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Boot the emulator and run the smoke test
+        uses: reactivecircus/android-emulator-runner@v2.33.0
+        with:
+          api-level: ${{ inputs.api }}
+          arch: x86_64
+          target: default
+          profile: Nexus 7
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -camera-front none
+          script: bash tools/emu/smoke.sh
+      - name: Keep the logs and screenshots of the emulator
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: emu-smoke-${{ inputs.api }}
+          path: emu-out
+          retention-days: 7
+          if-no-files-found: ignore
