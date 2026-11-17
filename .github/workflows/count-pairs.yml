@@ -57,9 +57,9 @@ jobs:
           set -o pipefail
           T="$RUNNER_TEMP/src/eng_sentences.tsv.bz2"
           S="$RUNNER_TEMP/src/soda.txt"
-          python3 -I tools/glide/count_pairs.py --vocab "$LM/vocab.txt" --text "$T" --tsv-column 3 --min-count 2 --top-k 150 --holdout-every 40 --holdout-out "$LM/heldout_tatoeba.txt" --out "$LM/pairs_tatoeba.txt" --starters "$LM/starters_tatoeba.txt" 2>&1 | tee "$LM/stats.txt"
+          python3 -I tools/glide/count_pairs.py --vocab "$LM/vocab.txt" --text "$T" --tsv-column 3 --min-count 3 --top-k 3000 --holdout-every 40 --holdout-out "$LM/heldout_tatoeba.txt" --out "$LM/pairs_tatoeba.txt" --starters "$LM/starters_tatoeba.txt" 2>&1 | tee "$LM/stats.txt"
           if [ -f "$S" ]; then
-            python3 -I tools/glide/count_pairs.py --vocab "$LM/vocab.txt" --text "$S" --min-count 2 --top-k 150 --out "$LM/pairs_soda.txt" --starters "$LM/starters_soda.txt" 2>&1 | tee -a "$LM/stats.txt"
+            python3 -I tools/glide/count_pairs.py --vocab "$LM/vocab.txt" --text "$S" --min-count 3 --top-k 3000 --out "$LM/pairs_soda.txt" --starters "$LM/starters_soda.txt" 2>&1 | tee -a "$LM/stats.txt"
           fi
           rm -f "$LM/vocab.txt"
           ls -l "$LM"
