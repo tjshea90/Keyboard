@@ -41,6 +41,14 @@ class KeyboardRootInsetsTest {
         assertEquals("and back when the bar goes (a different navigation mode)", plain, heightOf(root)); assertNull(panel.background)
     }
 
+    @Test fun aBarAtTheSideOfASidewaysPhoneIsRespectedToo() {
+        val root = KeyboardRoot(app)
+        val side = WindowInsets.Builder().setInsets(WindowInsets.Type.navigationBars(), Insets.of(0, 0, 120, 0)).build()
+        root.dispatchApplyWindowInsets(side)
+        val panel = root.getChildAt(0)
+        assertEquals("the keys stop before the bar at the right", 120, panel.paddingRight); assertEquals(0, panel.paddingBottom)
+    }
+
     @Test fun aFloatingKeyboardStaysAboveTheBarToo() {
         val root = KeyboardRoot(app); root.dispatchApplyWindowInsets(bar(96)); root.requestFloating(true)
         assertTrue(root.floating)

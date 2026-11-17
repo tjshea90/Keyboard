@@ -219,8 +219,7 @@ class KeyboardRoot(context: Context) : FrameLayout(context), GripBar.Host {
      * Android 15+ (edge to edge, and this app targets 36): the system navigation bar is drawn OVER the bottom of the keyboard window, so without this the bottom row (?123, space, Enter) sat under it. The keys stand
      * above that bar and the keyboard's own colour fills the strip behind it. Zero before Android 15, where the window already ends above the bar (the Android 10 tablet), and whenever the bar does not overlap.
      */
-    private var navBottom = 0
-    private fun navInset(ins: android.view.WindowInsets): Int = if (Build.VERSION.SDK_INT >= 35) ins.getInsets(android.view.WindowInsets.Type.navigationBars()).bottom else 0
+    private var navBottom = 0; private var navLeft = 0; private var navRight = 0          // (a phone turned sideways with three-button navigation has the bar at a side)
 
     // the corner grab
     private var resizeCorner = -1
@@ -240,7 +239,13 @@ class KeyboardRoot(context: Context) : FrameLayout(context), GripBar.Host {
         grip.host = this
         addView(panel, LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.BOTTOM))
         setWillNotDraw(false)
-        setOnApplyWindowInsetsListener { _, ins -> val n = navInset(ins); if (n != navBottom) { navBottom = n; applyMode() }; ins }
+        setOnApplyWindowInsetsListener { _, ins ->
+            if (Build.VERSION.SDK_INT >= 35) {
+                val n = ins.getInsets(android.view.WindowInsets.Type.navigationBars())
+                if (n.bottom != navBottom || n.left != navLeft || n.right != navRight) { navBottom = n.bottom; navLeft = n.left; navRight = n.right; applyMode() }
+            }
+            ins
+        }
         applyMode()
     }
 
@@ -292,9 +297,9 @@ class KeyboardRoot(context: Context) : FrameLayout(context), GripBar.Host {
         grip.floating = floating
         keys.floatMul = if (floating) hMul else 1f
         val f = frame()
-        panel.setPadding(f, f / 2, f, f + (if (floating) 0 else navBottom))
+        panel.setPadding(f + (if (floating) 0 else navLeft), f / 2, f + (if (floating) 0 else navRight), f + (if (floating) 0 else navBottom))
         panel.background = if (floating) GradientDrawable().apply { setColor(keys.backgroundColor); cornerRadius = 16 * d; setStroke((2 * d).toInt(), grip.accent) }
-            else if (navBottom > 0) android.graphics.drawable.ColorDrawable(keys.backgroundColor) else null
+            else if (navBottom > 0 || navLeft > 0 || navRight > 0) android.graphics.drawable.ColorDrawable(keys.backgroundColor) else null
         panel.elevation = if (floating) 12 * d else 0f
         minimumHeight = if (floating) screenH() else 0
         requestLayout()
