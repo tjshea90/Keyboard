@@ -301,7 +301,7 @@ class KeyboardPresenterTest {
     /** Owner M1: "exactly like the photo", and the photo is the dark theme: a phone or tablet left in day mode still gets the dark keyboard until the person picks Automatic or Light. */
     @Test fun theKeyboardIsDarkUntilAnotherLookIsChosen() {
         val r = Rig()
-        assertEquals(Settings.DEFAULT_THEME, Settings(r.context).theme); assertEquals("Dark", Settings.THEMES[Settings.DEFAULT_THEME])
+        assertEquals(Settings.DEFAULT_THEME, Settings(app).theme); assertEquals("Dark", Settings.THEMES[Settings.DEFAULT_THEME])
         assertEquals(1, r.view.themeMode)
         assertEquals("the dark teal of the photo behind the keys, although this test runs in day mode", 0xFF0D1D1D.toInt(), r.view.backgroundColor)
     }
