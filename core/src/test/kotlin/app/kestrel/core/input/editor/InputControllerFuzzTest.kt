@@ -22,7 +22,7 @@ class InputControllerFuzzTest {
     /** [lagging]: reports arrive late. KNOWN LIMITATION (TASKS KB-101b): after Enter or a cursor move longer than the window the selection is unknown until the editor's reports catch up; with lagging reports the window can be wrong for a moment, so those two operations are left out of the lagging streams (they are covered with prompt reports and in the unit tests). */
     private fun op(r: Rig, rnd: Random, external: Boolean, lagging: Boolean = false): String {
         val c = r.c
-        val k = rnd.nextInt(if (external) 24 else 20)
+        val k = rnd.nextInt(if (external) 28 else 24)
         return when (k) {
             0, 1, 2, 3, 4, 5, 19 -> { val ch = letters[rnd.nextInt(26)].toString(); c.type(ch); "type $ch" }
             6 -> { val p = punct[rnd.nextInt(punct.size)]; c.type(p); "type '$p'" }
@@ -36,9 +36,13 @@ class InputControllerFuzzTest {
             16 -> { c.lockShift(); "lock" }
             17 -> { c.setShift(ShiftState.OFF); "shiftOff" }
             18 -> { val d = if (lagging) rnd.nextInt(9) - 4 else rnd.nextInt(121) - 60; c.moveCursor(d); "move $d" }
-            20 -> { val p = rnd.nextInt(r.text.length + 1); r.ed.userMove(p); "USER move $p" }
-            21 -> { val t = listOf("PASTED", "x", "\n", "\uD83D\uDE00")[rnd.nextInt(4)]; r.ed.userInsert(t); "USER insert '$t'" }
-            22 -> { val a = rnd.nextInt(r.text.length + 1); val b = minOf(r.text.length, a + rnd.nextInt(5)); r.ed.userSelect(a, b); "USER select $a-$b" }
+            20 -> { val w = words[rnd.nextInt(words.size)]; val ok = c.pickWord(w); "pick $w=$ok" }
+            21 -> { val b = listOf(" ", ".", ",")[rnd.nextInt(3)]; c.typeCorrected("the", b); "fix the$b" }
+            22 -> { for (ch in "teh") c.type(ch.toString()); c.typeCorrected("the", " "); "typo teh -> the" }
+            23 -> { val w = c.wordBeforeCursor(); if (w != null) c.contextBefore(w); "peek $w" }
+            24 -> { val p = rnd.nextInt(r.text.length + 1); r.ed.userMove(p); "USER move $p" }
+            25 -> { val t = listOf("PASTED", "x", "\n", "\uD83D\uDE00")[rnd.nextInt(4)]; r.ed.userInsert(t); "USER insert '$t'" }
+            26 -> { val a = rnd.nextInt(r.text.length + 1); val b = minOf(r.text.length, a + rnd.nextInt(5)); r.ed.userSelect(a, b); "USER select $a-$b" }
             else -> if (rnd.nextInt(6) == 0) { r.ed.appSetText("app " + rnd.nextInt(1000) + " text"); "APP setText" } else { r.ed.userMove(0); "USER move 0" }
         }
     }
