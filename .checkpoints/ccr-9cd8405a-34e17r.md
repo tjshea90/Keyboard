@@ -1,13 +1,13 @@
-# CHECKPOINT 284 — read me first, then TASKS.md
+# CHECKPOINT 285 — read me first, then TASKS.md
 
-**Written:** 2026-11-17T08:35:38Z · **tests:** all 1 fast checks green (gradle suite: see ship.sh)
-**Branch:** `ccr-9cd8405a-34e17r` · **builds on:** `17eb3c4` (this checkpoint is the commit after it)
+**Written:** 2026-11-17T08:44:02Z · **tests:** all 1 fast checks green (gradle suite: see ship.sh)
+**Branch:** `ccr-9cd8405a-34e17r` · **builds on:** `1367803` (this checkpoint is the commit after it)
 
 ## Just done
-M6 default sentence caps, M9 glide-vs-tap (stayedOnKey + minLength 0.45), M1 new Gboard-like layout (ROW_UNITS 11.5, ?123 bottom right, enter on home row), M5 symbols auto-return, toolbar strip (cog/clipboard/ES), M2 ClipboardStore+ClipboardPanel+ClipboardHost wired, EmojiMap + emoji asset, settings rows; two helper agents running (lexicon rebuild ae9303e340af4888b, translate engine aa9042f6cd2a71e87)
+M12/M15 dictionary (core UserDictionary, engine block/add/lookup, DictionaryActivity, strip long-press confirm), M11 emoji chips, M7 translate wired (helper's engine; Enter translates/Enter sends; INTERNET permission), ime tests+lint green
 
 ## Do this next
-TODO in order: (1) fix ime tests broken by layout (KeysViewTest, KeyboardPresenterTest, SetupActivityTest) via ./gradlew :ime:testDebugUnitTest; (2) UserDictionary in core + GlideTyping block/add API + DictionaryActivity (M12,M15) + presenter long-press confirm (KeysView.onCandidateLong/onRemoveWord already exist); (3) emoji chips in presenter (EmojiMap + Paint.hasGlyph; assets/emoji/en.tsv); (4) M8 squeeze docked keyboard in KeyboardRoot/GripBar (prefs DOCK_FRAC/DOCK_X exist); (5) wire translate when helper aa90 finishes (toolbar TOOL_TRANSLATE -> presenter.onToggleTranslate); (6) M14 persistence tests; (7) version 0.4.0 + ship
+M8 squeeze docked keyboard: KeyboardRoot docked width = Settings.dockFrac/dockX, GripBar pinch + end arrows + horizontal drag, onComputeInsets touchable region; then M14 persistence test + M10/M13 when helper ae9303e340af4888b reports; then add ime tests for toolbar/clipboard/hideLetters/emoji/glide-short-swipe; version 0.4.0; ship
 
 *(resuming? CLAUDE.md's "FIRST ACTION OF EVERY SESSION" says how; the briefing is tools/resume.sh. Do that first, or autosave may stay off all session.)*
 
@@ -16,6 +16,7 @@ TODO in order: (1) fix ime tests broken by layout (KeysViewTest, KeyboardPresent
 
 ## Last ten checkpoints
 ```
+  bba95ae ckpt 284: M6 default sentence caps, M9 glide-vs-tap (stayedOnKey + minLength 0.45), M1 n
   625c67b ckpt 283: recorded the owner's 16 scheduled requests M1-M16 in TASKS.md
   ec5e72e ckpt 282: owner's reversal done: the 123 key and symbols page are back (space bar 4.9 un
   4a31f70 ckpt 279: owner reversed N11 (wants the 123 key back: he needs the special symbols). Cod
@@ -25,8 +26,7 @@ TODO in order: (1) fix ime tests broken by layout (KeysViewTest, KeyboardPresent
   8ea6088 ckpt 249: RELEASE swoop-v0.2.1-alpha1 (code 3) published (run 44009075923 green, pinned 
   6f0e9b4 ckpt 245: swoop-v0.2.1-alpha1 (code 3) gated and android.yml dispatched (floating keyboa
   a7d984f ckpt 244: gated swoop-v0.2.1-alpha1 (ime code 3) and pushed it: handoff self-test, unit 
-  5cb34be ckpt 241: N3 floating keyboard proven on an Android 10 emulator (run 44007433798: 0 fail
 ```
 
-(32 automatic checkpoint(s) since the last deliberate one — the
+(16 automatic checkpoint(s) since the last deliberate one — the
 session was still mid-step. `git diff` against it shows what changed.)
