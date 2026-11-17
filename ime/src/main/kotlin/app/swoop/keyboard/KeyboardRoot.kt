@@ -23,6 +23,11 @@ import app.kestrel.core.input.FloatingMath
 /** The transparent layer above the keys: draws what changes while a finger is down ([KeysView.drawOverlay]) and never takes a touch. */
 class KeyOverlay(context: Context, private val keys: KeysView) : View(context) {
     init { isClickable = false; isFocusable = false; importantForAccessibility = IMPORTANT_FOR_ACCESSIBILITY_NO }
+    /**
+     * Exactly as big as the keys and never bigger: a plain View that is asked to fill its parent takes the WHOLE screen height when the parent only says "at most" (that is how the keyboard window is measured), and
+     * the keyboard window would cover the app. The keys view sits before this one in the pane, so it is measured already.
+     */
+    override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) { setMeasuredDimension(keys.measuredWidth, keys.measuredHeight) }
     override fun onDraw(c: Canvas) { keys.drawOverlay(c) }
     override fun onTouchEvent(event: MotionEvent): Boolean = false
 }
@@ -155,7 +160,7 @@ class KeyboardRoot(context: Context) : FrameLayout(context), GripBar.Host {
 
     init {
         pane.addView(keys, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
-        pane.addView(overlay, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
+        pane.addView(overlay, FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT))
         keys.overlay = overlay
         panel.orientation = LinearLayout.VERTICAL
         panel.addView(grip, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))

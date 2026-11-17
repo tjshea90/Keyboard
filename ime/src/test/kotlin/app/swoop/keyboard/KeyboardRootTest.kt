@@ -64,6 +64,18 @@ class KeyboardRootTest {
         assertTrue("no mode change reported", c.modes.isEmpty())
     }
 
+    /** The bug that this test exists for: the keyboard window is measured "at most the screen"; the overlay layer used to fill all of it, so the keyboard covered the whole app. */
+    @Test fun theDockedKeyboardIsOnlyAsTallAsItsKeysNotTheWholeScreen() {
+        val (r, _) = root()
+        val keysH = r.keys.measuredHeight; val gripH = r.grip.measuredHeight
+        assertEquals("the window is the keys plus the bar", keysH + gripH, r.height); assertTrue("${r.height} of $sh px", r.height < sh / 2)
+        assertEquals(keysH, r.overlay.measuredHeight); assertEquals(r.keys.measuredWidth, r.overlay.measuredWidth)
+    }
+
+    @Test fun theOldSingleViewKeyboardWasAlsoNotTheWholeScreen() {
+        val v = KeysView(app); v.measure(View.MeasureSpec.makeMeasureSpec(sw, View.MeasureSpec.EXACTLY), View.MeasureSpec.makeMeasureSpec(sh, View.MeasureSpec.AT_MOST)); assertTrue(v.measuredHeight < sh / 2)
+    }
+
     @Test fun aLongPressOnTheBarLiftsTheKeyboardOffAndItFollowsTheFinger() {
         val (r, c) = root()
         val (gx, gy) = gripCentre(r)
