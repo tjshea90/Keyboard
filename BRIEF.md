@@ -29,7 +29,7 @@ Q17 in apps with their own Send button, Enter translates and the owner taps the 
 kotlin-stdlib only (no AppCompat/Compose/Material/Room/WorkManager/coroutines); `:core` pure JVM on the Java 8 API surface (`-Xjdk-release=8`); never block the UI thread; no `largeHeap`; zero allocation on the tap path; the keyboard does nothing while idle (no timers, no services other than the IME, no boot receiver, no background network).
 Budgets (plan 7.1, proposals until measured on the tablet): APK < 6 MB, PSS < 40 MB with the keyboard up, < 25 MB hidden, glide lift -> word p95 < 100 ms, cold first show < 400 ms.
 
-## The references (READ-ONLY, another Claude account works in them)
+## The references (LinkMeter READ-ONLY; the Browser repo is LINKED since 2026-11-17: docs/KESTREL-LINK.md; another Claude account works in both)
 `tjshea90/Browser` at commit `063b2761fff54bc7b3f5c69a44f72c41541ee202` (the glide engine; checked out at `/home/user/Browser` in the cloud sandbox when present: read with absolute paths or `git -C`, NEVER `cd` there, its hooks would run) and `tjshea90/LinkMeter` at `283d63ee6aa62b2f91c4a2788ad1af9ad14ec0a7` (translation; fetched at KB-600). Blob ids of every file to port are in plan section 3.1: `git -C <ref> rev-parse --short=10 HEAD:<path>` must match before copying.
 
 ## Gates (owner-visible milestones: stop and report in plain words, say what was NOT run on the tablet)
