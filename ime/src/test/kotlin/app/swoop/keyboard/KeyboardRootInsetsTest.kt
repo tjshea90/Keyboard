@@ -6,6 +6,7 @@ import android.view.View
 import android.view.WindowInsets
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -51,6 +52,9 @@ class KeyboardRootInsetsTest {
         assertEquals("the dark teal of the photo behind the bar row and the keys", 0xFF0D1D1D.toInt(), paint()); assertEquals(root.keys.backgroundColor, paint())
         root.keys.themeMode = 2                                              // the person picks Light in Settings
         assertEquals(0xFFE4EDED.toInt(), paint())
+        assertEquals("the strips beside a squeezed keyboard are in the same colour", paint(), (root.background as android.graphics.drawable.ColorDrawable).color)
+        root.requestFloating(true)
+        assertNull("floating, the window is the whole screen and stays transparent: the app shows around the panel", root.background)
     }
 
     @Test fun aBarAtTheSideOfASidewaysPhoneIsRespectedToo() {
