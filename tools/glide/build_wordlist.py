@@ -206,6 +206,8 @@ def main():
             continue
         if f < a.wf_new or hd.get(w, 0) < a.hd_new:
             continue
+        if len(w) == 2 and f < a.short2:
+            continue
         vocab[w] = 'new'
     for w in extras:
         if WORD.match(w) and w not in vocab:
