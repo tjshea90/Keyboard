@@ -353,9 +353,13 @@ class InputController(private val ed: EditorBridge, val stats: InputStats = Inpu
             if (size == CAP) { head = (head + 1) % CAP; size-- }
             val i = (head + size) % CAP; a[i] = s; b[i] = e; size++
         }
-        /** True when (s, e) is one of the expected selections; that one and every older one are forgotten. */
+        /**
+         * True when (s, e) is one of the expected selections; that one and every older one are forgotten. The OLDEST match wins: reports arrive in the order of the edits, and
+         * offsets repeat (type a letter, delete it: the cursor is back where it was), so matching from the newest end would swallow the entries of reports still on their way.
+         * (A merged report that skips some states then leaves their entries behind; stale entries only ever make an external move to the same offset look like ours.)
+         */
         fun matchAndDrop(s: Int, e: Int): Boolean {
-            for (k in size - 1 downTo 0) {
+            for (k in 0 until size) {
                 val i = (head + k) % CAP
                 if (a[i] == s && b[i] == e) { head = (head + k + 1) % CAP; size -= k + 1; return true }
             }
