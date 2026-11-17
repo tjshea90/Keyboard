@@ -331,6 +331,47 @@ def scene_fields(rep):
         time.sleep(1.0)
 
 
+AUTOFIX = [("teh ", "the "), ("dont ", "don't "), ("recieve ", "receive "), ("helo ", "hello "), ("im ", "I'm "), ("wierd ", "weird ")]
+
+
+def scene_autocorrect(rep):
+    """A word typed with a slip and then a space: the keyboard puts the right word in, inside a real Gecko field (the engine replaces composing text), and one Backspace gives the typed word back."""
+    w, h = screen()
+    reset()
+    open_url("http://localhost:%d/f/text" % PORT)
+    st = wait_state(lambda s: s.get("kind") == "text" and s.get("last") == "load", timeout=60)
+    if st.get("last") != "load":
+        rep.row("autocorrect page loaded", "FAIL", "the page never reported")
+        return
+    time.sleep(1.5)
+    drive.tap(w // 2, int(h * 0.30))
+    time.sleep(2.0)
+    km = drive.wait_settled(timeout=15)
+    if km is None or km.page != "letters":
+        rep.row("autocorrect keyboard", "FAIL", "Swoop did not show")
+        return
+    right = 0
+    for typed, want in AUTOFIX:
+        n0 = state().get("events", 0)
+        drive.type_text(typed)
+        wait_state(lambda s: s.get("events", 0) > n0, timeout=5.0, step=0.2)
+        time.sleep(1.0)
+        got = state().get("value", "")
+        ok = got.strip() == want.strip()
+        right += 1 if ok else 0
+        rep.row("autocorrect '%s'" % typed.strip(), "OK" if ok else "WARN", "the page holds %r, wanted %r" % (got, want))
+        drive.backspaces(1)                                                         # Backspace right after the fix: the word as typed comes back
+        time.sleep(1.0)
+        back = state().get("value", "")
+        rep.row("autocorrect '%s' undo" % typed.strip(), "INFO", "after one Backspace the page holds %r" % back)
+        drive.backspaces(len(back) + 3)
+        time.sleep(0.8)
+    rep.row("autocorrect summary", "INFO", "%d of %d slips put right by the space" % (right, len(AUTOFIX)))
+    rep.event("autocorrect", right=right, n=len(AUTOFIX))
+    sh("input keyevent KEYCODE_BACK", check=False)
+    time.sleep(1.0)
+
+
 # ---------------------------------------------------------------------------------------------------------------------------------------------- Kestrel's own screen
 def ui_dump():
     sh("uiautomator dump /sdcard/sim_ui.xml", check=False)
@@ -584,6 +625,7 @@ def main():
         scene_memory(rep, "before")
         if a.suite in ("typing", "all"):
             scene_fields(rep)
+            scene_autocorrect(rep)
             scene_address(rep)
             scene_private(rep)
             scene_memory(rep, "after typing")
@@ -603,6 +645,9 @@ def main():
             pass
         if srv:
             srv.terminate()
+        st = drive.STATS
+        rep.fact("driver: %d key-map reads (%.2f s each on average), %d tap batches with %d taps, the first batch lost and sent again %d time(s)" % (
+            st["reads"], st["read_s"] / max(1, st["reads"]), st["batches"], st["taps"], st["first_batch_lost"]))
         n = rep.write()
         print("daily sim done: %s" % n)
     return 0
