@@ -549,7 +549,7 @@ def scene_private(rep):
 
 PAGES = ["https://en.wikipedia.org/wiki/Android_(operating_system)", "https://news.ycombinator.com/", "https://lite.cnn.com/", "https://developer.mozilla.org/en-US/docs/Web/CSS",
          "https://developer.android.com/guide", "https://docs.python.org/3/tutorial/index.html", "https://kotlinlang.org/docs/home.html", "https://lobste.rs/", "https://apnews.com/",
-         "https://archive.org/", "https://pypi.org/project/requests/", "https://slashdot.org/", "https://github.com/mozilla/gecko-dev", "https://duckduckgo.com/?q=kestrel+browser+android"]
+         "https://archive.org/", "https://text.npr.org/", "https://slashdot.org/", "https://github.com/mozilla/gecko-dev", "https://duckduckgo.com/?q=kestrel+browser+android"]
 
 
 def load_numbers(line):
@@ -590,10 +590,12 @@ def scene_pages(rep, minutes):
     A site that hangs the emulator is a finding of its own (the run waits for Android to come back and goes on)."""
     end = time.time() + minutes * 60
     paints, dones = [], []
+    fails_in_a_row = 0
     for i, url in enumerate(PAGES):
         if time.time() > end:
             rep.row("pages", "INFO", "stopped after the time limit of %d minutes" % minutes)
             break
+        before = len(dones)
         try:
             _one_page(rep, url, paints, dones)
         except Exception as e:
@@ -601,6 +603,10 @@ def scene_pages(rep, minutes):
             rep.row("page " + host, "FAIL", "the step broke: %s %s" % (type(e).__name__, str(e)[:100]))
             if not recover_device(rep, "%s while loading %s" % (type(e).__name__, host)):
                 break
+        fails_in_a_row = 0 if len(dones) > before else fails_in_a_row + 1
+        if fails_in_a_row >= 3:
+            rep.row("pages", "FAIL", "three sites in a row did not load: the emulator's graphics or Kestrel is gone (a system_server watchdog restart loop); the scene stops here instead of waiting 100 s per site")
+            break
         if i % 4 == 3:
             scene_memory(rep, "after %d pages" % (i + 1))
     if dones:
