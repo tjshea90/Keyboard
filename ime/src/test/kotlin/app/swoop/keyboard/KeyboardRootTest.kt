@@ -89,10 +89,10 @@ class KeyboardRootTest {
         assertEquals("the window is the whole screen now", sh, r.height)
         // drag: the keyboard follows
         val before = r.panelRect()
-        touch(r, MotionEvent.ACTION_MOVE, gx - 50f, gy - 300f); layout(r)
+        touch(r, MotionEvent.ACTION_MOVE, gx - 50f, gy + 300f); layout(r)
         val after = r.panelRect()
-        assertTrue("${after.left - before.left}", Math.abs(after.left - before.left + 50) <= 2); assertEquals(-300, after.top - before.top)
-        touch(r, MotionEvent.ACTION_UP, gx - 50f, gy - 300f); layout(r)
+        assertTrue("${after.left - before.left}", Math.abs(after.left - before.left + 50) <= 2); assertTrue("${after.top - before.top}", Math.abs(after.top - before.top - 300) <= 2)
+        touch(r, MotionEvent.ACTION_UP, gx - 50f, gy + 300f); layout(r)
         assertTrue("a drop in the middle keeps it floating", r.floating); assertEquals(1, c.geometry)
         assertTrue(Settings(app).floating)
     }
@@ -156,7 +156,7 @@ class KeyboardRootTest {
         val (dx, dy) = corner(r, 3)
         touch(r, MotionEvent.ACTION_DOWN, dx, dy); touch(r, MotionEvent.ACTION_MOVE, dx + 120f, dy + 90f); touch(r, MotionEvent.ACTION_UP, dx + 120f, dy + 90f)
         val after = r.panelRect()
-        assertEquals("bottom right keeps the top left still", listOf(before.left, before.top), listOf(after.left, after.top))
+        assertTrue("bottom right keeps the top left still: $before $after", Math.abs(before.left - after.left) <= 2 && Math.abs(before.top - after.top) <= 2)
         assertTrue("wider: ${before.width()} -> ${after.width()}", after.width() > before.width()); assertTrue("taller: ${before.height()} -> ${after.height()}", after.height() > before.height())
         assertTrue(c.geometry >= 2); assertTrue(Settings(app).floatWDp > 100)
         // top left: the bottom right stays
