@@ -19,6 +19,10 @@ class FloatingMathTest {
         assertEquals(500, FloatingMath.frac(5, 0)); assertEquals(600, FloatingMath.clampPos(900, 400, 1000)); assertEquals(0, FloatingMath.clampPos(-5, 400, 1000)); assertEquals(0, FloatingMath.clampPos(10, 1200, 1000))
     }
 
+    @Test fun aPositionGoesThereAndBackToTheSamePixelWhateverTheRoom() {
+        for (room in listOf(1, 7, 156, 700, 1999, 2745)) for (pos in 0..room step maxOf(1, room / 37)) { var p = pos; repeat(50) { p = FloatingMath.posF(FloatingMath.fracF(p, room), room) }; assertEquals("room $room pos $pos", pos, p) }
+    }
+
     @Test fun droppingAtTheBottomDocks() {
         assertTrue(FloatingMath.dropsToDock(1990, 2000, 2f)); assertTrue(FloatingMath.dropsToDock(2000, 2000, 2f)); assertFalse(FloatingMath.dropsToDock(1900, 2000, 2f))
     }

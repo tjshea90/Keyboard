@@ -27,6 +27,10 @@ object FloatingMath {
     /** The fraction (0..1000) that puts the panel at [pos] when [room] is the free space. */
     fun frac(pos: Int, room: Int): Int = if (room <= 0) 500 else ((pos.coerceIn(0, room) * 1000L) / room).toInt()
 
+    /** The same without the rounding to a thousandth: a position as a fraction of the free room, and back. Going there and back gives the same pixel (a held finger must never move the keyboard). */
+    fun fracF(pos: Int, room: Int): Float = if (room <= 0) 0.5f else pos.coerceIn(0, room).toFloat() / room
+    fun posF(frac: Float, room: Int): Int = Math.round(frac.coerceIn(0f, 1f) * maxOf(0, room))
+
     /** [v] kept so that a panel [size] long stays fully inside 0..[limit]. */
     fun clampPos(v: Int, size: Int, limit: Int): Int = v.coerceIn(0, maxOf(0, limit - size))
 

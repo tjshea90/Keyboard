@@ -146,7 +146,7 @@ class KeyboardRoot(context: Context) : FrameLayout(context), GripBar.Host {
     var floating = false; private set
     /** The copy in the settings screen: shows the bar but never floats. */
     var previewOnly = false
-    private var posX = 500; private var posY = 800            // 0..1000 of the free room
+    private var posX = 0.5f; private var posY = 0.8f          // where the panel stands: a fraction of the free room across and down (kept as a float so that holding still never moves it)
     private var wDp = 0f                                        // 0 = the default width for this screen
     private var hMul = 1f
     private var settings: Settings? = null
@@ -180,19 +180,25 @@ class KeyboardRoot(context: Context) : FrameLayout(context), GripBar.Host {
         settings = st
         keys.applyOptions(st)
         grip.accent = st.accentColor
-        posX = st.floatX; posY = st.floatY; wDp = st.floatWDp.toFloat(); hMul = FloatingMath.clampHeightMul(st.floatHMul)
+        posX = st.floatX / 1000f; posY = st.floatY / 1000f; wDp = st.floatWDp.toFloat(); hMul = FloatingMath.clampHeightMul(st.floatHMul)
         floatEnabled = st.floatEnabled && !safe
         val want = floatEnabled && st.floating && !previewOnly
         if (want != floating) setFloating(want, save = false) else applyMode()
     }
 
-    private fun save() { settings?.saveFloat(floating, posX, posY, Math.round(wDp), hMul) }
+    private fun save() { settings?.saveFloat(floating, Math.round(posX * 1000f), Math.round(posY * 1000f), Math.round(wDp), hMul) }
 
     // ------------------------------------------------------------------ geometry
 
     private fun screenW() = resources.displayMetrics.widthPixels
     private fun screenH() = resources.displayMetrics.heightPixels
     private fun frame() = if (floating) (FRAME_DP * d).toInt() else 0
+
+    /** The height the panel really has at [pw] pixels wide (measured, not estimated: an estimate that is a pixel off makes the panel creep). */
+    private fun panelHeightAt(pw: Int): Int {
+        panel.measure(MeasureSpec.makeMeasureSpec(pw, MeasureSpec.EXACTLY), MeasureSpec.makeMeasureSpec(0, MeasureSpec.UNSPECIFIED))
+        return panel.measuredHeight
+    }
     private fun panelWidthPx(): Int = if (!floating) ViewGroup.LayoutParams.MATCH_PARENT else Math.round(FloatingMath.clampWidthDp(if (wDp > 0f) wDp else FloatingMath.defaultWidthDp(screenW() / d), screenW() / d) * d)
 
     private fun setFloating(on: Boolean, save: Boolean = true) {
@@ -222,11 +228,10 @@ class KeyboardRoot(context: Context) : FrameLayout(context), GripBar.Host {
         if (floating) {
             lp.gravity = Gravity.TOP or Gravity.LEFT
             val pw = lp.width
-            val keysW = pw - 2 * frame()
-            val ph = grip.let { (GripBar.HEIGHT_DP * d).toInt() } + keys.heightFor(keysW, hMul) + frame() * 3 / 2
+            val ph = panelHeightAt(pw)
             val w = MeasureSpec.getSize(widthMeasureSpec).let { if (it > 0) it else screenW() }
             val h = MeasureSpec.getSize(heightMeasureSpec).let { if (it > 0 && MeasureSpec.getMode(heightMeasureSpec) != MeasureSpec.UNSPECIFIED) it else screenH() }
-            lp.leftMargin = FloatingMath.left(posX, w, pw); lp.topMargin = FloatingMath.top(posY, h, ph)
+            lp.leftMargin = FloatingMath.posF(posX, w - pw); lp.topMargin = FloatingMath.posF(posY, h - ph)
         } else { lp.gravity = Gravity.BOTTOM; lp.leftMargin = 0; lp.topMargin = 0 }
         super.onMeasure(widthMeasureSpec, heightMeasureSpec)
     }
@@ -273,9 +278,11 @@ class KeyboardRoot(context: Context) : FrameLayout(context), GripBar.Host {
         // the panel leaves the bottom and stands with its bar under the finger; the window becomes the whole screen first, so the position is worked out in screen terms
         val w = screenW(); val h = screenH()
         val pw = Math.round(FloatingMath.clampWidthDp(if (wDp > 0f) wDp else FloatingMath.defaultWidthDp(w / d), w / d) * d)
-        val ph = (GripBar.HEIGHT_DP * d).toInt() + keys.heightFor(pw - 2 * (FRAME_DP * d).toInt(), hMul) + (FRAME_DP * d).toInt() * 3 / 2
+        keys.floatMul = hMul
+        floating = true; applyMode(); floating = false           // (the frame and the row height count in the measure below)
+        val ph = panelHeightAt(pw)
         val left = FloatingMath.clampPos((rawX - pw / 2f).toInt(), pw, w); val top = FloatingMath.clampPos((rawY - GripBar.HEIGHT_DP * d / 2f - FRAME_DP * d).toInt(), ph, h)
-        posX = FloatingMath.frac(left, w - pw); posY = FloatingMath.frac(top, h - ph)
+        posX = FloatingMath.fracF(left, w - pw); posY = FloatingMath.fracF(top, h - ph)
         travelled = 0f
         setFloating(true)
     }
@@ -283,10 +290,11 @@ class KeyboardRoot(context: Context) : FrameLayout(context), GripBar.Host {
     override fun gripDrag(dx: Float, dy: Float) {
         if (!floating) return
         val w = if (width > 0) width else screenW(); val h = if (height > 0) height else screenH()
+        if (dx == 0f && dy == 0f) return                          // a finger held still moves nothing
         val r = panelRect(); val pw = r.width().coerceAtLeast(1); val ph = r.height().coerceAtLeast(1)
-        val left = FloatingMath.clampPos(r.left + dx.toInt(), pw, w); val top = FloatingMath.clampPos(r.top + dy.toInt(), ph, h)
+        val left = FloatingMath.clampPos(r.left + Math.round(dx), pw, w); val top = FloatingMath.clampPos(r.top + Math.round(dy), ph, h)
         travelled += Math.abs(dx) + Math.abs(dy)
-        posX = FloatingMath.frac(left, w - pw); posY = FloatingMath.frac(top, h - ph)
+        posX = FloatingMath.fracF(left, w - pw); posY = FloatingMath.fracF(top, h - ph)
         requestLayout()
     }
 
@@ -332,10 +340,10 @@ class KeyboardRoot(context: Context) : FrameLayout(context), GripBar.Host {
         wDp = r.width / d
         val keysH = (r.height - gripH - f * 3 / 2).toFloat()
         hMul = FloatingMath.clampHeightMul(keysH / maxOf(1, keys.heightFor(r.width - 2 * f, 1f)))
-        val ph = gripH + keys.heightFor(r.width - 2 * f, hMul) + f * 3 / 2
-        val top = if (resizeCorner == 0 || resizeCorner == 1) FloatingMath.clampPos(rsTop + rsH - ph, ph, sh) else r.top
-        posX = FloatingMath.frac(r.left, sw - r.width); posY = FloatingMath.frac(top, sh - ph)
         keys.floatMul = hMul
+        val ph = panelHeightAt(r.width)
+        val top = if (resizeCorner == 0 || resizeCorner == 1) FloatingMath.clampPos(rsTop + rsH - ph, ph, sh) else r.top
+        posX = FloatingMath.fracF(r.left, sw - r.width); posY = FloatingMath.fracF(top, sh - ph)
         requestLayout()
     }
 
