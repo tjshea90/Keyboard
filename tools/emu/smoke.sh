@@ -22,11 +22,22 @@ adb shell settings put global window_animation_scale 0; adb shell settings put g
 
 # ---- 1 install, register, enable, choose
 adb install -r -t "$APK" >/dev/null 2>&1 && ok "installed $PKG" || { bad "install failed"; exit 1; }
-adb shell ime list -a > "$OUT/ime-list.txt" 2>&1   # (a file, not a pipe: grep -q in a pipe under pipefail kills adb with SIGPIPE and reports a false failure)
+# Android registers a freshly installed keyboard a moment AFTER the install returns (the run of 2026-11-17 selected it too early: "Unknown input method", the stock keyboard stayed
+# current and every later check was about the wrong keyboard). So: wait until it is listed, enable it, choose it, and STOP if it is not the chosen one.
+for i in $(seq 1 30); do
+  adb shell ime list -a > "$OUT/ime-list.txt" 2>&1   # (a file, not a pipe: grep -q in a pipe under pipefail kills adb with SIGPIPE and reports a false failure)
+  if grep -q "$PKG" "$OUT/ime-list.txt"; then break; fi
+  sleep 2
+done
 grep -q "$PKG" "$OUT/ime-list.txt" && ok "ime list -a shows Swoop" || bad "ime list -a does not show $PKG"
 adb shell ime enable "$COMP" > "$OUT/ime-enable.txt" 2>&1; grep -qi "enabled" "$OUT/ime-enable.txt" && ok "enabled" || bad "ime enable: $(cat "$OUT/ime-enable.txt")"
-adb shell ime set "$COMP" >/dev/null
-[ "$(adb shell settings get secure default_input_method | tr -d '\r')" = "$COMP" ] && ok "Swoop is the chosen keyboard" || bad "default_input_method is $(adb shell settings get secure default_input_method)"
+for i in 1 2 3 4 5; do
+  adb shell ime set "$COMP" > "$OUT/ime-set.txt" 2>&1
+  [ "$(adb shell settings get secure default_input_method | tr -d '\r')" = "$COMP" ] && break
+  sleep 3
+done
+if [ "$(adb shell settings get secure default_input_method | tr -d '\r')" = "$COMP" ]; then ok "Swoop is the chosen keyboard"
+else bad "default_input_method is $(adb shell settings get secure default_input_method) ($(cat "$OUT/ime-set.txt" | head -2 | tr '\n' ' '))"; echo "emulator smoke: Swoop could not be chosen, nothing else can be tested"; exit 1; fi
 
 # ---- 2 show it in a text field (the Setup screen has a try-it box)
 adb shell am start -n "$PKG/app.swoop.keyboard.SetupActivity" >/dev/null
@@ -51,11 +62,12 @@ adb shell input tap $TAP; sleep 3
 dump; TAP="$(find_edit)"   # (the field may have moved above the keyboard)
 adb shell dumpsys input_method > "$OUT/dumpsys-ime.txt"
 grep -q "mInputShown=true" "$OUT/dumpsys-ime.txt" && ok "the keyboard is showing" || bad "the keyboard did not show (mInputShown)"
-grep -q "$PKG" "$OUT/dumpsys-ime.txt" && ok "Swoop is the current input method" || bad "Swoop is not the current input method"
+grep -q "mCurMethodId=$COMP" "$OUT/dumpsys-ime.txt" && ok "Swoop is the current input method" || bad "Swoop is not the current input method (mCurMethodId: $(grep -m1 mCurMethodId "$OUT/dumpsys-ime.txt"))"
 shot keyboard-shown
 
 # ---- 3 where are the keys: the INPUT METHOD window frame
 adb shell dumpsys window windows > "$OUT/dumpsys-window.txt"
+python3 -I tools/emu/float_check.py --show "$OUT/dumpsys-window.txt" 0 || true      # the IME window facts, into the job log
 DENS="$(adb shell wm density | grep -oE '[0-9]+' | tail -1)"
 GEOM="$(python3 -I - "$OUT/dumpsys-window.txt" "$DENS" <<'PY'
 import re, sys
