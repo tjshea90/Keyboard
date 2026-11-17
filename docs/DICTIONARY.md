@@ -13,7 +13,7 @@ tap suggester (`Suggester`) use.
 
 | Part | Source (version, where from) | Licence |
 | :- | :- | :- |
-| Which words are valid English (about 125 000 words; inflections, plurals, tenses) | SCOWL 2020.12.07 (Kevin Atkinson), the shared and the American-spelling lists, sizes up to 95, lowercase only. Debian source archive `scowl_2020.12.07.orig.tar.gz` | permissive notice (public domain parts, ENABLE, UKACD, Ispell, WordNet); the whole `Copyright` file of SCOWL is reproduced in `LICENSE.txt` |
+| Which words are valid English (about 139 900 of the 140 436 words; inflections, plurals, tenses) | SCOWL 2020.12.07 (Kevin Atkinson), the shared and the American-spelling lists, sizes up to 95, lowercase only. Debian source archive `scowl_2020.12.07.orig.tar.gz` | permissive notice (public domain parts, ENABLE, UKACD, Ispell, WordNet); the whole `Copyright` file of SCOWL is reproduced in `LICENSE.txt` |
 | How common a word is, casual and web English | wordfreq 3.1.1 `large_en` (321 180 words; blend of Wikipedia, subtitles, news, books, web text, Twitter and Reddit counts), a wheel from PyPI | code Apache-2.0; data CC BY-SA 4.0 |
 | How common a word is, spoken / subtitle English | hermitdave FrequencyWords, `content/2018/en/en_full.txt` (OpenSubtitles 2018; 1 656 996 words, 734 777 659 tokens), GitHub | code MIT; content CC BY-SA 4.0 |
 | How common a word is, written English (Google Books), and the word pairs | SymSpell `frequency_dictionary_en_82_765.txt` and `frequency_bigramdictionary_en_243_342.txt` (symspellpy 6.10.2 wheel from PyPI) | MIT (the Google Books Ngram data asks for credit) |
@@ -50,7 +50,7 @@ Not used, on purpose (research/PREDICTION-SOURCES.md section C): Norvig count fi
    (`UNIGRAM_COUNT` 2e7 per use), so the scale must not move.
 3. **Pairs.** The 242 000 SymSpell pairs between words that are in the list (unchanged: they are the only pair counts with a licence we can use).
 
-Result: 140 436 words (old list: 82 833), 3.64 MB (old: 2.71 MB). 4 400 words are common (probability above e^-9.5), about 17 000 are above the rarity floor, the rest is the long tail.
+Result: 140 436 words (old list: 82 833), 3.64 MB (old: 2.71 MB). 1 650 words have a probability above e^-9.5 (the everyday core), 13 200 are above the rarity floor, the other 127 000 are the long tail (54 000 of them above e^-16).
 
 ## Rare words (what the decoder and the suggester do with the counts)
 
