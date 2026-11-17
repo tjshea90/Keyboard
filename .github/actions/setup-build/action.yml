@@ -1,5 +1,9 @@
 name: Set up the Android build
 description: JDK 21, the Gradle cache, and the SDK packages this repo needs (platform 36, build-tools 36.0.0)
+inputs:
+  gradle-cache:
+    description: 'false = do not read or write the Gradle cache (a throw-away job that only needs a quiet log)'
+    default: 'true'
 runs:
   using: composite
   steps:
@@ -9,6 +13,8 @@ runs:
         java-version: '21'
 
     - uses: gradle/actions/setup-gradle@v4
+      with:
+        cache-disabled: ${{ inputs.gradle-cache == 'false' }}
 
     - name: Android SDK packages
       shell: bash

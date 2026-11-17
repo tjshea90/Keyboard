@@ -7,6 +7,7 @@ set -uo pipefail
 PKG="${SWOOP_PKG:-app.swoop.keyboard.debug}"
 APK="${SWOOP_APK:-ime/build/outputs/apk/debug/ime-debug.apk}"
 OUT="${OUT:-emu-out}"; mkdir -p "$OUT"
+exec > >(tee "$OUT/smoke.log") 2>&1     # the whole result is also an artifact
 COMP="$PKG/app.swoop.keyboard.KeysService"
 FAILS=0
 ok(){ echo "  OK    $*"; }

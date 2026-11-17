@@ -27,6 +27,8 @@ jobs:
         with:
           persist-credentials: false
       - uses: ./.github/actions/setup-build
+        with:
+          gradle-cache: 'false'   # no cache upload noise after the emulator step: the smoke result is the last thing in the job log
       - name: Build the debug APK
         run: ./gradlew :ime:assembleDebug --console=plain
       - name: Enable KVM
