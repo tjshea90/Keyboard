@@ -33,7 +33,4 @@ object FieldInfos {
             initialSelStart = e.initialSelStart, initialSelEnd = e.initialSelEnd,
         )
     }
-
-    /** True for fields where the number/phone page (no letters) is wanted. */
-    fun wantsLetters(f: FieldInfo): Boolean = f.kind != FieldKind.NUMBER && f.kind != FieldKind.PHONE
 }

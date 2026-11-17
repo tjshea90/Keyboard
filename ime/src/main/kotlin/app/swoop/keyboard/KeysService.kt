@@ -4,6 +4,7 @@ import android.inputmethodservice.InputMethodService
 import android.os.SystemClock
 import android.view.View
 import android.view.inputmethod.EditorInfo
+import app.kestrel.core.input.ImeLayout
 import app.kestrel.core.input.Key
 import app.kestrel.core.input.editor.InputController
 
@@ -26,7 +27,8 @@ class KeysService : InputMethodService(), KeysView.Listener {
         super.onStartInputView(editorInfo, restarting)
         val field = FieldInfos.from(editorInfo)
         controller.startInput(field)
-        keys?.setForField(FieldInfos.wantsLetters(field))
+        keys?.reset()
+        keys?.setField(field.kind, ImeLayout.actionLabel(field.imeAction, field.noEnterAction))
         keys?.setShift(controller.shift)
     }
 
@@ -38,6 +40,9 @@ class KeysService : InputMethodService(), KeysView.Listener {
         controller.onSelectionUpdate(newSelStart, newSelEnd, candidatesStart, candidatesEnd)
         keys?.setShift(controller.shift)
     }
+
+    /** The finger slid over the space key. */
+    override fun onCursor(steps: Int) { controller.moveCursor(steps); keys?.setShift(controller.shift) }
 
     override fun onKey(key: Key) {
         when (key) {

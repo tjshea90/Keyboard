@@ -131,6 +131,5 @@ class InputConnectionBridgeTest {
     @Test fun learningAndActionFlagsAreCarriedOver() {
         val f = FieldInfos.from(EditorInfo().apply { inputType = InputType.TYPE_CLASS_TEXT; imeOptions = EditorInfo.IME_ACTION_SEND or EditorInfo.IME_FLAG_NO_PERSONALIZED_LEARNING or EditorInfo.IME_FLAG_NO_ENTER_ACTION })
         assertEquals(ImeActions.SEND, f.imeAction); assertTrue(f.noEnterAction); assertTrue(f.noPersonalizedLearning); assertFalse(f.learningAllowed)
-        assertFalse(FieldInfos.wantsLetters(FieldInfo(kind = FieldKind.NUMBER))); assertTrue(FieldInfos.wantsLetters(FieldInfo()))
     }
 }

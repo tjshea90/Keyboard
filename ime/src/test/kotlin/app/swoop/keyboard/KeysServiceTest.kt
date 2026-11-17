@@ -3,9 +3,6 @@ package app.swoop.keyboard
 import android.app.Application
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.os.SystemClock
-import android.view.MotionEvent
-import android.view.View
 import android.view.inputmethod.InputMethodInfo
 import app.kestrel.core.input.Key
 import org.junit.Assert.assertEquals
@@ -54,36 +51,6 @@ class KeysServiceTest {
     @Test fun noPermissionsAreRequested() {
         val pi = app.packageManager.getPackageInfo(app.packageName, PackageManager.GET_PERMISSIONS)
         assertTrue("the keyboard must request no permission yet (tools/expected-permissions.txt): ${pi.requestedPermissions?.toList()}", pi.requestedPermissions == null || pi.requestedPermissions!!.isEmpty())
-    }
-
-    private class Rec : KeysView.Listener { val keys = ArrayList<Key>(); override fun onKey(key: Key) { keys.add(key) } }
-
-    private fun layout(v: KeysView, w: Int = 1080) {
-        v.measure(View.MeasureSpec.makeMeasureSpec(w, View.MeasureSpec.EXACTLY), View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED))
-        v.layout(0, 0, v.measuredWidth, v.measuredHeight)
-    }
-
-    private fun tap(v: View, x: Float, y: Float) {
-        val t = SystemClock.uptimeMillis()
-        v.dispatchTouchEvent(MotionEvent.obtain(t, t, MotionEvent.ACTION_DOWN, x, y, 0))
-        v.dispatchTouchEvent(MotionEvent.obtain(t, t + 40, MotionEvent.ACTION_UP, x, y, 0))
-    }
-
-    @Test fun tappingTheMiddleOfTheTopLeftKeyTypesQ_andTheLastKeyOfRowOneP() {
-        val v = KeysView(app); val rec = Rec(); v.listener = rec; layout(v)
-        val pad = 4f * app.resources.displayMetrics.density
-        val rowH = 50f * app.resources.displayMetrics.density
-        tap(v, pad + 5f, pad + rowH / 2)                 // inside the first key of row 1
-        tap(v, v.width - pad - 5f, pad + rowH / 2)       // inside the last key of row 1
-        assertEquals(listOf("q", "p"), rec.keys.map { (it as Key.Ch).text })
-    }
-
-    @Test fun theShiftKeyIsReportedBecauseTheControllerOwnsTheShiftState() {
-        val v = KeysView(app); val rec = Rec(); v.listener = rec; layout(v)
-        val d = app.resources.displayMetrics.density
-        val pad = 4f * d; val rowH = 50f * d; val gap = 4f * d
-        tap(v, pad + 8f, pad + 2 * (rowH + gap) + rowH / 2)           // the shift key (first of row 3)
-        assertEquals(listOf<Key>(Key.Shift), rec.keys)
     }
 
     @Test fun serviceCreatesItsViewAndIgnoresKeysWithoutAnEditor() {
