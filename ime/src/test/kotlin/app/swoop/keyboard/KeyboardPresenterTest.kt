@@ -76,7 +76,14 @@ class KeyboardPresenterTest {
             view.layout(0, 0, view.measuredWidth, view.measuredHeight)
         }
         fun report() { presenter.onUpdateSelection(et.selectionStart, et.selectionEnd, BaseInputConnection.getComposingSpanStart(et.text), BaseInputConnection.getComposingSpanEnd(et.text)) }
-        private fun inlineReport() { if (sameProcess) report() }
+        /** Like InputMethodManager.updateSelection: a report only when the selection or the composing region differs from the last one sent. */
+        private var lastSent = intArrayOf(-2, -2, -2, -2)
+        private fun inlineReport() {
+            if (!sameProcess) return
+            val now = intArrayOf(et.selectionStart, et.selectionEnd, BaseInputConnection.getComposingSpanStart(et.text), BaseInputConnection.getComposingSpanEnd(et.text))
+            if (now.contentEquals(lastSent)) return
+            lastSent = now; report()
+        }
         fun ev(a: Int, x: Float, y: Float) { val t = SystemClock.uptimeMillis(); view.dispatchTouchEvent(MotionEvent.obtain(t, t, a, x, y, 0)); if (!sameProcess) report() }
         fun tap(label: String) { val (x, y) = view.centerOf(label)!!; ev(MotionEvent.ACTION_DOWN, x, y); ev(MotionEvent.ACTION_UP, x, y) }
         /** A letter key whatever the shift state shows on it (capitals while Shift is on). */
