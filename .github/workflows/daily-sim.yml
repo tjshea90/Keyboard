@@ -1,0 +1,139 @@
+# Daily-use simulation of the Swoop keyboard AND the Kestrel browser together (owner request 17, TASKS R17c): Android 10 on a KVM emulator shaped like the owner's tablet (600 x 1024 at 170 dpi, 2 GB,
+# low-RAM flag), the 5 Mbit/s hotspot imitated by the emulator's network options, Swoop chosen as THE keyboard, Kestrel G (the real Firefox engine) typing through it. tools/sim/dailysim.py plays a person:
+# types and glides search words into Kestrel's address box and into real page fields, opens pages, scrolls, watches a film, and measures what it can.
+# Dispatch-only (never a push trigger: minutes are scarce, autosave pushes after every tool call). It touches nothing in the Browser repository: it only READS a branch of it (public) to build the app.
+# An emulator is NOT the tablet (x86_64, software GPU, a fast CPU, no Mali): the numbers are relative to the same run's other numbers and to earlier runs, never absolute. Say so in every report.
+name: Daily-use simulation (keyboard + browser)
+
+on:
+  workflow_dispatch:
+    inputs:
+      browser_ref:
+        description: 'Branch (or tag) of tjshea90/Browser that Kestrel G is built from (read only)'
+        type: string
+        default: 'ccr-5531c47b-hl1gzo'
+      suite:
+        description: 'typing = keyboard in Kestrel and in Swoop own field | pages = real sites | video = films | all'
+        type: string
+        default: 'typing'
+      net:
+        description: 'hotspot = 5 Mbit/s and 60-120 ms (the owner hotspot) | full = no limit'
+        type: string
+        default: 'hotspot'
+      minutes:
+        description: 'How long the pages / video part may run, in minutes'
+        type: string
+        default: '15'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: daily-sim-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  sim:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    env:
+      AVD_NAME: sim29x64
+      ANDROID_AVD_HOME: /home/runner/.android/avd
+      SUITE: ${{ inputs.suite }}
+      NET: ${{ inputs.net }}
+      MINUTES: ${{ inputs.minutes }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: actions/checkout@v5
+        with:
+          repository: tjshea90/Browser
+          ref: ${{ inputs.browser_ref }}
+          path: browser
+          persist-credentials: false
+      - uses: ./.github/actions/setup-build
+        with:
+          gradle-cache: 'false'
+
+      - name: Hardware acceleration (KVM)
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules >/dev/null
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+          ls -l /dev/kvm || { echo "::error::no /dev/kvm on this runner"; exit 1; }
+          echo "cores: $(nproc), memory: $(free -m | awk '/Mem:/ {print $2}') MB"
+
+      - name: Build Swoop (debug: it logs its key map for the driver)
+        run: ./gradlew :ime:assembleDebug --console=plain
+
+      - name: Build Kestrel G debug for x86_64 (the real engine, GeckoView) from the Browser branch
+        working-directory: browser
+        run: |
+          git log -1 --format='Browser commit %h %s' | cut -c1-120
+          ./gradlew :geckoapp:assembleDebug -PgeckoAbi=x86_64 --console=plain
+
+      - name: Android emulator and the Android 10 system image
+        run: |
+          SDKM="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          yes | "$SDKM" --licenses >/dev/null 2>&1 || true
+          "$SDKM" "emulator" "platform-tools" "system-images;android-29;default;x86_64" 2>&1 | tr '\r' '\n' | tail -3
+
+      - name: Create the tablet-shaped emulator (600 x 1024 at 170 dpi, 2 GB)
+        run: |
+          export PATH="$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/emulator:$ANDROID_HOME/platform-tools:$PATH"
+          mkdir -p "$ANDROID_AVD_HOME"
+          echo no | avdmanager create avd -n "$AVD_NAME" -k "system-images;android-29;default;x86_64" -d pixel --force
+          CFG="$ANDROID_AVD_HOME/$AVD_NAME.avd/config.ini"
+          [ -f "$CFG" ] || { echo "::error::no config.ini at $CFG"; exit 1; }
+          python3 -I - "$CFG" <<'PY'
+          import sys
+          p = sys.argv[1]
+          want = {"hw.lcd.width": "600", "hw.lcd.height": "1024", "hw.lcd.density": "170", "hw.ramSize": "2048", "vm.heapSize": "128", "hw.cpu.ncore": "2",
+                  "disk.dataPartition.size": "6G", "hw.gpu.enabled": "yes", "hw.gpu.mode": "swiftshader_indirect", "hw.keyboard": "yes", "hw.mainKeys": "no",
+                  "showDeviceFrame": "no", "hw.initialOrientation": "portrait"}
+          lines = [l for l in open(p).read().splitlines() if l.split("=")[0].strip() not in want and not l.startswith("skin.")]
+          lines += ["%s=%s" % kv for kv in want.items()]
+          open(p, "w").write("\n".join(lines) + "\n")
+          PY
+
+      - name: Start the emulator (low-RAM flag, the hotspot imitated) and wait for Android 10
+        run: |
+          export PATH="$ANDROID_HOME/emulator:$ANDROID_HOME/platform-tools:$PATH"
+          if [ "$NET" = hotspot ]; then NETOPT="-netspeed 5000:5000 -netdelay 60:120"; else NETOPT="-netspeed full -netdelay none"; fi
+          BASE="-avd $AVD_NAME -no-window -no-audio -no-boot-anim -no-snapshot -wipe-data -gpu swiftshader_indirect -accel on -no-metrics $NETOPT"
+          nohup emulator $BASE -prop ro.config.low_ram=true > "$RUNNER_TEMP/emulator.log" 2>&1 &
+          EPID=$!
+          sleep 25
+          if ! kill -0 "$EPID" 2>/dev/null; then
+            echo "::warning::the emulator refused ro.config.low_ram: starting without it"
+            nohup emulator $BASE > "$RUNNER_TEMP/emulator.log" 2>&1 &
+          fi
+          adb start-server
+          adb wait-for-device
+          timeout 600 bash -c 'until [ "$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d "\r")" = 1 ]; do sleep 5; done' || { echo "::error::the emulator did not boot in 10 minutes"; tail -30 "$RUNNER_TEMP/emulator.log"; exit 1; }
+          sleep 10
+          echo "android $(adb shell getprop ro.build.version.release | tr -d '\r') sdk $(adb shell getprop ro.build.version.sdk | tr -d '\r') abi $(adb shell getprop ro.product.cpu.abi | tr -d '\r') low_ram=$(adb shell getprop ro.config.low_ram | tr -d '\r') $(adb shell wm size | tr -d '\r' | tail -1) $(adb shell wm density | tr -d '\r' | tail -1)"
+          adb shell settings put global window_animation_scale 0; adb shell settings put global transition_animation_scale 0; adb shell settings put global animator_duration_scale 0
+          adb shell settings put global hide_error_dialogs 1
+          adb shell settings put secure show_ime_with_hard_keyboard 1
+
+      - name: Play a day of keyboard + browser use
+        run: |
+          mkdir -p sim-out
+          python3 -u -I tools/sim/dailysim.py --out sim-out --suite "$SUITE" --net "$NET" --minutes "$MINUTES" \
+            --swoop ime/build/outputs/apk/debug/ime-debug.apk --kestrel "$(ls browser/geckoapp/build/outputs/apk/debug/*.apk | head -1)" --browser-dir browser 2>&1 | tee sim-out/console.txt
+
+      - name: Report
+        if: always()
+        run: |
+          if [ -f sim-out/report.md ]; then cat sim-out/report.md >> "$GITHUB_STEP_SUMMARY"; fi
+
+      - name: Keep the logs, screenshots and the report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: daily-sim-${{ inputs.suite }}
+          path: sim-out
+          retention-days: 7
+          if-no-files-found: ignore
