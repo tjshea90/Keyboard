@@ -1,21 +1,22 @@
-# CHECKPOINT 122 — read me first, then TASKS.md
+# CHECKPOINT 129 — read me first, then TASKS.md
 
-**Written:** 2026-11-17T00:58:25Z · **tests:** all 1 fast checks green (gradle suite: see ship.sh)
-**Branch:** `ccr-c57dc9d3-149psl` · **builds on:** `0498e72` (this checkpoint is the commit after it)
+**Written:** 2026-11-17T01:05:27Z · **tests:** all 1 fast checks green (gradle suite: see ship.sh)
+**Branch:** `ccr-c57dc9d3-149psl` · **builds on:** `806e7f3` (this checkpoint is the commit after it)
 
 ## Just done
-README.md written for the now-public repo; emulator smoke run 43991821449 (API 29) dispatched and in progress
+owner decision: sign like the other repos - PUBLIC dev key signing/dev/swoop-dev.p12 (pin ded33b33...), no secrets/passphrase; Gradle release signs with it by default; android.yml rewritten (pin gate, build, verify, publish); passphrase machinery removed; docs/README updated; local release APK built and verify-apk passed (pinned cert); self-test 67 green
 
 ## Do this next
-read emu-smoke run 43991821449 (list_workflow_jobs); fix tools/emu/smoke.sh until green; then wait for the owner's 'secret added' (Q-KB003) and do the release sequence in the previous card
+bash ship.sh 'first alpha: glide + tap keyboard' (gates + unit suites + pushes), then dispatch android.yml full_build=true note 'first alpha...' on ref ccr-c57dc9d3-149psl, wait for jobs success (list_workflow_jobs), get_release_by_tag swoop-v0.1.0-alpha1 shows the APK, then bash tools/record-release.sh swoop-v0.1.0-alpha1 'SAME note', tell the owner the Release link on its own line. Afterwards: fix the failed emulator smoke run 43991821449 (get_job_logs tail_lines ~400 for job 133734073305; make smoke.sh tee to emu-out/smoke.log).
 
 *(resuming? CLAUDE.md's "FIRST ACTION OF EVERY SESSION" says how; the briefing is tools/resume.sh. Do that first, or autosave may stay off all session.)*
 
 ## Uncommitted right now
-    (nothing — the tree is clean as of this checkpoint)
+     M TASKS.md
 
 ## Last ten checkpoints
 ```
+  7e85792 ckpt 122: README.md written for the now-public repo; emulator smoke run 43991821449 (API
   67b4887 ckpt 120: emulator smoke test written (tools/emu/smoke.sh + .github/workflows/emu-smoke.
   6f13916 ckpt 118: owner made the repo PUBLIC and asked for the first release now (OR2 in TASKS):
   1bb33bd ckpt 112: docs: IF-THE-KEYBOARD-BREAKS no longer promises the Forget button before KB-20
@@ -25,8 +26,7 @@ read emu-smoke run 43991821449 (list_workflow_jobs); fix tools/emu/smoke.sh unti
   c621fd2 ckpt 61: KB-102 done: full-width KeysView + core ImeLayout (letters/symbols/URL/email/ke
   2403b56 ckpt 52: KB-101 done: EditorBridge/FieldInfo/InputController in :core (window snapshot, 
   dd9285f ckpt 33: KB-100 built and unit-proven (not ticked: needs a device/emulator): manifest + 
-  81944a8 ckpt 27: KB-003 prepared except the owner's one secret: tools/signing-key.sh (create/unl
 ```
 
-(1 automatic checkpoint(s) since the last deliberate one — the
+(6 automatic checkpoint(s) since the last deliberate one — the
 session was still mid-step. `git diff` against it shows what changed.)
