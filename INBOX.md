@@ -59,3 +59,8 @@ So far i like the keyboard.
 8) the settings gui for the keyboard is very plain and dull ai feel. revamp the gui for the settings and organize them well.
 9) for the key pop up when i press a key, make it almost immediately disappear after i take my finger off the key. right now it is slightly laggy
 ```
+
+## 2026-11-17T04:45:21Z
+```
+I typed a word in brave browser and it predicted the wrong word. when i pressed the correct word in the box of suggested words, it didn't change the word in the url bar. Remove the 123 button because there are always numbers, remove the bottom left button to change keyboards, and make the space bar wider. As wide as can fit. See what predictive engines are online to help teach the keyboard to make it as accurate as possible at predicting words in glide type 
+```
