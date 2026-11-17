@@ -33,12 +33,20 @@ object ImeLayout {
         }
     }
 
-    fun rows(page: Page, shift: Boolean, kind: FieldKind, actionLabel: String = "⏎"): List<List<KeySpec>> {
+    /** The number row is a little thinner than the letter rows (it is only ever tapped, never glided over). */
+    const val NUMBER_ROW_WEIGHT = 0.72f
+
+    /** Row heights for [MiniKeyboardGeometry.boxes]: pass the SAME list to the view and to the decoder. */
+    fun rowWeights(rows: List<List<KeySpec>>): List<Float> = if (hasNumberRow(rows)) List(rows.size) { if (it == 0) NUMBER_ROW_WEIGHT else 1f } else List(rows.size) { 1f }
+    fun hasNumberRow(rows: List<List<KeySpec>>): Boolean = rows.size == 5
+
+    fun rows(page: Page, shift: Boolean, kind: FieldKind, actionLabel: String = "⏎", numberRow: Boolean = true): List<List<KeySpec>> {
         if (kind == FieldKind.NUMBER || kind == FieldKind.PHONE) return keypad(kind, actionLabel)
-        if (page == Page.SYMBOLS) return listOf(
-            chars("1234567890"),
+        val digits = if (numberRow) listOf(chars("1234567890")) else emptyList()
+        if (page == Page.SYMBOLS) return digits + listOf(
             chars("@#$%&-+()/"),
-            chars("_*\"':;!?") + back.let { KeySpec(it.label, it.key, 2f) },
+            chars("*\"':;!?_=~"),
+            chars("<>[]{}\\|") + back.let { KeySpec(it.label, it.key, 2f) },
             listOf(KeySpec("abc", Key.ToLetters, 1.5f), globe, ch(","), KeySpec("space", Key.Ch(" "), 3.5f), ch("."), action(actionLabel, 2f)),
         )
         fun letters(s: String) = chars(if (shift) s.uppercase() else s)
@@ -47,7 +55,7 @@ object ImeLayout {
             FieldKind.EMAIL -> listOf(globe, KeySpec("123", Key.ToSymbols, 1.5f), ch("@"), KeySpec("space", Key.Ch(" "), 2.5f), ch("."), ch(".com", 1.5f), action(actionLabel, 1.5f))
             else -> listOf(globe, KeySpec("123", Key.ToSymbols, 1.5f), ch(","), KeySpec("space", Key.Ch(" "), 3.5f), ch("."), action(actionLabel, 2f))
         }
-        return listOf(
+        return digits + listOf(
             letters("qwertyuiop"),
             listOf(KeySpec("", null, 0.5f)) + letters("asdfghjkl") + KeySpec("", null, 0.5f),
             listOf(KeySpec("⇧", Key.Shift, 1.5f)) + letters("zxcvbnm") + back,
