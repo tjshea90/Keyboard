@@ -29,6 +29,7 @@ object PredictionEval {
         val typoFixedBySpace: IntArray,           // [right fixes, wrong fixes, no fix, total] over typos that are not another word
         val rightWordChanged: Int, val rightWords: Int,
         val searchNext: Tally, val searchComp2: Tally, val searchKsr: Double,
+        val nextEmpty: Int, val nextShort: Int,
         val notes: List<String>,
     )
 
@@ -49,10 +50,12 @@ object PredictionEval {
         val comp = arrayOf(Tally("completion after 1 letter"), Tally("completion after 2 letters"), Tally("completion after 3 letters"))
         val shown = arrayOf(Tally("on the strip after 1 letter"), Tally("on the strip after 2 letters"), Tally("on the strip after 3 letters"))
         var typedTotal = 0; var saved = 0; var allKeys = 0
+        var nextEmpty = 0; var nextShort = 0
         for (s in sentences) for ((i, w) in s.withIndex()) {
             val (p1, p2) = contextOf(s, i)
             val rn = Suggester.suggest(main, pm, keys, "", p1, p2, 3)
             next.add(rn.words.firstOrNull().equals(w, true), rn.words.any { it.equals(w, true) })
+            if (rn.words.isEmpty()) nextEmpty++ else if (rn.words.size < 3) nextShort++
             var foundAt = -1
             if (rn.words.any { it.equals(w, true) }) foundAt = 0
             for (k in 1..3) {
@@ -116,7 +119,7 @@ object PredictionEval {
             sKeys += w.length + 1
             if (foundAt >= 0) sSaved += w.length - foundAt
         }
-        return Result(next, comp[0], comp[1], comp[2], shown[0], shown[1], shown[2], ksr, allKeys, saved, tn, tm, td, ts, fix, changed, rights, sNext, sComp, if (sKeys == 0) 0.0 else sSaved.toDouble() / sKeys, notes)
+        return Result(next, comp[0], comp[1], comp[2], shown[0], shown[1], shown[2], ksr, allKeys, saved, tn, tm, td, ts, fix, changed, rights, sNext, sComp, if (sKeys == 0) 0.0 else sSaved.toDouble() / sKeys, nextEmpty, nextShort, notes)
     }
 
     /** One realistic slip: 0 a neighbouring key instead of an inner letter, 1 an inner letter left out, 2 an inner letter doubled, 3 two inner letters swapped. Null when the word cannot take that slip. */
@@ -134,6 +137,7 @@ object PredictionEval {
     fun report(r: Result): String {
         val b = StringBuilder()
         b.appendLine(r.next.toString())
+        b.appendLine("next word: nothing offered %d times, fewer than three %d times (of %d)".format(r.nextEmpty, r.nextShort, r.next.n))
         for (t in listOf(r.comp1, r.comp2, r.comp3)) b.appendLine(t.toString())
         for (t in listOf(r.shown1, r.shown2, r.shown3)) b.appendLine(t.toString())
         b.appendLine("keystrokes saved by tapping the strip: %.1f %% (%d of %d)".format(100 * r.ksr, r.keysSaved, r.keysTyped))
