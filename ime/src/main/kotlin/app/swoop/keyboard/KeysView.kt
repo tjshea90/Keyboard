@@ -11,6 +11,7 @@ import android.graphics.RectF
 import android.graphics.Typeface
 import android.os.Handler
 import android.os.Looper
+import android.text.TextPaint
 import android.text.TextUtils
 import android.view.HapticFeedbackConstants
 import android.view.MotionEvent
@@ -69,7 +70,7 @@ class KeysView(context: Context) : View(context) {
     private var cBg = 0; private var cKey = 0; private var cSpecial = 0; private var cLit = 0; private var cText = 0; private var cMuted = 0; private var cAccent = 0; private var cAccentText = 0; private var cBubble = 0
     private val fill = Paint(Paint.ANTI_ALIAS_FLAG)
     private val line = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE }
-    private val text = Paint(Paint.ANTI_ALIAS_FLAG).apply { textAlign = Paint.Align.CENTER; typeface = Typeface.DEFAULT }
+    private val text = TextPaint(Paint.ANTI_ALIAS_FLAG).apply { textAlign = Paint.Align.CENTER; typeface = Typeface.DEFAULT }
     private val box = RectF()
 
     // ---- touch state (one pointer is tracked; see ACTION_POINTER_DOWN)
