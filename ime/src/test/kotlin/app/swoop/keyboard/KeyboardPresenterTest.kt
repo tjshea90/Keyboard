@@ -298,6 +298,14 @@ class KeyboardPresenterTest {
         assertFalse(r.view.hapticsOn); assertFalse(r.view.keyPreview); assertTrue(r.view.soundOn); assertFalse(r.view.trailOn)
     }
 
+    /** Owner M1: "exactly like the photo", and the photo is the dark theme: a phone or tablet left in day mode still gets the dark keyboard until the person picks Automatic or Light. */
+    @Test fun theKeyboardIsDarkUntilAnotherLookIsChosen() {
+        val r = Rig()
+        assertEquals(Settings.DEFAULT_THEME, Settings(r.context).theme); assertEquals("Dark", Settings.THEMES[Settings.DEFAULT_THEME])
+        assertEquals(1, r.view.themeMode)
+        assertEquals("the dark teal of the photo behind the keys, although this test runs in day mode", 0xFF0D1D1D.toInt(), r.view.backgroundColor)
+    }
+
     @Test fun aTypedWordWithAnEmojiOffersItAndTappingItReplacesTheWord() {
         val r = Rig(glidePref = false, suggest = true, words = LexiconFile.build(listOf("clown" to 900L, "clowns" to 300L, "the" to 9000L).map { LexiconFile.Entry(it.first, it.second) }, emptyList()))
         r.presenter.canDraw = { true }; Thread.sleep(200); org.robolectric.shadows.ShadowLooper.idleMainLooper()
