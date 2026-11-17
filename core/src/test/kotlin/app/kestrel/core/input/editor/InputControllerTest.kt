@@ -192,6 +192,15 @@ class InputControllerTest {
         assertEquals("abc", c.before); assertTrue(c.onSelectionUpdate(3, 3)); assertEquals(3, c.selStart)
     }
 
+    @Test fun aGlideRightAfterATappedWordSurvivesTheLateReportOfEndingTheWord() {
+        val r = Rig().typeAll("hel"); r.c.commitGlide("world")           // no report delivered in between: the report of ending the word arrives after the glide
+        r.sync(); r.check(); assertEquals(0, r.foreign); assertTrue("the glide must still be the last thing, so a strip pick works", r.c.swapGlide("word"))
+        r.sync(); assertEquals("hel word ", r.text)
+    }
+    @Test fun typingAfterATappedWordThenASpaceNeverLooksForeign() {
+        val r = Rig(); for (ch in "hello world, ok") r.c.type(ch.toString()); r.sync(); r.check(); assertEquals(0, r.foreign)
+    }
+
     // ------------------------------------------------------------------ a dead editor
     @Test fun anEditorThatFailsNeverCrashesTheKeyboardAndItRecovers() {
         val r = Rig().typeAll("ab"); r.ed.failing = true

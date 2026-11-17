@@ -271,8 +271,11 @@ class InputController(private val ed: EditorBridge, val stats: InputStats = Inpu
     }
 
     private fun endComposing() {
-        if (composing != null) { ed.finishComposing(); composing = null }
+        if (composing != null) { ed.finishComposing(); composing = null; expectReportOfSameSelection() }
     }
+
+    /** Ending composition changes only the composing region, but the editor still reports it (with the unchanged selection): that report is ours too, even when it arrives after later edits. */
+    private fun expectReportOfSameSelection() { if (selStart >= 0 && batchDepth == 0) pending.push(selStart, selEnd) }
 
     /** Inserts [text] at the cursor (replacing a selection) and updates what is believed. */
     private fun commit(text: String): Boolean {
@@ -321,7 +324,7 @@ class InputController(private val ed: EditorBridge, val stats: InputStats = Inpu
 
     /** Called before every edit: closes a composing region the keyboard lost track of, so an edit can never replace somebody's composing word by accident. */
     private fun settle() {
-        if (composingUnknown && composing == null && ed.finishComposing()) composingUnknown = false
+        if (composingUnknown && composing == null && ed.finishComposing()) { composingUnknown = false; expectReportOfSameSelection() }
     }
 
     /** Edits shorten the window from the front; when text exists before it, read it again. */
