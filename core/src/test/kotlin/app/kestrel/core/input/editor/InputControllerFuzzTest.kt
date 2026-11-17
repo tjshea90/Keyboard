@@ -44,6 +44,7 @@ class InputControllerFuzzTest {
         val rnd = Random(seed)
         val start = listOf("", "hello world", "x".repeat(130), "line one\nline two")[rnd.nextInt(4)]
         val log = ArrayList<String>()
+        var firstForeign: String? = null
         val r = Rig(start, if (rnd.nextBoolean()) start.length else rnd.nextInt(start.length + 1), multiline = rnd.nextInt(4) != 0,
             action = if (rnd.nextInt(5) == 0) ImeActions.SEARCH else ImeActions.UNSPECIFIED)
         try {
@@ -53,13 +54,15 @@ class InputControllerFuzzTest {
                     // a dead editor loses nothing it said: the keyboard is told about the new field state like Android does after a restart
                     r.ed.updates.clear(); r.c.startInput(FieldInfo(initialSelStart = r.ed.selS, initialSelEnd = r.ed.selE)); r.check(); continue
                 }
+                val f0 = r.foreign
                 log.add(op(r, rnd, external))
                 if (lazy) { repeat(rnd.nextInt(3)) { r.deliverOne() } } else { r.sync(); r.check() }
+                if (r.foreign > f0 && firstForeign == null) firstForeign = "op #$i '${log.last()}' after '${log.getOrNull(log.size - 2)}' (text ...'${r.text.takeLast(20).replace("\n", "\\n")}')"
             }
             r.sync(); r.check()
             if (!external && !flaky) assertEquals("with no change by the user or the app NO report may look foreign", 0, r.foreign)
         } catch (e: Throwable) {
-            throw AssertionError("seed $seed (lazy=$lazy external=$external flaky=$flaky) start='${start.take(20).replace("\n", "\\n")}' ops: ${log.takeLast(12)} text='${r.text.takeLast(40).replace("\n", "\\n")}': ${e.message}", e)
+            throw AssertionError("first foreign report: $firstForeign; seed $seed (lazy=$lazy external=$external flaky=$flaky) start='${start.take(20).replace("\n", "\\n")}' ops: ${log.takeLast(12)} text='${r.text.takeLast(40).replace("\n", "\\n")}': ${e.message}", e)
         }
     }
 
