@@ -13,11 +13,21 @@ import kotlin.system.exitProcess
  *   --extra  "word count" per line; a word already known gets AT LEAST that count, an unknown one is added (web names, modern words, the apostrophe words)
  *   --min-count N / --max-words N  drop the rare tail
  *
+ * Mixing a second pair corpus into a list that already exists (docs/DICTIONARY.md, "Casual pairs"; the pairs file is made by tools/glide/count_pairs.py):
+ *
+ *   gradlew :tools:glideLexicon --args="--base ime/src/main/assets/glide/en.klx --dump-vocab vocab.txt"
+ *   gradlew :tools:glideLexicon --args="--base ime/src/main/assets/glide/en.klx --merge-pairs casual_pairs.txt --merge-max-weight 0.7 --merge-k 30 --out en.klx"
+ *
+ *   --base FILE            start from this compiled list (its words and its pairs), --words / --pairs are not needed then
+ *   --dump-vocab FILE      write the words of the base list, one per line, and stop
+ *   --merge-pairs FILE     "first second count" per line, mixed into the base list's pairs (LexiconFile.mergePairs); --merge-max-weight W (0..1) --merge-k K
+ *
  * The inputs are untrusted text: they are parsed, never executed.
  */
 fun main(args: Array<String>) {
     var out: String? = null; var words: String? = null; var pairs: String? = null; val extras = ArrayList<String>()
     var minCount = 0L; var maxWords = Int.MAX_VALUE
+    var base: String? = null; var dumpVocab: String? = null; var mergePairs: String? = null; var mergeWeight = 0.7; var mergeK = 30.0
     var i = 0
     while (i < args.size) {
         when (args[i]) {
@@ -27,9 +37,34 @@ fun main(args: Array<String>) {
             "--extra" -> extras.add(args[++i])
             "--min-count" -> minCount = args[++i].toLong()
             "--max-words" -> maxWords = args[++i].toInt()
+            "--base" -> base = args[++i]
+            "--dump-vocab" -> dumpVocab = args[++i]
+            "--merge-pairs" -> mergePairs = args[++i]
+            "--merge-max-weight" -> mergeWeight = args[++i].toDouble()
+            "--merge-k" -> mergeK = args[++i].toDouble()
             else -> { System.err.println("unknown argument ${args[i]}"); exitProcess(2) }
         }
         i++
+    }
+    if (base != null) {
+        val lex = LexiconFile.read(File(base).readBytes())
+        if (dumpVocab != null) {
+            File(dumpVocab).writeText((0 until lex.size).joinToString("\n") { lex.text(it) } + "\n", Charsets.UTF_8)
+            println("vocabulary: ${lex.size} words -> $dumpVocab")
+            return
+        }
+        if (out == null || mergePairs == null) { System.err.println("usage: --base FILE (--dump-vocab FILE | --merge-pairs FILE --out FILE [--merge-max-weight W] [--merge-k K])"); exitProcess(2) }
+        val extra = ArrayList<LexiconFile.Pair>()
+        for (raw in File(mergePairs).readLines(Charsets.UTF_8)) {
+            val p = raw.trim().split(' ', '\t').filter { it.isNotEmpty() }
+            if (p.size == 3 && !raw.startsWith("#")) { val c = p[2].toLongOrNull() ?: continue; extra.add(LexiconFile.Pair(p[0], p[1], c)) }
+        }
+        val merged = LexiconFile.mergePairs(LexiconFile.pairsOf(lex), extra, mergeWeight, mergeK)
+        val bytes = LexiconFile.build(LexiconFile.entriesOf(lex), merged)
+        File(out).parentFile?.mkdirs()
+        File(out).writeBytes(bytes)
+        println("glide word list: ${lex.size} words, ${lex.bigramCount} pairs in the base + ${extra.size} new -> ${merged.size} pairs, ${bytes.size} bytes -> $out (weight $mergeWeight, k $mergeK)")
+        return
     }
     if (out == null || words == null) { System.err.println("usage: --out FILE --words FILE [--pairs FILE] [--extra FILE]... [--min-count N] [--max-words N]"); exitProcess(2) }
 
