@@ -30,11 +30,11 @@ class GlideHost(
     val engine: GlideTyping = GlideTyping(
         loadMain = loadMain ?: { try { context.assets.open("glide/en.klx").use { it.readBytes() } } catch (e: Exception) { null } },
         executor = engineExecutor,
-        loadPersonal = { if (personalFile.isFile) personalFile.readText() else null },
+        loadPersonal = { readWithBackup(personalFile) },
         savePersonal = { text -> writeAtomically(personalFile, text) },
         previewExecutor = previewExecutor,
         saveOwn = { text -> saveOwn(text) },
-        loadDictionary = { if (dictFile.isFile) dictFile.readText() else null },
+        loadDictionary = { readWithBackup(dictFile) },
         saveDictionary = { text -> writeAtomically(dictFile, text) },
     )
 
@@ -75,13 +75,25 @@ class GlideHost(
 
     fun saveHabit(h: FloatArray) { if (h.size == 2) writeAtomically(habitFile, "${h[0]} ${h[1]}") }
 
+    /**
+     * Owner (M14): "ensure that any keyboard learning or data is saved and doesn't get removed or deleted by an app update". An update keeps the app's private files (same signing key, same package); on top of that
+     * every write is atomic (temp file, then rename) and the file it replaces is kept as a ".bak" next to it, so a write cut off by a dying process or a bad future format change can never take the only copy.
+     */
     private fun writeAtomically(f: File, text: String) {
         try {
-            if (text.isEmpty()) { f.delete(); return }
+            if (text.isEmpty()) { f.delete(); File(f.parentFile, f.name + ".bak").delete(); return }
             val tmp = File(f.parentFile, f.name + ".tmp")
             tmp.writeText(text)
+            if (f.isFile && f.length() > 0) { val bak = File(f.parentFile, f.name + ".bak"); bak.delete(); f.renameTo(bak) }
             if (!tmp.renameTo(f)) { f.delete(); tmp.renameTo(f) }
         } catch (e: Exception) { /* the memory is only a convenience: a full disk must never break typing */ }
+    }
+
+    /** The text of [f], or of its ".bak" when the file is missing or empty (a write that was cut off). */
+    private fun readWithBackup(f: File): String? {
+        try { if (f.isFile && f.length() > 0) return f.readText() } catch (_: Exception) { }
+        val bak = File(f.parentFile, f.name + ".bak")
+        return try { if (bak.isFile && bak.length() > 0) bak.readText() else null } catch (_: Exception) { null }
     }
 
     companion object {
