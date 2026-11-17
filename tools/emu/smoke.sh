@@ -19,6 +19,8 @@ adb shell 'while [ "$(getprop sys.boot_completed)" != 1 ]; do sleep 2; done'
 adb logcat -c
 adb shell settings put secure show_ime_with_hard_keyboard 1     # an emulator has a hardware keyboard: without this the soft keyboard is hidden
 adb shell settings put global window_animation_scale 0; adb shell settings put global transition_animation_scale 0; adb shell settings put global animator_duration_scale 0
+# the emulator's launcher ("Quickstep isn't responding", seen twice on the Android 16 image on 2026-11-17) can show an ANR dialog over the app on a slow runner: no crash / ANR dialogs, so the checks look at Swoop and not at the dialog
+adb shell settings put global hide_error_dialogs 1
 
 # ---- 1 install, register, enable, choose
 adb install -r -t "$APK" >/dev/null 2>&1 && ok "installed $PKG" || { bad "install failed"; exit 1; }
