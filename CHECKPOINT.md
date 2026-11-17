@@ -1,13 +1,13 @@
-# CHECKPOINT 177 — read me first, then TASKS.md
+# CHECKPOINT 184 — read me first, then TASKS.md
 
-**Written:** 2026-11-17T02:08:13Z · **tests:** all 1 fast checks green (gradle suite: see ship.sh)
-**Branch:** `ccr-c57dc9d3-149psl` · **builds on:** `dedd4a9` (this checkpoint is the commit after it)
+**Written:** 2026-11-17T02:14:45Z · **tests:** all 1 fast checks green (gradle suite: see ship.sh)
+**Branch:** `ccr-c57dc9d3-149psl` · **builds on:** `0795d00` (this checkpoint is the commit after it)
 
 ## Just done
-N4 tap suggestions and N6 typing-learning wired into the keyboard: strip works with glide off, taps replace the word, quoted typed word keeps it, space fixes obvious typos (one Backspace undoes and teaches), words/pairs/triples learned from taps, erase-and-retype learning, saves on hide/finish; ime 92 + core 262 green, lint ok
+N7 core done: InputController autoSpace (lazy space after , . ! ? ; : before the next letter, not in addresses/abbreviations/numbers), doubleSpace() full stop, autoCapsOn + autoCaps after non-letters and Backspace; TypingOptionsTest (9); core all green
 
 ## Do this next
-N7 options + N8 settings redesign: new Settings screen (ime/SetupActivity.kt is plain). Plan: Settings object in ime (typed prefs: glide, suggestions, autofix, learn, number row, key preview, haptics, trail, key height, theme accent, auto-space-after-punctuation, double-space period, auto-capitalise, sound...), controller support for auto-space/double-space-period (core InputController + tests), KeysView/presenter read them live; then a card-style settings UI (sections, switches, sliders) built in code with the keyboard's neon theme; then release 0.2.0-alpha1 (ime/build.gradle.kts versionCode 2) and N3 floating.
+N7/N8 ime part: (1) ime/Settings.kt typed prefs object (Prefs keys to add: TRAIL AUTOCAPS AUTOSPACE DOUBLESPACE CAPI NUMBERROW KEYHEIGHT PREVIEW HAPTIC SOUND THEME ACCENT SPACESLIDE) with defaults; (2) KeysView.applyOptions(Settings) + themeMode (system/dark/light) + sound + spaceSlide flag; (3) KeyboardPresenter.startInput applies Settings, sets controller.autoSpace/autoCapsOn, double-space (clock 600 ms) in onKey for Key.Ch(' '), 'i'->'I' fix; (4) new SetupActivity UI in SettingsUi.kt: hero status card, live preview KeysView, sections Typing / Suggestions and learning / Layout and look / Feel / Your data, accent chips; ime tests (Robolectric) ; then release 0.2.0-alpha1 (versionCode 2) and N3 floating last.
 
 *(resuming? CLAUDE.md's "FIRST ACTION OF EVERY SESSION" says how; the briefing is tools/resume.sh. Do that first, or autosave may stay off all session.)*
 
@@ -16,6 +16,7 @@ N7 options + N8 settings redesign: new Settings screen (ime/SetupActivity.kt is 
 
 ## Last ten checkpoints
 ```
+  6108878 ckpt 177: N4 tap suggestions and N6 typing-learning wired into the keyboard: strip works
   2104156 ckpt 165: N4/N6 core done: Suggester (completions, typo fixes, next words, autocorrect d
   e2aee4a ckpt 152: N1 number row always on top (thin row, letters+symbols pages), N5 glide starts
   558b1e8 ckpt 143: owner's 9 requests (N1-N9) written into TASKS.md in his words; he likes the ke
@@ -25,8 +26,7 @@ N7 options + N8 settings redesign: new Settings screen (ime/SetupActivity.kt is 
   4b66884 ckpt 132: emulator smoke result (run 43991821449, Android 10 x86_64 emulator on a GitHub
   26a28ff ckpt 130: gated swoop-v0.1.0-alpha1 (ime code 1) and pushed it: handoff self-test, unit 
   a7df414 ckpt 129: owner decision: sign like the other repos - PUBLIC dev key signing/dev/swoop-d
-  7e85792 ckpt 122: README.md written for the now-public repo; emulator smoke run 43991821449 (API
 ```
 
-(11 automatic checkpoint(s) since the last deliberate one — the
+(6 automatic checkpoint(s) since the last deliberate one — the
 session was still mid-step. `git diff` against it shows what changed.)
