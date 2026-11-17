@@ -124,6 +124,7 @@ jobs:
           adb shell settings put secure show_ime_with_hard_keyboard 1
 
       - name: Play a day of keyboard + browser use
+        timeout-minutes: 70
         run: |
           set -o pipefail
           export PATH="$ANDROID_HOME/emulator:$ANDROID_HOME/platform-tools:$PATH"
