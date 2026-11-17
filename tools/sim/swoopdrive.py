@@ -176,7 +176,6 @@ def type_text(text, per_key_pause=0.0, log=None):
     """Types [text] by tapping: letters and space on the letters page, one other character at a time through ?123 (Swoop returns to the letters after one symbol, a digit stays on the symbols page).
     Returns the number of characters that could not be typed (no such key)."""
     missing = 0
-    clear_log()
     km = wait_keymap("letters", need=["k61"])
     for c in text:
         if km is None:
@@ -189,7 +188,6 @@ def type_text(text, per_key_pause=0.0, log=None):
                 km = wait_keymap("letters", need=["k61"]) or km
             tap_char(km, c.lower() if c.isalpha() else c)
         else:
-            clear_log()
             tap_key(km, "sym")
             sk = wait_keymap("symbols", need=["k31"])
             if sk and sk.char(c):
@@ -199,7 +197,6 @@ def type_text(text, per_key_pause=0.0, log=None):
                     log("cannot type %r (not on the first symbols page)" % c)
                 missing += 1
                 tap_key(sk, "abc") if sk and "abc" in sk.keys else None
-            clear_log()
             km = wait_keymap("letters", need=["k61"]) or km
         if per_key_pause:
             time.sleep(per_key_pause)

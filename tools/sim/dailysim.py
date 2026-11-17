@@ -23,6 +23,7 @@ import sys
 import threading
 import time
 import urllib.request
+import xml.etree.ElementTree as ET
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 
@@ -299,6 +300,138 @@ def scene_fields(rep):
         time.sleep(1.0)
 
 
+# ---------------------------------------------------------------------------------------------------------------------------------------------- Kestrel's own screen
+def ui_dump():
+    sh("uiautomator dump /sdcard/sim_ui.xml", check=False)
+    try:
+        return ET.fromstring(adb("exec-out", "cat", "/sdcard/sim_ui.xml", check=False))
+    except Exception:
+        return None
+
+
+def center(node):
+    m = re.match(r"\[(\d+),(\d+)\]\[(\d+),(\d+)\]", node.get("bounds", ""))
+    if not m:
+        return None
+    x1, y1, x2, y2 = (int(v) for v in m.groups())
+    return (x1 + x2) // 2, (y1 + y2) // 2
+
+
+def find_edit(root, *hints):
+    """The first EditText whose hint or text contains one of the hints (case-insensitive)."""
+    if root is None:
+        return None
+    for n in root.iter("node"):
+        if n.get("class") == "android.widget.EditText":
+            blob = (n.get("hint", "") + " " + n.get("text", "") + " " + n.get("content-desc", "")).lower()
+            if any(h.lower() in blob for h in hints):
+                return n
+    return None
+
+
+HEALTH_LOADED = re.compile(r"page loaded host=(\S*).*?paint=(\S+).*?done=(\S+)")
+
+
+def health_lines():
+    return adb("logcat", "-d", "-s", "KestrelHealth:V", check=False).splitlines()
+
+
+def wait_page_loaded(n_before, timeout=60.0):
+    """The first 'page loaded' Health line that Kestrel wrote after [n_before] lines: (seconds, line) or (None, last line)."""
+    t0 = time.time()
+    last = ""
+    while time.time() - t0 < timeout:
+        ls = health_lines()
+        for line in ls[n_before:]:
+            last = line
+            if "page loaded" in line:
+                return time.time() - t0, line
+        time.sleep(1.0)
+    return None, last
+
+
+def address_text():
+    n = find_edit(ui_dump(), "address", "type a url", "search")
+    return n.get("text", "") if n is not None else None
+
+
+def scene_address(rep):
+    """Typing into Kestrel's own address-and-search box with Swoop (the keyboard shows the browser layout there), pressing Go, and watching the page load."""
+    open_url("http://localhost:%d/" % PORT)
+    time.sleep(6.0)
+    tests = [("tap", "example.com", "example.com"), ("tap", "en.wikipedia.org", "en.wikipedia.org"), ("glide", ["weather", "today"], "weather today "),
+             ("glide", ["browser", "keyboard", "google"], "browser keyboard google ")]
+    for mode, what, expected in tests:
+        scene = "address %s %s" % (mode, what if isinstance(what, str) else " ".join(what))
+        node = find_edit(ui_dump(), "type address", "type a url", "search")
+        if node is None:
+            rep.row(scene, "FAIL", "no address box found in Kestrel's screen")
+            shot(rep, "address-nobox")
+            continue
+        drive.tap(*center(node))
+        time.sleep(1.5)
+        km = drive.wait_keymap("letters", need=["k61"], timeout=12)
+        if km is None:
+            rep.row(scene + " keyboard", "FAIL", "Swoop did not show for the address box (keyboard showing=%s)" % keyboard_showing())
+            shot(rep, "address-nokeyboard")
+            continue
+        rep.row(scene + " keyboard", "OK", "Swoop shows; browser layout keys: %s" % ", ".join(k for k in ("k2f", "k2e", "go") if k in km.keys))
+        t0 = time.time()
+        if mode == "tap":
+            drive.type_text(what)
+        else:
+            for w in what:
+                drive.glide_word(w, km)
+                time.sleep(0.6)
+        time.sleep(0.8)
+        got = address_text()
+        shot(rep, "address-typed-%d" % len(rep.rows))
+        ok = got is not None and got.strip() == expected.strip()
+        rep.row(scene + " text", "OK" if ok else "WARN", "the box holds %r, wanted %r (%.1fs of typing)" % (got, expected, time.time() - t0))
+        n0 = len(health_lines())
+        km = drive.read_keymap() or km
+        if "go" in km.keys:
+            drive.tap(*km.keys["go"])
+        else:
+            sh("input keyevent KEYCODE_ENTER", check=False)
+        secs, line = wait_page_loaded(n0, timeout=75.0)
+        if secs is None:
+            rep.row(scene + " page", "FAIL", "no 'page loaded' line within 75 s; last Health line: %s" % line[-120:])
+        else:
+            rep.row(scene + " page", "OK", "loaded after %.1fs: %s" % (secs, line.split("KestrelHealth")[-1].strip()[:140]))
+        shot(rep, "address-page-%d" % len(rep.rows))
+        time.sleep(1.0)
+
+
+def scene_private(rep):
+    """A page field in a PRIVATE tab must make Swoop learn nothing: the field says so (IME_FLAG_NO_PERSONALIZED_LEARNING) and Swoop's debug line shows noLearn=true; a normal tab shows noLearn=false."""
+    w, h = screen()
+    for label, private in (("normal tab", False), ("private tab", True)):
+        reset()
+        url = "http://localhost:%d/f/text" % PORT
+        if private:
+            sh("am start -n %s --es kestrel_debug privtab --es kestrel_arg '%s'" % (KESTREL_ACT, url), check=False)
+        else:
+            open_url(url)
+        st = wait_state(lambda s: s.get("last") == "load", timeout=60)
+        if st.get("last") != "load":
+            rep.row("field %s page loaded" % label, "FAIL", "the page never reported")
+            continue
+        time.sleep(1.5)
+        before = adb("logcat", "-d", "-s", "SwoopDiag:D", check=False).count("startInput")
+        drive.tap(w // 2, int(h * 0.30))
+        time.sleep(2.5)
+        lines = [l for l in adb("logcat", "-d", "-s", "SwoopDiag:D", check=False).splitlines() if "startInput" in l]
+        last = lines[-1] if lines and len(lines) > before else (lines[-1] if lines else "")
+        m = re.search(r"noLearn=(\w+)", last)
+        got = m.group(1) if m else None
+        want = "true" if private else "false"
+        rep.row("field %s noLearn" % label, "OK" if got == want else "FAIL", "Swoop's field line: %s" % last.split("SwoopDiag:")[-1].strip()[:150])
+        shot(rep, "private-%s" % ("on" if private else "off"))
+        sh("input keyevent KEYCODE_BACK", check=False)
+        time.sleep(1.0)
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--out", default="sim-out")
@@ -331,6 +464,8 @@ def main():
         scene_memory(rep, "before")
         if a.suite in ("typing", "all"):
             scene_fields(rep)
+            scene_address(rep)
+            scene_private(rep)
             scene_memory(rep, "after typing")
     except Exception as e:
         rep.row("run", "FAIL", "the run itself broke: %s" % str(e)[:160])
