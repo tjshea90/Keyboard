@@ -148,6 +148,16 @@ if [ -n "$GEOM" ]; then
   T="$(field_text)"; shot symbols
   # (the keyboard's "space after punctuation" may put a space between ? and the letter, and capitalise it: Android 16 did, Android 10 did not; both prove the same thing: ? was typed and the letters are back)
   case "$T" in *"?a"|*"?A"|*"? a"|*"? A") ok "?123, then ?, then a typed a letter after the ?: one special character and the letters are back ($T)" ;; *) bad "expected the field to end with ? and a letter after ?123 ? a, got '$T'" ;; esac
+  # ---- 6b a capital after a sentence end, the way people type it: full stop, space, letter (owner M6). The keyboard's own trace of the conditions (booleans and counts only, a debuggable build) is
+  # printed too: Q-SMARTSPACE (Android 10 typed H?a where Android 16 typed H? A) is looked at with it.
+  adb shell input tap $(key dot); sleep 0.7
+  adb shell input tap $(key space); sleep 0.7
+  adb shell input tap $(key b); sleep 0.7
+  T3="$(field_text)"; shot sentence
+  case "$T3" in *". B") ok "a full stop, a space and a letter: the letter is a capital ($T3)" ;; *) bad "expected the field to end with '. B' after a full stop, a space and b, got '$T3'" ;; esac
+  adb logcat -d | grep -a 'SwoopDiag: \(key\|sel\)' > "$OUT/swoopdiag-keys.txt" 2>/dev/null
+  echo "  info  keyboard trace of the typing stages (booleans and counts; the last 70 lines):"; tail -70 "$OUT/swoopdiag-keys.txt" | sed 's/^/    /' | cut -c1-300
+  adb shell input tap $(key back); sleep 0.4; adb shell input tap $(key back); sleep 0.4; adb shell input tap $(key back); sleep 0.4
   adb shell input tap $(key back); sleep 0.4; adb shell input tap $(key back); sleep 0.4
   # ---- 4 glide: a swipe along the top row from t to p (a word like top/tip/typo is decoded)
   adb shell input tap $(key space); sleep 0.4
