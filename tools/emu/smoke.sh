@@ -105,8 +105,8 @@ rows = [
 out = {}
 for letters, xs, ri in rows:
     for ch, x in zip(letters, xs): out[ch] = (int(x), int(row_y(ri)))
-bx = row_x([1, 1.5, 1, 3.5, 1, 2])           # the bottom row: globe, 123, comma, space, dot, action
-out['globe'] = (int(bx[0]), int(row_y(4))); out['space'] = (int(bx[3]), int(row_y(4))); out['back'] = (int(row_x([1.5] + [1] * 7 + [1.5])[-1]), int(row_y(3)))
+bx = row_x([1, 6.4, 1, 1.6])                 # the bottom row: comma, space, dot, action (no 123 key, no globe key; the space bar takes the rest)
+out['space'] = (int(bx[1]), int(row_y(4))); out['dot'] = (int(bx[2]), int(row_y(4))); out['back'] = (int(row_x([1.5] + [1] * 7 + [1.5])[-1]), int(row_y(3)))
 out['grip'] = (int(l + W / 2), int(t_ + grip / 2))
 print(frame, (b_ - t_) / dp, ' '.join('%s=%d,%d' % (k, v[0], v[1]) for k, v in out.items()))
 PY
@@ -146,7 +146,10 @@ if [ -n "$GEOM" ]; then
   echo "  info  field bytes after the glide: $(printf '%s' "$T" | od -An -c | tr -s ' ' | head -2 | tr '\n' ' ')"
   case "$T" in *[a-z]" ") [ "${#T}" -ge 4 ] && ok "a glide typed a word with a trailing space ('$T')" || bad "the glide typed too little ('$T')" ;; *) bad "the glide did not type a word (field: '$T')" ;; esac
   # ---- 6 globe key: must not crash
-  adb shell input tap $(key globe); sleep 2; shot globe
+  # holding the space bar opens the keyboard picker (there is no globe key any more); it must not crash and must not type a space
+  SX=$(key space | cut -d' ' -f1); SY=$(key space | cut -d' ' -f2)
+  adb shell input swipe $SX $SY $SX $SY 1000; sleep 2; shot picker
+  T2="$(field_text)"; [ "$T2" = "$T" ] && ok "holding the space bar typed no space" || echo "  info  field before '$T' after the hold '$T2'"
   adb shell input keyevent KEYCODE_BACK; sleep 1                 # (closes the keyboard picker if Android showed one)
 
   # ---- 8 floating (N3): long press the neon bar; the window becomes the whole screen, only the panel takes touches, the app behind is not resized
