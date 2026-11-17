@@ -80,7 +80,7 @@ for b in blocks:
         if m: frame = tuple(map(int, m.groups())); break
 if not frame: sys.exit(1)
 l, t_, r, b_ = frame
-dp = dens / 160.0; pad = 3 * dp; gap = 3 * dp; strip = 30 * dp; grip = 18 * dp
+dp = dens / 160.0; pad = 3 * dp; gap = 3 * dp; strip = 36 * dp; grip = 22 * dp
 W = r - l
 # the IME window ALSO covers the navigation bar below the keyboard, so the keyboard's own height comes from its formula, not from the frame
 rowh = min(max((W - 2 * pad) / 10.0, 40 * dp), 52 * dp)
@@ -98,15 +98,15 @@ def row_x(ws):
     for w in ws: xs.append(x + w * unit / 2); x += w * unit + gap
     return xs
 rows = [
-    ("qwertyuiop", row_x([1] * 10), 1),
-    ("asdfghjkl", row_x([.5] + [1] * 9 + [.5])[1:-1], 2),
-    ("zxcvbnm", row_x([1.5] + [1] * 7 + [1.5])[1:-1], 3),
+    ("qwertyuiop", row_x([1] * 10 + [1.5])[:-1], 1),
+    ("asdfghjkl", row_x([.5] + [1] * 9 + [2])[1:-1], 2),
+    ("zxcvbnm", row_x([2.25] + [1] * 7 + [2.25])[1:-1], 3),
 ]
 out = {}
 for letters, xs, ri in rows:
     for ch, x in zip(letters, xs): out[ch] = (int(x), int(row_y(ri)))
-bx = row_x([1.5, 1, 4.9, 1, 1.6])             # the bottom row: 123, comma, space, dot, action (no globe key by default; the space bar takes the rest)
-out['space'] = (int(bx[2]), int(row_y(4))); out['dot'] = (int(bx[3]), int(row_y(4))); out['back'] = (int(row_x([1.5] + [1] * 7 + [1.5])[-1]), int(row_y(3)))
+bx = row_x([1.5, 6, 1.5, 2.5])               # the bottom row: comma, space, dot, ?123 (no globe key by default; the space bar takes the rest)
+out['space'] = (int(bx[1]), int(row_y(4))); out['dot'] = (int(bx[2]), int(row_y(4))); out['back'] = (int(row_x([1] * 10 + [1.5])[-1]), int(row_y(1)))
 out['grip'] = (int(l + W / 2), int(t_ + grip / 2))
 print(frame, (b_ - t_) / dp, ' '.join('%s=%d,%d' % (k, v[0], v[1]) for k, v in out.items()))
 PY
