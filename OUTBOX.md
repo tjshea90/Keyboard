@@ -248,3 +248,27 @@
 >
 > Everything is pushed (checkpoint 282), and I'm not starting any new work. To pick up: tell Claude to "resume Swoop" and it will continue from the saved next steps, which are the emulator test and then shipping 0.3.0-alpha1.
 <!-- sha:baee908fb2ee -->
+
+## 2026-11-17T08:54:43Z
+> Everything so far is saved and pushed. The word-list helper (M10/M13) is still running, so I'm waiting on it before the final tests, the release build and the Kestrel browser link (M16).
+>
+> **Done and tested**
+> - **M1 Layout:** the Gboard-style layout is in. The photo never arrived with the scheduled prompt, so this follows Gboard's large layout and needs adjusting once you send the photo. Backspace ends the top letter row, Enter ends the home row, and Shift sits at both ends of the bottom letter row. Under that is only comma, a wide space bar, full stop and ?123 at the bottom right. There is no globe, emoji or voice key and nothing under the space bar.
+> - **M2 Clipboard:** a Gboard-style clipboard panel. It keeps what you copy for an hour, pastes on tap, pins, has a hold menu (Pin or Delete) and Clear all.
+> - **M3 Glide trail:** the Settings switch for the glide trail already existed. I made its description say that turning it off removes the line.
+> - **M4 Hide letters:** a Settings switch draws blank keys that still type their letters.
+> - **M5 Special characters:** after one special character the keyboard returns to the letters at once.
+> - **M6 Capitals:** a capital letter after `. ? !` is the default.
+> - **M7 Translate:** an ES icon in the toolbar next to settings and clipboard. With it on, Enter turns the box into Mexican Spanish and a second Enter sends. It is the only internet use, and the manifest now requests INTERNET and nothing else. The real MyMemory and Google services were never called, only tested against fake answers.
+> - **M8 Squeeze:** pinch the glowing bar with two fingers, or drag the arrows at its ends, to narrow the docked keyboard. Drag the bar sideways to move it and double-tap it for full width again.
+> - **M9 Glide vs tap:** a touch only counts as a single tap if it never leaves its key, so a quick swipe to the next key is now a glide.
+> - **M11 Emoji:** a word with an emoji, like "clown", offers the emoji as the last suggestion. Tapping it replaces the written word, and the emoji is never learned as a word.
+> - **M12 and M15 Dictionary:** Settings has a new My dictionary screen. Added words are predicted on glide, and removed words are never offered or learned. Long-pressing a suggested word asks "Remove for good?" and a tap confirms.
+> - **M14 Updates:** learned data is kept across updates (same signing key). I added a backup copy of each data file and tests that read old-format files.
+> - **Tests:** core and keyboard unit tests and lint are green. Nothing has been run on the tablet or phone, since the sandbox has no emulator.
+>
+> **Still open**
+> - **M10 and M13 prediction:** the helper is rebuilding the English word list from frequency sources and adding the rare-word filter ("tui" should no longer beat common words). It has not reported yet.
+> - **M16 Kestrel browser:** this comes last. I will not expose your learned data to other apps on the phone. The signing key is public, so any app signed with it could read your typing history. Sharing will be through the one engine code copy plus the existing Export/Import, and I will explain the options when I get there.
+> - **Release:** version 0.4.0-alpha1 is set but not built or published yet.
+<!-- sha:7c6a7a42fcc9 -->
