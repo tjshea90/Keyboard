@@ -138,7 +138,7 @@ BRIEF="$(
 - New request from the owner -> TASKS.md as [ ] boxes in their words FIRST, ckpt, then code.
 - GitHub Actions builds EVERY APK ("Claude codes, GitHub makes the APK"): bash ship.sh "note", then dispatch android.yml
   (mcp__github__actions_run_trigger run_workflow, ref = this branch, inputs full_build=true + note), then bash tools/record-release.sh <tag> "note".
-- Never commit a key, keystore, learning export, replay log, screenshot of the owner's screen or APK (the repo is PUBLIC and the hooks copy chat into it). The Kestrel browser repo (tjshea90/Browser) is READ-ONLY.
+- Never commit a key, keystore, learning export, replay log, screenshot of the owner's screen or APK (the repo is PUBLIC and the hooks copy chat into it). The Kestrel browser repo (tjshea90/Browser) is LINKED (docs/KESTREL-LINK.md): edit it only on your own branch via git -C, never cd into it, never main; LinkMeter is read-only.
 - Rules, architecture map, device facts: CLAUDE.md, BRIEF.md, research/KEYBOARD-APP-PLAN.md. No emulator/KVM here: say honestly what was and was not run on the tablet.
 - AUTO-RESUME: on a long job keep ONE heartbeat (id in the latest ckpt 'next'); a cut-off notice with a reset time -> send_later at reset+2 min.
 SHORT
