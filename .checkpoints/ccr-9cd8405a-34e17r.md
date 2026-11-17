@@ -1,13 +1,13 @@
-# CHECKPOINT 286 — read me first, then TASKS.md
+# CHECKPOINT 287 — read me first, then TASKS.md
 
-**Written:** 2026-11-17T08:48:18Z · **tests:** all 1 fast checks green (gradle suite: see ship.sh)
-**Branch:** `ccr-9cd8405a-34e17r` · **builds on:** `bb8368f` (this checkpoint is the commit after it)
+**Written:** 2026-11-17T08:53:35Z · **tests:** all 1 fast checks green (gradle suite: see ship.sh)
+**Branch:** `ccr-9cd8405a-34e17r` · **builds on:** `b12af71` (this checkpoint is the commit after it)
 
 ## Just done
-M8 squeeze/pinch/slide of docked keyboard + tests, toolbar/clipboard/emoji/dictionary/short-swipe tests, ime 172 tests green
+M14 backup rotation + update-safety tests, version 0.4.0-alpha1 (code 5), README, smoke geometry for new layout; core+ime tests+lint green. WAITING for lexicon helper ae9303e340af4888b
 
 ## Do this next
-M14: .bak rotation in GlideHost.writeAtomically + fallback load + golden-format test; then wait for helper ae93 (lexicon) result, run full :core:test :ime:testDebugUnitTest :ime:lintDebug, bump ime/build.gradle.kts to 0.4.0 (code 5), README/docs, ship.sh + dispatch android.yml
+when helper reports: run :core:test :ime:testDebugUnitTest :ime:lintDebug, check APK size budget, tick TASKS M1-M15 with proofs, bash ship.sh note, dispatch android.yml ref ccr-9cd8405a-34e17r full_build=true, wait, record-release; THEN M16: vendor Keyboard core/input into /home/user/Browser (my branch ccr-9cd8405a-34e17r only) with tools/sync-keyboard-core.sh + pin; write docs/KESTREL-LINK.md (note: no IPC data sharing because the dev signing key is public)
 
 *(resuming? CLAUDE.md's "FIRST ACTION OF EVERY SESSION" says how; the briefing is tools/resume.sh. Do that first, or autosave may stay off all session.)*
 
@@ -16,6 +16,7 @@ M14: .bak rotation in GlideHost.writeAtomically + fallback load + golden-format 
 
 ## Last ten checkpoints
 ```
+  b6d15cb ckpt 286: M8 squeeze/pinch/slide of docked keyboard + tests, toolbar/clipboard/emoji/dic
   50e0018 ckpt 285: M12/M15 dictionary (core UserDictionary, engine block/add/lookup, DictionaryAc
   bba95ae ckpt 284: M6 default sentence caps, M9 glide-vs-tap (stayedOnKey + minLength 0.45), M1 n
   625c67b ckpt 283: recorded the owner's 16 scheduled requests M1-M16 in TASKS.md
@@ -25,8 +26,7 @@ M14: .bak rotation in GlideHost.writeAtomically + fallback load + golden-format 
   4eecb24 ckpt 272: N10-N14 done in code and tests: glide survives an address bar's inline complet
   7fd6628 ckpt 253: owner's new requests (Brave strip tap does nothing, remove 123 and globe keys,
   8ea6088 ckpt 249: RELEASE swoop-v0.2.1-alpha1 (code 3) published (run 44009075923 green, pinned 
-  6f0e9b4 ckpt 245: swoop-v0.2.1-alpha1 (code 3) gated and android.yml dispatched (floating keyboa
 ```
 
-(7 automatic checkpoint(s) since the last deliberate one — the
+(6 automatic checkpoint(s) since the last deliberate one — the
 session was still mid-step. `git diff` against it shows what changed.)
