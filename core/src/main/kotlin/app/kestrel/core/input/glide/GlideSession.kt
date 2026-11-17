@@ -37,6 +37,9 @@ class GlideSession(
     private var retypeAt = 0L
     private var liftAt = 0L
 
+    private var shown: List<String> = emptyList()
+    private fun show(words: List<String>) { shown = words; ui?.showCandidates(words) }
+
     private fun learnAllowed() = controller.field.learningAllowed
 
     /** The context for the next glide (and its live previews): the two words before the cursor. */
@@ -47,7 +50,7 @@ class GlideSession(
 
     /** A live guess for the glide still in progress (UI thread). */
     fun onPreview(res: GlideResult) {
-        if (res.candidates.isEmpty()) ui?.clearCandidates() else ui?.showCandidates(res.candidates.map { it.text })
+        if (res.candidates.isEmpty()) { shown = emptyList(); ui?.clearCandidates() } else show(res.candidates.map { it.text })
     }
 
     /** The decoder's answer for the glide that ended (UI thread): the best guess goes in, the strip shows the others. */
@@ -69,7 +72,7 @@ class GlideSession(
         pendingWord = best.text; pendingWeight = 1f; pendingGuessed = null
         topGuess = best.text
         pendingPrev = prev; pendingPrev2 = prev2
-        ui?.showCandidates(cands.map { it.text })
+        show(cands.map { it.text })
     }
 
     /** A candidate in the strip was tapped: it replaces the word the glide put in. */
@@ -81,13 +84,9 @@ class GlideSession(
         val g = engine()
         g?.stats?.onPicked()
         g?.accepted(word) { h -> habitChanged(h) }
-        ui?.showCandidates(listOf(word) + currentStrip.filter { it != word }.take(2))
+        show(listOf(word) + shown.filter { it != word }.take(2))
         return true
     }
-
-    private var currentStrip: List<String> = emptyList()
-    init { /* the strip the UI shows is mirrored here so a pick can reorder it */ }
-    fun setStrip(words: List<String>) { currentStrip = words }
 
     /** Call BEFORE a key reaches the controller: it decides what the key means for the glide that is on screen. */
     fun beforeKey(key: Key) {
@@ -106,11 +105,11 @@ class GlideSession(
     /** Call AFTER the controller handled the key. */
     fun afterKey(key: Key) {
         if (retypeWatch && key is Key.Ch && key.text == " ") finishRetype()
-        if (controller.lastGlide == null) ui?.clearCandidates()
+        if (controller.lastGlide == null) { shown = emptyList(); ui?.clearCandidates() }
     }
 
     /** The cursor was moved on purpose, the field changed or the keyboard closed: the glide that is on screen stays. */
-    fun settle() { confirmPrevious(); pendingWord = null; afterUndo = false; retypeWatch = false; ui?.clearCandidates() }
+    fun settle() { confirmPrevious(); pendingWord = null; afterUndo = false; retypeWatch = false; shown = emptyList(); ui?.clearCandidates() }
 
     /** The glide that was just put in stays: the decoder learns from it where this thumb lands, and the memory learns the word. */
     private fun confirmPrevious() {
