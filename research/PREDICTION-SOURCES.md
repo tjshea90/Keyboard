@@ -60,3 +60,39 @@ Swoop has NO internet permission and must never send typed text anywhere (CLAUDE
 - Our decoder is already a SHARK2-family design (shape cost + language prior, a learned finger bias, remembered personal glide shapes); the published numbers say the **language prior and the vocabulary matter as much as the path model**, which is where the personal learning (N6) and a chat-register word list (item 2) act.
 - The biggest unknown is how accurate our decoder is on REAL human swipes. We only have simulated paths (`eval/` GestureSim). Item 1 (real swipes, MIT) is the first thing to do before changing anything, because without a number we cannot tell a tuning from a regression.
 - Licence care: CC BY-SA data would make the compiled asset CC BY-SA. That is acceptable for a public personal repo but must be stated in `ime/src/main/assets/glide/LICENSE.txt` and `docs/DICTIONARY.md`.
+
+## F) What was built (2026-11-17, owner: "do everything possible to improve the glide word prediction accuracy ... never predict rare words like tui")
+
+**Data (all downloaded as data, nothing run; docs/DICTIONARY.md has versions, checksums, licences and the recipe).** The list went from 82 971 words (SymSpell only) to 140 436: SCOWL 2020.12.07 says which words are valid English
+(inflections included), the counts are a log-linear blend of wordfreq 3.1.1 `large_en` (0.4), OpenSubtitles via hermitdave FrequencyWords 2018 (0.3) and SymSpell / Google Books (0.3), 447 frequent words that SCOWL lacks (`lol`, `youtube`) and the
+hand-written extras are added, short words (2 and 3 letters) need real use, and a word nobody counted keeps a tiny count. wordfreq and FrequencyWords are CC BY-SA 4.0, so `en.klx` is now CC BY-SA 4.0 and `LICENSE.txt` carries every notice
+(including SCOWL's whole Copyright file). The format is still KGL1 (3.64 MB, was 2.71). Reading it: 21 ms cold JVM (was 16), 10.5 MB of heap (was 6.8), on this desktop; not measured on the tablet.
+`tui` is out: it is a 3-letter word with 0.6 per million in wordfreq (a travel company), under the new rule for short words; and anything of that kind that stays in the list (4+ letters, SCOWL-valid) is rare by the next rule.
+
+**Decoder (`GlideDecoder`, `Rarity`, new `GlideParams.rareFloor/rareW/rareCap/rareMaxPerLetter/rareFitSpan`).** A word whose language prior (own use and pair with the word before included) is below ln p = -12.5 (about rank 13 000 of 140 000) pays
+1.0 cost unit per nat below it, and is not offered at all unless the path fits it (cost per letter <= 3.4 just under the floor, 1.1 two nats under). The price does not shrink with the adaptive language weight, so a clean glide cannot be argued into a rare lookalike
+and a clear glide of a rare word still gets it; personal use or a known pair lifts the prior out of the rare class. `keep` (words that reach the careful pass) 200 -> 400 and `quickPrior` 0.12 -> 0.10: with 1.7 times the words the right one
+fell out of the quick pass more often (+1 point top-1). Tap suggestions (`Suggester`) use the same floor (0.7 nats per nat), so completions, next words and typo fixes prefer common words and learned words come first; a typed word below -16 is no longer
+trusted as "known" by itself.
+
+**Numbers** (`RareWordEval`: 5000 simulated glides of words drawn by the OLD list's frequencies, `pop=freq`; `pop=mid` = words uniform over the old top 15 000, a harder mix; same words and same paths for both lists; "steal" = a rare word
+(ln p < -12.5 in the new list) came first although the intended word was common; "deep" = the winner was below -14; keep=200 / old list / no price before, keep=400 / new list / price after):
+
+| noise | words | top-1 before -> after | top-3 before -> after | rare steals before -> after | deep steals |
+| :- | :- | :- | :- | :- | :- |
+| calm | freq | 96.1 -> 95.5 | 99.2 -> 99.3 | 2 -> 0 | 0 -> 0 |
+| normal | freq | 90.2 -> 89.3 | 97.4 -> 97.4 | 13 -> 4 | 4 -> 0 |
+| sloppy | freq | 79.2 -> 77.6 | 91.3 -> 91.1 | 39 -> 19 | 17 -> 1 |
+| bad | freq | 64.7 -> 63.3 | 78.4 -> 78.0 | 143 -> 56 | 62 -> 1 |
+| normal | mid | 82.9 -> 81.3 | 95.2 -> 94.7 | 28 -> 4 | 7 -> 0 |
+| sloppy | mid | 64.5 -> 64.6 | 81.8 -> 83.5 | 92 -> 30 | 29 -> 0 |
+| bad | mid | 46.5 -> 47.5 | 63.5 -> 66.8 | 247 -> 89 | 107 -> 6 |
+
+The old list scores a little higher on its OWN distribution (it is both the yardstick and the competitor). With words drawn by an INDEPENDENT yardstick the new list is better (normal / sloppy top-1, 4000 glides): subtitle counts 89.1 / 77.2 -> 91.0 / 80.9,
+wordfreq counts 90.1 / 79.9 -> 90.5 / 80.7, Google Books counts 71.7 / 52.6 -> 71.5 / 53.9; deep steals 4 / 24 -> 0 / 0 (subtitles). On the new list's own words (`GlideEval`, no old list): normal 91.0 / 98.2, sloppy 82.6 / 93.8, calm 96.8 / 99.7.
+The price: rare words that ARE meant (uniform over words between ln p -16 and -12.5) are found less: normal 54.4 -> 53.6 % top-1 for the fit rule alone, and 49 -> 41-44 % with the language price against the old behaviour (simulated; uncommon words meant on purpose
+need a clearer glide or a few uses). Decode time on this desktop (JIT warm, 4 shared cores): 3.1-3.4 ms -> 5.4-6.5 ms per glide (the careful pass looks at 400 words instead of 200); on the tablet expect several times that, off the UI thread. Not measured there.
+
+**Not verified / still open.** No recorded human glide data (only the simulator), no run on the tablet or an emulator, the rarity floor and prices were tuned on simulated thumbs, the pair list is still book English (no licence-clean chat pairs), and
+ideas 1, 2 (pairs part), 4 and 5 above (real swipe replay, chat-register pairs, personal-cache tuning, a small neural decoder) are untouched.
+

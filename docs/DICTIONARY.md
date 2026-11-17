@@ -59,7 +59,7 @@ A word is **rare** when its language prior (ln of its chance, the person's own u
 
 * Glide decoder (`GlideParams.rareW`, `rareFloor`, `rareCap`, `rareMaxPerLetter`, `rareFitSpan`): a rare word pays 1.0 cost unit per nat below the floor (at most 7 nats) on top of the language weight, and is not offered at all unless the
   path fits it (cost per letter at most 3.4 for a word just under the floor, 1.1 for a word 2 nats under it). So a rare word wins only when its letters were plainly drawn; a glide that fits nothing gives no word (it used to give "tui").
-* A word the person uses is not rare: `PersonalModel` adds its own mass (2e7 occurrences per use, 1.5e7 per recent use) to the prior before the test, so about eight uses lift a word past a common lookalike, one use past other rare words.
+* A word the person uses is not rare: `PersonalModel` adds its own mass (2e7 occurrences per use, 1.5e7 per recent use) to the prior before the test, so a handful of uses (at most ten in the test) lift a word past a common lookalike and two or three past other rare words.
   A pair with the word before that the list knows (`hong kong`) also keeps a word out of the rare class.
 * Tap suggestions (`Suggester`): the same floor, 0.7 nats lost per nat below it (completions, next words, typo fixes); a typed word below -16 (the unused tail) is not trusted as "known" on its own, so a far more likely one-slip fix may replace it.
 * The quick pass of the decoder keeps 400 words (was 200): with 1.7 times the words the right one fell below the cut-off more often; this alone is worth about 1 point of top-1.
