@@ -14,6 +14,7 @@ class GlideStats {
     private var shapes = 0; private var shapeWords = 0; private var shapeLifts = 0; private var shapeFlips = 0
     private var previews = 0; private var previewMs = 0L; private var shown = 0; private var shownMs = 0L; private var shownMax = 0L
     private var retries = 0
+    private var suggested = 0; private var suggestMs = 0L; private var suggestMax = 0L; private var suggPicked = 0; private var typedLearned = 0; private var autoFixed = 0; private var autoUndone = 0; private var retyped = 0
 
     @Synchronized fun onDecoded(millis: Long, found: Boolean) { glides++; if (!found) noMatch++; ms += millis; if (millis > msMax) msMax = millis; if (found) pending = true }
     /** Whatever the person did next that was not a correction: the word stays. */
@@ -35,9 +36,20 @@ class GlideStats {
     @Synchronized fun onLearnedTop() { learnedTop++ }
     /** The glide was a retry of a deleted word that came up first again: the deleted word was moved to second place. */
     @Synchronized fun onRetryDemoted() { retries++ }
+    /** The strip was filled for tapped letters (or for the next word) in [millis]. */
+    @Synchronized fun onSuggested(millis: Long) { suggested++; suggestMs += millis; if (millis > suggestMax) suggestMax = millis }
+    /** A word from the strip was tapped while typing with taps. */
+    @Synchronized fun onSuggestionPicked() { suggPicked++ }
+    /** A word typed with taps was learned. */
+    @Synchronized fun onTypedLearned() { typedLearned++ }
+    /** A space put in the keyboard's fix for a typo; [undone]: the person took it back with Backspace right away. */
+    @Synchronized fun onAutoCorrected() { autoFixed++ }
+    @Synchronized fun onAutoCorrectUndone() { autoUndone++ }
+    /** A word was erased and another typed in its place (the new one was meant). */
+    @Synchronized fun onRetyped() { retyped++ }
 
     @Synchronized fun line(): String {
-        if (loadMs < 0 && glides == 0) return "Glide typing: not used yet this run"
+        if (loadMs < 0 && glides == 0 && typedLearned == 0 && suggested == 0) return "Glide typing: not used yet this run"
         val sb = StringBuilder("Glide typing: ")
         if (glides == 0) sb.append("no glide yet")
         else {
@@ -56,6 +68,8 @@ class GlideStats {
         if (learnedWords > 0 || learnedTop > 0) sb.append("; learned $learnedWords words and $learnedPairs word pairs from your typing, a learned word was the first guess $learnedTop times")
         if (learnedCorrections > 0 || learnedTriples > 0) sb.append("; $learnedCorrections corrections and $learnedTriples three-word phrases remembered")
         if (shapes > 0 || shapeLifts > 0) sb.append("; $shapes glide shapes of $shapeWords words remembered, a remembered shape helped $shapeLifts times and changed the first guess $shapeFlips times")
+        if (typedLearned > 0 || suggested > 0) sb.append("; tap typing: $typedLearned words learned, suggestions made $suggested times (avg ${if (suggested > 0) suggestMs / suggested else 0} ms, worst $suggestMax ms), $suggPicked picked from the strip, $retyped erased and retyped")
+        if (autoFixed > 0) sb.append("; automatic fixes $autoFixed, taken back $autoUndone")
         if (retries > 0) sb.append("; a deleted word came up first again and went to second place $retries times")
         return sb.toString()
     }
