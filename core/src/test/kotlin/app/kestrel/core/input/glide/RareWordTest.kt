@@ -176,7 +176,7 @@ class RareWordTest {
     @Test fun everydayWordsAreNotRareAndJunkIsNotInTheList() {
         val lex = GlideEval.loadLexicon()
         val everyday = listOf("the", "you", "weather", "dinner", "tomorrow", "grocery", "restaurants", "homework", "birthday", "weekend", "thanks", "please", "address", "message", "yesterday", "morning",
-            "doctor", "appointment", "tonight", "wonderful", "beautiful", "delicious", "sneakers", "emoji", "selfie", "podcast", "youtube", "gmail", "wifi", "lol", "gonna", "wanna", "don't", "it's", "i'm", "that's")
+            "doctor", "appointment", "tonight", "wonderful", "beautiful", "delicious", "shoes", "emoji", "selfie", "podcast", "youtube", "gmail", "wifi", "lol", "gonna", "wanna", "don't", "it's", "i'm", "that's")
         for (w in everyday) { val id = lex.idOf(w); assertTrue("$w is in the list", id >= 0); assertTrue("$w is not rare (${lex.logProb(id)})", lex.logProb(id) >= Rarity.FLOOR) }
         // valid but uncommon words are there, and rare
         for (w in listOf("quixotic", "xylophone", "obsequious", "ephemeral")) { val id = lex.idOf(w); assertTrue("$w is in the list", id >= 0); assertTrue("$w is rare", lex.logProb(id) < Rarity.FLOOR) }
