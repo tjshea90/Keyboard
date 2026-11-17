@@ -70,7 +70,8 @@ class GripBar(context: Context) : View(context) {
         box.set(cx - len / 2, cy - th / 2, cx + len / 2, cy + th / 2); c.drawRoundRect(box, th / 2, th / 2, paint)
     }
 
-    private fun lighten(c: Int): Int { fun m(x: Int) = x + (255 - x) / 2; return 0xFF000000.toInt() or (m((c shr 16) and 255) shl 16) or (m((c shr 8) and 255) shl 8) or m(c and 255) }
+    private fun half(x: Int) = x + (255 - x) / 2
+    private fun lighten(c: Int): Int = 0xFF000000.toInt() or (half((c shr 16) and 255) shl 16) or (half((c shr 8) and 255) shl 8) or half(c and 255)
 
     override fun onTouchEvent(e: MotionEvent): Boolean {
         val rx = e.rawX; val ry = e.rawY
