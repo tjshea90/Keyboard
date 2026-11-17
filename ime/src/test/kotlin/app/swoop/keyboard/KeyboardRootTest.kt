@@ -262,7 +262,7 @@ class KeyboardRootTest {
         val p = r.panelRect(); val y = p.top + r.grip.top + r.grip.height / 2f; val cx = p.centerX().toFloat()
         touch(r, MotionEvent.ACTION_DOWN, cx, y); touch(r, MotionEvent.ACTION_MOVE, cx + 30 * dp, y); touch(r, MotionEvent.ACTION_MOVE, cx + 90 * dp, y); touch(r, MotionEvent.ACTION_UP, cx + 90 * dp, y)
         val moved = r.panelRect(); assertTrue("moved right: $moved", moved.left > 40 * dp); assertEquals("same width", p.width(), moved.width())
-        assertEquals(Settings(app).dockX, Math.round(moved.left * 1000f / (sw - moved.width())), 3)
+        assertEquals(Settings(app).dockX.toDouble(), Math.round(moved.left * 1000f / (sw - moved.width())).toDouble(), 3.0)
         val q = r.panelRect(); val cy = q.top + r.grip.top + r.grip.height / 2f
         touch(r, MotionEvent.ACTION_DOWN, q.centerX().toFloat(), cy); touch(r, MotionEvent.ACTION_UP, q.centerX().toFloat(), cy)
         touch(r, MotionEvent.ACTION_DOWN, q.centerX().toFloat(), cy); touch(r, MotionEvent.ACTION_UP, q.centerX().toFloat(), cy)
