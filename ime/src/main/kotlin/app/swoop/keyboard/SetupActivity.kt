@@ -1,6 +1,7 @@
 package app.swoop.keyboard
 
 import android.app.Activity
+import android.app.AlertDialog
 import android.content.Context
 import android.content.Intent
 import android.graphics.Typeface
@@ -13,6 +14,9 @@ import android.view.ViewGroup
 import android.view.WindowInsets
 import android.view.inputmethod.InputMethodManager
 import android.widget.Button
+import android.widget.CompoundButton
+import android.widget.Switch
+import android.widget.Toast
 import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.ScrollView
@@ -25,6 +29,7 @@ import android.widget.TextView
 class SetupActivity : Activity() {
     private lateinit var enabledLine: TextView
     private lateinit var currentLine: TextView
+    private lateinit var flow: KeyboardFlow
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -44,6 +49,23 @@ class SetupActivity : Activity() {
         currentLine = text(15f, "").also { col.addView(it) }
         col.addView(text(18f, getString(R.string.setup_tryit), true))
         col.addView(EditText(this).apply { hint = getString(R.string.setup_tryit_hint); minLines = 2 }, ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+        val prefs = getSharedPreferences(Prefs.FILE, Context.MODE_PRIVATE)
+        col.addView(Switch(this).apply {
+            text = getString(R.string.setup_glide_switch); isChecked = prefs.getBoolean(Prefs.GLIDE, true)
+            setOnCheckedChangeListener { _: CompoundButton, on: Boolean -> prefs.edit().putBoolean(Prefs.GLIDE, on).apply() }
+            setPadding(0, (12 * d).toInt(), 0, (12 * d).toInt())
+        })
+        flow = KeyboardFlow(this, Engine.host(this), object : KeyboardFlow.Host {
+            override fun say(message: String) { Toast.makeText(this@SetupActivity, message, Toast.LENGTH_LONG).show() }
+            override fun ask(title: String, message: String, yes: String, no: String, result: (Boolean) -> Unit) {
+                AlertDialog.Builder(this@SetupActivity).setTitle(title).setMessage(message)
+                    .setPositiveButton(yes) { _, _ -> result(true) }.setNegativeButton(no) { _, _ -> result(false) }.show()
+            }
+        })
+        col.addView(text(18f, getString(R.string.setup_learning_title), true))
+        col.addView(text(14f, getString(R.string.setup_learning_text)))
+        col.addView(Button(this).apply { text = getString(R.string.setup_export); setOnClickListener { flow.exportNow() } })
+        col.addView(Button(this).apply { text = getString(R.string.setup_import); setOnClickListener { flow.importFromFile() } })
         col.addView(text(14f, getString(R.string.setup_fallback)))
         col.addView(text(14f, getString(R.string.setup_back)))
         val scroll = ScrollView(this).apply { addView(col) }
@@ -53,6 +75,10 @@ class SetupActivity : Activity() {
             v.setPadding(b.left, b.top, b.right, b.bottom); insets
         }
         setContentView(scroll)
+    }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        if (!flow.onResult(requestCode, resultCode, data)) super.onActivityResult(requestCode, resultCode, data)
     }
 
     override fun onResume() { super.onResume(); refreshState() }

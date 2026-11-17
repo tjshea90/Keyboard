@@ -3,6 +3,7 @@ package app.swoop.keyboard
 import android.content.Context
 import app.kestrel.core.input.glide.GlideKeys
 import app.kestrel.core.input.glide.GlideTyping
+import app.kestrel.core.input.glide.UserWords
 import java.io.File
 import java.util.concurrent.Executor
 import java.util.concurrent.LinkedBlockingQueue
@@ -23,6 +24,7 @@ class GlideHost(
 ) {
     private val personalFile = File(context.filesDir, "glide_personal.txt")
     private val habitFile = File(context.filesDir, "glide_habit.txt")
+    private val ownFile = File(context.filesDir, "own_words.txt")
 
     val engine: GlideTyping = GlideTyping(
         loadMain = loadMain ?: { try { context.assets.open("glide/en.klx").use { it.readBytes() } } catch (e: Exception) { null } },
@@ -34,17 +36,24 @@ class GlideHost(
 
     private var preparedFor = ""
 
+    /** Words the person uses that the shipped list lacks (KB-204 fills it from typing; an import brings the ones in the file). Loaded once, on first use. */
+    val own: UserWords by lazy { try { if (ownFile.isFile) UserWords.parse(ownFile.readText(), 1400) else UserWords(1400) } catch (e: Exception) { UserWords(1400) } }
+    fun saveOwn(text: String) { writeAtomically(ownFile, text) }
+
     /** The decoder needs the real key positions: known once the keys view has a size (and again when it changes). Cheap when nothing changed. */
     fun prepare(keys: GlideKeys?, tag: String) {
         if (keys == null || tag == preparedFor) return
         preparedFor = tag
-        engine.prepare(keys, loadHabit(), null)
+        engine.prepare(keys, loadHabit(), own)
     }
 
     /** The thumb habit (where this person's finger lands, in key pitches), kept between sessions. */
     private fun loadHabit(): FloatArray? = try {
         if (habitFile.isFile) habitFile.readText().trim().split(' ').map { it.toFloat() }.takeIf { it.size == 2 }?.toFloatArray() else null
     } catch (e: Exception) { null }
+
+    /** The saved thumb habit, for an export (null when none was learned yet). */
+    fun habitOrNull(): FloatArray? = loadHabit()
 
     fun saveHabit(h: FloatArray) { if (h.size == 2) writeAtomically(habitFile, "${h[0]} ${h[1]}") }
 

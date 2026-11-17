@@ -20,4 +20,24 @@
     <string name="setup_back">To go back at any time: tap the keyboard icon (or the Choose input method notification) while typing and pick your old keyboard.</string>
     <string name="strip_hint">slide over the letters to type a word</string>
     <string name="strip_no_word">no word fits - try again</string>
+
+    <string name="setup_glide_switch">Glide typing (slide over the letters to type a word)</string>
+    <string name="setup_learning_title">What the keyboard learned</string>
+    <string name="setup_learning_text">It lives only on this device. Export writes ONE plain-text file into Downloads (it lists words you typed: keep it private, never paste it anywhere). Import adds a file to what is learned, including the file the Kestrel browser exported.</string>
+    <string name="setup_export">Export what the keyboard learned</string>
+    <string name="setup_import">Import what the keyboard learned</string>
+    <string name="flow_not_ready">The keyboard is not ready yet. Try again in a moment.</string>
+    <string name="flow_saved">Saved \"%1$s\" in Downloads</string>
+    <string name="flow_keep_private">. It lists words you typed: keep it private.</string>
+    <string name="flow_save_failed">The file could not be saved: %1$s</string>
+    <string name="flow_no_picker">This device has no file picker (the Files app), so a file cannot be chosen.</string>
+    <string name="flow_not_export">This is not a file a Kestrel or Swoop keyboard exported.</string>
+    <string name="flow_too_big">This file is too big to be one a keyboard exported.</string>
+    <string name="flow_read_failed">The file could not be read.</string>
+    <string name="flow_import_title">Import what the keyboard learned?</string>
+    <string name="flow_import_message">The file holds %1$s.\n\nIt is added to what this keyboard has learned. What is learned here stays; importing the same file again changes nothing.</string>
+    <string name="flow_import_yes">Import</string>
+    <string name="flow_import_no">Cancel</string>
+    <string name="flow_import_failed">The file could not be imported.</string>
+    <string name="flow_imported">Imported: %1$s.</string>
 </resources>

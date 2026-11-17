@@ -12,7 +12,7 @@ import android.view.inputmethod.EditorInfo
  */
 class KeysService : InputMethodService() {
     private val main = Handler(Looper.getMainLooper())
-    private val glide by lazy { GlideHost(applicationContext) }
+    private val glide by lazy { Engine.host(applicationContext) }
     private val presenter by lazy { KeyboardPresenter(this, { currentInputConnection }, glide, { main.post(it) }) }
 
     override fun onCreateInputView(): View = KeysView(this).also { v ->
