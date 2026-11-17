@@ -90,3 +90,11 @@
 >
 > The first publish attempt failed once for a reason I couldn't see in the logs. A re-run of the same version went through, and I added error reporting so a repeat would show its reason.
 <!-- sha:39d4255c8ab3 -->
+
+## 2026-11-17T01:17:34Z
+> That notification was the reminder I scheduled earlier to check the emulator run and finish the release. Both are already done: the emulator test passed on run 43993756467, and the release is published, so there is nothing left for it to do. I had already deleted the trigger, so it won't fire again.
+>
+> Nothing has changed since my last message. Still open:
+> - The Diagnostics numbers from the tablet and phone, to clear this stage (G1).
+> - Whether I may set up a 2-hourly wake-up after usage cut-offs.
+<!-- sha:f5db3abdeec3 -->
