@@ -159,4 +159,36 @@ class RareWordTest {
         assertFalse(Rarity.below(-14f) == 0f)
         assertNotEquals(0f, GlideParams().rareW)
     }
+
+    // ------------------------------------------------------------------ the shipped list itself
+
+    @Test fun theShippedListHasManyMoreWordsAndStaysSmallAndFast() {
+        val file = GlideEval.findAsset()
+        assertTrue("file ${file.length()} bytes", file.length() in 2_000_000L..6_000_000L)
+        val bytes = file.readBytes()
+        val t0 = System.nanoTime()
+        val lex = LexiconFile.read(bytes)
+        val ms = (System.nanoTime() - t0) / 1e6
+        assertTrue("words ${lex.size}", lex.size >= 130_000)
+        assertTrue("reading the list took $ms ms", ms < 2000.0)
+    }
+
+    @Test fun everydayWordsAreNotRareAndJunkIsNotInTheList() {
+        val lex = GlideEval.loadLexicon()
+        val everyday = listOf("the", "you", "weather", "dinner", "tomorrow", "grocery", "restaurants", "homework", "birthday", "weekend", "thanks", "please", "address", "message", "yesterday", "morning",
+            "doctor", "appointment", "tonight", "wonderful", "beautiful", "delicious", "sneakers", "emoji", "selfie", "podcast", "youtube", "gmail", "wifi", "lol", "gonna", "wanna", "don't", "it's", "i'm", "that's")
+        for (w in everyday) { val id = lex.idOf(w); assertTrue("$w is in the list", id >= 0); assertTrue("$w is not rare (${lex.logProb(id)})", lex.logProb(id) >= Rarity.FLOOR) }
+        // valid but uncommon words are there, and rare
+        for (w in listOf("quixotic", "xylophone", "obsequious", "ephemeral")) { val id = lex.idOf(w); assertTrue("$w is in the list", id >= 0); assertTrue("$w is rare", lex.logProb(id) < Rarity.FLOOR) }
+        // junk and fragments are out: single letters (except a and i), "tui", possessives, the Scrabble-only two-letter words
+        for (w in listOf("tui", "xu", "oe", "dog's", "q", "z", "kn")) assertTrue("$w must not be in the list", lex.idOf(w) < 0 || lex.logProb(lex.idOf(w)) < -16f)
+        for (i in 0 until lex.size) if (lex.length(i) == 1) assertTrue("one-letter word ${lex.text(i)}", lex.text(i) == "a" || lex.text(i) == "i")
+    }
+
+    @Test fun theLongTailIsMuchRarerThanTheEverydayWords() {
+        val lex = GlideEval.loadLexicon()
+        var rare = 0; var common = 0
+        for (i in 0 until lex.size) if (lex.logProb(i) < Rarity.FLOOR) rare++ else common++
+        assertTrue("$common common words and $rare in the long tail", common in 8_000..30_000 && rare > 80_000)
+    }
 }
