@@ -9,6 +9,7 @@ import android.view.View
 import android.view.inputmethod.BaseInputConnection
 import android.view.inputmethod.EditorInfo
 import android.widget.EditText
+import app.kestrel.core.input.glide.EmojiMap
 import app.kestrel.core.input.glide.LexiconFile
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -305,7 +306,7 @@ class KeyboardPresenterTest {
         val r = Rig(glidePref = false, suggest = true, extra = { it.putBoolean(Prefs.EMOJI_SUGGEST, false) }, words = LexiconFile.build(listOf("clown" to 900L, "the" to 9000L).map { LexiconFile.Entry(it.first, it.second) }, emptyList()))
         Thread.sleep(50); org.robolectric.shadows.ShadowLooper.idleMainLooper()
         for (c in "clown") r.tap(c.toString())
-        assertTrue(r.view.candidatesForTest().none { app.kestrel.core.input.glide.EmojiMap.isEmoji(it) })
+        assertTrue(r.view.candidatesForTest().none { EmojiMap.isEmoji(it) })
     }
 
     @Test fun aWordRemovedWithALongPressIsNeverOfferedAgain() {
