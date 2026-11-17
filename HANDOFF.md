@@ -39,4 +39,4 @@ docs/ research/ TASKS.md CHECKPOINT.md BUILDLOG.md INBOX.md OUTBOX.md .checkpoin
 - `INBOX.md`/`OUTBOX.md` contain the chat history of the project; they merge as unions.
 
 ## 6. Status
-See `CHECKPOINT.md` (latest card) and `TASKS.md` (done boxes with proof). `BUILDLOG.md` lists published releases (none yet).
+See `CHECKPOINT.md` (latest card) and `TASKS.md` (done boxes with proof). `BUILDLOG.md` lists the published releases (newest: Swoop 0.5.x, the photo layout; its layout facts and the choices made are in `docs/LAYOUT.md`, the Kestrel browser link in `docs/KESTREL-LINK.md`). The emulator smoke test (`.github/workflows/emu-smoke.yml`, api 29 and 36) is the proof of what really runs on Android: read its screenshots (artifact `emu-smoke-<api>`, fetch with `python3 -I /home/user/Browser/tools/emu/fetch_artifact.py <url> <empty folder>`).
