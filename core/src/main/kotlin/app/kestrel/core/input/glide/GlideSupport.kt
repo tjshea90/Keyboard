@@ -131,6 +131,8 @@ class GlideTyping(
     private val savePersonal: (String) -> Unit = {},
     /** Where the live previews are decoded (the finger is still moving): another thread than [executor], so a preview never holds up the real decode when the finger lifts. */
     private val previewExecutor: Executor = executor,
+    /** Stores the person's own words (the words typed that the shipped list lacks), on the executor's thread. */
+    private val saveOwn: (String) -> Unit = {},
 ) {
     @Volatile private var main: BinaryLexicon? = null
     @Volatile private var userLex: ArrayLexicon? = null
@@ -141,8 +143,10 @@ class GlideTyping(
     private var bx = 0f; private var by = 0f
     private var loading = false
     private var lastUserWords = 0
-    private var personal = PersonalModel()
+    @Volatile private var personal = PersonalModel()
     private var personalLoaded = false
+    private var ownRef: UserWords? = null
+    private val suggestSeq = java.util.concurrent.atomic.AtomicInteger()
 
     /** What was saved is read once, before anything is learned, exported or imported (on the executor's thread): an import must add to what is on disk, not replace it with an empty table that was never loaded. */
     private fun ensurePersonal() {
@@ -180,7 +184,7 @@ class GlideTyping(
                 keys = k
                 decoder = GlideDecoder(k).also { it.biasX = bx; it.biasY = by; it.personal = personal }
                 previewDecoder = GlideDecoder(k).also { it.biasX = bx; it.biasY = by; it.personal = personal }
-                if (own != null) setOwn(own)
+                if (own != null) { ownRef = own; setOwn(own) }
                 ready = main != null
                 if (!warmed && ready) { warmed = true; warmUp(k) }
             } catch (e: Exception) { loading = false; ready = false }
@@ -258,6 +262,59 @@ class GlideTyping(
                     done(GlideResult(r, ms))
                 }
             } finally { previewBusy.set(false) }
+        }
+    }
+
+    /**
+     * Tap typing (N4): the words to offer for the letters [typed] so far (completions and typo fixes), or the likely next words when [typed] is empty. [done] is called on a worker thread, unless a newer
+     * request has been made by then (the latest letter always wins: an answer for an older word is dropped, never shown late).
+     */
+    fun suggest(typed: String, prev: String?, prev2: String?, limit: Int, done: (Suggestions) -> Unit) {
+        val my = suggestSeq.incrementAndGet()
+        previewExecutor.execute {
+            if (my != suggestSeq.get()) return@execute
+            val m = main
+            if (m == null || !ready) return@execute
+            val t0 = System.nanoTime()
+            val r = try { Suggester.suggest(m, personal, keys, typed, prev, prev2, limit) } catch (e: Exception) { Suggestions.NONE }
+            stats.onSuggested((System.nanoTime() - t0) / 1_000_000)
+            if (my == suggestSeq.get()) done(r)
+        }
+    }
+
+    /** What the strip shows is no longer wanted (a glide started, the field changed): an answer on its way is dropped. */
+    fun cancelSuggest() { suggestSeq.incrementAndGet() }
+
+    /**
+     * A word the person TYPED was completed (space, punctuation, Enter) or chosen from the strip: it is learned like a glided one (the word, the pair, the triple). [weight] 1 for an ordinary word, more for a
+     * chosen or retyped one; [guessed] is what the keyboard had (or the person had typed first) when they meant [word]. A word the shipped list lacks that was used twice joins the person's own words
+     * (so glides can find it too).
+     */
+    fun learnWord(prev: String?, word: String, weight: Float, prev2: String? = null, guessed: String? = null, guessedWeight: Float = 1f) {
+        executor.execute {
+            ensurePersonal()
+            personal.add(prev, word, weight, prev2)
+            if (guessed != null) personal.addConfusion(guessed, word, guessedWeight)
+            val n = PersonalModel.norm(word)
+            val m = main; val o = ownRef
+            if (n != null && m != null && o != null && personal.weightOf(n) >= Suggester.OWN_WORD_USES && !o.contains(n) && m.idOf(n).let { it < 0 || m.text(it).lowercase() != n } && UserWords.glideable(n)) {
+                o.add(n); setOwn(o); try { saveOwn(o.serialize()) } catch (e: Exception) { /* a full disk must never break typing */ }
+            }
+            stats.onTypedLearned()
+            personalDirty = true
+            stats.onLearned(personal.wordCount, personal.pairCount, personal.confusionCount, personal.tripleCount, personal.patterns.patternCount, personal.patterns.wordCount)
+            if (System.nanoTime() / 1_000_000 - lastSaveAt > SAVE_EVERY_MS) saveNow()
+        }
+    }
+
+    /** A word the person deleted after it was learned: what it earned is taken back (a slip that was typed once and erased must not become a favourite). */
+    fun unlearnWord(prev: String?, word: String, weight: Float, prev2: String? = null) {
+        executor.execute {
+            ensurePersonal()
+            personal.unlearn(prev, word, weight, prev2)
+            personalDirty = true
+            stats.onLearned(personal.wordCount, personal.pairCount, personal.confusionCount, personal.tripleCount, personal.patterns.patternCount, personal.patterns.wordCount)
+            if (System.nanoTime() / 1_000_000 - lastSaveAt > SAVE_EVERY_MS) saveNow()
         }
     }
 
@@ -391,7 +448,7 @@ class GlideTyping(
     }
 
     companion object {
-        private const val SAVE_EVERY_MS = 30_000L
+        private const val SAVE_EVERY_MS = 10_000L
         /** A deleted glide can have meant the word typed in its place when the straight line through that word's letters is within this many key units of it (a careful glide is about 0.3 away, a sloppy one 0.6 to 0.9, another word more than 1.3). */
         const val FIT_D = 1.15f
     }

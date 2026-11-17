@@ -101,6 +101,15 @@ class PersonalModel(private val capWords: Int = 6000, private val capPairs: Int 
         if (confusions.size > capConfusions) { val cut = confusions.values.sorted()[confusions.size / 10]; val it = confusions.entries.iterator(); while (it.hasNext()) { val e = it.next(); if (e.value <= cut && confusions.size > capConfusions * 9 / 10) it.remove() } }
     }
 
+    /** What the person meant when the keyboard offered or typed [guessed] (or they typed it and corrected it): the words and how often, most often first. */
+    @Synchronized fun correctionsOf(guessed: String): List<Pair<String, Float>> {
+        val pre = "$guessed "
+        val out = ArrayList<Pair<String, Float>>()
+        for ((k, v) in confusions) if (k.startsWith(pre)) out.add(k.substring(pre.length) to v)
+        out.sortByDescending { it.second }
+        return out.take(4)
+    }
+
     /** How often [meant] was meant when [guessed] was the first guess. */
     @Synchronized fun confusionWeight(guessed: String, meant: String): Float = confusions["$guessed $meant"] ?: 0f
     val confusionCount: Int @Synchronized get() = confusions.size
