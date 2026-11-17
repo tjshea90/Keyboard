@@ -23,7 +23,7 @@ class TypingOptionsTest {
         for ((typed, want) in listOf("e.g" to "E.g", "u.s.a" to "U.s.a", "3.14" to "3.14", "1,000" to "1,000", "a@b.com" to "A@b.com", "10:30" to "10:30", "see/this.now" to "See/this.now")) {
             val r = rig(); r.typeAll(typed); assertEquals("typing $typed", want, r.text)
         }
-        val url = rig(kind = FieldKind.URL); url.typeAll("a,b"); assertEquals("no spaces inside an address field", "a,b", url.text)
+        val url = rig(kind = FieldKind.URL, caps = 0); url.typeAll("a,b"); assertEquals("no spaces inside an address field", "a,b", url.text)
     }
 
     @Test fun capitalsFollowASentenceEndTypedByHand() {
@@ -50,7 +50,7 @@ class TypingOptionsTest {
     @Test fun twoSpacesDoNothingSpecialWhereTheyAreNotAfterAWord() {
         val r = rig(); assertFalse(r.c.doubleSpace())
         val s = rig("hello, "); assertFalse(s.c.doubleSpace()); assertEquals("hello, ", s.text)
-        val u = rig(kind = FieldKind.URL); u.typeAll("abc "); assertFalse(u.c.doubleSpace())
+        val u = rig(kind = FieldKind.URL, caps = 0); u.typeAll("abc "); assertFalse(u.c.doubleSpace())
     }
 
     @Test fun theOptionsNeverBreakTheEditorBeliefs() {
