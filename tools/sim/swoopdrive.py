@@ -131,6 +131,7 @@ def inject_taps(points, hold=0.04, gap=0.10):
 
 # ---------------------------------------------------------------------------------------------------------------------------------------------- the key map
 _KEYMAP = re.compile(r"SwoopDiag: keymap page=(\w+) shift=(\d) (.*)$")
+STATS = {"reads": 0, "read_s": 0.0, "first_batch_lost": 0, "batches": 0, "taps": 0}
 
 
 class Keymap:
@@ -153,7 +154,10 @@ _last_km = {"v": None}
 
 def read_keymap():
     """The newest key map the keyboard logged. The log is a ring buffer that a chatty page (Gecko) can push the one line out of: then the last one seen is returned (the layout only changes when the keyboard logs a new line)."""
+    t0 = time.time()
     out = adb("logcat", "-d", "-s", "SwoopDiag:D", check=False)
+    STATS["reads"] += 1
+    STATS["read_s"] += time.time() - t0
     last = None
     for line in out.splitlines():
         m = _KEYMAP.search(line)
@@ -173,6 +177,24 @@ def read_keymap():
 
 def clear_log():
     adb("logcat", "-c", check=False)
+
+
+def key_events():
+    """How many key presses the keyboard has logged so far (debug build: 'key after' lines): the proof that touches reach it."""
+    return adb("logcat", "-d", "-s", "SwoopDiag:D", check=False).count("key after")
+
+
+def wait_state(page="letters", shift=None, timeout=5.0, need=()):
+    """The newest key map once it is on [page] (and [shift] when given, and has the keys in [need]); the last one seen when it never was."""
+    end = time.time() + timeout
+    km = None
+    while True:
+        km = read_keymap()
+        if km and km.page == page and (shift is None or km.shift == shift) and all(n in km.keys or (n == "k61" and "k41" in km.keys) for n in need):
+            return km
+        if time.time() > end:
+            return km
+        time.sleep(0.3)
 
 
 def wait_settled(page="letters", need=("k61",), timeout=20.0):
@@ -202,6 +224,18 @@ def wait_keymap(page=None, timeout=15.0, need=None):
     return km
 
 
+def to_letters(timeout=6.0):
+    """The keyboard on its letters page (the digits keep the symbols page up until a space or ABC): the key map of the letters page."""
+    km = read_keymap()
+    if km is not None and km.page != "letters" and "abc" in km.keys:
+        tap(*km.keys["abc"])
+        time.sleep(0.15)
+        km = wait_state("letters", timeout=timeout)
+    elif km is None or km.page != "letters":
+        km = wait_state("letters", timeout=timeout)
+    return km
+
+
 # ---------------------------------------------------------------------------------------------------------------------------------------------- typing
 def tap_key(km, name):
     xy = km.keys.get(name)
@@ -219,9 +253,28 @@ def tap_char(km, c):
     time.sleep(0.10)
 
 
+def _taps(points, hold, gap):
+    """A batch of taps in one shell call. The very first batch after the keyboard appeared was lost once on the emulator (the raw touch path needs a first event before it works): a first batch that raises no key press is sent again, and counted (STATS['first_batch_lost'])."""
+    STATS["taps"] += len(points)
+    check = STATS["batches"] == 0
+    before = key_events() if check else 0
+    inject_taps(points, hold=hold, gap=gap)
+    STATS["batches"] += 1
+    if check:
+        time.sleep(0.5)
+        if key_events() <= before:
+            STATS["first_batch_lost"] += 1
+            inject_taps(points, hold=hold, gap=gap)
+
+
+def _plain(c, km):
+    """A character that the letters page types with one tap and no state change: a lower-case letter, a space, or a key it shows (comma, full stop)."""
+    return c == " " or (c.isascii() and c.isalpha() and c.islower()) or (c in ",." and km.char(c) is not None)
+
+
 def type_text_fast(text, km=None, hold=0.04, gap=0.10):
-    """Letters and spaces only (the letters page stays up): all the taps of [text] in one call, at human speed. Returns the number of characters that could not be tapped."""
-    km = km or wait_settled()
+    """Letters and spaces only, on the letters page: all the taps of [text] in one call, at human speed. Returns the number of characters that could not be tapped."""
+    km = km or to_letters()
     if km is None:
         raise RuntimeError("the keyboard is not showing (no key map)")
     pts, missing = [], 0
@@ -232,40 +285,79 @@ def type_text_fast(text, km=None, hold=0.04, gap=0.10):
         else:
             pts.append(xy)
     if pts:
-        inject_taps(pts, hold=hold, gap=gap)
+        _taps(pts, hold, gap)
     time.sleep(0.4)
     return missing
 
 
-def type_text(text, per_key_pause=0.0, log=None):
-    """Types [text] by tapping: letters and space on the letters page, one other character at a time through ?123 (Swoop returns to the letters after one symbol, a digit stays on the symbols page).
-    Returns the number of characters that could not be typed (no such key)."""
+def type_text(text, per_key_pause=0.0, log=None, hold=0.04, gap=0.10):
+    """Types [text] the way a thumb does, with every page change a person makes: lower-case letters, spaces and the keys of the letters page in runs (one shell call each), a capital through Shift, a digit or a
+    symbol through ?123 (a digit leaves the symbols page up, one symbol sends the keyboard back to the letters). Returns the number of characters that could not be typed (no such key)."""
     missing = 0
-    km = wait_keymap("letters", need=["k61"])
-    for c in text:
-        if km is None:
-            raise RuntimeError("the keyboard is not showing (no key map in logcat; is it a debug build and the field focused?)")
+    km = to_letters()
+    if km is None:
+        raise RuntimeError("the keyboard is not showing (no key map in logcat; is it a debug build and the field focused?)")
+    i, n = 0, len(text)
+    while i < n:
+        c = text[i]
+        if km.page == "letters" and _plain(c, km):
+            j = i
+            while j < n and _plain(text[j], km):
+                j += 1
+            run = text[i:j]
+            pts = [km.char(x) for x in run]
+            _taps([p for p in pts if p], hold, gap)
+            time.sleep(0.15)
+            i = j
+            continue
+        if km.page != "letters" and km.char(c) is not None:             # still on the symbols page after a digit: the next digit / symbol is right here
+            tap(*km.char(c))
+            time.sleep(0.12)
+            km = wait_state("symbols", timeout=1.5) if c.isdigit() else (to_letters() or km)
+            i += 1
+            continue
         if km.page != "letters":
-            km = wait_keymap("letters", need=["k61"]) or km
-        if km.char(c.lower()) and (c.isalpha() or c == " "):
-            if c.isupper() and km.shift == 0:
+            km = to_letters() or km
+        if c.isascii() and c.isalpha() and c.isupper():
+            if km.shift == 0 and "shift" in km.keys:
                 tap_key(km, "shift")
-                km = wait_keymap("letters", need=["k61"]) or km
-            tap_char(km, c.lower() if c.isalpha() else c)
-        else:
-            tap_key(km, "sym")
-            sk = wait_keymap("symbols", need=["k31"])
-            if sk and sk.char(c):
-                tap_char(sk, c)
-            else:
-                if log:
-                    log("cannot type %r (not on the first symbols page)" % c)
+                km = wait_state("letters", shift=1, timeout=3.0) or km
+            xy = km.char(c)
+            if xy is None:
                 missing += 1
-                tap_key(sk, "abc") if sk and "abc" in sk.keys else None
-            km = wait_keymap("letters", need=["k61"]) or km
+            else:
+                tap(*xy)
+                time.sleep(0.12)
+            km = wait_state("letters", shift=0, timeout=3.0) or km
+        elif km.char(c) is not None and km.page == "letters":          # e.g. an apostrophe some layouts keep on the letters page
+            tap(*km.char(c))
+            time.sleep(0.12)
+        else:
+            tap_key(km, "sym") if "sym" in km.keys else None
+            sk = wait_state("symbols", timeout=3.0)
+            if sk is not None and sk.char(c) is None and "sym" in sk.keys:     # the second symbols page (=\<)
+                tap_key(sk, "sym")
+                sk = wait_state("symbols2", timeout=3.0) or sk
+            if sk is not None and sk.char(c) is not None:
+                tap(*sk.char(c))
+                time.sleep(0.12)
+                km = wait_state("symbols", timeout=1.5) if c.isdigit() else (to_letters() or sk)
+            else:
+                missing += 1
+                if log:
+                    log("cannot type %r (not on the symbols pages)" % c)
+                km = to_letters() or km
+        i += 1
         if per_key_pause:
             time.sleep(per_key_pause)
     return missing
+
+
+def backspaces(count, gap=0.06):
+    """[count] taps on Backspace (the key map of the page the keyboard shows now)."""
+    km = read_keymap()
+    if km is not None and "back" in km.keys and count > 0:
+        inject_taps([km.keys["back"]] * count, hold=0.03, gap=gap)
 
 
 def path_points(word, km, step_px=6.0, jitter=None):
@@ -281,6 +373,8 @@ def path_points(word, km, step_px=6.0, jitter=None):
             y += jitter[ch][1]
         if not cs or cs[-1] != (x, y):
             cs.append((x, y))
+    if not cs:
+        raise KeyError("no letter key of %r on the %s page" % (word, km.page))
     if len(cs) < 2:
         return cs * 2
     pts = [cs[0]]
@@ -292,7 +386,7 @@ def path_points(word, km, step_px=6.0, jitter=None):
 
 
 def glide_word(word, km=None, jitter=None):
-    km = km or wait_settled()
+    km = km if (km is not None and km.page == "letters") else to_letters()
     if km is None:
         raise RuntimeError("the keyboard is not showing (no key map)")
     inject(path_points(word, km, jitter=jitter))
