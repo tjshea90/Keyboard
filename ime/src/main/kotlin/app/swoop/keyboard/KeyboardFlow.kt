@@ -103,6 +103,13 @@ class KeyboardFlow(private val a: Activity, private val glide: GlideHost, privat
         }
     }
 
+    /** Forget everything that was learned, after the person said yes. */
+    fun forgetNow() {
+        host.ask("Forget what the keyboard learned?", "Your words, word pairs, corrections and thumb habit are deleted from this device. Settings stay. This cannot be undone (an export file you made earlier can be imported again).", "Forget", "Cancel") { ok ->
+            if (ok) Io.exec { glide.forgetEverything { Io.ui { host.say("Forgotten. The keyboard starts learning again from now.") } } }
+        }
+    }
+
     class TooBig : IOException()
 
     companion object {

@@ -37,6 +37,20 @@ class GlideHost(
 
     private var preparedFor = ""
 
+    /** What the keyboard knows about this person, in words, read from the saved memory (numbers only; any thread). */
+    fun learnedSummary(): String {
+        val m = try { if (personalFile.isFile) app.kestrel.core.input.glide.PersonalModel.parse(personalFile.readText()) else null } catch (e: Exception) { null }
+        if (m == null || m.isEmpty) return "Nothing yet. It starts learning with the first words you type."
+        val n = java.text.NumberFormat.getIntegerInstance(java.util.Locale.US)
+        val c = m.confusionCount
+        return "${n.format(m.wordCount)} of your words and ${n.format(m.pairCount)} word pairs" + (if (c > 0) ", and ${n.format(c)} corrections you made" else "") + "."
+    }
+
+    /** Settings > Forget: the learned words, pairs, corrections, own words and thumb habit are gone (any thread). */
+    fun forgetEverything(done: () -> Unit = {}) {
+        engine.forgetAll { own.clear(); try { ownFile.delete(); habitFile.delete() } catch (_: Exception) { }; done() }
+    }
+
     /** Words the person uses that the shipped list lacks (KB-204 fills it from typing; an import brings the ones in the file). Loaded once, on first use. */
     val own: UserWords by lazy { try { if (ownFile.isFile) UserWords.parse(ownFile.readText(), 1400) else UserWords(1400) } catch (e: Exception) { UserWords(1400) } }
     fun saveOwn(text: String) { writeAtomically(ownFile, text) }

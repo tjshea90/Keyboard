@@ -93,6 +93,9 @@ class UserWords(private val cap: Int = 800) {
 
     @Synchronized fun contains(word: String) = counts.containsKey(word.lowercase())
 
+    /** Forgets every word (Settings > Forget what the keyboard learned). */
+    @Synchronized fun clear() { counts.clear() }
+
     /** The list to glide into: [total] is the shipped list's total count, so the probabilities are on the same scale. */
     @Synchronized fun lexicon(total: Double): ArrayLexicon = ArrayLexicon(counts.map { (w, n) -> w to (30_000_000L + 25_000_000L * minOf(n, 12)) }, total)
 
