@@ -81,7 +81,8 @@ class KeysView(context: Context) : View(context) {
     private fun dyn() { val o = overlay; if (o != null) o.invalidate() else invalidate() }
 
     // ---- options (the settings screen writes them, the presenter hands them over)
-    var numberRow = true; set(v) { if (field != v) { field = v; rebuildRows(); requestLayout() } }
+    /** Off by default, like the photo: the digits are small hints on the top row and a held top-row key types its digit. Settings > Layout > Number row puts a row of digits above the letters. */
+    var numberRow = false; set(v) { if (field != v) { field = v; rebuildRows(); requestLayout() } }
     /** The keyboard-switch key at the left of the space bar (off by default; safe mode turns it on). */
     var showGlobe = false; set(v) { if (field != v) { field = v; rebuildRows(); requestLayout() } }
     var keyPreview = true
