@@ -389,3 +389,18 @@
 >   2. Decide whether you want a private signing key for a live learned-data link between Swoop and Kestrel.
 >   3. Optionally set Key height to Extra large on the tablet.
 <!-- sha:9a985be2e43f -->
+
+## 2026-11-17T18:52:01Z
+> The quick keyboard-plus-browser simulation is still running on the emulator, and I've scheduled a wake-up for about nine minutes from now to read its report. Everything is saved and pushed in both repos.
+>
+> Where things stand:
+> - **One linked keyboard:** Kestrel's text boxes already used Android's own keyboard, so with Swoop chosen everything typed there already goes through Swoop's single memory. The code now makes that deliberate: "installed" rather than "chosen" decides, a one-time Android keyboard-choice prompt appears when Swoop isn't chosen yet, and the small panel keyboard remains only as the fallback.
+> - **Added functions in Kestrel (all coded and unit-tested, none released yet):**
+>   - Kestrel's address box tells Swoop it is the address box, so Swoop gives it the browser layout (slash, .com, Go) and still learns words.
+>   - Private tabs, including private web-page fields, tell Swoop to learn nothing.
+>   - One Settings button hands what Kestrel's own keyboard learned earlier to Swoop's "Add to Swoop" screen, which asks before adding anything.
+> - **Signing:** stays public, as you said. This design needs no open channel between the apps, so nothing is exposed.
+> - **Simulation harness:** Swoop and Kestrel run together on an Android 10 emulator shaped like your tablet, in a new workflow that only reads the Browser repo. Real runs already show Swoop typing correctly into a web-page field inside Kestrel. The driver was fixed after the first runs typed at stale key positions.
+> - **Other Kestrel session:** it just shipped alpha67 and is active in the Browser repo. I merged its newest work into my branch with no conflicts and touched only my own branch. My Kestrel release will be alpha68, and I'll check the Browser repo has no queued release run before dispatching it.
+> - **Not done:** the simulation's results, fixes based on them, the real-sites and video runs under the 5 Mbit/s imitation, and the Swoop alpha4 and Kestrel alpha68 releases.
+<!-- sha:8abbf07a7f84 -->
