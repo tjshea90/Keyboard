@@ -190,7 +190,7 @@ class KeysView(context: Context) : View(context) {
     override fun onDraw(c: Canvas) {
         layoutKeys()
         c.drawColor(cBg)
-        if (!drewOnce) { drewOnce = true; post { onFirstDraw?.invoke() } }
+        if (!drewOnce) { drewOnce = true; handler.post { onFirstDraw?.invoke() } }
         val r = dp(6f)
         for ((i, row) in rows.withIndex()) for ((j, k) in row.withIndex()) {
             val key = k.key ?: continue
