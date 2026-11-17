@@ -9,12 +9,14 @@ class Rig(text: String = "", sel: Int = text.length, multiline: Boolean = true,
     val ed = FakeEditor(text, sel, multiline)
     val c = InputController(ed)
     var foreign = 0; private set        // selection reports the controller judged NOT to be its own
+    var firstForeignInfo: String? = null; private set
 
     init { c.startInput(FieldInfo(kind, action, noEnter, noLearn, noSuggestions, caps, sel, sel)) }
 
     fun deliverOne(): Boolean {
         val u = ed.updates.removeFirstOrNull() ?: return false
-        if (!c.onSelectionUpdate(u[0], u[1], u[2], u[3])) foreign++
+        val believed = "${c.selStart}-${c.selEnd}"; val queued = ed.updates.size
+        if (!c.onSelectionUpdate(u[0], u[1], u[2], u[3])) { foreign++; if (firstForeignInfo == null) firstForeignInfo = "report sel ${u[0]}-${u[1]} comp ${u[2]}-${u[3]} but the keyboard believed $believed (queued behind it: $queued; composing='${c.composing}')" }
         return true
     }
     fun sync() { while (deliverOne()) { } }
