@@ -7,6 +7,7 @@ A small, fast Android keyboard with **glide typing that keeps learning from you*
 ## What works today
 - Tap typing and glide typing (slide over the letters; a glowing trail follows your finger and a glide starts the moment you move; a strip shows other guesses; one Backspace removes the whole glided word).
 - A number row above the letters at all times.
+- A floating keyboard: a glowing bar on top of the keyboard; press and hold it and drag to lift the keyboard off the bottom and put it anywhere, drag a corner to resize it, double-tap the bar (or drop it at the bottom) to dock it again. The app behind is never pushed or covered except by the keyboard itself. Checked on an Android 10 emulator in CI; not yet on the real tablet or phone.
 - Word suggestions while you tap, with glide typing on or off: completions, the likely next word, and an automatic fix for an obvious typo (Backspace takes it back and the keyboard never changes that word again).
 - It learns you in every app: your words, the words you use together, your corrections, a word you erased and retyped, and where your thumb lands. Only on your device. Export / import of what it learned (including the file the Kestrel browser's keyboard exports), and a Forget button.
 - Options like other keyboards: space after punctuation, double space for a full stop, capital letters after a full stop, capital I, slide on the space bar to move the cursor, key pop-up, vibration, key sound, key height, light / dark / automatic colours and an accent colour.
@@ -16,7 +17,7 @@ A small, fast Android keyboard with **glide typing that keeps learning from you*
 - A crash-loop "safe layout" and a globe key, so a bug can never lock you out of typing.
 - Diagnostics screen (numbers only, nothing you typed) with a Copy button.
 
-Not yet: a floating, resizable keyboard (next), translation, emoji, clipboard.
+Not yet: translation, emoji, clipboard.
 
 ## Install
 1. Open the latest **Release** of this repository on the device and tap the `.apk` file (allow installs from your browser when Android asks).
