@@ -361,7 +361,7 @@ class InputController(private val ed: EditorBridge, val stats: InputStats = Inpu
             }
             return false
         }
-        companion object { const val CAP = 24 }
+        companion object { const val CAP = 160 }   // a cursor slide of 64 steps expects 64 reports, plus the late ones of earlier edits
     }
 
     companion object {
