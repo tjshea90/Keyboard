@@ -230,14 +230,14 @@ class InputController(private val ed: EditorBridge, val stats: InputStats = Inpu
             if (left) {
                 if (before.isEmpty()) { if (selStart != 0) predicted = false; continue }
                 val n = lastCodePointLength(before)
-                after = (before.takeLast(n) + after).take(WINDOW_AFTER); before = before.dropLast(n); if (selStart >= 0) selStart -= n
+                after = (before.takeLast(n) + after).take(WINDOW_AFTER); before = before.dropLast(n); if (selStart >= 0) { selStart -= n; selEnd = selStart; pending.push(selStart, selEnd) }   // every arrow key is reported on its own
             } else {
                 if (after.isEmpty()) { predicted = false; continue }       // we cannot tell whether the field ends here
                 val n = firstCodePointLength(after)
-                before = (before + after.take(n)).takeLast(WINDOW_BEFORE); after = after.drop(n); if (selStart >= 0) selStart += n
+                before = (before + after.take(n)).takeLast(WINDOW_BEFORE); after = after.drop(n); if (selStart >= 0) { selStart += n; selEnd = selStart; pending.push(selStart, selEnd) }
             }
         }
-        if (selStart >= 0 && predicted) { selEnd = selStart; pending.push(selStart, selEnd); ensureWindow() }
+        if (selStart >= 0 && predicted) { selEnd = selStart; ensureWindow() }
         else { selStart = -1; selEnd = -1; pending.clear(); refresh() }
     }
 

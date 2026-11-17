@@ -56,7 +56,7 @@ class InputControllerFuzzTest {
                 }
                 val f0 = r.foreign
                 log.add(op(r, rnd, external))
-                if (lazy) { repeat(rnd.nextInt(3)) { r.deliverOne() } } else { r.sync(); r.check() }
+                if (lazy) { repeat(rnd.nextInt(3)) { r.deliverOne() }; while (r.ed.updates.size > 12) r.deliverOne() } else { r.sync(); r.check() }
                 if (r.foreign > f0 && firstForeign == null) firstForeign = "op #$i '${log.last()}' after '${log.getOrNull(log.size - 2)}' (text ...'${r.text.takeLast(20).replace("\n", "\\n")}')"
             }
             r.sync(); r.check()
