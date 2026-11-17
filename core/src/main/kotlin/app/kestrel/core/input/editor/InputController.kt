@@ -46,6 +46,11 @@ class InputController(private val ed: EditorBridge, val stats: InputStats = Inpu
     var revertedCorrection: Correction? = null; private set
     var shift = ShiftState.OFF; private set
 
+    /** Options the settings switch (N7). Off by default here; the keyboard turns them on from its settings. */
+    var autoCapsOn = true
+    /** A letter typed right after punctuation that touches the word before it ("hello.world") gets a space first ("hello. world"). */
+    var autoSpace = false
+
     private val pending = Pending()
     /** The editor may still hold a composing region this keyboard lost track of (a failed call, a new session): it is closed before the next edit. */
     private var composingUnknown = false
@@ -68,7 +73,7 @@ class InputController(private val ed: EditorBridge, val stats: InputStats = Inpu
 
     /** The field wants capitals at the cursor (the start of a sentence, a word, or always, as its flags say): Shift goes on for the next letter. Never switches caps lock off. */
     fun autoCaps() {
-        if (field.capsFlags == 0 || shift == ShiftState.LOCK) return
+        if (!autoCapsOn || field.capsFlags == 0 || shift == ShiftState.LOCK) return
         if (ed.cursorCapsMode(field.capsFlags) != 0) { if (shift == ShiftState.OFF) shift = ShiftState.ONCE } else if (shift == ShiftState.ONCE && autoShift) shift = ShiftState.OFF
         autoShift = shift == ShiftState.ONCE
     }
@@ -118,6 +123,7 @@ class InputController(private val ed: EditorBridge, val stats: InputStats = Inpu
         if (key.isEmpty()) return
         stats.keys++
         settle()
+        if (autoSpace && composing == null && isLetter(key) && needsAutoSpace() && commit(" ")) { lastGlide = null; autoCaps() }   // "hello." "w" -> "hello. w", and the new sentence starts with a capital
         val t = if (shift != ShiftState.OFF && isSingleCodePoint(key)) key.uppercase() else key
         if (isLetter(t) || (composing != null && isWordConnector(t))) {
             if (field.composingAllowed) { typeComposing(t); return }
@@ -137,12 +143,55 @@ class InputController(private val ed: EditorBridge, val stats: InputStats = Inpu
         lastGlide = null
         if (shift == ShiftState.ONCE) shift = ShiftState.OFF
         ensureWindow()
+        autoCaps()                                                  // after ". " (or a newline) the next letter is a capital
     }
 
     fun space() { type(" ") }
 
+    /** The previous character is sentence punctuation that touches a word or a number, and the word is not part of an address, an abbreviation or a number: a space belongs after it. */
+    private fun needsAutoSpace(): Boolean {
+        if (selStart >= 0 && selStart != selEnd) return false
+        if (field.kind != FieldKind.TEXT && field.kind != FieldKind.SEARCH) return false
+        val n = before.length
+        if (n < 2) return false
+        val p = before[n - 1]
+        if (p !in AUTO_SPACE_AFTER) return false
+        val q = before[n - 2]
+        if (!(q.isLetterOrDigit() || q in ")]\"”’'")) return false
+        val tok = before.substringAfterLast(' ').substringAfterLast('\n')
+        if (tok.any { it == '@' || it == '/' || it == '\\' }) return false
+        if (p == '.') { val core = tok.dropLast(1); if (core.length <= 1 || core.contains('.')) return false }   // e.g, U.S, example.com, a.m
+        if (p == ':' && tok.length > 1 && tok.dropLast(1).all { it.isDigit() }) return false           // 10:30
+        return true
+    }
+
+    /**
+     * A second space right after a word ("hello " " ") becomes ". " (a full stop and one space): the habit of typing a sentence end with two taps. False (nothing changed, the caller types a space) when the text before
+     * the cursor is not a word and one space, or something is selected.
+     */
+    fun doubleSpace(): Boolean {
+        settle()
+        if (composing != null || selStart != selEnd || before.length < 2 || !before.endsWith(" ")) return false
+        val q = before[before.length - 2]
+        if (!(q.isLetterOrDigit() || q in ")]\"”’")) return false
+        if (field.kind != FieldKind.TEXT && field.kind != FieldKind.SEARCH) return false
+        stats.keys++
+        val s0 = selStart; val e0 = selEnd
+        beginBatch()
+        var ok = ed.deleteSurrounding(1, 0)
+        if (ok) { before = before.dropLast(1); moveSel(-1); ok = commit(". ") }
+        endBatch(s0, e0)
+        lastGlide = null
+        if (!ok) { resync(); return true }
+        ensureWindow()
+        autoCaps()
+        return true
+    }
+
     /** One press of Backspace. A tapped word loses its last letter; the word a glide just added goes whole; otherwise the editor deletes (selection or one character). */
-    fun backspace() {
+    fun backspace() { backspaceInner(); autoCaps() }
+
+    private fun backspaceInner() {
         settle()
         stats.backspaces++
         revertedCorrection = null
@@ -482,6 +531,8 @@ class InputController(private val ed: EditorBridge, val stats: InputStats = Inpu
         const val WINDOW_AFTER = 16
         const val MIN_BEFORE = 16
         /** Keys that join the word before them: right after a glide they take away the space the glide added. */
+        /** Punctuation after which the next word needs a space (when [autoSpace] is on). */
+        const val AUTO_SPACE_AFTER = ".,!?;:"
         val CLOSES_WORD: Set<String> = setOf(".", ",", "?", "!", ":", ";", "/", ".com", ")", "'", "-", "_", "@", "%")
         /** A glide right after one of these starts the word without a space before it. */
         const val NO_SPACE_AFTER = "([{“‘/@#"
