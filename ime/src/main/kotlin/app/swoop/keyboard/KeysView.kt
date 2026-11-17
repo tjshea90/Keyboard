@@ -611,6 +611,8 @@ class KeysView(context: Context) : View(context) {
     fun bubbleTextForTest(): String? = if (bubbleKey != null) bubbleText else null
     fun pageForTest(): Page = page
     fun candidatesForTest(): List<String> = cands
+    fun popupOpenForTest(): Boolean = popup != null
+    fun popupCellCenterForTest(ch: String): Pair<Float, Float>? { val p = popup ?: return null; val i = p.chars.indexOf(ch); return if (i < 0) null else p.cells[i].let { it.centerX() to it.centerY() } }
     fun chipCenterForTest(i: Int): Pair<Float, Float>? { val r = chipBoxes().getOrNull(i) ?: return null; return r.centerX() to r.centerY() }
 
     companion object {

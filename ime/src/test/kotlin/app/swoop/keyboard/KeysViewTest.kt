@@ -102,10 +102,10 @@ class KeysViewTest {
         advance(KeysView.REPEAT_MS * 3); assertEquals(5, r.keys.size)
         up(v, x, y); val n = r.keys.size; advance(500); assertEquals("repeat must stop at lift, and the lift itself types nothing", n, r.keys.size)
     }
-    @Test fun theGlobeKeyIsOnEveryPageAndReportsNextKeyboard() {
-        val (v, r) = view(); tap(v, at(v, "globe")); assertEquals(listOf("<next>"), r.keys)
-        tap(v, at(v, "123")); tap(v, at(v, "globe")); assertEquals(listOf("<next>", "<next>"), r.keys)
-        val (n, rn) = view(kind = FieldKind.NUMBER); tap(n, at(n, "globe")); assertEquals(listOf("<next>"), rn.keys)
+    @Test fun theGlobeKeyComesBackWhenAskedAndReportsNextKeyboard() {
+        val (v, r) = view(); v.showGlobe = true; v.measure(View.MeasureSpec.makeMeasureSpec((564 * dp).toInt(), View.MeasureSpec.EXACTLY), View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED)); v.layout(0, 0, v.measuredWidth, v.measuredHeight)
+        tap(v, at(v, "globe")); assertEquals(listOf("<next>"), r.keys)
+        val (n, rn) = view(kind = FieldKind.NUMBER); n.showGlobe = true; tap(n, at(n, "globe")); assertEquals(listOf("<next>"), rn.keys)
     }
     @Test fun theActionKeyReportsGoAndShowsItsLabel() {
         val (v, r) = view(action = "Search"); tap(v, at(v, "Search")); assertEquals(listOf("<go>"), r.keys)
@@ -117,16 +117,55 @@ class KeysViewTest {
         tap(v, at(v, "Q")); assertEquals("Q", r.keys.last())
         v.setShift(ShiftState.OFF); assertNotNull(v.centerOf("q"))
     }
-    @Test fun theSymbolsKeyPagesInsideTheViewAndIsNotReported() {
-        val (v, r) = view(); tap(v, at(v, "123")); assertEquals(Page.SYMBOLS, v.pageForTest()); assertTrue(r.keys.isEmpty())
-        tap(v, at(v, "7")); tap(v, at(v, "abc")); assertEquals(Page.LETTERS, v.pageForTest()); assertEquals(listOf("7"), r.keys)
+    @Test fun thereIsNoOneTwoThreeKeyAndTheSpaceBarIsTheWidestKeyOfTheBottomRow() {
+        val (v, _) = view(); assertNull(v.centerOf("123")); assertNull("no globe by default", v.centerOf("globe"))
+        val sp = at(v, "space"); val comma = at(v, ","); val dot = at(v, "."); val go = at(v, "⏎")
+        assertTrue("space is in the middle", comma.first < sp.first && sp.first < dot.first && dot.first < go.first)
+        val spaceW = (dot.first - sp.first) * 2; val keyW = (at(v, "q").first - at(v, "w").first).let { Math.abs(it) }
+        assertTrue("the space bar is about six keys wide: $spaceW vs $keyW", spaceW > keyW * 5f)
+    }
+
+    @Test fun holdingTheFullStopOpensTheSymbolsGridAndALetGoOnASymbolTypesIt() {
+        val (v, r) = view(); val (x, y) = at(v, ".")
+        down(v, x, y); assertFalse(v.popupOpenForTest()); advance(KeysView.HOLD_MS + 40); assertTrue("the grid is open", v.popupOpenForTest())
+        for (c in "@#$%&-+()/*\"':;!?_=~<>[]{}\\|") assertNotNull("'$c' is in the grid", v.popupCellCenterForTest(c.toString()))
+        val (sx, sy) = v.popupCellCenterForTest("@")!!; move(v, sx, sy); up(v, sx, sy)
+        assertEquals(listOf("@"), r.keys); assertFalse(v.popupOpenForTest())
+    }
+
+    @Test fun theSymbolsGridWorksFromTheCommaToo() {
+        val (v, r) = view(); val (x, y) = at(v, ",")
+        down(v, x, y); advance(KeysView.HOLD_MS + 40); val (sx, sy) = v.popupCellCenterForTest("?")!!; move(v, sx, sy); up(v, sx, sy)
+        assertEquals(listOf("?"), r.keys)
+    }
+
+    @Test fun liftingOnTheHeldKeyItselfTypesIt_andLiftingOutsideTheGridTypesNothing() {
+        val (v, r) = view(); val (x, y) = at(v, ".")
+        down(v, x, y); advance(KeysView.HOLD_MS + 40); up(v, x, y); assertEquals(listOf("."), r.keys)
+        val (a, b) = at(v, "q"); down(v, x, y); advance(KeysView.HOLD_MS + 40); move(v, a + 700f, b + 900f); up(v, a + 700f, b + 900f); assertEquals(listOf("."), r.keys)
+    }
+
+    @Test fun aQuickTapOnTheFullStopStillJustTypesIt_andNumberFieldsHaveNoGrid() {
+        val (v, r) = view(); tap(v, at(v, ".")); assertEquals(listOf("."), r.keys); assertFalse(v.popupOpenForTest())
+        val (n, rn) = view(kind = FieldKind.NUMBER); val (x, y) = at(n, "."); down(n, x, y); advance(KeysView.HOLD_MS + 40); assertFalse(n.popupOpenForTest()); up(n, x, y); assertEquals(listOf("."), rn.keys)
+    }
+
+    @Test fun holdingTheSpaceBarOpensTheKeyboardPickerAndTypesNoSpace() {
+        val (v, r) = view(); val (x, y) = at(v, "space")
+        down(v, x, y); advance(KeysView.SPACE_HOLD_MS + 40); assertEquals(listOf("<next>"), r.keys); up(v, x, y); assertEquals("no space typed after the hold", listOf("<next>"), r.keys)
+        tap(v, at(v, "space")); assertEquals(listOf("<next>", " "), r.keys)
+    }
+
+    @Test fun slidingOnTheSpaceBarMovesTheCursorAndNeverOpensThePicker() {
+        val (v, r) = view(); val (x, y) = at(v, "space")
+        down(v, x, y); move(v, x + 40 * dp, y); advance(KeysView.SPACE_HOLD_MS + 100); up(v, x + 40 * dp, y)
+        assertTrue(r.cursor > 0); assertTrue(r.keys.none { it == "<next>" })
     }
 
     // ------------------------------------------------------------------ hold, bubble, slide
     @Test fun theNumberRowIsOnTopOfTheLettersAndTypesDigits() {
         val (v, r) = view(); assertTrue("digits above the letters", at(v, "5").second < at(v, "q").second)
         for (d in "1234567890") tap(v, at(v, d.toString())); assertEquals("1234567890", r.keys.joinToString(""))
-        tap(v, at(v, "123")); assertNotNull("the number row stays on the symbols page", v.centerOf("0")); assertEquals(Page.SYMBOLS, v.pageForTest())
     }
     @Test fun withTheNumberRowANormalHoldOnALetterIsJustTheLetter() { val (v, r) = view(); val (x, y) = at(v, "e"); down(v, x, y); advance(KeysView.HOLD_MS + 50); up(v, x, y); assertEquals(listOf("e"), r.keys) }
     @Test fun withoutTheNumberRowHeldTopRowLetterTypesItsDigitAndShowsItInTheBubble() {
@@ -177,7 +216,7 @@ class KeysViewTest {
         assertNull("no digit hold on a keypad", v.bubbleTextForTest().let { if (it == null) null else if (it == "5") null else it })
     }
     @Test fun aUrlFieldHasSlashAndDotComKeys() { val (v, r) = view(kind = FieldKind.URL); tap(v, at(v, "/")); tap(v, at(v, ".com")); assertEquals(listOf("/", ".com"), r.keys) }
-    @Test fun changingTheFieldReturnsToTheLettersPage() { val (v, _) = view(); tap(v, at(v, "123")); v.setField(FieldKind.EMAIL, "Next"); assertEquals(Page.LETTERS, v.pageForTest()); assertNotNull(v.centerOf("@")) }
+    @Test fun changingTheFieldShowsTheLayoutOfTheNewField() { val (v, _) = view(); v.setField(FieldKind.EMAIL, "Next"); assertEquals(Page.LETTERS, v.pageForTest()); assertNotNull(v.centerOf("@")) }
 
     // ------------------------------------------------------------------ geometry
     @Test fun theGlideDecoderGetsTheCentresOfAllTwentySixLettersInsideTheView() {

@@ -13,6 +13,7 @@ import app.kestrel.core.input.glide.LexiconFile
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -129,8 +130,13 @@ class KeyboardPresenterTest {
     }
 
     @Test fun theGlobeKeyAsksTheServiceForTheNextKeyboardAndTypesNothing() {
-        val r = Rig(); var asked = 0; r.presenter.onNextKeyboard = { asked++ }
+        val r = Rig(extra = { it.putBoolean(Prefs.GLOBE, true) }); var asked = 0; r.presenter.onNextKeyboard = { asked++ }
         r.tap("globe"); assertEquals(1, asked); assertEquals("", r.text)
+    }
+
+    @Test fun theGlobeKeyIsOffByDefaultButTheSafeLayoutAlwaysHasIt() {
+        val r = Rig(); assertNull(r.view.centerOf("globe"))
+        r.presenter.safeMode = true; r.presenter.startInput(r.info); r.relayout(); assertNotNull("the way out of a broken keyboard", r.view.centerOf("globe"))
     }
 
     @Test fun safeModeIsPlainKeysOnlyAndNeverTouchesTheEngine() {
