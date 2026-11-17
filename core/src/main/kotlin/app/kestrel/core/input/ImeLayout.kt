@@ -47,40 +47,45 @@ object ImeLayout {
      * The symbols of the "123" page, also offered as a grid when the full stop or the comma is HELD (see KeysView). (The owner asked to remove the 123 key and then took it back: "i need a way to get to the special
      * symbols": the key and the page stay, the grid is a shortcut.)
      */
-    val symbolRows: List<List<String>> = listOf("@#$%&-+()/", "*\"':;!?_=~", "<>[]{}\\|").map { r -> r.map { it.toString() } }
+    private const val SYMBOL_ROW_3 = "<>[]{}\\|\u20AC\u00A3\u00A5"
+    val symbolRows: List<List<String>> = listOf("@#$%&-+()/", "*\"':;!?_=~", SYMBOL_ROW_3).map { r -> r.map { it.toString() } }
 
-    /** Width of the space bar: as much of the row as the other keys leave (owner: "make the space bar wider. As wide as can fit"). */
-    const val ROW_UNITS = 10f
+    /**
+     * Every text row is this many units wide. (Owner, 2026-11-17, M1: the keyboard is modelled on Gboard's large layout: Backspace at the end of the first letter row, the action key at the end of the home row,
+     * a Shift key at both ends of the bottom letter row, and under it ONLY comma, space, full stop and the key for special characters at the bottom right: no globe, no emoji, no voice key, no bar under the space bar.)
+     */
+    const val ROW_UNITS = 11.5f
 
     fun rows(page: Page, shift: Boolean, kind: FieldKind, actionLabel: String = "⏎", numberRow: Boolean = true, showGlobe: Boolean = false): List<List<KeySpec>> {
         if (kind == FieldKind.NUMBER || kind == FieldKind.PHONE) return keypad(kind, actionLabel, showGlobe)
-        val digits = if (numberRow) listOf(chars("1234567890")) else emptyList()
+        val digits = if (numberRow) listOf("1234567890".map { ch(it.toString(), ROW_UNITS / 10f) }) else emptyList()
         fun letters(s: String) = chars(if (shift) s.uppercase() else s)
-        // the bottom row: [the 123 / abc key] [globe if asked] [one or two small keys] [space: ALL the rest] [the full stop and the action key]
-        fun bottom(first: KeySpec, vararg fixed: KeySpec): List<KeySpec> {
+        // the bottom row: [globe if asked] [one or two small keys] [space: ALL the rest] [full stop, .com] [special characters / abc, bottom right]
+        fun bottom(vararg fixed: KeySpec, last: KeySpec): List<KeySpec> {
             val g = if (showGlobe) listOf(globe) else emptyList()
-            val used = (listOf(first) + g + fixed).sumOf { it.weight.toDouble() }.toFloat()
+            val used = (g + fixed + last).sumOf { it.weight.toDouble() }.toFloat()
             val space = KeySpec("space", Key.Ch(" "), ROW_UNITS - used)
-            val head = fixed.takeWhile { it.label != "." && it.label != ".com" && it.key !== Key.Go }
+            val head = fixed.takeWhile { it.label != "." && it.label != ".com" }
             val tail = fixed.drop(head.size)
-            return listOf(first) + g + head + space + tail
+            return g + head + space + tail + last
         }
+        fun act() = action(actionLabel, 2f)
         if (page == Page.SYMBOLS) return digits + listOf(
-            chars("@#$%&-+()/"),
-            chars("*\"':;!?_=~"),
-            chars("<>[]{}\\|") + back.let { KeySpec(it.label, it.key, 2f) },
-            bottom(KeySpec("abc", Key.ToLetters, 1.5f), ch(","), ch("."), action(actionLabel, 1.6f)),
+            chars("@#$%&-+()/") + KeySpec(back.label, back.key, 1.5f),
+            chars("*\"':;!?_=~") + action(actionLabel, 1.5f),
+            listOf(KeySpec("", null, 0.25f)) + chars(SYMBOL_ROW_3) + KeySpec("", null, 0.25f),
+            bottom(ch(",", 1.5f), ch(".", 1.5f), last = KeySpec("abc", Key.ToLetters, 2.5f)),
         )
-        val toSymbols = KeySpec("123", Key.ToSymbols, 1.5f)
+        val toSymbols = KeySpec("?123", Key.ToSymbols, 2.5f)
         val bottomRow = when (kind) {
-            FieldKind.URL -> bottom(toSymbols, ch("/"), ch("."), ch(".com", 1.5f), action(actionLabel, 1.6f))
-            FieldKind.EMAIL -> bottom(toSymbols, ch("@"), ch("."), ch(".com", 1.5f), action(actionLabel, 1.6f))
-            else -> bottom(toSymbols, ch(","), ch("."), action(actionLabel, 1.6f))
+            FieldKind.URL -> bottom(ch("/", 1.25f), ch(".", 1.25f), ch(".com", 1.75f), last = toSymbols)
+            FieldKind.EMAIL -> bottom(ch("@", 1.25f), ch(".", 1.25f), ch(".com", 1.75f), last = toSymbols)
+            else -> bottom(ch(",", 1.5f), ch(".", 1.5f), last = toSymbols)
         }
         return digits + listOf(
-            letters("qwertyuiop"),
-            listOf(KeySpec("", null, 0.5f)) + letters("asdfghjkl") + KeySpec("", null, 0.5f),
-            listOf(KeySpec("⇧", Key.Shift, 1.5f)) + letters("zxcvbnm") + back,
+            letters("qwertyuiop") + back,
+            listOf(KeySpec("", null, 0.5f)) + letters("asdfghjkl") + act(),
+            listOf(KeySpec("⇧", Key.Shift, 2.25f)) + letters("zxcvbnm") + KeySpec("⇧", Key.Shift, 2.25f),
             bottomRow,
         )
     }
