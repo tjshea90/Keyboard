@@ -181,7 +181,7 @@ class RareWordTest {
         // valid but uncommon words are there, and rare
         for (w in listOf("quixotic", "xylophone", "obsequious", "ephemeral")) { val id = lex.idOf(w); assertTrue("$w is in the list", id >= 0); assertTrue("$w is rare", lex.logProb(id) < Rarity.FLOOR) }
         // junk and fragments are out: single letters (except a and i), "tui", possessives, the Scrabble-only two-letter words
-        for (w in listOf("tui", "xu", "oe", "dog's", "q", "z", "kn")) assertTrue("$w must not be in the list", lex.idOf(w) < 0 || lex.logProb(lex.idOf(w)) < -16f)
+        for (w in listOf("tui", "xu", "oe", "dog's", "q", "z", "kn")) assertTrue("$w must not be in the list", lex.idOf(w).let { it < 0 || lex.text(it) != w || lex.logProb(it) < -16f })
         for (i in 0 until lex.size) if (lex.length(i) == 1) assertTrue("one-letter word ${lex.text(i)}", lex.text(i) == "a" || lex.text(i) == "i")
     }
 
