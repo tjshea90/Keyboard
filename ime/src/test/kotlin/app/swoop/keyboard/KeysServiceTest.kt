@@ -53,6 +53,16 @@ class KeysServiceTest {
         assertEquals("the keyboard requests INTERNET and nothing else (tools/expected-permissions.txt; only the translate package uses it)", listOf("android.permission.INTERNET"), pi.requestedPermissions?.toList() ?: emptyList<String>())
     }
 
+    @Test fun theKestrelNavigationPanelCanFloatAndDockTheKeyboardWithAPrivateCommand() {
+        val s = Robolectric.setupService(KeysService::class.java)
+        val root = s.onCreateInputView() as KeyboardRoot
+        assertTrue("docked at first", !root.floating)
+        s.onAppPrivateCommand(ACTION_FLOAT, null); assertTrue("the command floats it", root.floating)
+        s.onAppPrivateCommand("some.other.action", null); assertTrue("an unknown command changes nothing", root.floating)
+        s.onAppPrivateCommand(ACTION_DOCK, null); assertTrue("and the other docks it", !root.floating)
+        root.floatEnabled = false; s.onAppPrivateCommand(ACTION_FLOAT, null); assertTrue("floating switched off in the settings stays off", !root.floating)
+    }
+
     @Test fun serviceCreatesItsViewAndSurvivesALifecycleWithoutAnEditor() {
         val s = Robolectric.setupService(KeysService::class.java)
         val view = s.onCreateInputView()
