@@ -1,23 +1,23 @@
-# CHECKPOINT 297 — read me first, then TASKS.md
+# CHECKPOINT 298 — read me first, then TASKS.md
 
-**Written:** 2026-11-17T15:58:14Z · **tests:** all 1 fast checks green (gradle suite: see ship.sh)
-**Branch:** `ccr-5531c47b-hl1gzo` · **builds on:** `59b102c` (this checkpoint is the commit after it)
+**Written:** 2026-11-17T16:09:00Z · **tests:** all 1 fast checks green (gradle suite: see ship.sh)
+**Branch:** `ccr-5531c47b-hl1gzo` · **builds on:** `89bb406` (this checkpoint is the commit after it)
 
 ## Just done
-gated swoop-v0.5.0-alpha1 (ime code 6) and pushed it: handoff self-test, unit suites and the versionCode check passed here. NOT yet built - GitHub has not been asked.
+Android 16 fix: the emulator run on API 36 (44120198332) showed the system nav bar covering the bottom row (edge to edge since Android 15); KeyboardRoot now reads the navigation-bar inset on API 35+ and pads the docked panel / keeps the floating one above it (KeyboardRootInsetsTest, sdk 35); smoke.sh accepts mSelectedMethodId and the smart-space outcome; ImeGeometryAccuracyTest (photo layout top-1 97.3 vs 96.5 reference); Kestrel branch pushed (8676c1c6: tests core 1616 app 365 green); docs; version 0.5.0-alpha2 code 7
 
 ## Do this next
-TRIGGER THE BUILD: mcp__github__actions_run_trigger, method run_workflow, workflow_id android.yml, ref ccr-5531c47b-hl1gzo, inputs {"full_build":"true","note":"0.5.0-alpha1: the keyboard now matches the Gboard photo: four rows, round ?123 at the bottom left and round Enter at the bottom right, digit hints on the top row, teal colours, toolbar spread evenly, symbols on two pages, number row off by default; the Kestrel browser panel can open it floating"}.
-When the run is green, confirm the Release shows the APK (mcp__github__get_release_by_tag swoop-v0.5.0-alpha1), then:  bash tools/record-release.sh swoop-v0.5.0-alpha1 "0.5.0-alpha1: the keyboard now matches the Gboard photo: four rows, round ?123 at the bottom left and round Enter at the bottom right, digit hints on the top row, teal colours, toolbar spread evenly, symbols on two pages, number row off by default; the Kestrel browser panel can open it floating"
-NEVER ship swoop-v0.5.0-alpha1 twice (check BUILDLOG.md and the Releases first).
+dispatch emu-smoke.yml api 36 AND api 29 on this head, look at the API 36 screenshot (keys above the nav bar?); if good: bash ship.sh 'note', android.yml full_build=true, wait tag+green, get_release_by_tag, record-release swoop-v0.5.0-alpha2; Browser: gecko compile running locally (log scratchpad gecko2.log) then merge origin/ccr-e89b9dfe-pl3lk5 into the Browser branch when alpha65 is out; heartbeat trig_014NvZHSbSv1BNgvBVbYFsDR
 
 *(resuming? CLAUDE.md's "FIRST ACTION OF EVERY SESSION" says how; the briefing is tools/resume.sh. Do that first, or autosave may stay off all session.)*
 
 ## Uncommitted right now
-    (nothing — the tree is clean as of this checkpoint)
+     M docs/LAYOUT.md
+     M ime/build.gradle.kts
 
 ## Last ten checkpoints
 ```
+  8568d04 ckpt 297: gated swoop-v0.5.0-alpha1 (ime code 6) and pushed it: handoff self-test, unit 
   59b102c ckpt 296: P1+P4(api29) done: emulator smoke run 44118913362 (Android 10) 0 failures incl
   2e51a71 ckpt 295: P1 verified further: ime lint ok (online), gear/translate icons drawn, cyan de
   4d33958 ckpt 294: P1 (photo layout) built and green: core 404 tests, ime 181 tests incl. KeysVie
@@ -27,5 +27,7 @@ NEVER ship swoop-v0.5.0-alpha1 twice (check BUILDLOG.md and the Releases first).
   7f64a43 ckpt 290: gated swoop-v0.4.0-alpha1 (ime code 5) and pushed it: handoff self-test, unit 
   8232797 ckpt 289: pre-ship: 0.4.0-alpha1: Gboard-style layout with ?123 bottom right, toolbar (s
   89345f9 ckpt 288: TASKS M1-M9,M11,M12,M14,M15 ticked with proofs; tools/core-input-hash.sh (shar
-  fff8405 ckpt 287: M14 backup rotation + update-safety tests, version 0.4.0-alpha1 (code 5), READ
 ```
+
+(5 automatic checkpoint(s) since the last deliberate one — the
+session was still mid-step. `git diff` against it shows what changed.)
