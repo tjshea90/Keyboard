@@ -30,6 +30,31 @@ class KeysService : InputMethodService() {
         Engine.safeMode = safeMode
         presenter.safeMode = safeMode
         presenter.onNextKeyboard = { nextKeyboard() }
+        presenter.onOpenSettings = { openSettings() }
+        presenter.onToggleClipboard = { toggleClipboard() }
+        try { (getSystemService(CLIPBOARD_SERVICE) as android.content.ClipboardManager).addPrimaryClipChangedListener(clipListener) } catch (_: Exception) { }
+    }
+
+    private val clips by lazy { ClipboardHost(applicationContext) }
+    private val clipListener = android.content.ClipboardManager.OnPrimaryClipChangedListener {
+        if (Settings(this).clipboardHistory && !safeMode) { if (clips.capture()) root?.clipboard?.let { if (it.isOpen) it.refresh() } }
+    }
+
+    /** The cog in the toolbar: the keyboard's settings screen (the Setup screen) opens in its own task. */
+    private fun openSettings() {
+        try { startActivity(android.content.Intent(this, SetupActivity::class.java).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)) } catch (_: Exception) { }
+    }
+
+    /** The clipboard icon: show the clipboard in place of the keys, or go back to the keys. */
+    private fun toggleClipboard() {
+        val r = root ?: return
+        if (r.clipboard.isOpen) { r.clipboard.close(); return }
+        val on = Settings(this).clipboardHistory
+        r.clipboard.historyOn = on
+        clips.ensureLoaded()
+        if (on) clips.capture()                                    // what was copied before the keyboard was open
+        r.clipboard.store = clips.store
+        r.clipboard.open()
     }
 
     private var root: KeyboardRoot? = null
@@ -39,6 +64,12 @@ class KeysService : InputMethodService() {
         root.host = object : KeyboardRoot.Host {
             override fun modeChanged(floating: Boolean) { applyWindow(floating) }
             override fun geometryChanged() { presenter.prepareGlide() }
+        }
+        root.clipboard.host = object : ClipboardPanel.Host {
+            override fun clipPaste(text: String) { presenter.pasteText(text); root.clipboard.close() }
+            override fun clipClose() { root.clipboard.close() }
+            override fun clipChanged() { clips.save() }
+            override fun clipTurnOn() { Settings(this@KeysService).set(Prefs.CLIPBOARD, true); clips.capture(); root.clipboard.historyOn = true; root.clipboard.refresh() }
         }
         val v = root.keys
         presenter.view = v
@@ -80,6 +111,7 @@ class KeysService : InputMethodService() {
 
     override fun onStartInputView(editorInfo: EditorInfo, restarting: Boolean) {
         super.onStartInputView(editorInfo, restarting)
+        root?.clipboard?.close()                                   // a new text box starts on the keys
         root?.applySettings(Settings(this), safeMode)
         Diag.d("onStartInputView safe=$safeMode floating=${root?.floating}")
         presenter.startInput(editorInfo)
@@ -90,7 +122,7 @@ class KeysService : InputMethodService() {
     /** The keyboard goes away (Back, another app): what was learned is written now, so a killed process loses nothing. */
     override fun onFinishInputView(finishingInput: Boolean) { presenter.saveLearned(); super.onFinishInputView(finishingInput) }
     override fun onWindowHidden() { presenter.saveLearned(); super.onWindowHidden() }
-    override fun onDestroy() { presenter.saveLearned(); super.onDestroy() }
+    override fun onDestroy() { presenter.saveLearned(); try { (getSystemService(CLIPBOARD_SERVICE) as android.content.ClipboardManager).removePrimaryClipChangedListener(clipListener) } catch (_: Exception) { }; super.onDestroy() }
 
     /** Android tells us every selection change, ours and everybody else's; the controller tells them apart (plan 6.4). */
     override fun onUpdateSelection(oldSelStart: Int, oldSelEnd: Int, newSelStart: Int, newSelEnd: Int, candidatesStart: Int, candidatesEnd: Int) {

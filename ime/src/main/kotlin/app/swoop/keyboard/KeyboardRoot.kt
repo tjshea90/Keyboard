@@ -135,6 +135,8 @@ class KeyboardRoot(context: Context) : FrameLayout(context), GripBar.Host {
 
     val keys = KeysView(context)
     val overlay = KeyOverlay(context, keys)
+    /** The clipboard: it covers the keys while it is open. */
+    val clipboard = ClipboardPanel(context, keys)
     val grip = GripBar(context)
     private val pane = FrameLayout(context)
     private val panel = LinearLayout(context)
@@ -163,6 +165,7 @@ class KeyboardRoot(context: Context) : FrameLayout(context), GripBar.Host {
         Diag.init(context)
         pane.addView(keys, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
         pane.addView(overlay, FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT))
+        pane.addView(clipboard, FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT))
         keys.overlay = overlay
         panel.orientation = LinearLayout.VERTICAL
         panel.addView(grip, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))

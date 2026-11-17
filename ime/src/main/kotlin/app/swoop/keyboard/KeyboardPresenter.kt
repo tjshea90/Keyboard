@@ -50,6 +50,21 @@ class KeyboardPresenter(
     var safeMode = false
     /** The globe key: the service switches to the next keyboard. */
     var onNextKeyboard: () -> Unit = {}
+    /** The toolbar: the cog opens the settings screen, the clipboard icon shows or hides the clipboard, the translate icon switches translating. */
+    var onOpenSettings: () -> Unit = {}
+    var onToggleClipboard: () -> Unit = {}
+    var onToggleTranslate: () -> Unit = {}
+
+    /** A clipboard card was tapped: its text goes in at the cursor. */
+    fun pasteText(text: String) { session.settle(); learner.settle(); controller.paste(text); view?.setShift(controller.shift); refreshSuggestions() }
+
+    override fun onToolbar(tool: Int) {
+        when (tool) {
+            KeysView.TOOL_SETTINGS -> onOpenSettings()
+            KeysView.TOOL_CLIPBOARD -> onToggleClipboard()
+            KeysView.TOOL_TRANSLATE -> onToggleTranslate()
+        }
+    }
 
     var view: KeysView? = null
         set(v) { field = v; v?.listener = this; session.ui = this; prepareGlide() }
