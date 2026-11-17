@@ -164,3 +164,39 @@
 ## 2026-11-17T03:21:51Z
 > Still building. Checking again in about a minute and a half.
 <!-- sha:1c83a6d30ef5 -->
+
+## 2026-11-17T03:24:03Z
+> **Swoop 0.2.1-alpha1 is out, built and signed by GitHub:**
+>
+> https://github.com/tjshea90/Keyboard/releases/tag/swoop-v0.2.1-alpha1
+>
+> It installs over whatever Swoop you have. **Use this instead of 0.2.0-alpha1.** My own tests found that 0.2.0 could make the keyboard window as tall as the whole screen. The fix is in 0.2.1, and the emulator confirms the docked window is only keyboard-sized.
+>
+> All nine of your requests are now done:
+> 1. **Numbers row:** always on top.
+> 2. **Trail:** drawn on its own small layer, with touches delivered unbuffered.
+> 3. **Floating keyboard (new in this build):**
+>    - **Detach:** a glowing bar sits on top of the keyboard. Press and hold it, or drag it up, and the keyboard lifts off and follows your finger.
+>    - **Move and resize:** drag the bar to move it anywhere. Drag a corner to resize it. The keys and the glide decoder follow the new size.
+>    - **Dock:** double-tap the bar, or drop it at the bottom, to dock again.
+>    - **Remembered and optional:** it remembers where you left it. Settings > Layout and look has a switch to turn the whole feature off.
+> 4. **Suggestions while tapping:** with glide typing on or off.
+> 5. **Instant glide:** it starts after about 5 dp of movement.
+> 6. **Learning:** words, pairs, corrections, erase-and-retype, and picks from the strip. It keeps learning in every app.
+> 7. **Options:** space after punctuation, double space for a full stop, capitals, capital I, themes and more.
+> 8. **New settings screen:** a live copy of the keyboard that follows every change.
+> 9. **Key pop-up:** gone at the moment of lift.
+>
+> **What was and wasn't tested.**
+> - **On an Android 10 emulator in GitHub CI:** it passed with 0 failures, twice. It checked the keyboard window size, tapping, a glide, Backspace, a long press floating the keyboard, and the app behind still taking a tap. It also found a 1-pixel creep while the finger is held still, which I fixed before this build.
+> - **Automated tests:** 277 in the core logic and 120 in the app, plus lint.
+> - **Not run:** your tablet, your phone, Android 16. I haven't verified how the trail, pop-up and floating touch feel, or whether the 350 ms long press and the 24 dp corner grab zones feel right under a thumb.
+>
+> The auto-space after `.` can split a bare address you type in a message, like `example.com`, because a keyboard can't tell it from `ok.thanks`. There's a switch for it. Address fields, anything with `@` or `/`, numbers and `e.g` are left alone.
+>
+> **Open items:**
+> - **Your device check of 0.2.1:** please tell me what's slow or wrong, especially the floating bar and the trail speed.
+> - **Android 16 phone pass:** I can run the Android 16 emulator test in CI next if you want.
+> - **2-hourly wake-up after usage cut-offs:** still your call.
+> - **Reading the LinkMeter repo for the translation feature:** still your call, needed later.
+<!-- sha:cb25f1fd54f0 -->
