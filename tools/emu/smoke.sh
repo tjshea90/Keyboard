@@ -62,7 +62,7 @@ adb shell input tap $TAP; sleep 3
 dump; TAP="$(find_edit)"   # (the field may have moved above the keyboard)
 adb shell dumpsys input_method > "$OUT/dumpsys-ime.txt"
 grep -q "mInputShown=true" "$OUT/dumpsys-ime.txt" && ok "the keyboard is showing" || bad "the keyboard did not show (mInputShown)"
-grep -q "mCurMethodId=$COMP" "$OUT/dumpsys-ime.txt" && ok "Swoop is the current input method" || bad "Swoop is not the current input method (mCurMethodId: $(grep -m1 mCurMethodId "$OUT/dumpsys-ime.txt"))"
+grep -qE "(mCurMethodId|mSelectedMethodId|mCurId)=$COMP" "$OUT/dumpsys-ime.txt" && ok "Swoop is the current input method" || bad "Swoop is not the current input method (dumpsys says: $(grep -m1 -E 'mCurMethodId|mSelectedMethodId|mCurId' "$OUT/dumpsys-ime.txt"))"     # (Android 16 calls the field mSelectedMethodId)
 shot keyboard-shown
 
 # ---- 3 where are the keys: the INPUT METHOD window frame
@@ -134,7 +134,8 @@ if [ -n "$GEOM" ]; then
   adb shell input tap $(key qmark); sleep 0.7
   adb shell input tap $(key a); sleep 0.7
   T="$(field_text)"; shot symbols
-  case "$T" in *"?a"|*"?A") ok "?123, then ?, then a typed '?a': one special character and the letters are back ($T)" ;; *) bad "expected the field to end with ?a after ?123 ? a, got '$T'" ;; esac
+  # (the keyboard's "space after punctuation" may put a space between ? and the letter, and capitalise it: Android 16 did, Android 10 did not; both prove the same thing: ? was typed and the letters are back)
+  case "$T" in *"?a"|*"?A"|*"? a"|*"? A") ok "?123, then ?, then a typed a letter after the ?: one special character and the letters are back ($T)" ;; *) bad "expected the field to end with ? and a letter after ?123 ? a, got '$T'" ;; esac
   adb shell input tap $(key back); sleep 0.4; adb shell input tap $(key back); sleep 0.4
   # ---- 4 glide: a swipe along the top row from t to p (a word like top/tip/typo is decoded)
   adb shell input tap $(key space); sleep 0.4
