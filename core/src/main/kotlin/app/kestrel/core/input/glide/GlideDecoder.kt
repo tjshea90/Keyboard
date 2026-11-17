@@ -79,7 +79,23 @@ class GlideParams(
     val patGain: Float = 2.5f,
     val patCap: Float = 4.5f,
     val patMaxGap: Float = 2.2f,
+    /**
+     * Rare words (owner: "it shouldn't ever predict rare words unless the glide pattern is very clear"): a word whose language prior (ln of its chance, the person's own use and the pair
+     * with the word before included) is below [rareFloor] pays [rareW] cost units per nat below it, at most [rareCap] nats' worth. The price does NOT shrink with the language weight, so
+     * a clean glide cannot be talked into a rare lookalike of a common word, yet a rare word whose letters the finger clearly drew still wins. A word the person uses is not rare (its
+     * own mass lifts its prior), and neither is a word that the pair with the word before makes likely. [rareW] 0 = no price.
+     */
+    val rareFloor: Float = Rarity.FLOOR,
+    val rareW: Float = 0.45f,
+    val rareCap: Float = 7f,
 )
+
+/** What counts as a rare word (shared by the glide decoder and the tap suggester). ln-probabilities are on the scale of the shipped list: -12.5 is about rank 13 000 of 140 000. */
+object Rarity {
+    const val FLOOR = -12.5f
+    /** Nats below [floor] (at most [cap]) that a prior is under the rarity floor; 0 for any word that is not rare. */
+    fun below(lnPrior: Float, floor: Float = FLOOR, cap: Float = 7f): Float { val d = floor - lnPrior; return if (d <= 0f) 0f else if (d > cap) cap else d }
+}
 
 class GlideCandidate(val text: String, val score: Float, val cost: Float, val prior: Float, val letters: Int = 1) {
     /** How far the path was from the word, per letter (pitch squared): the smaller the better. */
@@ -165,19 +181,20 @@ class GlideDecoder(private val keys: GlideKeys, private val p: GlideParams = Gli
 
         // ---- careful pass
         val ids = prevIds(lexicons, prev)
-        val costs = FloatArray(heapN); val priors = FloatArray(heapN)
+        val costs = FloatArray(heapN); val priors = FloatArray(heapN); val rare = FloatArray(heapN)
         var bestPer = Float.MAX_VALUE
         for (h in 0 until heapN) {
             val lex = lexicons[heapLex[h]]; val id = heapId[h]
             costs[h] = careful(lex, id)
             priors[h] = prior(lex, id, ids[heapLex[h]], prev, prev2)
+            rare[h] = if (p.rareW > 0f) p.rareW * Rarity.below(priors[h], p.rareFloor, p.rareCap) else 0f
             val per = costs[h] / distinctLetters(lex, id)
             if (per < bestPer) bestPer = per
         }
         var lm = if (p.lmA > 0f) (p.lmA * bestPer).coerceIn(p.lmMin, p.lmMax) else p.lmW
         // ---- the best ones again, with the path moved by the way the finger was off
         if (p.biasKeep > 0 && p.biasGain > 0f) {
-            val order = (0 until heapN).sortedByDescending { -costs[it] + lm * priors[it] }.take(p.biasKeep)
+            val order = (0 until heapN).sortedByDescending { -costs[it] + lm * priors[it] - rare[it] }.take(p.biasKeep)
             var best2 = Float.MAX_VALUE
             for (h in order) {
                 val lex = lexicons[heapLex[h]]; val id = heapId[h]
@@ -193,7 +210,7 @@ class GlideDecoder(private val keys: GlideKeys, private val p: GlideParams = Gli
             val lex = lexicons[heapLex[h]]; val id = heapId[h]
             val letters = distinctLetters(lex, id)
             if (costs[h] / letters > p.maxPerLetter) continue
-            out.add(GlideCandidate(lex.text(id), -costs[h] + lm * priors[h], costs[h], priors[h], letters))
+            out.add(GlideCandidate(lex.text(id), -costs[h] + lm * priors[h] - rare[h], costs[h], priors[h], letters))
         }
         out.sortByDescending { it.score }
         applyPatterns(out)
