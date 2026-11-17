@@ -200,3 +200,7 @@
 > - **2-hourly wake-up after usage cut-offs:** still your call.
 > - **Reading the LinkMeter repo for the translation feature:** still your call, needed later.
 <!-- sha:cb25f1fd54f0 -->
+
+## 2026-11-17T04:46:39Z
+> Four changes and a research question, plus a bug. The suggestion tap not working in a URL bar most likely comes from Chrome and Brave's inline autocomplete, which makes our "last glide" bookkeeping give up. I'm writing your requests into `TASKS.md` in your words first, then starting a research helper for the prediction sources while I fix the bug.
+<!-- sha:003c3384660e -->
