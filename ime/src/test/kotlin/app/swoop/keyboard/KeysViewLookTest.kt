@@ -58,12 +58,12 @@ class KeysViewLookTest {
             val p = b.getPixel((x - 12 * dp).toInt(), (y).toInt() + 60)
             assertNotEquals("key '$c' is not painted where touches find it", bg, p)
         }
-        assertEquals("the pad around the keys is the background", 0xFFD3D6DB.toInt(), bg)
+        assertEquals("the pad around the keys is the background", 0xFFE4EDED.toInt(), bg)
     }
 
     @Test fun theActionKeyIsTheAccentColourAndSaysWhatEnterDoes() {
         val v = view(action = "Search"); val b = render(v, "light-search")
-        assertEquals(0xFF1F6FEB.toInt(), pixelAtKey(b, v, "Search", dx = 14 * dp, dy = -12 * dp))
+        assertEquals(0xFF00DDE6.toInt(), pixelAtKey(b, v, "Search", dx = 14 * dp, dy = -12 * dp))
     }
 
     @Test fun aPressedKeyLightsUpThenDims() {
@@ -96,8 +96,41 @@ class KeysViewLookTest {
 
     @Test @Config(qualifiers = "night", sdk = [29]) fun theDarkPaletteIsDark() {
         val v = view(); val b = render(v, "dark-letters")
-        assertEquals(0xFF1B1D20.toInt(), corner(b))
+        assertEquals(0xFF0D1D1D.toInt(), corner(b))
     }
+
+
+    /** Owner M1: the dark letters page IS the photo (Gboard, dark teal). The colours below were measured from the photo; the geometry is checked in ImeLayoutTest. */
+    @Test @Config(qualifiers = "night", sdk = [29]) fun theDarkLettersPageHasThePhotosColours() {
+        val v = view(w = 412, action = "\u23CE"); val b = render(v, "photo-dark-phone")
+        assertEquals("background", 0xFF0D1D1D.toInt(), corner(b))
+        assertEquals("a letter key", 0xFF253535.toInt(), pixelAtKey(b, v, "w", dx = -12 * dp))
+        assertEquals("the space bar", 0xFF253535.toInt(), pixelAtKey(b, v, "space", dx = 40 * dp))
+        assertEquals("Shift is the lighter slate", 0xFF35494A.toInt(), pixelAtKey(b, v, "\u21E7", dx = -22 * dp))
+        assertEquals("Backspace is the lighter slate", 0xFF35494A.toInt(), pixelAtKey(b, v, "\u232B", dx = 22 * dp))
+        assertEquals("the comma key is the lighter slate", 0xFF35494A.toInt(), pixelAtKey(b, v, ",", dy = -14 * dp))
+        assertEquals("the full stop key is the lighter slate", 0xFF35494A.toInt(), pixelAtKey(b, v, ".", dy = -14 * dp))
+        assertEquals("?123 is the pale blue round key", 0xFFA4CEDC.toInt(), pixelAtKey(b, v, "?123", dx = -24 * dp))
+        assertEquals("Enter is the cyan round key", 0xFF00DDE6.toInt(), pixelAtKey(b, v, "\u23CE", dx = -24 * dp))
+        assertNull("no number row: the digits are hints", v.centerOf("5"))
+        val rows = listOf("q", "a", "z", "space").map { v.centerOf(it)!!.second }
+        assertTrue("four rows from the top: $rows", rows[0] < rows[1] && rows[1] < rows[2] && rows[2] < rows[3])
+        val (qx, _) = v.centerOf("q")!!; val (zx, _) = v.centerOf("z")!!; val (sx, _) = v.centerOf("s")!!
+        assertEquals("Z stands under S like the photo", sx, zx, 0.5f); assertTrue(qx < sx)
+        // the round keys are really round: the corner of the Enter key's box is the background, its middle is not
+        val (ex, ey) = v.centerOf("\u23CE")!!
+        assertEquals("the corner of the Enter key's box is outside the round key", 0xFF0D1D1D.toInt(), b.getPixel((ex + 36 * dp).toInt(), (ey - 26 * dp).toInt() + 60).let { it })
+    }
+
+    @Test @Config(qualifiers = "night", sdk = [29]) fun theSymbolsPagesAreDrawnToo() {
+        val v = view(w = 412)
+        val (px, py) = v.centerOf("?123")!!; fun tapAt(x: Float, y: Float) { touch(v, MotionEvent.ACTION_DOWN, x, y); touch(v, MotionEvent.ACTION_UP, x, y) }
+        tapAt(px, py); render(v, "photo-dark-symbols1")
+        val (mx, my) = v.centerOf(app.kestrel.core.input.ImeLayout.MORE_SYMBOLS)!!; tapAt(mx, my); render(v, "photo-dark-symbols2")
+        assertEquals(app.kestrel.core.input.Page.SYMBOLS2, v.pageForTest())
+    }
+
+    @Test @Config(qualifiers = "night", sdk = [29]) fun theTabletWidthIsDrawnToo() { render(view(w = 564), "photo-dark-tablet"); render(view(w = 564, action = "Search"), "photo-dark-tablet-search") }
 
     @Test fun thePhoneWidthStillGivesWholeKeys() { val v = view(w = 411); render(v, "light-phone"); val (x0, _) = v.centerOf("q")!!; val (x1, _) = v.centerOf("w")!!; assertTrue(x1 - x0 > 30 * dp) }
 }
