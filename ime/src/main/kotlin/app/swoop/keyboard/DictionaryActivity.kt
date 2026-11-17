@@ -34,6 +34,7 @@ class DictionaryActivity : Activity() {
     private var seq = 0
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        setTheme(settingsTheme(Settings(this).theme))
         super.onCreate(savedInstanceState)
         title = getString(R.string.dict_title)
         st = Settings(this)

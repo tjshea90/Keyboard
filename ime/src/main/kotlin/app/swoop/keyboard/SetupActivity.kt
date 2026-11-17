@@ -38,6 +38,7 @@ class SetupActivity : Activity() {
     private var learnedLine: TextView? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        setTheme(settingsTheme(Settings(this).theme))
         super.onCreate(savedInstanceState)
         title = getString(R.string.setup_title)
         st = Settings(this)

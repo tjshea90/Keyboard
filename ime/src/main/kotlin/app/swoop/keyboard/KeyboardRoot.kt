@@ -246,6 +246,7 @@ class KeyboardRoot(context: Context) : FrameLayout(context), GripBar.Host {
             }
             ins
         }
+        keys.onPaletteChanged = { panel.background = panelBackground() }
         applyMode()
     }
 
@@ -292,14 +293,21 @@ class KeyboardRoot(context: Context) : FrameLayout(context), GripBar.Host {
         host?.modeChanged(on)
     }
 
+    /**
+     * What the panel paints behind the bar row and the keys: the keyboard's own colour, docked and floating alike. (Docked it used to be nothing, so the bar row showed the keyboard WINDOW's background, which is white
+     * on a phone in day mode: a white strip above dark keys once the colours no longer follow the phone.)
+     */
+    private fun panelBackground(): android.graphics.drawable.Drawable =
+        if (floating) GradientDrawable().apply { setColor(keys.backgroundColor); cornerRadius = 16 * d; setStroke((2 * d).toInt(), grip.accent) }
+        else android.graphics.drawable.ColorDrawable(keys.backgroundColor)
+
     /** Docked: full width at the bottom. Floating: the chosen width, the chosen row height, at the saved position, in a neon frame. */
     private fun applyMode() {
         grip.floating = floating
         keys.floatMul = if (floating) hMul else 1f
         val f = frame()
         panel.setPadding(f + (if (floating) 0 else navLeft), f / 2, f + (if (floating) 0 else navRight), f + (if (floating) 0 else navBottom))
-        panel.background = if (floating) GradientDrawable().apply { setColor(keys.backgroundColor); cornerRadius = 16 * d; setStroke((2 * d).toInt(), grip.accent) }
-            else if (navBottom > 0 || navLeft > 0 || navRight > 0) android.graphics.drawable.ColorDrawable(keys.backgroundColor) else null
+        panel.background = panelBackground()
         panel.elevation = if (floating) 12 * d else 0f
         minimumHeight = if (floating) screenH() else 0
         requestLayout()

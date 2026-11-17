@@ -246,7 +246,11 @@ class KeysView(context: Context) : View(context) {
         cPale = if (dark) 0xFFA4CEDC.toInt() else 0xFF9CC7D6.toInt()
         cPaleText = 0xFF0D1D1D.toInt()
         cBubble = if (dark) 0xFF0C161D.toInt() else 0xFFFFFFFF.toInt()
+        onPaletteChanged?.invoke()
     }
+
+    /** Called after the colours were chosen again (a new setting, or the phone changed between day and night): the keyboard's frame paints its own background in the same colour. */
+    var onPaletteChanged: (() -> Unit)? = null
 
     private fun luma(c: Int): Float = (0.299f * ((c shr 16) and 0xFF) + 0.587f * ((c shr 8) and 0xFF) + 0.114f * (c and 0xFF)) / 255f
     private fun mix(v: Int, f: Float): Int = (v + (255 - v) * f).toInt().coerceIn(0, 255)

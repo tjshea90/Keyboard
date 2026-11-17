@@ -25,6 +25,16 @@ import android.widget.TextView
  * The look of the settings screen, built in code (no XML, no AndroidX): colours that follow the phone's light / dark setting and the person's accent colour, and the few
  * building blocks the screen is made of (a card, a switch row, a segmented choice, colour dots, an action row). One place, so every row looks and behaves the same.
  */
+/**
+ * The framework theme that goes with a colours choice (0 follows the phone, 1 dark, 2 light), so the title bar, the dialogs and the pop-ups of the settings screens are in the colours of the screen whatever day or night
+ * the phone is set to. Call it before super.onCreate.
+ */
+fun settingsTheme(mode: Int): Int = when (mode) {
+    1 -> android.R.style.Theme_DeviceDefault
+    2 -> android.R.style.Theme_DeviceDefault_Light
+    else -> android.R.style.Theme_DeviceDefault_DayNight
+}
+
 class Ui(val ctx: Context, val accent: Int, themeMode: Int = 0) {
     val d = ctx.resources.displayMetrics.density
     val dark = when (themeMode) { 1 -> true; 2 -> false; else -> (ctx.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES }

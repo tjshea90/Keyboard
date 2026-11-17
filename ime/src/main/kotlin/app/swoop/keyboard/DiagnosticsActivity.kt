@@ -20,6 +20,7 @@ class DiagnosticsActivity : Activity() {
     private lateinit var body: TextView
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        setTheme(settingsTheme(Settings(this).theme))
         super.onCreate(savedInstanceState)
         title = getString(R.string.diag_title)
         val d = resources.displayMetrics.density
