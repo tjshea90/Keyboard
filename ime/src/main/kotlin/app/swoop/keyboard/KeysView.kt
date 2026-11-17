@@ -6,126 +6,345 @@ import android.content.res.Configuration
 import android.graphics.Canvas
 import android.graphics.Paint
 import android.graphics.RectF
+import android.graphics.Typeface
+import android.os.Handler
+import android.os.Looper
 import android.view.HapticFeedbackConstants
 import android.view.MotionEvent
 import android.view.View
+import app.kestrel.core.input.ImeLayout
 import app.kestrel.core.input.Key
 import app.kestrel.core.input.KeyBox
 import app.kestrel.core.input.KeySpec
 import app.kestrel.core.input.MiniKeyboardGeometry
-import app.kestrel.core.input.MiniKeyboardLayout
+import app.kestrel.core.input.Page
+import app.kestrel.core.input.editor.FieldKind
 import app.kestrel.core.input.editor.ShiftState
+import app.kestrel.core.input.glide.GlideKeys
 
 /**
- * KB-100 walking skeleton of the keys view: it draws the ported English QWERTY pages with the SAME geometry function the glide decoder reads
- * ([MiniKeyboardGeometry.boxes]) and reports taps. KB-102 replaces its insides with the full port of the browser's KeysView (taps, key bubble,
- * Backspace repeat, hold-for-digit, space slide, glide trail); the [Listener] seam stays.
- * One custom View drawn with Canvas (plan 6.7): paints are created once, rectangles are computed on size change, a press invalidates one key.
+ * The keys, drawn and hit-tested by ONE view (no view per key; plan 6.7), ported from the browser's KeysView and widened to a full-width system keyboard.
+ *  - the SAME [MiniKeyboardGeometry] function lays out the rows for drawing, touching and (KB-103) the glide decoder, so they cannot disagree;
+ *  - a touch between two keys types the nearest key of that row; a thumb that drifts a little off a letter still types the letter it went down on;
+ *  - the key under the finger is shown large above it; Backspace repeats; holding a top-row letter types its digit; sliding over the space key moves the cursor;
+ *  - a second finger that goes down while the first still holds a letter types the first letter at once (fast two-thumb typing).
+ * The view only REPORTS ([Listener]); what a key does to the text is decided by InputController (:core). Pages (letters / symbols) are the view's own business.
  */
 class KeysView(context: Context) : View(context) {
     interface Listener {
-        /** A key was tapped (Shift included; the symbols/letters paging is the view's own business and is not reported). */
+        /** A key was tapped (Shift included; the symbols / letters paging is the view's own business and is not reported). */
         fun onKey(key: Key)
+        /** The finger slid over the space key: the text cursor moves this many characters (negative = left). */
+        fun onCursor(steps: Int)
     }
 
     var listener: Listener? = null
+
     private val density = resources.displayMetrics.density
-    private val gap = 4f * density
-    private val pad = 4f * density
-    private val rowH = 50f * density
+    private fun dp(v: Float) = v * density
+    private val gap = dp(3f)
+    private val pad = dp(3f)
+    private val handler = Handler(Looper.getMainLooper())
 
-    private var symbols = false
+    // ---- what is shown
+    private var page = Page.LETTERS
     private var shift = ShiftState.OFF
-    private var forField = true
-    private var rows: List<List<KeySpec>> = MiniKeyboardLayout.rows(false, false, true)
-    private var boxes: List<List<KeyBox>> = emptyList()
-    private var pressed: KeyBox? = null
-    private var pressedKey: Key? = null
+    private var kind = FieldKind.TEXT
+    private var actionLabel = "⏎"
+    private var rows: List<List<KeySpec>> = ImeLayout.rows(page, false, kind, actionLabel)
+    private var rects: List<List<KeyBox>> = emptyList()
+    private var rectsW = -1; private var rectsH = -1
 
-    private val dark = (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
-    private val bg = if (dark) 0xFF202124.toInt() else 0xFFD3D6DB.toInt()
-    private val keyFill = if (dark) 0xFF3C4043.toInt() else 0xFFFFFFFF.toInt()
-    private val keyFillSpecial = if (dark) 0xFF2D2F31.toInt() else 0xFFB8BDC4.toInt()
-    private val keyFillPressed = if (dark) 0xFF6B7280.toInt() else 0xFF9AA3AE.toInt()
+    // ---- palette (light / dark follows the system; KB-305 adds themes)
+    private var dark = false
+    private var cBg = 0; private var cKey = 0; private var cSpecial = 0; private var cLit = 0; private var cText = 0; private var cMuted = 0; private var cAccent = 0; private var cAccentText = 0; private var cBubble = 0
     private val fill = Paint(Paint.ANTI_ALIAS_FLAG)
-    private val text = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = if (dark) 0xFFE8EAED.toInt() else 0xFF202124.toInt(); textAlign = Paint.Align.CENTER; textSize = 20f * density }
-    private val rect = RectF()
+    private val line = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE }
+    private val text = Paint(Paint.ANTI_ALIAS_FLAG).apply { textAlign = Paint.Align.CENTER; typeface = Typeface.DEFAULT }
+    private val box = RectF()
 
-    init { contentDescription = context.getString(R.string.app_name) }
+    // ---- touch state (one pointer is tracked; see ACTION_POINTER_DOWN)
+    private var activeId = -1
+    private var down: KeySpec? = null           // the key the finger went down on (or slid to, for keys that are not letters)
+    private var pressedLetter: KeySpec? = null  // a letter: what a tap that drifts a little still types
+    private var litKey: KeySpec? = null
+    private var holdAlt: String? = null         // the finger stayed on a top-row letter: its digit
+    private var bubbleKey: KeySpec? = null; private var bubbleText = ""
+    private var spaceDown = false; private var sliding = false; private var slideStartX = 0f; private var slideAnchorX = 0f
+
+    private val unlight = Runnable { litKey = null; invalidate() }
+    private val repeat = object : Runnable { override fun run() { down?.key?.let { listener?.onKey(it) }; handler.postDelayed(this, REPEAT_MS) } }
+    private val hold = Runnable { holdFired() }
+
+    init {
+        contentDescription = context.getString(R.string.app_name)
+        applyPalette()
+    }
+
+    // ------------------------------------------------------------------ what the service tells the view
 
     /** The controller owns the shift state; the view only shows it (capitals on the keys, a lit Shift key). */
-    fun setShift(state: ShiftState) { if (shift != state) { shift = state; rebuild() } }
+    fun setShift(state: ShiftState) { if (shift != state) { shift = state; rebuildRows() } }
 
-    /** The page for the field being edited (KB-104 chooses it from EditorInfo; today every field gets the text-field letters page). */
-    fun setForField(value: Boolean) { if (forField != value) { forField = value; rebuild() } }
+    /** The field being edited: which bottom row / keypad, and what the action key says. */
+    fun setField(newKind: FieldKind, newActionLabel: String) {
+        if (kind == newKind && actionLabel == newActionLabel) return
+        kind = newKind; actionLabel = newActionLabel; page = Page.LETTERS; rebuildRows()
+    }
 
-    private fun rebuild() {
-        rows = MiniKeyboardLayout.rows(symbols, shift != ShiftState.OFF, forField)
-        boxes = MiniKeyboardGeometry.boxes(rows, width - 2 * pad, height - 2 * pad, gap).map { r -> r.map { KeyBox(it.left + pad, it.top + pad, it.right + pad, it.bottom + pad) } }
+    /** Everything in flight stops (the keyboard closed or the field changed). */
+    fun reset() {
+        handler.removeCallbacks(repeat); handler.removeCallbacks(unlight); handler.removeCallbacks(hold)
+        activeId = -1; down = null; pressedLetter = null; litKey = null; holdAlt = null; bubbleKey = null; spaceDown = false; sliding = false
         invalidate()
     }
 
+    private fun rebuildRows() {
+        rows = ImeLayout.rows(page, shift != ShiftState.OFF, kind, actionLabel)
+        rectsW = -1
+        invalidate()
+    }
+
+    private fun applyPalette() {
+        dark = (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
+        cBg = if (dark) 0xFF1B1D20.toInt() else 0xFFD3D6DB.toInt()
+        cKey = if (dark) 0xFF3C4043.toInt() else 0xFFFFFFFF.toInt()
+        cSpecial = if (dark) 0xFF2B2E31.toInt() else 0xFFB9BEC6.toInt()
+        cLit = if (dark) 0xFF6B7280.toInt() else 0xFF9AA3AE.toInt()
+        cText = if (dark) 0xFFE8EAED.toInt() else 0xFF202124.toInt()
+        cMuted = if (dark) 0xFF9AA0A6.toInt() else 0xFF5F6368.toInt()
+        cAccent = 0xFF1F6FEB.toInt(); cAccentText = 0xFFFFFFFF.toInt()
+        cBubble = if (dark) 0xFF0C161D.toInt() else 0xFFFFFFFF.toInt()
+    }
+
+    override fun onConfigurationChanged(newConfig: Configuration) { super.onConfigurationChanged(newConfig); applyPalette(); invalidate() }
+
+    // ------------------------------------------------------------------ layout
+
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
         val w = MeasureSpec.getSize(widthMeasureSpec)
-        val h = (4 * rowH + 3 * gap + 2 * pad).toInt()
+        // a key is about as tall as a letter key is wide (a thumb-sized target), within sensible bounds on a phone and on the tablet
+        val rowH = ((w - 2 * pad) / 10f).coerceIn(dp(44f), dp(58f))
+        val h = (rows.size * rowH + (rows.size - 1) * gap + 2 * pad).toInt()
         setMeasuredDimension(w, h)
     }
 
-    override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) { rebuild() }
-
-    override fun onDraw(canvas: Canvas) {
-        canvas.drawColor(bg)
-        val r = 6f * density
-        for ((ri, row) in rows.withIndex()) {
-            for ((ci, spec) in row.withIndex()) {
-                if (spec.key == null) continue
-                val b = boxes[ri][ci]
-                rect.set(b.left, b.top, b.right, b.bottom)
-                fill.color = when { b === pressed -> keyFillPressed; spec.key is Key.Ch && spec.label.length <= 2 -> keyFill; else -> keyFillSpecial }
-                canvas.drawRoundRect(rect, r, r, fill)
-                val label = if (spec.key is Key.Shift && shift != ShiftState.OFF) (if (shift == ShiftState.LOCK) "⇪" else "⇧") else spec.label
-                text.textSize = (if (label.length > 2) 15f else 20f) * density
-                canvas.drawText(label, b.centerX, b.centerY - (text.ascent() + text.descent()) / 2f, text)
-            }
-        }
+    private fun layoutKeys() {
+        if (rectsW == width && rectsH == height && rects.isNotEmpty()) return
+        rectsW = width; rectsH = height
+        rects = MiniKeyboardGeometry.boxes(rows, width - 2 * pad, height - 2 * pad, gap).map { r -> r.map { KeyBox(it.left + pad, it.top + pad, it.right + pad, it.bottom + pad) } }
     }
 
-    private fun keyAt(x: Float, y: Float): Pair<KeyBox, Key>? {
-        for ((ri, row) in boxes.withIndex()) for ((ci, b) in row.withIndex()) {
-            val k = rows[ri][ci].key ?: continue
-            if (b.contains(x, y)) return b to k
+    /** The 26 letter keys' centres as laid out now (the same function that draws them), for the glide decoder (KB-103). Null before the first layout. */
+    fun glideKeys(): GlideKeys? {
+        if (width <= 0 || height <= 0) return null
+        val letters = ImeLayout.rows(Page.LETTERS, false, FieldKind.TEXT)
+        val b = MiniKeyboardGeometry.boxes(letters, width - 2 * pad, height - 2 * pad, gap).map { r -> r.map { KeyBox(it.left + pad, it.top + pad, it.right + pad, it.bottom + pad) } }
+        return try { GlideKeys.from(letters, b) } catch (e: IllegalArgumentException) { null }
+    }
+
+    // ------------------------------------------------------------------ drawing
+
+    override fun onDraw(c: Canvas) {
+        layoutKeys()
+        c.drawColor(cBg)
+        val r = dp(6f)
+        for ((i, row) in rows.withIndex()) for ((j, k) in row.withIndex()) {
+            val key = k.key ?: continue
+            val kb = rects[i][j]
+            box.set(kb.left, kb.top, kb.right, kb.bottom)
+            val special = key !is Key.Ch || k.label.length > 1
+            fill.color = when {
+                k === litKey -> cLit
+                key === Key.Go -> cAccent
+                key === Key.Shift && shift == ShiftState.LOCK -> cAccent
+                key === Key.Shift && shift == ShiftState.ONCE -> cMuted
+                special -> cSpecial
+                else -> cKey
+            }
+            c.drawRoundRect(box, r, r, fill)
+            text.color = if (key === Key.Go || (key === Key.Shift && shift == ShiftState.LOCK)) cAccentText else cText
+            val label = if (key === Key.Shift) (if (shift == ShiftState.LOCK) "⇪" else "⇧") else k.label
+            text.textSize = (kb.bottom - kb.top) * (if (label.length > 1) 0.30f else 0.44f)
+            val fm = text.fontMetrics
+            c.drawText(label, box.centerX(), box.centerY() - (fm.ascent + fm.descent) / 2f, text)
+            if (i == 0 && page == Page.LETTERS && kind != FieldKind.NUMBER && kind != FieldKind.PHONE && label.length == 1) {   // the digit a held top-row letter types, small in its corner
+                val d = TOP_ROW.indexOf(label.lowercase())
+                if (d >= 0) {
+                    text.color = cMuted; text.textSize = (kb.bottom - kb.top) * 0.22f
+                    val hf = text.fontMetrics
+                    c.drawText(DIGITS.substring(d, d + 1), box.right - dp(7f), box.top + dp(3f) - hf.ascent, text)
+                }
+            }
         }
+        drawBubble(c)
+    }
+
+    private fun drawBubble(c: Canvas) {
+        val k = bubbleKey ?: return
+        val kb = boxOf(k) ?: return
+        val room = kb.top - dp(2f)
+        if (room < dp(30f)) return                    // the top row has no room above it until the candidate strip exists (KB-103)
+        val w = Math.max((kb.right - kb.left) * 1.35f, dp(44f)); val h = Math.min(dp(52f), room)
+        var left = (kb.left + kb.right) / 2f - w / 2f; if (left < 0f) left = 0f; if (left + w > width) left = width - w
+        box.set(left, kb.top - dp(2f) - h, left + w, kb.top - dp(2f))
+        val r = dp(8f)
+        fill.color = cBubble; c.drawRoundRect(box, r, r, fill)
+        line.strokeWidth = dp(1.2f); line.color = cAccent; c.drawRoundRect(box, r, r, line)
+        text.color = cText; text.textSize = h * 0.6f
+        val fm = text.fontMetrics
+        c.drawText(bubbleText, box.centerX(), box.centerY() - (fm.ascent + fm.descent) / 2f, text)
+    }
+
+    // ------------------------------------------------------------------ touch
+
+    private fun keyAt(x: Float, y: Float): KeySpec? {
+        layoutKeys()
+        if (rects.isEmpty()) return null
+        // the row under (or nearest to) the finger: the pad around the keys and the gaps between rows belong to the closest row
+        var ri = 0; var best = Float.MAX_VALUE
+        for ((i, row) in rects.withIndex()) {
+            val top = row[0].top; val bottom = row[0].bottom
+            val d = if (y < top) top - y else if (y > bottom) y - bottom else 0f
+            if (d < best) { best = d; ri = i }
+        }
+        if (best > dp(10f)) return null
+        // inside a key, else the nearest key of that row horizontally (a thumb that lands on a gap still types)
+        var near: KeySpec? = null; var nearD = Float.MAX_VALUE
+        for ((j, b) in rects[ri].withIndex()) {
+            val k = rows[ri][j]; if (k.key == null) continue
+            if (b.contains(x, y)) return k
+            val d = Math.abs(x - b.centerX); if (d < nearD) { nearD = d; near = k }
+        }
+        return near
+    }
+
+    private fun boxOf(k: KeySpec?): KeyBox? {
+        if (k == null) return null
+        layoutKeys()
+        for ((i, row) in rows.withIndex()) for ((j, s) in row.withIndex()) if (s === k) return rects[i][j]
         return null
     }
 
-    @SuppressLint("ClickableViewAccessibility") // KB-305 adds TalkBack key descriptions; this view is not a button
+    private fun isLetter(k: KeySpec?): Boolean { val c = (k?.key as? Key.Ch)?.text ?: return false; return c.length == 1 && c[0].isLetter() }
+    private fun isBubbleKey(k: KeySpec?): Boolean { val c = (k?.key as? Key.Ch)?.text ?: return false; return c.length == 1 && c != " " }
+    /** The digit a top-row letter types when it is held (null for every other key and page). */
+    private fun altOf(k: KeySpec?): String? {
+        if (page != Page.LETTERS || kind == FieldKind.NUMBER || kind == FieldKind.PHONE || k == null || k.label.length != 1) return null
+        val i = TOP_ROW.indexOf(k.label.lowercase()); return if (i >= 0 && rows[0].contains(k)) DIGITS.substring(i, i + 1) else null
+    }
+
+    private fun light(k: KeySpec?) { litKey = k; invalidate(); handler.removeCallbacks(unlight); if (k != null) handler.postDelayed(unlight, FLASH_MS) }
+    private fun haptic() { performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP) }
+    private fun clearHold() { handler.removeCallbacks(hold); holdAlt = null; bubbleKey = null }
+    private fun holdFired() {
+        val k = pressedLetter ?: down ?: return
+        val alt = altOf(k) ?: return
+        holdAlt = alt; bubbleKey = k; bubbleText = alt; invalidate(); haptic()
+    }
+
+    @SuppressLint("ClickableViewAccessibility") // KB-305 adds TalkBack key descriptions; this view is a keyboard, not a button
     override fun onTouchEvent(e: MotionEvent): Boolean {
         when (e.actionMasked) {
-            MotionEvent.ACTION_DOWN -> {
-                val hit = keyAt(e.x, e.y)
-                pressed = hit?.first; pressedKey = hit?.second
-                if (hit != null) performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
-                invalidate()
+            MotionEvent.ACTION_DOWN -> { activeId = e.getPointerId(0); pressDown(e.getX(0), e.getY(0)) }
+            MotionEvent.ACTION_POINTER_DOWN -> {
+                // the second thumb: the letter the first one holds is typed NOW (in the order they were pressed), then the new finger is the tracked one
+                finishHeldLetter()
+                val i = e.actionIndex; activeId = e.getPointerId(i); pressDown(e.getX(i), e.getY(i))
             }
-            MotionEvent.ACTION_MOVE -> {
-                val hit = keyAt(e.x, e.y)
-                if (hit?.first !== pressed) { pressed = hit?.first; pressedKey = hit?.second; invalidate() }
+            MotionEvent.ACTION_MOVE -> { val i = e.findPointerIndex(activeId); if (i >= 0) pressMove(e.getX(i), e.getY(i)) }
+            MotionEvent.ACTION_POINTER_UP -> {
+                val i = e.actionIndex
+                if (e.getPointerId(i) == activeId) { pressUp(e.getX(i), e.getY(i)); activeId = -1 }
             }
-            MotionEvent.ACTION_UP -> {
-                val key = pressedKey
-                pressed = null; pressedKey = null; invalidate()
-                if (key != null) press(key)
-            }
-            MotionEvent.ACTION_CANCEL -> { pressed = null; pressedKey = null; invalidate() }
+            MotionEvent.ACTION_UP -> { if (activeId >= 0) { val i = e.findPointerIndex(activeId).let { if (it < 0) 0 else it }; pressUp(e.getX(i), e.getY(i)) }; activeId = -1 }
+            MotionEvent.ACTION_CANCEL -> { pressCancel(); activeId = -1 }
         }
         return true
     }
 
-    private fun press(key: Key) {
+    private fun pressDown(x: Float, y: Float) {
+        handler.removeCallbacks(repeat); clearHold()
+        val k = keyAt(x, y); down = k; light(k)
+        spaceDown = (k?.key as? Key.Ch)?.text == " "; sliding = false; slideStartX = x; slideAnchorX = x
+        pressedLetter = if (isLetter(k)) k else null
+        if (isBubbleKey(k)) { bubbleKey = k; bubbleText = k!!.label }
+        if (k != null) { haptic(); if (altOf(k) != null) handler.postDelayed(hold, HOLD_MS) }
+        if (k?.key === Key.Backspace) { listener?.onKey(Key.Backspace); handler.postDelayed(repeat, REPEAT_FIRST_MS) }
+    }
+
+    private fun pressMove(x: Float, y: Float) {
+        if (pressedLetter != null) return                 // a letter: nothing changes until the finger lifts (a tap types the letter it went down on)
+        if (spaceDown) {                                  // press the space key and slide sideways: the text cursor follows the finger
+            if (!sliding && Math.abs(x - slideStartX) > dp(SLIDE_START_DP)) { sliding = true; slideAnchorX = x; litKey = down; invalidate() }
+            if (sliding) {
+                val steps = ((x - slideAnchorX) / dp(SLIDE_STEP_DP)).toInt()
+                if (steps != 0) { slideAnchorX += steps * dp(SLIDE_STEP_DP); haptic(); listener?.onCursor(steps) }
+                return
+            }
+        }
+        val k = keyAt(x, y)
+        if (k !== down) { down = k; handler.removeCallbacks(repeat); clearHold(); if (isBubbleKey(k)) { bubbleKey = k; bubbleText = k!!.label }; light(k) }
+    }
+
+    private fun pressUp(x: Float, y: Float) {
+        handler.removeCallbacks(repeat)
+        val alt = holdAlt; clearHold(); invalidate()
+        if (sliding) { sliding = false; spaceDown = false; down = null; litKey = null; return }   // the end of a cursor slide: no space is typed
+        spaceDown = false
+        val letter = pressedLetter
+        if (letter != null) {                              // a tap on a letter types the letter it went down on, even when the finger drifted (held: its digit)
+            pressedLetter = null; down = null
+            light(letter); emit(if (alt != null) Key.Ch(alt) else letter.key!!)
+            return
+        }
+        val k = keyAt(x, y)
+        val d = down; down = null
+        if (k != null && k === d && k.key !== Key.Backspace) { light(k); emit(k.key!!) }      // Backspace fired on the way down
+    }
+
+    private fun pressCancel() { handler.removeCallbacks(repeat); clearHold(); down = null; pressedLetter = null; spaceDown = false; sliding = false; litKey = null; invalidate() }
+
+    /** A second finger arrived: type the letter the first one is holding, once. */
+    private fun finishHeldLetter() {
+        val l = pressedLetter ?: return
+        handler.removeCallbacks(repeat)
+        val alt = holdAlt; clearHold()
+        pressedLetter = null; down = null
+        light(l); emit(if (alt != null) Key.Ch(alt) else l.key!!)
+    }
+
+    /** Paging between letters and symbols is the view's own; everything else goes to the listener. */
+    private fun emit(key: Key) {
         when (key) {
-            Key.ToSymbols -> { symbols = true; rebuild() }
-            Key.ToLetters -> { symbols = false; rebuild() }
+            Key.ToSymbols -> { page = Page.SYMBOLS; rebuildRows() }
+            Key.ToLetters -> { page = Page.LETTERS; rebuildRows() }
             else -> listener?.onKey(key)
         }
+    }
+
+    // ------------------------------------------------------------------ tests
+
+    /** Tests: the centre of the key labelled [label] in this view's pixels. */
+    fun centerOf(label: String): Pair<Float, Float>? {
+        layoutKeys()
+        for ((i, row) in rows.withIndex()) for ((j, k) in row.withIndex()) if (k.label == label && k.key != null) return rects[i][j].centerX to rects[i][j].centerY
+        return null
+    }
+    fun bubbleTextForTest(): String? = if (bubbleKey != null) bubbleText else null
+    fun pageForTest(): Page = page
+
+    companion object {
+        /** Sliding over the space key: the finger must move this far sideways before it is a cursor slide and not a space, and every step of this width moves the cursor one character. */
+        const val SLIDE_START_DP = 10f
+        const val SLIDE_STEP_DP = 11f
+        /** How long a pressed key stays lit. */
+        const val FLASH_MS = 130L
+        const val REPEAT_FIRST_MS = 380L
+        const val REPEAT_MS = 70L
+        /** Holding a top-row letter this long types its digit. */
+        const val HOLD_MS = 420L
+        private const val TOP_ROW = "qwertyuiop"
+        private const val DIGITS = "1234567890"
     }
 }
