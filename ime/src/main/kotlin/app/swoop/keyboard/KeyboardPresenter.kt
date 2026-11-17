@@ -226,9 +226,16 @@ class KeyboardPresenter(
 
     // ------------------------------------------------------------------ KeysView.Listener
 
+    /** Debug build only (the emulator smoke test): which conditions behind "space after punctuation" and "capital after a sentence end" hold as a key is typed. Booleans, counts and state names: never a character. */
+    private fun traceKey(key: Key.Ch, fixed: Boolean, stage: String) {
+        val b = controller.before
+        Diag.d("key $stage letter=${key.text.length == 1 && key.text[0].isLetter()} autoSpace=${controller.autoSpace} composing=${controller.composing != null} fix=$fixed sel=${controller.selStart}/${controller.selEnd} beforeLen=${b.length} lastPunct=${b.isNotEmpty() && b.last() in InputController.AUTO_SPACE_AFTER} lastSpace=${b.isNotEmpty() && b.last() == ' '} shift=${controller.shift} kind=${controller.field.kind} caps=${controller.field.capsFlags}")
+    }
+
     override fun onKey(key: Key) {
         session.beforeKey(key)
         val fix = autoFixFor(key)
+        if (Diag.enabled && key is Key.Ch) traceKey(key, fix != null, "before")
         learner.beforeKey(key, fix)
         when (key) {
             is Key.Ch -> if (fix != null) controller.typeCorrected(fix, key.text) else if (key.text == " " && doubleSpaceOn && clock() - lastSpaceAt < DOUBLE_SPACE_MS && controller.doubleSpace()) { /* ". " is in */ } else controller.type(key.text)
