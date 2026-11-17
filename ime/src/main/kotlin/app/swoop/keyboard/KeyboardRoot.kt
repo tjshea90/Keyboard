@@ -343,7 +343,11 @@ class KeyboardRoot(context: Context) : FrameLayout(context), GripBar.Host {
         val loc = IntArray(2); grip.getLocationOnScreen(loc)
         val msg = "layout root=${r - l}x${b - t} panel=${panelRect().flattenToString()} grip=${grip.width}x${grip.height} at screen ${loc[0]},${loc[1]} keys=${keys.width}x${keys.height} floating=$floating"
         if (msg != lastLayoutLog) { lastLayoutLog = msg; Diag.d(msg) }
+        if (Diag.enabled) post { keys.keymapLine()?.let { if (it != lastKeymapLog) { lastKeymapLog = it; Diag.d(it) } } }     // after the layout pass: the key centres the emulator tools tap
     }
+    private var lastKeymapLog = ""
+    /** Debug builds: logs the key map again right now (the tools call it after a page change); no-op in a release build. */
+    fun logKeymapNow() { if (Diag.enabled) keys.keymapLine()?.let { lastKeymapLog = it; Diag.d(it) } }
 
     /** The panel's rectangle in this view's coordinates. */
     fun panelRect(): Rect = Rect(panel.left, panel.top, panel.right, panel.bottom)

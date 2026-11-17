@@ -568,6 +568,28 @@ class KeysView(context: Context) : View(context) {
         return near
     }
 
+    /**
+     * Debug builds only (the emulator tools read it from logcat, tag SwoopDiag): the centre of every key of the page shown, in SCREEN pixels, as the app itself laid them out, so a test driver never has to
+     * repeat the geometry formulas. Format: `keymap page=letters key=x,y ...` where a one-character key is `k<hex code point>` and the others are shift, back, sym, abc, go, globe. Geometry only, never text.
+     */
+    fun keymapLine(): String? {
+        if (width <= 0 || height <= 0) return null
+        layoutKeys()
+        val loc = IntArray(2); getLocationOnScreen(loc)
+        val sb = StringBuilder("keymap page=").append(page.name.lowercase()).append(" shift=").append(if (shift == ShiftState.OFF) 0 else 1)
+        for ((i, row) in rows.withIndex()) for ((j, s) in row.withIndex()) {
+            val key = s.key ?: continue
+            val name = when (key) {
+                is Key.Ch -> if (key.text.codePointCount(0, key.text.length) == 1) "k" + Integer.toHexString(key.text.codePointAt(0)) else "t" + key.text.length + "_" + Integer.toHexString(key.text.hashCode() and 0xffff)
+                Key.Shift -> "shift"; Key.Backspace -> "back"; Key.ToSymbols -> "sym"; Key.ToLetters -> "abc"; Key.Go -> "go"; Key.NextKeyboard -> "globe"
+                else -> continue
+            }
+            val b = rects[i][j]
+            sb.append(' ').append(name).append('=').append(Math.round(loc[0] + b.centerX)).append(',').append(Math.round(loc[1] + b.centerY))
+        }
+        return sb.toString()
+    }
+
     private fun boxOf(k: KeySpec?): KeyBox? {
         if (k == null) return null
         layoutKeys()
