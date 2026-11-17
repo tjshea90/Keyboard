@@ -337,12 +337,12 @@ class KeysView(context: Context) : View(context) {
                 finishHeldLetter()
                 val i = e.actionIndex; activeId = e.getPointerId(i); pressDown(e.getX(i), e.getY(i))
             }
-            MotionEvent.ACTION_MOVE -> { val i = e.findPointerIndex(activeId); if (i >= 0) pressMove(e.getX(i), e.getY(i)) }
+            MotionEvent.ACTION_MOVE -> { val i = e.findPointerIndex(activeId); if (i >= 0) pressMove(e, i) }
             MotionEvent.ACTION_POINTER_UP -> {
                 val i = e.actionIndex
-                if (e.getPointerId(i) == activeId) { pressUp(e.getX(i), e.getY(i)); activeId = -1 }
+                if (e.getPointerId(i) == activeId) { pressUp(e, i); activeId = -1 }
             }
-            MotionEvent.ACTION_UP -> { if (activeId >= 0) { val i = e.findPointerIndex(activeId).let { if (it < 0) 0 else it }; pressUp(e.getX(i), e.getY(i)) }; activeId = -1 }
+            MotionEvent.ACTION_UP -> { if (activeId >= 0) { val i = e.findPointerIndex(activeId).let { if (it < 0) 0 else it }; pressUp(e, i) }; activeId = -1 }
             MotionEvent.ACTION_CANCEL -> { pressCancel(); activeId = -1 }
         }
         return true
@@ -350,17 +350,30 @@ class KeysView(context: Context) : View(context) {
 
     private fun pressDown(x: Float, y: Float) {
         handler.removeCallbacks(repeat); clearHold()
+        armed = false; gliding = false; stripDown = -1
+        if (glideEnabled && y < stripPx() + pad) { stripDown = chipAt(x, y); invalidate(); return }   // a guess in the strip was touched
+        removeCallbacks(fadeStep); gn = 0; fadeStart = 0L
         val k = keyAt(x, y); down = k; light(k)
         spaceDown = (k?.key as? Key.Ch)?.text == " "; sliding = false; slideStartX = x; slideAnchorX = x
         pressedLetter = if (isLetter(k)) k else null
         if (isBubbleKey(k)) { bubbleKey = k; bubbleText = k!!.label }
         if (k != null) { haptic(); if (altOf(k) != null) handler.postDelayed(hold, HOLD_MS) }
         if (k?.key === Key.Backspace) { listener?.onKey(Key.Backspace); handler.postDelayed(repeat, REPEAT_FIRST_MS) }
+        if (glideEnabled && page == Page.LETTERS && pressedLetter != null) { armed = true; glideDown = k; downBox = boxOf(k); addPoint(x, y) }
     }
 
-    private fun pressMove(x: Float, y: Float) {
-        if (pressedLetter != null) return                 // a letter: nothing changes until the finger lifts (a tap types the letter it went down on)
-        if (spaceDown) {                                  // press the space key and slide sideways: the text cursor follows the finger
+    private fun pressMove(e: MotionEvent, i: Int) {
+        val x = e.getX(i); val y = e.getY(i)
+        if (stripDown >= 0) return
+        if (armed) {                                     // a letter: nothing happens until the finger leaves its key (a glide) or lifts (a tap)
+            for (h in 0 until e.historySize) addPoint(e.getHistoricalX(i, h), e.getHistoricalY(i, h))
+            addPoint(x, y)
+            if (!gliding && leftTheKey(x, y)) beginGlide()
+            if (gliding) { invalidate(); maybePreview() }
+            return
+        }
+        if (pressedLetter != null) return                // (glide off) a letter: a tap types the letter it went down on
+        if (spaceDown) {                                 // press the space key and slide sideways: the text cursor follows the finger
             if (!sliding && Math.abs(x - slideStartX) > dp(SLIDE_START_DP)) { sliding = true; slideAnchorX = x; litKey = down; invalidate() }
             if (sliding) {
                 val steps = ((x - slideAnchorX) / dp(SLIDE_STEP_DP)).toInt()
@@ -372,14 +385,22 @@ class KeysView(context: Context) : View(context) {
         if (k !== down) { down = k; handler.removeCallbacks(repeat); clearHold(); if (isBubbleKey(k)) { bubbleKey = k; bubbleText = k!!.label }; light(k) }
     }
 
-    private fun pressUp(x: Float, y: Float) {
+    private fun pressUp(e: MotionEvent, i: Int) {
+        val x = e.getX(i); val y = e.getY(i)
+        if (stripDown >= 0) {
+            val c = chipAt(x, y); val was = stripDown; stripDown = -1; invalidate()
+            if (c == was && c in cands.indices) listener?.onCandidate(cands[c])
+            return
+        }
+        if (gliding) { for (h in 0 until e.historySize) addPoint(e.getHistoricalX(i, h), e.getHistoricalY(i, h)); addPoint(x, y); endGlide(); return }
+        armed = false
         handler.removeCallbacks(repeat)
         val alt = holdAlt; clearHold(); invalidate()
         if (sliding) { sliding = false; spaceDown = false; down = null; litKey = null; return }   // the end of a cursor slide: no space is typed
         spaceDown = false
         val letter = pressedLetter
         if (letter != null) {                              // a tap on a letter types the letter it went down on, even when the finger drifted (held: its digit)
-            pressedLetter = null; down = null
+            pressedLetter = null; down = null; gn = 0
             light(letter); emit(if (alt != null) Key.Ch(alt) else letter.key!!)
             return
         }
@@ -388,15 +409,58 @@ class KeysView(context: Context) : View(context) {
         if (k != null && k === d && k.key !== Key.Backspace) { light(k); emit(k.key!!) }      // Backspace fired on the way down
     }
 
-    private fun pressCancel() { handler.removeCallbacks(repeat); clearHold(); down = null; pressedLetter = null; spaceDown = false; sliding = false; litKey = null; invalidate() }
+    private fun pressCancel() {
+        handler.removeCallbacks(repeat); clearHold(); down = null; pressedLetter = null; armed = false; stripDown = -1; spaceDown = false; sliding = false; litKey = null; invalidate()
+        if (gliding) { gliding = false; fadeStart = SystemClock.uptimeMillis(); postOnAnimation(fadeStep) }
+    }
 
     /** A second finger arrived: type the letter the first one is holding, once. */
     private fun finishHeldLetter() {
         val l = pressedLetter ?: return
         handler.removeCallbacks(repeat)
         val alt = holdAlt; clearHold()
-        pressedLetter = null; down = null
+        pressedLetter = null; down = null; armed = false; gliding = false; gn = 0
         light(l); emit(if (alt != null) Key.Ch(alt) else l.key!!)
+    }
+
+    // ---- glide
+    private fun addPoint(x: Float, y: Float) {
+        if (gn == gx.size) { if (gn >= MAX_TRAIL_POINTS) return; gx = gx.copyOf(gn * 2); gy = gy.copyOf(gn * 2) }
+        gx[gn] = x; gy[gn] = y; gn++
+    }
+    private fun pitch(): Float = if (rects.isNotEmpty() && rects[0].size > 1) rects[0][1].centerX - rects[0][0].centerX else dp(29f)
+    private fun leftTheKey(x: Float, y: Float): Boolean {
+        val b = downBox ?: return false
+        val slop = pitch() * GLIDE_SLOP
+        return x < b.left - slop || x > b.right + slop || y < b.top - slop || y > b.bottom + slop
+    }
+    private fun pathPitches(): Float { var len = 0f; for (i in 1 until gn) len += Math.hypot((gx[i] - gx[i - 1]).toDouble(), (gy[i] - gy[i - 1]).toDouble()).toFloat(); return len / pitch() }
+
+    private fun beginGlide() {
+        lastPreviewAt = SystemClock.uptimeMillis(); lastPreviewN = 0
+        clearHold(); gliding = true; down = null; pressedLetter = null
+        handler.removeCallbacks(repeat); handler.removeCallbacks(unlight); litKey = null
+        removeCallbacks(fadeStep); fadeStart = 0L
+    }
+
+    /** While the finger is still gliding, now and then (not faster than the decoder, not for every touch point) ask for a live guess of the path so far. */
+    private fun maybePreview() {
+        val now = SystemClock.uptimeMillis()
+        if (now - lastPreviewAt < PREVIEW_MS || gn - lastPreviewN < PREVIEW_POINTS) return
+        lastPreviewAt = now; lastPreviewN = gn
+        listener?.onGlideMove(gx, gy, gn)
+    }
+
+    private fun endGlide() {
+        gliding = false; armed = false
+        val k = glideDown; glideDown = null
+        if (pathPitches() < MIN_GLIDE_PITCHES) {         // a tap that slid a little: the key it went down on
+            gn = 0; invalidate()
+            if (k?.key != null) { light(k); emit(k.key!!) }
+            return
+        }
+        fadeStart = SystemClock.uptimeMillis(); postOnAnimation(fadeStep)
+        listener?.onGlideEnd(gx.copyOf(gn), gy.copyOf(gn), gn)
     }
 
     /** Paging between letters and symbols is the view's own; everything else goes to the listener. */
@@ -431,5 +495,17 @@ class KeysView(context: Context) : View(context) {
         const val HOLD_MS = 420L
         private const val TOP_ROW = "qwertyuiop"
         private const val DIGITS = "1234567890"
+        /** The strip of guesses above the keys (glide typing on). */
+        const val STRIP_H_DP = 30f
+        /** A finger that leaves the key it went down on by this many pitches has started a glide. */
+        const val GLIDE_SLOP = 0.18f
+        /** A path shorter than this (in key pitches) is a tap that slid a little, not a glide. */
+        const val MIN_GLIDE_PITCHES = 1.2f
+        const val TRAIL_FADE_MS = 260L
+        const val NO_WORD_MS = 1500L
+        /** The live guess while gliding: at most this often, and only after this many new touch points. */
+        const val PREVIEW_MS = 110L
+        const val PREVIEW_POINTS = 4
+        private const val MAX_TRAIL_POINTS = 4096
     }
 }
