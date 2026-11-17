@@ -258,6 +258,20 @@ class PageValue:
         pass
 
 
+def pss_mb(pkg):
+    """Total PSS of an app's processes in MB (dumpsys meminfo), or None."""
+    out = sh("dumpsys meminfo %s" % pkg, check=False)
+    m = re.search(r"^\s*TOTAL(?: PSS:)?\s+(\d+)", out, re.M)
+    return round(int(m.group(1)) / 1024.0, 1) if m else None
+
+
+def scene_memory(rep, tag):
+    """What the keyboard and the browser hold in RAM now (the tablet has 2 GB and a 128 MB heap class)."""
+    s, k = pss_mb(SWOOP_PKG), pss_mb(KESTREL_PKG)
+    rep.row("memory " + tag, "INFO", "Swoop %s MB PSS, Kestrel %s MB PSS" % (s, k))
+    rep.event("memory", tag=tag, swoop_mb=s, kestrel_mb=k)
+
+
 def scene_fields(rep):
     w, h = screen()
     kinds = ["text", "search", "textarea", "editable", "url", "email"]
@@ -306,8 +320,10 @@ def main():
             return 1
         choose_swoop(rep)
         srv = start_server(rep)
+        scene_memory(rep, "before")
         if a.suite in ("typing", "all"):
             scene_fields(rep)
+            scene_memory(rep, "after typing")
     except Exception as e:
         rep.row("run", "FAIL", "the run itself broke: %s" % str(e)[:160])
     finally:
