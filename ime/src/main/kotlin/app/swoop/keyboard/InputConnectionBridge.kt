@@ -25,6 +25,7 @@ class InputConnectionBridge(private val connection: () -> InputConnection?) : Ed
     override fun deleteSurrounding(before: Int, after: Int): Boolean = with(false) { it.deleteSurroundingText(before, after) }
     override fun setSelection(start: Int, end: Int): Boolean = with(false) { it.setSelection(start, end) }
     override fun performAction(action: Int): Boolean = with(false) { it.performEditorAction(action) }
+    override fun cursorCapsMode(reqModes: Int): Int = with(0) { it.getCursorCapsMode(reqModes) }
     override fun beginBatch(): Boolean = with(false) { it.beginBatchEdit() }
     override fun endBatch(): Boolean = with(false) { it.endBatchEdit() }
 

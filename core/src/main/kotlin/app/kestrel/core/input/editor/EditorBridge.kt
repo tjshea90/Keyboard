@@ -24,6 +24,8 @@ interface EditorBridge {
     fun sendKey(code: Int): Boolean
     /** Runs the field's own action (IME_ACTION_GO, SEARCH, SEND, DONE, NEXT, PREVIOUS). */
     fun performAction(action: Int): Boolean
+    /** Which of the capitalisation modes in [reqModes] (the CAP_* flags of the field's input type) apply at the cursor right now: 0 = none. Android's own TextUtils rules; 0 when the editor is gone. */
+    fun cursorCapsMode(reqModes: Int): Int
     /** Edits between begin and end are applied as one (the app sees one change). They nest. */
     fun beginBatch(): Boolean
     fun endBatch(): Boolean
@@ -35,6 +37,14 @@ object KeyCodes {
     const val DPAD_RIGHT = 22
     const val ENTER = 66
     const val DEL = 67
+}
+
+/** The same numbers as android.text.InputType.TYPE_TEXT_FLAG_CAP_*: which automatic capitalisation a field asked for. */
+object CapFlags {
+    const val CHARACTERS = 0x1000
+    const val WORDS = 0x2000
+    const val SENTENCES = 0x4000
+    const val ALL = CHARACTERS or WORDS or SENTENCES
 }
 
 /** The same numbers as android.view.inputmethod.EditorInfo.IME_ACTION_*. */

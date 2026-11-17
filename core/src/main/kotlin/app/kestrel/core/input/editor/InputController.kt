@@ -53,7 +53,16 @@ class InputController(private val ed: EditorBridge) {
         pending.clear()
         selStart = info.initialSelStart; selEnd = info.initialSelEnd
         refresh()
+        autoCaps()
     }
+
+    /** The field wants capitals at the cursor (the start of a sentence, a word, or always, as its flags say): Shift goes on for the next letter. Never switches caps lock off. */
+    fun autoCaps() {
+        if (field.capsFlags == 0 || shift == ShiftState.LOCK) return
+        if (ed.cursorCapsMode(field.capsFlags) != 0) { if (shift == ShiftState.OFF) shift = ShiftState.ONCE } else if (shift == ShiftState.ONCE && autoShift) shift = ShiftState.OFF
+        autoShift = shift == ShiftState.ONCE
+    }
+    private var autoShift = false
 
     /** The field loses the focus (onFinishInput): the word being tapped stays in the text as typed. */
     fun finishInput() { endComposing(); lastGlide = null; pending.clear() }
@@ -160,6 +169,7 @@ class InputController(private val ed: EditorBridge) {
         if (!ok) { resync(); return }
         if (shift == ShiftState.ONCE) shift = ShiftState.OFF
         refresh(); selStart = -1; selEnd = -1; pending.clear()   // the next selection report is the truth
+        autoCaps()
     }
 
     /** A glide ended on [word] (already ranked by the decoder). It is inserted at the cursor with a space after it, and one before it when the text does not end in a space. */

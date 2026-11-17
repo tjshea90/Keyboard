@@ -5,12 +5,12 @@ import org.junit.Assert.assertTrue
 
 /** A controller wired to a [FakeEditor], with the checks every test shares. [sync] delivers every queued selection report. */
 class Rig(text: String = "", sel: Int = text.length, multiline: Boolean = true,
-          kind: FieldKind = FieldKind.TEXT, action: Int = ImeActions.UNSPECIFIED, noEnter: Boolean = false, noSuggestions: Boolean = false, noLearn: Boolean = false) {
+          kind: FieldKind = FieldKind.TEXT, action: Int = ImeActions.UNSPECIFIED, noEnter: Boolean = false, noSuggestions: Boolean = false, noLearn: Boolean = false, caps: Int = 0) {
     val ed = FakeEditor(text, sel, multiline)
     val c = InputController(ed)
     var foreign = 0; private set        // selection reports the controller judged NOT to be its own
 
-    init { c.startInput(FieldInfo(kind, action, noEnter, noLearn, noSuggestions, sel, sel)) }
+    init { c.startInput(FieldInfo(kind, action, noEnter, noLearn, noSuggestions, caps, sel, sel)) }
 
     fun deliverOne(): Boolean {
         val u = ed.updates.removeFirstOrNull() ?: return false

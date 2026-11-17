@@ -2,6 +2,7 @@ package app.swoop.keyboard
 
 import android.text.InputType
 import android.view.inputmethod.EditorInfo
+import app.kestrel.core.input.editor.CapFlags
 import app.kestrel.core.input.editor.FieldInfo
 import app.kestrel.core.input.editor.FieldKind
 
@@ -30,6 +31,7 @@ object FieldInfos {
             noEnterAction = (e.imeOptions and EditorInfo.IME_FLAG_NO_ENTER_ACTION) != 0,
             noPersonalizedLearning = (e.imeOptions and EditorInfo.IME_FLAG_NO_PERSONALIZED_LEARNING) != 0,
             noSuggestions = noSuggestions,
+            capsFlags = if (cls == InputType.TYPE_CLASS_TEXT && kind != FieldKind.PASSWORD && kind != FieldKind.EMAIL && kind != FieldKind.URL) e.inputType and CapFlags.ALL else 0,
             initialSelStart = e.initialSelStart, initialSelEnd = e.initialSelEnd,
         )
     }

@@ -13,6 +13,8 @@ class FieldInfo(
     val noEnterAction: Boolean = false,
     val noPersonalizedLearning: Boolean = false,
     val noSuggestions: Boolean = false,
+    /** The automatic capitalisation the field asked for ([CapFlags] bits of its input type); 0 = none (passwords, e-mail, URLs ask for none). */
+    val capsFlags: Int = 0,
     val initialSelStart: Int = -1,
     val initialSelEnd: Int = -1,
 ) {

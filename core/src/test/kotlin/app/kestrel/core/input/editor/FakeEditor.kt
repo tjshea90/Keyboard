@@ -71,6 +71,19 @@ class FakeEditor(text: String = "", sel: Int = text.length, val multiline: Boole
         }
         emit(); return true
     }
+    /** TextUtils.getCapsMode, simplified: characters = always; words = at the start or after whitespace; sentences = at the start, after a newline, or after . ? ! and a space. */
+    override fun cursorCapsMode(reqModes: Int): Int {
+        if (!alive()) return 0
+        val b = beforeText(64)
+        var mode = 0
+        if (reqModes and CapFlags.CHARACTERS != 0) mode = mode or CapFlags.CHARACTERS
+        if (reqModes and CapFlags.WORDS != 0 && (b.isEmpty() || b.last().isWhitespace())) mode = mode or CapFlags.WORDS
+        if (reqModes and CapFlags.SENTENCES != 0) {
+            val t = b.trimEnd(' ', '\t')
+            if (t.isEmpty() || t.endsWith("\n") || (t.length < b.length && (t.endsWith(".") || t.endsWith("?") || t.endsWith("!")))) mode = mode or CapFlags.SENTENCES
+        }
+        return mode
+    }
     override fun performAction(action: Int): Boolean { if (!alive()) return false; actions.add(action); return true }
     override fun beginBatch(): Boolean { if (!alive()) return false; batch++; return true }
     override fun endBatch(): Boolean { if (!alive()) return false; if (batch > 0) batch--; emit(); return true }
