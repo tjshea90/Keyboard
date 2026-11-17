@@ -73,14 +73,11 @@ class SetupActivityTest {
     }
 
     /** The settings screens are dark until the person chooses otherwise: the title bar and the dialogs come from the framework theme, which must not stay light in day mode with a dark body under it. */
-    @Test fun theSettingsScreenAndItsTitleBarAreDarkUntilAnotherLookIsChosen() {
+    @Test fun theSettingsScreenAndItsFrameworkThemeAreDarkUntilAnotherLookIsChosen() {
         val a = launch()
-        val bar = a.actionBar
-        val bg = (bar?.javaClass?.getMethod("getHeight")?.let { 0 }) ?: 0     // (the bar object itself has no public colour getter)
         assertEquals(1, Settings(app).theme)
         assertEquals(android.R.style.Theme_DeviceDefault, settingsTheme(1)); assertEquals(android.R.style.Theme_DeviceDefault_Light, settingsTheme(2)); assertEquals(android.R.style.Theme_DeviceDefault_DayNight, settingsTheme(0))
         val tv = TypedValue(); assertTrue(a.theme.resolveAttribute(android.R.attr.isLightTheme, tv, true)); assertEquals("the activity theme is the dark one in day mode", 0, tv.data)
-        assertEquals(0, bg)
     }
 
     @Test fun theLiveKeyboardFollowsTheSettings() {
