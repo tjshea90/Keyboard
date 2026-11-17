@@ -239,7 +239,7 @@ class KeyboardPresenterTest {
     @Test fun erasingAWordAndRetypingItTeachesTheCorrection() {
         val r = Rig(glidePref = false, suggest = false, words = tapList)
         for (c in "hellp") r.tap(c.toString()); r.tap("space")
-        r.tap("⌫"); r.tap("⌫"); r.tap("o"); r.tap("space")
+        assertEquals("hellp ", r.text); r.tap("⌫"); assertEquals("hellp", r.text); r.tap("⌫"); assertEquals("hell", r.text); r.tap("o"); r.tap("space")
         val m = r.memory()
         assertEquals("hello ", r.text)
         assertTrue("the correction is remembered: $m", m.lines().any { it.startsWith("c hellp hello ") })
