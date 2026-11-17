@@ -1,5 +1,6 @@
 import json,re,sys
-d=json.load(open('/tmp/claude-0/emoji/x/package/en/data.json'))
+# usage: python3 -I build_emoji_map.py <emojibase-data en/data.json> <output en.tsv>   (data only: never run code from the package)
+d=json.load(open(sys.argv[1]))
 STOP=set("the and for you are but not all can her was one our out get has him his how now see two way who did its let put say she too use new old top end back off on up down in of to is it be we he me my so do no go at as an or if by am us oh ok yes hot cut low high".split())
 GENERIC=set("face with and of the in on button sign symbol mark person people man woman boy girl flag key sleeping hand body clothing animal food drink sport activity object place travel symbols small large medium dark light skin tone".split())
 best={}  # word -> (prio, order, emoji)
@@ -34,7 +35,7 @@ for w,em in CURATED.items():
     best[w]=(0,0,em)
 # plural / variants: only the singular is stored; lookup strips a trailing s
 rows=sorted(best.items())
-with open('/tmp/claude-0/emoji/en.tsv','w',encoding='utf-8') as f:
+with open(sys.argv[2],'w',encoding='utf-8') as f:
     for w,(p,o,em) in rows: f.write(f"{w}\t{em}\n")
 print(len(rows))
 for w in ["clown","pizza","dog","heart","fire","rocket","love","happy","cat","car","money","party","pizza","beer","sad","smile","tablet","phone","star","sun","cry","laugh","lol","pray","thanks","tui","the","book","home","music"]:
