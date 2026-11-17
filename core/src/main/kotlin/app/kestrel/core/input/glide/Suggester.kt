@@ -25,6 +25,8 @@ object Suggester {
     const val FAR = 4.2f
     /** A fix is applied by a space only when it beats the next best word by this many nats (about 2.7 times as likely). */
     const val AUTO_MARGIN = 1.0f
+    /** A contraction replaces a real word spelled the same only when it is this many nats (about 20 times) more likely. */
+    const val CONTRACTION_MARGIN = 3.0f
     /** Words the person used this many times are theirs: never "corrected". */
     const val OWN_WORD_USES = 2f
     private const val POOL = 48
@@ -92,7 +94,16 @@ object Suggester {
         val typedKnown = mainKnows || own >= OWN_WORD_USES
         val ranked = found.values.sortedByDescending { it.score }
         var auto: String? = null
-        if (!typedKnown && t.length >= 3 && ranked.isNotEmpty()) {
+        // the same letters WITH an apostrophe ("dont" -> "don't", "im" -> "I'm", "cant" -> "can't"): people mean the contraction. A real word that happens to be spelled the same ("ill", "were") is only changed when the
+        // contraction is about twenty times as likely; one Backspace puts the typed word back and the keyboard never changes it again.
+        if (letters) {
+            val contraction = ranked.firstOrNull { it.lower != t && it.lower.replace("'", "") == t }
+            if (contraction != null) {
+                val own = ranked.firstOrNull { it.lower == t }?.score
+                if (own == null || contraction.score >= own + CONTRACTION_MARGIN) auto = contraction.text
+            }
+        }
+        if (auto == null && !typedKnown && t.length >= 3 && ranked.isNotEmpty()) {
             val best = ranked[0]
             val margin = best.score - (ranked.getOrNull(1)?.score ?: -1e9f)
             if (best.fix && (margin >= AUTO_MARGIN || best.bonus >= 1.5f)) auto = best.text
@@ -170,7 +181,8 @@ object Suggester {
     }
 
     /** The word dressed like what was typed: Capital first letter after a capital, all capitals after capitals. */
-    private fun shape(word: String, typed: String): String {
+    private fun shape(word0: String, typed: String): String {
+        val word = if (word0 == "i" || word0.startsWith("i'")) "I" + word0.substring(1) else word0        // "i'm" is always "I'm"
         if (typed.length > 1 && typed.all { it.isUpperCase() || !it.isLetter() } && typed.any { it.isUpperCase() }) return word.uppercase()
         if (typed.firstOrNull()?.isUpperCase() == true) return word.replaceFirstChar { it.uppercase() }
         return word
