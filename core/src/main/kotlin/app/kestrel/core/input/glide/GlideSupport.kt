@@ -194,6 +194,14 @@ class GlideTyping(
     private fun persistDictionary() { try { saveDictionary(dictionary.serialize()) } catch (e: Exception) { /* a full disk must never break typing */ } }
     private fun rebuildUserLexicon() { ownRef?.let { setOwn(it) } ?: run { userLex = if (dictionary.addedCount == 0) null else UserWords(1).lexicon(main?.totalCount ?: 5.4e11, dictionary.addedWords()) } }
 
+    /** Loads the shipped word list if no keyboard has done it yet (the settings screen can search the dictionary before the keyboard was ever opened). [done] runs on the engine thread. */
+    fun ensureListLoaded(done: () -> Unit = {}) {
+        executor.execute {
+            try { if (main == null && !loading) { loading = true; val t0 = System.nanoTime(); val b = loadMain(); if (b != null) { main = LexiconFile.read(b); stats.onLoaded((System.nanoTime() - t0) / 1_000_000, main!!.size) }; loading = false } } catch (e: Exception) { loading = false }
+            ensureDictionary(); done()
+        }
+    }
+
     /** What the dictionary search of the settings screen shows: whether [word] is in the shipped list, and the most common words that start with [prefix]. Runs on the preview thread. */
     fun lookup(prefix: String, limit: Int, done: (known: Boolean, words: List<String>) -> Unit) {
         previewExecutor.execute {

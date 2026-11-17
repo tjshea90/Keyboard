@@ -25,6 +25,7 @@ class GlideHost(
     private val personalFile = File(context.filesDir, "glide_personal.txt")
     private val habitFile = File(context.filesDir, "glide_habit.txt")
     private val ownFile = File(context.filesDir, "own_words.txt")
+    private val dictFile = File(context.filesDir, "user_dictionary.txt")
 
     val engine: GlideTyping = GlideTyping(
         loadMain = loadMain ?: { try { context.assets.open("glide/en.klx").use { it.readBytes() } } catch (e: Exception) { null } },
@@ -33,6 +34,8 @@ class GlideHost(
         savePersonal = { text -> writeAtomically(personalFile, text) },
         previewExecutor = previewExecutor,
         saveOwn = { text -> saveOwn(text) },
+        loadDictionary = { if (dictFile.isFile) dictFile.readText() else null },
+        saveDictionary = { text -> writeAtomically(dictFile, text) },
     )
 
     private var preparedFor = ""
