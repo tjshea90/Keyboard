@@ -59,12 +59,29 @@ class KeysView(context: Context) : View(context) {
     private val pad = dp(3f)
     private val handler = Handler(Looper.getMainLooper())
 
+    /**
+     * The layer above the keys (a transparent sibling view): everything that changes while a finger is down - the lit key, the key bubble, the glide trail, the strip of guesses -
+     * is drawn there, so a press, a trail segment or the bubble going away redraws a tiny layer instead of every key of the keyboard (the tablet's GPU is weak). Null when the keys
+     * view stands alone (tests): it then draws the dynamic things itself.
+     */
+    var overlay: View? = null
+    private fun dyn() { val o = overlay; if (o != null) o.invalidate() else invalidate() }
+
+    // ---- options (the settings screen writes them, the presenter hands them over)
+    var numberRow = true; set(v) { if (field != v) { field = v; rebuildRows(); requestLayout() } }
+    var keyPreview = true
+    var hapticsOn = true
+    var trailOn = true
+    /** 1.0 = normal key height; the settings offer small / normal / large. */
+    var keyHeightScale = 1f; set(v) { if (field != v) { field = v; rectsW = -1; requestLayout(); invalidate() } }
+    var accent = 0xFF1F6FEB.toInt(); set(v) { field = v; applyPalette(); invalidate(); dyn() }
+
     // ---- what is shown
     private var page = Page.LETTERS
     private var shift = ShiftState.OFF
     private var kind = FieldKind.TEXT
     private var actionLabel = "⏎"
-    private var rows: List<List<KeySpec>> = ImeLayout.rows(page, false, kind, actionLabel)
+    private var rows: List<List<KeySpec>> = ImeLayout.rows(page, false, kind, actionLabel, true)
     private var rects: List<List<KeyBox>> = emptyList()
     private var rectsW = -1; private var rectsH = -1
 
@@ -84,6 +101,7 @@ class KeysView(context: Context) : View(context) {
     private var holdAlt: String? = null         // the finger stayed on a top-row letter: its digit
     private var bubbleKey: KeySpec? = null; private var bubbleText = ""
     private var spaceDown = false; private var sliding = false; private var slideStartX = 0f; private var slideAnchorX = 0f
+    private var downX = 0f; private var downY = 0f
 
     // ---- glide (KB-103)
     private var glideEnabled = false
@@ -100,11 +118,11 @@ class KeysView(context: Context) : View(context) {
     private val trail = Path()
     private val trailPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE; strokeCap = Paint.Cap.ROUND; strokeJoin = Paint.Join.ROUND }
     private val fadeStep = object : Runnable {
-        override fun run() { if (SystemClock.uptimeMillis() - fadeStart < TRAIL_FADE_MS) { invalidate(); postOnAnimation(this) } else { gn = 0; fadeStart = 0L; invalidate() } }
+        override fun run() { if (SystemClock.uptimeMillis() - fadeStart < TRAIL_FADE_MS) { dyn(); postOnAnimation(this) } else { gn = 0; fadeStart = 0L; dyn() } }
     }
-    private val noWordOff = Runnable { noWordUntil = 0L; invalidate() }
+    private val noWordOff = Runnable { noWordUntil = 0L; dyn() }
 
-    private val unlight = Runnable { litKey = null; invalidate() }
+    private val unlight = Runnable { litKey = null; dyn() }
     private val repeat = object : Runnable { override fun run() { down?.key?.let { listener?.onKey(it) }; handler.postDelayed(this, REPEAT_MS) } }
     private val hold = Runnable { holdFired() }
 
@@ -127,9 +145,9 @@ class KeysView(context: Context) : View(context) {
     /** Glide typing on or off (off in password fields: the guesses would show what is being typed). Switching it changes the height: the strip of guesses sits above the keys. */
     fun setGlideEnabled(on: Boolean) { if (glideEnabled != on) { glideEnabled = on; if (!on) { cands = emptyList(); gn = 0 }; rectsW = -1; requestLayout(); invalidate() } }
 
-    fun showCandidates(words: List<String>) { cands = words; noWordUntil = 0L; invalidate() }
-    fun clearCandidates() { if (cands.isNotEmpty() || noWordUntil != 0L) { cands = emptyList(); noWordUntil = 0L; invalidate() } }
-    fun showNoWord() { cands = emptyList(); noWordUntil = SystemClock.uptimeMillis() + NO_WORD_MS; handler.removeCallbacks(noWordOff); handler.postDelayed(noWordOff, NO_WORD_MS); invalidate() }
+    fun showCandidates(words: List<String>) { cands = words; noWordUntil = 0L; dyn() }
+    fun clearCandidates() { if (cands.isNotEmpty() || noWordUntil != 0L) { cands = emptyList(); noWordUntil = 0L; dyn() } }
+    fun showNoWord() { cands = emptyList(); noWordUntil = SystemClock.uptimeMillis() + NO_WORD_MS; handler.removeCallbacks(noWordOff); handler.postDelayed(noWordOff, NO_WORD_MS); dyn() }
     val isGliding: Boolean get() = gliding
     private fun stripPx() = if (glideEnabled) dp(STRIP_H_DP) else 0f
 
@@ -142,7 +160,7 @@ class KeysView(context: Context) : View(context) {
     }
 
     private fun rebuildRows() {
-        rows = ImeLayout.rows(page, shift != ShiftState.OFF, kind, actionLabel)
+        rows = ImeLayout.rows(page, shift != ShiftState.OFF, kind, actionLabel, numberRow)
         rectsW = -1
         invalidate()
     }
@@ -155,7 +173,7 @@ class KeysView(context: Context) : View(context) {
         cLit = if (dark) 0xFF6B7280.toInt() else 0xFF9AA3AE.toInt()
         cText = if (dark) 0xFFE8EAED.toInt() else 0xFF202124.toInt()
         cMuted = if (dark) 0xFF9AA0A6.toInt() else 0xFF5F6368.toInt()
-        cAccent = 0xFF1F6FEB.toInt(); cAccentText = 0xFFFFFFFF.toInt()
+        cAccent = accent; cAccentText = 0xFFFFFFFF.toInt()
         cBubble = if (dark) 0xFF0C161D.toInt() else 0xFFFFFFFF.toInt()
     }
 
@@ -166,22 +184,22 @@ class KeysView(context: Context) : View(context) {
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
         val w = MeasureSpec.getSize(widthMeasureSpec)
         // a key is about as tall as a letter key is wide (a thumb-sized target), within sensible bounds on a phone and on the tablet
-        val rowH = ((w - 2 * pad) / 10f).coerceIn(dp(44f), dp(58f))
-        val h = (stripPx() + rows.size * rowH + (rows.size - 1) * gap + 2 * pad).toInt()
+        val rowH = ((w - 2 * pad) / 10f).coerceIn(dp(40f), dp(52f)) * keyHeightScale
+        val h = (stripPx() + rowH * ImeLayout.rowWeights(rows).sum() + (rows.size - 1) * gap + 2 * pad).toInt()
         setMeasuredDimension(w, h)
     }
 
     private fun layoutKeys() {
         if (rectsW == width && rectsH == height && rects.isNotEmpty()) return
         rectsW = width; rectsH = height
-        rects = MiniKeyboardGeometry.boxes(rows, width - 2 * pad, height - 2 * pad - stripPx(), gap).map { r -> r.map { KeyBox(it.left + pad, it.top + pad + stripPx(), it.right + pad, it.bottom + pad + stripPx()) } }
+        rects = MiniKeyboardGeometry.boxes(rows, width - 2 * pad, height - 2 * pad - stripPx(), gap, 0f, ImeLayout.rowWeights(rows)).map { r -> r.map { KeyBox(it.left + pad, it.top + pad + stripPx(), it.right + pad, it.bottom + pad + stripPx()) } }
     }
 
     /** The 26 letter keys' centres as laid out now (the same function that draws them), for the glide decoder (KB-103). Null before the first layout. */
     fun glideKeys(): GlideKeys? {
         if (width <= 0 || height <= 0) return null
-        val letters = ImeLayout.rows(Page.LETTERS, false, FieldKind.TEXT)
-        val b = MiniKeyboardGeometry.boxes(letters, width - 2 * pad, height - 2 * pad - stripPx(), gap).map { r -> r.map { KeyBox(it.left + pad, it.top + pad + stripPx(), it.right + pad, it.bottom + pad + stripPx()) } }
+        val letters = ImeLayout.rows(Page.LETTERS, false, FieldKind.TEXT, "⏎", numberRow)
+        val b = MiniKeyboardGeometry.boxes(letters, width - 2 * pad, height - 2 * pad - stripPx(), gap, 0f, ImeLayout.rowWeights(letters)).map { r -> r.map { KeyBox(it.left + pad, it.top + pad + stripPx(), it.right + pad, it.bottom + pad + stripPx()) } }
         return try { GlideKeys.from(letters, b) } catch (e: IllegalArgumentException) { null }
     }
 
@@ -191,39 +209,48 @@ class KeysView(context: Context) : View(context) {
         layoutKeys()
         c.drawColor(cBg)
         if (!drewOnce) { drewOnce = true; handler.post { onFirstDraw?.invoke() } }
+        for ((i, row) in rows.withIndex()) for ((j, k) in row.withIndex()) { if (k.key != null) drawKey(c, k, rects[i][j], false, i == 0) }
+        if (overlay == null) drawOverlay(c)
+    }
+
+    /** The dynamic layer: the lit key, the strip of guesses, the key bubble and the glide trail. Called by the overlay view (or by [onDraw] when there is none). */
+    fun drawOverlay(c: Canvas) {
+        layoutKeys()
+        val lit = litKey
+        if (lit != null) { val kb = boxOf(lit); if (kb != null) drawKey(c, lit, kb, true, rows[0].contains(lit)) }
+        drawStrip(c)
+        if (!gliding && keyPreview) drawBubble(c)
+        if (trailOn) drawTrail(c)
+    }
+
+    private fun drawKey(c: Canvas, k: KeySpec, kb: KeyBox, lit: Boolean, topRow: Boolean) {
+        val key = k.key ?: return
         val r = dp(6f)
-        for ((i, row) in rows.withIndex()) for ((j, k) in row.withIndex()) {
-            val key = k.key ?: continue
-            val kb = rects[i][j]
-            box.set(kb.left, kb.top, kb.right, kb.bottom)
-            val special = key !is Key.Ch || k.label.length > 1
-            fill.color = when {
-                k === litKey -> cLit
-                key === Key.Go -> cAccent
-                key === Key.Shift && shift == ShiftState.LOCK -> cAccent
-                key === Key.Shift && shift == ShiftState.ONCE -> cMuted
-                special -> cSpecial
-                else -> cKey
-            }
-            c.drawRoundRect(box, r, r, fill)
-            text.color = if (key === Key.Go || (key === Key.Shift && shift == ShiftState.LOCK)) cAccentText else cText
-            if (key === Key.NextKeyboard) { drawGlobe(c, box); continue }
-            val label = if (key === Key.Shift) (if (shift == ShiftState.LOCK) "⇪" else "⇧") else k.label
-            text.textSize = (kb.bottom - kb.top) * (if (label.length > 1) 0.30f else 0.44f)
-            val fm = text.fontMetrics
-            c.drawText(label, box.centerX(), box.centerY() - (fm.ascent + fm.descent) / 2f, text)
-            if (i == 0 && page == Page.LETTERS && kind != FieldKind.NUMBER && kind != FieldKind.PHONE && label.length == 1) {   // the digit a held top-row letter types, small in its corner
-                val d = TOP_ROW.indexOf(label.lowercase())
-                if (d >= 0) {
-                    text.color = cMuted; text.textSize = (kb.bottom - kb.top) * 0.22f
-                    val hf = text.fontMetrics
-                    c.drawText(DIGITS.substring(d, d + 1), box.right - dp(7f), box.top + dp(3f) - hf.ascent, text)
-                }
+        box.set(kb.left, kb.top, kb.right, kb.bottom)
+        val special = key !is Key.Ch || k.label.length > 1
+        fill.color = when {
+            lit -> cLit
+            key === Key.Go -> cAccent
+            key === Key.Shift && shift == ShiftState.LOCK -> cAccent
+            key === Key.Shift && shift == ShiftState.ONCE -> cMuted
+            special -> cSpecial
+            else -> cKey
+        }
+        c.drawRoundRect(box, r, r, fill)
+        text.color = if (key === Key.Go || (key === Key.Shift && shift == ShiftState.LOCK)) cAccentText else cText
+        if (key === Key.NextKeyboard) { drawGlobe(c, box); return }
+        val label = if (key === Key.Shift) (if (shift == ShiftState.LOCK) "⇪" else "⇧") else k.label
+        text.textSize = (kb.bottom - kb.top) * (if (label.length > 1) 0.30f else if (topRow && ImeLayout.hasNumberRow(rows)) 0.52f else 0.44f)
+        val fm = text.fontMetrics
+        c.drawText(label, box.centerX(), box.centerY() - (fm.ascent + fm.descent) / 2f, text)
+        if (!numberRow && topRow && page == Page.LETTERS && kind != FieldKind.NUMBER && kind != FieldKind.PHONE && label.length == 1) {   // without the number row: the digit a held top-row letter types, small in its corner
+            val d = TOP_ROW.indexOf(label.lowercase())
+            if (d >= 0) {
+                text.color = cMuted; text.textSize = (kb.bottom - kb.top) * 0.22f
+                val hf = text.fontMetrics
+                c.drawText(DIGITS.substring(d, d + 1), box.right - dp(7f), box.top + dp(3f) - hf.ascent, text)
             }
         }
-        drawStrip(c)
-        if (!gliding) drawBubble(c)
-        drawTrail(c)
     }
 
     /** The globe on the next-keyboard key: a circle, an equator and two meridians (no font symbol: the tablet's fonts may lack one). */
@@ -332,23 +359,23 @@ class KeysView(context: Context) : View(context) {
     private fun isBubbleKey(k: KeySpec?): Boolean { val c = (k?.key as? Key.Ch)?.text ?: return false; return c.length == 1 && c != " " }
     /** The digit a top-row letter types when it is held (null for every other key and page). */
     private fun altOf(k: KeySpec?): String? {
-        if (page != Page.LETTERS || kind == FieldKind.NUMBER || kind == FieldKind.PHONE || k == null || k.label.length != 1) return null
+        if (numberRow || page != Page.LETTERS || kind == FieldKind.NUMBER || kind == FieldKind.PHONE || k == null || k.label.length != 1) return null
         val i = TOP_ROW.indexOf(k.label.lowercase()); return if (i >= 0 && rows[0].contains(k)) DIGITS.substring(i, i + 1) else null
     }
 
-    private fun light(k: KeySpec?) { litKey = k; invalidate(); handler.removeCallbacks(unlight); if (k != null) handler.postDelayed(unlight, FLASH_MS) }
-    private fun haptic() { performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP) }
+    private fun light(k: KeySpec?) { litKey = k; dyn(); handler.removeCallbacks(unlight); if (k != null) handler.postDelayed(unlight, FLASH_MS) }
+    private fun haptic() { if (hapticsOn) performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP) }
     private fun clearHold() { handler.removeCallbacks(hold); holdAlt = null; bubbleKey = null }
     private fun holdFired() {
         val k = pressedLetter ?: down ?: return
         val alt = altOf(k) ?: return
-        holdAlt = alt; bubbleKey = k; bubbleText = alt; invalidate(); haptic()
+        holdAlt = alt; bubbleKey = k; bubbleText = alt; dyn(); haptic()
     }
 
     @SuppressLint("ClickableViewAccessibility") // KB-305 adds TalkBack key descriptions; this view is a keyboard, not a button
     override fun onTouchEvent(e: MotionEvent): Boolean {
         when (e.actionMasked) {
-            MotionEvent.ACTION_DOWN -> { activeId = e.getPointerId(0); pressDown(e.getX(0), e.getY(0)) }
+            MotionEvent.ACTION_DOWN -> { requestUnbufferedDispatch(e); activeId = e.getPointerId(0); pressDown(e.getX(0), e.getY(0)) }   // unbuffered: every touch sample at once, not batched to the frame (a fast trail)
             MotionEvent.ACTION_POINTER_DOWN -> {
                 // the second thumb: the letter the first one holds is typed NOW (in the order they were pressed), then the new finger is the tracked one
                 finishHeldLetter()
