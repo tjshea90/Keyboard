@@ -4,3 +4,8 @@
 ```
 I made the repo public. Use github runners for emulators when needed and use github actions to sign and build releases. Make the first release now
 ```
+
+## 2026-11-17T01:01:35Z
+```
+The other repos use github actions to build apks that github signs. That's what I want here
+```
