@@ -20,11 +20,19 @@ class ImeLayoutTest {
         }
     }
 
-    @Test fun theFirstThreeRowsAreTheBrowsersOwnSoTheEngineSeesTheSameGeometry() {
-        val mine = ImeLayout.rows(Page.LETTERS, false, FieldKind.TEXT)
-        val theirs = MiniKeyboardLayout.rows(false)
-        assertEquals("the number row is on top", "1234567890", mine[0].joinToString("") { it.label })
-        for (i in 0..2) assertEquals(theirs[i].map { it.label to it.weight }, mine[i + 1].map { it.label to it.weight })
+    @Test fun theLettersAreInTheUsualOrderUnderTheNumberRow() {
+        val rows = ImeLayout.rows(Page.LETTERS, false, FieldKind.TEXT)
+        assertEquals("the number row is on top", "1234567890", rows[0].joinToString("") { it.label })
+        assertEquals("qwertyuiop", rows[1].filter { it.label.length == 1 && it.label[0].isLetter() }.joinToString("") { it.label })
+        assertEquals("asdfghjkl", rows[2].filter { it.label.length == 1 && it.label[0].isLetter() }.joinToString("") { it.label })
+        assertEquals("zxcvbnm", rows[3].filter { it.label.length == 1 && it.label[0].isLetter() }.joinToString("") { it.label })
+    }
+
+    @Test fun backspaceEndsTheFirstLetterRowTheActionKeyEndsTheHomeRowAndShiftStandsAtBothEndsOfTheLastLetterRow() {
+        val rows = ImeLayout.rows(Page.LETTERS, false, FieldKind.TEXT, "Go")
+        assertEquals(Key.Backspace, rows[1].last().key); assertEquals(Key.Go, rows[2].last().key); assertEquals("Go", rows[2].last().label)
+        assertEquals(Key.Shift, rows[3].first().key); assertEquals(Key.Shift, rows[3].last().key)
+        assertTrue("nothing but the bottom row has the special characters key", rows.dropLast(1).none { r -> r.any { it.key === Key.ToSymbols } })
     }
 
     @Test fun shiftMakesCapitalLetters() {
@@ -32,11 +40,20 @@ class ImeLayoutTest {
         assertTrue("Q" in k && "M" in k && "q" !in k)
     }
 
-    @Test fun theBottomRowDependsOnTheField() {
+    @Test fun theBottomRowIsCommaSpaceFullStopAndTheSpecialCharactersKeyAtTheBottomRight() {
         fun bottom(kind: FieldKind) = ImeLayout.rows(Page.LETTERS, false, kind, "Go").last().map { it.label }
-        assertEquals(listOf("123", ",", "space", ".", "Go"), bottom(FieldKind.TEXT))
-        assertEquals(listOf("123", "/", "space", ".", ".com", "Go"), bottom(FieldKind.URL))
-        assertEquals(listOf("123", "@", "space", ".", ".com", "Go"), bottom(FieldKind.EMAIL))
+        assertEquals(listOf(",", "space", ".", "?123"), bottom(FieldKind.TEXT))
+        assertEquals(listOf("/", "space", ".", ".com", "?123"), bottom(FieldKind.URL))
+        assertEquals(listOf("@", "space", ".", ".com", "?123"), bottom(FieldKind.EMAIL))
+        for (kind in listOf(FieldKind.TEXT, FieldKind.URL, FieldKind.EMAIL)) assertEquals(Key.ToSymbols, ImeLayout.rows(Page.LETTERS, false, kind).last().last().key)
+        assertEquals(Key.ToLetters, ImeLayout.rows(Page.SYMBOLS, false, FieldKind.TEXT).last().last().key)
+    }
+
+    @Test fun nothingSitsUnderTheSpaceBarAndThereIsNoEmojiVoiceOrGlobeKey() {
+        val labels = ImeLayout.rows(Page.LETTERS, false, FieldKind.TEXT).flatten().map { it.label }
+        assertEquals(5, ImeLayout.rows(Page.LETTERS, false, FieldKind.TEXT).size)
+        for (bad in listOf("globe", "\uD83D\uDE00", "mic", "voice", "emoji")) assertTrue(bad, bad !in labels)
+        assertTrue(keys(ImeLayout.rows(Page.LETTERS, false, FieldKind.TEXT)).none { it === Key.NextKeyboard })
     }
 
     @Test fun theOneTwoThreeKeyIsBackAndTheSymbolsPageAndTheHoldGridHaveEverySymbol() {
@@ -46,28 +63,28 @@ class ImeLayoutTest {
         }
         val page = keys(ImeLayout.rows(Page.SYMBOLS, false, FieldKind.TEXT)).filterIsInstance<Key.Ch>().map { it.text }.toSet()
         val grid = ImeLayout.symbolRows.flatten().toSet()
-        for (c in "@#$%&-+()/*\"':;!?_=~<>[]{}\\|") { assertTrue("'$c' on the symbols page", c.toString() in page); assertTrue("'$c' in the hold grid", c.toString() in grid) }
+        for (c in "@#$%&-+()/*\"':;!?_=~<>[]{}\\|\u20AC\u00A3\u00A5") { assertTrue("'$c' on the symbols page", c.toString() in page); assertTrue("'$c' in the hold grid", c.toString() in grid) }
     }
 
     @Test fun theSpaceBarTakesEverythingTheOtherKeysLeave() {
         for (kind in listOf(FieldKind.TEXT, FieldKind.SEARCH, FieldKind.PASSWORD, FieldKind.URL, FieldKind.EMAIL)) for (globe in listOf(false, true)) {
             val row = ImeLayout.rows(Page.LETTERS, false, kind, showGlobe = globe).last()
             val space = row.first { (it.key as? Key.Ch)?.text == " " }
-            assertEquals("$kind: the row is exactly full", 10.0, row.sumOf { it.weight.toDouble() }, 0.001)
+            assertEquals("$kind: the row is exactly full", ImeLayout.ROW_UNITS.toDouble(), row.sumOf { it.weight.toDouble() }, 0.001)
             assertTrue("$kind: the space bar is the widest key (${space.weight})", row.all { it === space || it.weight < space.weight })
         }
         val plain = ImeLayout.rows(Page.LETTERS, false, FieldKind.TEXT).last().first { it.label == "space" }
-        assertEquals(4.9f, plain.weight, 0.001f)                       // 123 1.5 + comma 1 + full stop 1 + action 1.6
+        assertEquals(6.0f, plain.weight, 0.001f)                       // 11.5 - comma 1.5 - full stop 1.5 - special characters 2.5
     }
 
-    @Test fun everyBottomRowHasASpaceAndAnActionKeyAndNoLetterRowIsWiderThanTen() {
+    @Test fun everyPageHasASpaceAnActionKeyAndBackspaceAndNoRowIsWiderThanTheRowUnits() {
         for (kind in FieldKind.values()) for (page in Page.values()) {
             val rows = ImeLayout.rows(page, false, kind)
             val ks = keys(rows)
             if (kind != FieldKind.PHONE) assertTrue("$kind/$page needs a space", ks.any { it is Key.Ch && it.text == " " })   // a phone number has no spaces
             assertTrue("$kind/$page needs the action key", ks.any { it === Key.Go })
             assertTrue("$kind/$page needs backspace", ks.any { it === Key.Backspace })
-            if (kind != FieldKind.NUMBER && kind != FieldKind.PHONE) for (r in rows) assertTrue(r.sumOf { it.weight.toDouble() } <= 10.001)
+            if (kind != FieldKind.NUMBER && kind != FieldKind.PHONE) for (r in rows) assertTrue(r.sumOf { it.weight.toDouble() } <= ImeLayout.ROW_UNITS + 0.001)
         }
     }
 
@@ -76,6 +93,7 @@ class ImeLayoutTest {
             assertTrue("$kind off by default", keys(ImeLayout.rows(Page.LETTERS, false, kind)).none { it === Key.NextKeyboard })
             val rows = ImeLayout.rows(Page.LETTERS, false, kind, showGlobe = true)
             assertTrue("$kind on when asked", keys(rows).any { it === Key.NextKeyboard }); assertTrue("$kind: at the left end of the bottom row", rows.last().take(2).any { it.key === Key.NextKeyboard })
+            assertEquals("$kind: still a full row", ImeLayout.ROW_UNITS.toDouble(), rows.last().sumOf { it.weight.toDouble() }, 0.001)
         }
     }
 
