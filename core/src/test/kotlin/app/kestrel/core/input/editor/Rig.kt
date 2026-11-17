@@ -7,7 +7,7 @@ import org.junit.Assert.assertTrue
 class Rig(text: String = "", sel: Int = text.length, multiline: Boolean = true,
           kind: FieldKind = FieldKind.TEXT, action: Int = ImeActions.UNSPECIFIED, noEnter: Boolean = false, noSuggestions: Boolean = false, noLearn: Boolean = false, caps: Int = 0,
           /** The editor reports INSIDE each call (an editor in the keyboard's own process on Android 10): see [FakeEditor.inlineSink]. */
-          inline: Boolean = false) {
+          inlineReports: Boolean = false) {
     val ed = FakeEditor(text, sel, multiline)
     val c = InputController(ed)
     var foreign = 0; private set        // selection reports the controller judged NOT to be its own
@@ -15,7 +15,7 @@ class Rig(text: String = "", sel: Int = text.length, multiline: Boolean = true,
 
     init {
         c.startInput(FieldInfo(kind, action, noEnter, noLearn, noSuggestions, caps, sel, sel))
-        if (inline) ed.inlineSink = { u -> deliver(u) }
+        if (inlineReports) ed.inlineSink = { u -> deliver(u) }
     }
 
     private fun deliver(u: IntArray) {
