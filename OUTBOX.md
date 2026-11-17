@@ -131,3 +131,16 @@
 >
 > Back to the floating keyboard.
 <!-- sha:90b2e9b73e95 -->
+
+## 2026-11-17T02:49:12Z
+> Waiting on the emulator run. Here is where things stand:
+>
+> - **0.2.0-alpha1:** don't install it. I found a bug in my own tests where the keyboard window can cover the whole screen.
+> - **Fix:** it is written and tested (core 276, app 119, lint clean). I'm now proving it on a real Android 10 emulator on GitHub, together with the floating keyboard: a long press on the glowing bar lifts it off, the window turns into the whole screen, and the app behind still takes touches.
+> - **Next:** if the emulator run is green, I'll ship 0.2.1-alpha1 and send you the link. If it shows a problem, I'll fix that first.
+>
+> **Still open:**
+> - Your device check of the 0.2 features.
+> - The 2-hourly wake-up after usage cut-offs, which is still your call.
+> - Reading the LinkMeter repo for translation, still your call, needed later.
+<!-- sha:7c918a39ad24 -->
