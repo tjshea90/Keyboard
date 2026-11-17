@@ -15,7 +15,6 @@ import android.widget.Toast
  */
 class ReceiveLearnedActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
-        setTheme(settingsTheme(Settings(this).theme))
         super.onCreate(savedInstanceState)
         val uri: Uri? = if (intent?.action != Intent.ACTION_SEND) null else if (Build.VERSION.SDK_INT >= 33) intent.getParcelableExtra(Intent.EXTRA_STREAM, Uri::class.java) else @Suppress("DEPRECATION") intent.getParcelableExtra(Intent.EXTRA_STREAM)
         if (uri == null) { finish(); return }
