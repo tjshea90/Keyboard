@@ -256,10 +256,11 @@ def tap_char(km, c):
 def _taps(points, hold, gap):
     """A batch of taps in one shell call. The very first batch after the keyboard appeared was lost once on the emulator (the raw touch path needs a first event before it works): a first batch that raises no key press is sent again, and counted (STATS['first_batch_lost'])."""
     STATS["taps"] += len(points)
-    check = STATS["batches"] == 0
+    check = STATS["batches"] == 0 or time.time() - STATS.get("last_batch", 0.0) > 12.0       # the first batch of the run, and the first after a pause (a keyboard that just came up again)
     before = key_events() if check else 0
     inject_taps(points, hold=hold, gap=gap)
     STATS["batches"] += 1
+    STATS["last_batch"] = time.time()
     if check:
         time.sleep(0.5)
         if key_events() <= before:
