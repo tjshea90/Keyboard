@@ -229,6 +229,7 @@ class KeysView(context: Context) : View(context) {
         rows = ImeLayout.rows(page, shift != ShiftState.OFF, kind, actionLabel, numberRow, showGlobe)
         rectsW = -1
         invalidate()
+        if (Diag.enabled) post { keymapLine()?.let { Diag.d(it) } }          // (debug builds: the tools see the new page's keys)
     }
 
     private fun applyPalette() {
