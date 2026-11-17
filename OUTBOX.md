@@ -272,3 +272,29 @@
 > - **M16 Kestrel browser:** this comes last. I will not expose your learned data to other apps on the phone. The signing key is public, so any app signed with it could read your typing history. Sharing will be through the one engine code copy plus the existing Export/Import, and I will explain the options when I get there.
 > - **Release:** version 0.4.0-alpha1 is set but not built or published yet.
 <!-- sha:7c6a7a42fcc9 -->
+
+## 2026-11-17T09:39:06Z
+> Swoop 0.4.0-alpha1 is released. Requests 1–15 are built and tested, and 16 is only partly done.
+>
+> Download: https://github.com/tjshea90/Keyboard/releases/tag/swoop-v0.4.0-alpha1
+>
+> The build is signed and green. Unit tests and lint pass, but none of this has been run on the tablet, the phone or an emulator.
+>
+> - **Layout (1):** The photo never arrived with the scheduled prompt, so I modelled the layout on Gboard's large layout. Send the photo and I'll match it. It has a number row, with Backspace at the end of the first letter row and Enter at the end of the home row. Shift sits on both sides of the bottom letter row. The bottom row is only comma, a wide space bar, full stop and ?123 at the bottom right. The toolbar above the keys holds settings, clipboard and translate icons next to the suggestions.
+> - **Clipboard (2):** It keeps what you copy for an hour, pastes on tap, can pin items, and has a hold menu and Clear all. Whether Android's clipboard listener works on your devices is untested.
+> - **Settings switches (3, 4):** The glide trail already had a switch; I made its text clearer. "Hide the letters" draws blank keys that still type.
+> - **Typing rules (5, 6, 9):** After one special character it returns to the letters at once, and a capital follows `. ? !` by default. A quick swipe to the next key now counts as a glide. It's only a single tap if the finger never leaves its key.
+> - **Translate (7):** The ES icon turns English into Mexican Spanish with Enter, and a second Enter sends. The manifest now requests INTERNET and nothing else. The real MyMemory and Google services were never called, only tested against fake answers.
+> - **Squeeze (8):** Pinch the glowing bar with two fingers, or drag the arrows at its ends, to narrow the docked keyboard. Drag the bar sideways to move it, and double-tap it for full width.
+> - **Dictionary and suggestions (11, 12, 15):** Settings has a My dictionary screen for adding and removing words. Removed words are never offered or learned again. A long press on a suggested word asks before removing it. A word like "clown" offers its emoji, and tapping it replaces the word.
+> - **Word list (10, 13):** It grew from 82,971 to 140,436 words, with a penalty for rare words. On simulated glides, rare words beating a common one dropped a lot, for example from 39 to 19 at sloppy noise. These numbers come from simulated thumbs only. Decode speed and memory on the tablet were not measured.
+> - **Updates (14):** Learned data stays across app updates. I added a backup copy of each file and tests that read old-format files.
+> - **Kestrel browser (16):** The engine and word list are copied into the browser repo on branch `ccr-9cd8405a-34e17r` only, with a pin file and a check that fails if the copy drifts. The browser's own tests pass with it, but its Gecko build could not be compiled here. The navigation panel is not yet wired to open Swoop's floating keyboard.
+> - **Learned data sharing (16):** I did not share it live between the apps. Both are signed with the public dev key, so any app signed with that key could read your typing history. It is shared by using Swoop as the system keyboard everywhere, plus the existing Export/Import. A live link would need a private signing key, which is your decision.
+>
+> Open items:
+> 1. Install it on the tablet and phone and try it.
+> 2. Send the layout photo.
+> 3. Decide the private signing key question for request 16.
+> 4. Next session: compile the browser's Gecko build in CI, wire the navigation panel, and run an emulator smoke test of the new layout.
+<!-- sha:cfaa0d9ff17b -->
