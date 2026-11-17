@@ -21,13 +21,14 @@ import kotlin.system.exitProcess
  *   --base FILE            start from this compiled list (its words and its pairs), --words / --pairs are not needed then
  *   --dump-vocab FILE      write the words of the base list, one per line, and stop
  *   --merge-pairs FILE     "first second count" per line, mixed into the base list's pairs (LexiconFile.mergePairs); --merge-max-weight W (0..1) --merge-k K
+ *   --add-words FILE       "word count" per line (tools/glide/texting-words.txt): unknown words are added, known ones keep the larger count
  *
  * The inputs are untrusted text: they are parsed, never executed.
  */
 fun main(args: Array<String>) {
     var out: String? = null; var words: String? = null; var pairs: String? = null; val extras = ArrayList<String>()
     var minCount = 0L; var maxWords = Int.MAX_VALUE
-    var base: String? = null; var dumpVocab: String? = null; var mergePairs: String? = null; var mergeWeight = 0.7; var mergeK = 30.0
+    var base: String? = null; var dumpVocab: String? = null; var mergePairs: String? = null; var mergeWeight = 0.7; var mergeK = 30.0; val addWords = ArrayList<String>()
     var i = 0
     while (i < args.size) {
         when (args[i]) {
@@ -42,6 +43,7 @@ fun main(args: Array<String>) {
             "--merge-pairs" -> mergePairs = args[++i]
             "--merge-max-weight" -> mergeWeight = args[++i].toDouble()
             "--merge-k" -> mergeK = args[++i].toDouble()
+            "--add-words" -> addWords.add(args[++i])
             else -> { System.err.println("unknown argument ${args[i]}"); exitProcess(2) }
         }
         i++
@@ -53,17 +55,32 @@ fun main(args: Array<String>) {
             println("vocabulary: ${lex.size} words -> $dumpVocab")
             return
         }
-        if (out == null || mergePairs == null) { System.err.println("usage: --base FILE (--dump-vocab FILE | --merge-pairs FILE --out FILE [--merge-max-weight W] [--merge-k K])"); exitProcess(2) }
+        if (out == null || (mergePairs == null && addWords.isEmpty())) { System.err.println("usage: --base FILE (--dump-vocab FILE | [--merge-pairs FILE [--merge-max-weight W] [--merge-k K]] [--add-words FILE]... --out FILE)"); exitProcess(2) }
         val extra = ArrayList<LexiconFile.Pair>()
-        for (raw in File(mergePairs).readLines(Charsets.UTF_8)) {
+        if (mergePairs != null) for (raw in File(mergePairs).readLines(Charsets.UTF_8)) {
             val p = raw.trim().split(' ', '\t').filter { it.isNotEmpty() }
             if (p.size == 3 && !raw.startsWith("#")) { val c = p[2].toLongOrNull() ?: continue; extra.add(LexiconFile.Pair(p[0], p[1], c)) }
         }
-        val merged = LexiconFile.mergePairs(LexiconFile.pairsOf(lex), extra, mergeWeight, mergeK)
-        val bytes = LexiconFile.build(LexiconFile.entriesOf(lex), merged)
+        val pairsNow = LexiconFile.pairsOf(lex)
+        val merged = if (mergePairs != null) LexiconFile.mergePairs(pairsNow, extra, mergeWeight, mergeK) else pairsNow
+        // --add-words: "word count" per line; a word the list has keeps the larger count, an unknown one is added (the shorthand people type, tools/glide/texting-words.txt)
+        val counts = LinkedHashMap<String, Long>()
+        for (e in LexiconFile.entriesOf(lex)) counts[e.text] = e.count
+        var added = 0; var raised = 0
+        for (f in addWords) for (raw in File(f).readLines(Charsets.UTF_8)) {
+            val line = raw.trim()
+            if (line.isEmpty() || line.startsWith("#")) continue
+            val p = line.split(' ', '\t').filter { it.isNotEmpty() }
+            if (p.size != 2) continue
+            val c = p[1].toLongOrNull() ?: continue
+            if (!ok(p[0])) continue
+            val old = counts[p[0]]
+            if (old == null) { counts[p[0]] = c; added++ } else if (c > old) { counts[p[0]] = c; raised++ }
+        }
+        val bytes = LexiconFile.build(counts.map { LexiconFile.Entry(it.key, it.value) }, merged)
         File(out).parentFile?.mkdirs()
         File(out).writeBytes(bytes)
-        println("glide word list: ${lex.size} words, ${lex.bigramCount} pairs in the base + ${extra.size} new -> ${merged.size} pairs, ${bytes.size} bytes -> $out (weight $mergeWeight, k $mergeK)")
+        println("glide word list: ${lex.size} words (+$added new, $raised raised), ${lex.bigramCount} pairs in the base + ${extra.size} new -> ${merged.size} pairs, ${bytes.size} bytes -> $out (weight $mergeWeight, k $mergeK)")
         return
     }
     if (out == null || words == null) { System.err.println("usage: --out FILE --words FILE [--pairs FILE] [--extra FILE]... [--min-count N] [--max-words N]"); exitProcess(2) }
