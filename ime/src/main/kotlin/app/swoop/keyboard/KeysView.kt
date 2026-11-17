@@ -721,6 +721,8 @@ class KeysView(context: Context) : View(context) {
     fun bubbleTextForTest(): String? = if (bubbleKey != null) bubbleText else null
     fun pageForTest(): Page = page
     fun candidatesForTest(): List<String> = cands
+    /** The guesses the strip shows now. */
+    fun currentCandidates(): List<String> = cands
     fun popupOpenForTest(): Boolean = popup != null
     fun popupCellCenterForTest(ch: String): Pair<Float, Float>? { val p = popup ?: return null; val i = p.chars.indexOf(ch); return if (i < 0) null else p.cells[i].let { it.centerX() to it.centerY() } }
     fun toolCenterForTest(tool: Int): Pair<Float, Float>? { for (i in 0 until toolCount()) if (toolId(i) == tool) return toolBox(i).let { it.centerX() to it.centerY() }; return null }

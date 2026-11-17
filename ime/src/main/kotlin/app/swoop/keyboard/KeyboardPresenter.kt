@@ -8,6 +8,7 @@ import app.kestrel.core.input.ImeLayout
 import app.kestrel.core.input.Key
 import app.kestrel.core.input.editor.FieldKind
 import app.kestrel.core.input.editor.InputController
+import app.kestrel.core.input.glide.EmojiMap
 import app.kestrel.core.input.glide.GlideResult
 import app.kestrel.core.input.glide.GlideSession
 import app.kestrel.core.input.glide.Suggestions
@@ -34,6 +35,7 @@ class KeyboardPresenter(
     private var autoFixOn = false
     private var capitalizeI = false
     private var doubleSpaceOn = false
+    private var emojiOn = false
     private var lastSpaceAt = Long.MIN_VALUE / 2
     private val learner = TypingLearner(controller, { if (learnOn && !safeMode) glide.engine else null }, now)
     /** Bumped for every request to the engine: an answer for an older one is dropped. */
@@ -50,6 +52,54 @@ class KeyboardPresenter(
     var safeMode = false
     /** The globe key: the service switches to the next keyboard. */
     var onNextKeyboard: () -> Unit = {}
+    // ------------------------------------------------------------------ emoji among the guesses (M11) and removing a guess for good (M15)
+
+    private var emojiMap: EmojiMap? = null
+    private var emojiLoading = false
+    private val glyphPaint by lazy { android.graphics.Paint() }
+    private val glyphOk = HashMap<String, Boolean>()
+    private fun loadEmoji() {
+        if (emojiMap != null || emojiLoading) return
+        emojiLoading = true
+        Io.exec { val m = try { EmojiMap(context.assets.open("emoji/en.tsv").use { String(it.readBytes(), Charsets.UTF_8) }) } catch (e: Exception) { null }; post(Runnable { emojiMap = m; emojiLoading = false }) }
+    }
+    /** The emoji for [word] when the person has the option on and this phone's font can draw it (an emoji the font lacks would show as an empty box). */
+    private fun emojiFor(word: String?): String? {
+        if (!emojiOn || word == null || safeMode) return null
+        val m = emojiMap ?: return null
+        return m.forWord(word) { e -> glyphOk.getOrPut(e) { try { glyphPaint.hasGlyph(e) } catch (_: Exception) { false } } }
+    }
+    /** The strip with the emoji for [word] as its last chip (three chips at most; an emoji already there stays where it is). */
+    private fun withEmoji(strip: List<String>, word: String?): List<String> {
+        val e = emojiFor(word) ?: return strip
+        if (e in strip) return strip
+        return strip.take(2) + e
+    }
+
+    /** An emoji chip was tapped: it takes the place of the word the person typed or glided (and a space follows, as after any suggestion). The emoji is never learned as a word. */
+    private fun chooseEmoji(emoji: String) {
+        if (controller.lastGlide != null) { controller.swapGlide(emoji); session.settle() }
+        else { session.settle(); learner.settle(); controller.pickWord(emoji) }
+        latest = null; literalShown = null; suggestSeq++
+        view?.setShift(controller.shift)
+        refreshSuggestions()
+    }
+
+    override fun onCandidateLong(word: String) {
+        if (EmojiMap.isEmoji(word) || word == literalShown) return
+        view?.confirmWord = word
+    }
+
+    override fun onRemoveWord(word: String, yes: Boolean) {
+        if (!yes) return
+        glide.engine.blockWord(word) { post(Runnable {
+            val rest = (view?.currentCandidates() ?: emptyList()).filter { !it.equals(word, ignoreCase = true) }
+            view?.showCandidates(rest)
+            latest = null; suggestSeq++
+            refreshSuggestions()
+        }) }
+    }
+
     /** The toolbar: the cog opens the settings screen, the clipboard icon shows or hides the clipboard, the translate icon switches translating. */
     var onOpenSettings: () -> Unit = {}
     var onToggleClipboard: () -> Unit = {}
@@ -82,8 +132,10 @@ class KeyboardPresenter(
         autoFixOn = suggestOn && st.autoFix
         capitalizeI = !safeMode && st.capitalizeI && field.composingAllowed
         doubleSpaceOn = !safeMode && st.doubleSpace
+        emojiOn = !safeMode && st.emojiSuggestions && field.composingAllowed
+        if (emojiOn) loadEmoji()
         controller.autoSpace = !safeMode && st.autoSpace
-        controller.autoCapsOn = st.autoCaps
+        controller.autoCapsOn = st.autoCaps; controller.sentenceCaps = st.autoCaps
         latest = null; literalShown = null; noFixFor = null; suggestSeq++
         view?.let {
             it.reset()
@@ -186,7 +238,8 @@ class KeyboardPresenter(
             literalShown = lit
         }
         for (w in res.words) if (strip.size < 3 && strip.none { it.equals(w, ignoreCase = true) }) strip.add(w)
-        if (strip.isEmpty()) view?.clearCandidates() else view?.showCandidates(strip)
+        val shown = withEmoji(strip, res.typed.ifEmpty { null })
+        if (shown.isEmpty()) view?.clearCandidates() else view?.showCandidates(shown)
     }
 
     override fun onGlideMove(xs: FloatArray, ys: FloatArray, count: Int) {
@@ -204,6 +257,7 @@ class KeyboardPresenter(
     }
 
     override fun onCandidate(word: String) {
+        if (EmojiMap.isEmoji(word)) { chooseEmoji(word); return }
         if (controller.lastGlide != null || session.hasCandidates()) session.pick(word)        // (the strip still shows a glide's guesses even when an app rewrote the field)
         else if (suggestOn) {
             val typed = controller.wordBeforeCursor()
@@ -219,7 +273,7 @@ class KeyboardPresenter(
 
     // ------------------------------------------------------------------ GlideSession.Ui -> the view
 
-    override fun showCandidates(words: List<String>) { view?.showCandidates(words) }
+    override fun showCandidates(words: List<String>) { view?.showCandidates(withEmoji(words, words.firstOrNull())) }
     override fun clearCandidates() { if (!suggestOn) view?.clearCandidates() }   // (with suggestions on, the next answer replaces the strip: no flicker)
     override fun showNoWord() { view?.showNoWord() }
 
