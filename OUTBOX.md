@@ -62,3 +62,7 @@
 >
 > **Still open:** the secret (item 1 above), whether I may set a 2-hourly wake-up after usage cut-offs, and later the LinkMeter access and your browser's learning export.
 <!-- sha:4633ce8db64d -->
+
+## 2026-11-17T01:02:02Z
+> Understood: the same setup as your other repos. That means a public dev signing key committed in the repo, and GitHub builds and signs with it, with no secret and no passphrase. I'm switching to that now. First I'm checking the emulator run.
+<!-- sha:cdd12f89df98 -->
