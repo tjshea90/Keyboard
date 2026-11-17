@@ -122,7 +122,7 @@ class KeysView(context: Context) : View(context) {
     private var shift = ShiftState.OFF
     private var kind = FieldKind.TEXT
     private var actionLabel = "⏎"
-    private var rows: List<List<KeySpec>> = ImeLayout.rows(page, false, kind, actionLabel, true)
+    private var rows: List<List<KeySpec>> = ImeLayout.rows(page, false, kind, actionLabel, false)
     private var rects: List<List<KeyBox>> = emptyList()
     private var rectsW = -1; private var rectsH = -1
 
