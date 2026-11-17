@@ -32,6 +32,9 @@ class KeyboardPresenter(
     private var learnOn = false
     private var suggestOn = false
     private var autoFixOn = false
+    private var capitalizeI = false
+    private var doubleSpaceOn = false
+    private var lastSpaceAt = Long.MIN_VALUE / 2
     private val learner = TypingLearner(controller, { if (learnOn && !safeMode) glide.engine else null }, now)
     /** Bumped for every request to the engine: an answer for an older one is dropped. */
     private var suggestSeq = 0
@@ -51,22 +54,25 @@ class KeyboardPresenter(
     var view: KeysView? = null
         set(v) { field = v; v?.listener = this; session.ui = this; prepareGlide() }
 
-    private fun prefs() = context.getSharedPreferences(Prefs.FILE, Context.MODE_PRIVATE)
-
     // ------------------------------------------------------------------ lifecycle (the service forwards these)
 
     fun startInput(info: EditorInfo) {
         val field = FieldInfos.from(info)
         session.settle(); learner.settle()
         controller.startInput(field)
-        val p = prefs()
-        glideOn = !safeMode && p.getBoolean(Prefs.GLIDE, true) && field.kind != FieldKind.PASSWORD
-        learnOn = !safeMode && p.getBoolean(Prefs.LEARN, true) && field.learningAllowed
-        suggestOn = !safeMode && p.getBoolean(Prefs.SUGGEST, true) && field.composingAllowed
-        autoFixOn = suggestOn && p.getBoolean(Prefs.AUTOFIX, true)
+        val st = Settings(context)
+        glideOn = !safeMode && st.glide && field.kind != FieldKind.PASSWORD
+        learnOn = !safeMode && st.learn && field.learningAllowed
+        suggestOn = !safeMode && st.suggest && field.composingAllowed
+        autoFixOn = suggestOn && st.autoFix
+        capitalizeI = !safeMode && st.capitalizeI && field.composingAllowed
+        doubleSpaceOn = !safeMode && st.doubleSpace
+        controller.autoSpace = !safeMode && st.autoSpace
+        controller.autoCapsOn = st.autoCaps
         latest = null; literalShown = null; noFixFor = null; suggestSeq++
         view?.let {
             it.reset()
+            it.applyOptions(st)
             it.setField(field.kind, ImeLayout.actionLabel(field.imeAction, field.noEnterAction))
             it.setGlideEnabled(glideOn)
             it.setSuggestionsEnabled(suggestOn)
@@ -101,7 +107,7 @@ class KeyboardPresenter(
         val fix = autoFixFor(key)
         learner.beforeKey(key, fix)
         when (key) {
-            is Key.Ch -> if (fix != null) controller.typeCorrected(fix, key.text) else controller.type(key.text)
+            is Key.Ch -> if (fix != null) controller.typeCorrected(fix, key.text) else if (key.text == " " && doubleSpaceOn && clock() - lastSpaceAt < DOUBLE_SPACE_MS && controller.doubleSpace()) { /* ". " is in */ } else controller.type(key.text)
             Key.Backspace -> controller.backspace()
             Key.Go -> controller.enter()
             Key.NextKeyboard -> onNextKeyboard()
@@ -112,6 +118,7 @@ class KeyboardPresenter(
             }
             else -> Unit
         }
+        if (key is Key.Ch && key.text == " ") lastSpaceAt = clock()
         session.afterKey(key)
         learner.afterKey()
         controller.revertedCorrection?.let { noFixFor = it.typed }
@@ -125,12 +132,17 @@ class KeyboardPresenter(
 
     /** The word an automatic fix will put in when [key] ends the word being tapped: the engine's latest answer for exactly this word, only for a space or sentence punctuation, never for one just taken back. */
     private fun autoFixFor(key: Key): String? {
-        if (!autoFixOn || key !is Key.Ch || key.text !in FIX_AT) return null
+        if (key !is Key.Ch || key.text !in FIX_AT) return null
         val typed = controller.composing ?: return null
         if (typed == noFixFor) return null
+        if (capitalizeI) { val i = capitalizedI(typed); if (i != null) return i }
+        if (!autoFixOn) return null
         val l = latest ?: return null
         return if (l.typed == typed) l.autoCorrect else null
     }
+
+    /** "i" -> "I", "i'm" -> "I'm", "i'll", "i've", "i'd": the one fix that needs no word list. */
+    private fun capitalizedI(typed: String): String? = if (typed == "i" || (typed.length in 3..4 && typed.startsWith("i'") && typed.substring(2) in I_ENDINGS)) "I" + typed.substring(1) else null
 
     /** Asks the engine what to offer for the word at the cursor (or the likely next word); the answer is shown only if it still fits what is on screen. */
     private fun refreshSuggestions() {
@@ -197,19 +209,10 @@ class KeyboardPresenter(
 
     private companion object {
         const val DOUBLE_TAP_MS = 350L
+        /** A second space this soon after the first makes a full stop. */
+        const val DOUBLE_SPACE_MS = 600L
+        val I_ENDINGS = setOf("m", "ll", "ve", "d")
         /** The keys after which an automatic fix may happen: the space and the punctuation that ends a sentence or a clause. */
         val FIX_AT = setOf(" ", ".", ",", "!", "?", ";", ":")
     }
-}
-
-/** The keyboard's few settings (SharedPreferences, private to the app). */
-object Prefs {
-    const val FILE = "swoop"
-    const val GLIDE = "glide_typing"
-    /** Word suggestions while typing with taps (the strip also works without glide typing). */
-    const val SUGGEST = "suggestions"
-    /** Learn from what is typed (words, word pairs, corrections): the most important setting. */
-    const val LEARN = "learn_typing"
-    /** Fix an obvious typo when the space is pressed (one Backspace takes it back). */
-    const val AUTOFIX = "auto_fix"
 }

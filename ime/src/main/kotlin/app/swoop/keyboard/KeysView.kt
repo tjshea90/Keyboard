@@ -72,6 +72,11 @@ class KeysView(context: Context) : View(context) {
     var keyPreview = true
     var hapticsOn = true
     var trailOn = true
+    var soundOn = false
+    /** Press the space bar and slide: the text cursor follows the finger. */
+    var spaceSlideOn = true
+    /** 0 = follows the system's light / dark setting, 1 = dark, 2 = light. */
+    var themeMode = 0; set(v) { if (field != v) { field = v; applyPalette(); invalidate(); dyn() } }
     /** 1.0 = normal key height; the settings offer small / normal / large. */
     var keyHeightScale = 1f; set(v) { if (field != v) { field = v; rectsW = -1; requestLayout(); invalidate() } }
     var accent = 0xFF1F6FEB.toInt(); set(v) { field = v; applyPalette(); invalidate(); dyn() }
@@ -131,6 +136,12 @@ class KeysView(context: Context) : View(context) {
         applyPalette()
     }
 
+    /** Every option from the settings in one call (the keyboard opening, the settings preview). */
+    fun applyOptions(s: Settings) {
+        numberRow = s.numberRow; keyPreview = s.keyPreview; hapticsOn = s.haptics; soundOn = s.sound; trailOn = s.trail
+        keyHeightScale = s.keyHeightScale; accent = s.accentColor; themeMode = s.theme; spaceSlideOn = s.spaceSlide
+    }
+
     // ------------------------------------------------------------------ what the service tells the view
 
     /** The controller owns the shift state; the view only shows it (capitals on the keys, a lit Shift key). */
@@ -169,7 +180,7 @@ class KeysView(context: Context) : View(context) {
     }
 
     private fun applyPalette() {
-        dark = (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
+        dark = when (themeMode) { 1 -> true; 2 -> false; else -> (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES }
         cBg = if (dark) 0xFF1B1D20.toInt() else 0xFFD3D6DB.toInt()
         cKey = if (dark) 0xFF3C4043.toInt() else 0xFFFFFFFF.toInt()
         cSpecial = if (dark) 0xFF2B2E31.toInt() else 0xFFB9BEC6.toInt()
@@ -368,6 +379,7 @@ class KeysView(context: Context) : View(context) {
 
     private fun light(k: KeySpec?) { litKey = k; dyn(); handler.removeCallbacks(unlight); if (k != null) handler.postDelayed(unlight, FLASH_MS) }
     private fun haptic() { if (hapticsOn) performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP) }
+    private fun click() { if (soundOn) try { (context.getSystemService(Context.AUDIO_SERVICE) as android.media.AudioManager).playSoundEffect(android.media.AudioManager.FX_KEYPRESS_STANDARD) } catch (_: Exception) { } }
     private fun clearHold() { handler.removeCallbacks(hold); holdAlt = null; bubbleKey = null }
     private fun holdFired() {
         val k = pressedLetter ?: down ?: return
@@ -401,10 +413,10 @@ class KeysView(context: Context) : View(context) {
         if (stripPx() > 0f && y < stripPx() + pad) { stripDown = chipAt(x, y); dyn(); return }   // a guess in the strip was touched
         removeCallbacks(fadeStep); gn = 0; fadeStart = 0L
         val k = keyAt(x, y); down = k; light(k)
-        spaceDown = (k?.key as? Key.Ch)?.text == " "; sliding = false; slideStartX = x; slideAnchorX = x
+        spaceDown = spaceSlideOn && (k?.key as? Key.Ch)?.text == " "; sliding = false; slideStartX = x; slideAnchorX = x
         pressedLetter = if (isLetter(k)) k else null
         if (isBubbleKey(k)) { bubbleKey = k; bubbleText = k!!.label }
-        if (k != null) { haptic(); if (altOf(k) != null) handler.postDelayed(hold, HOLD_MS) }
+        if (k != null) { haptic(); click(); if (altOf(k) != null) handler.postDelayed(hold, HOLD_MS) }
         if (k?.key === Key.Backspace) { listener?.onKey(Key.Backspace); handler.postDelayed(repeat, REPEAT_FIRST_MS) }
         downX = x; downY = y
         if (glideEnabled && page == Page.LETTERS && pressedLetter != null) { armed = true; glideDown = k; addPoint(x, y) }
