@@ -14,7 +14,8 @@ The photo is a Gboard screenshot (dark teal). It reached the session of branch `
 
 Every row is exactly 10 units wide. A key is a slot minus a gap (`MiniKeyboardGeometry.slots`), the gap across a row is about 14 % of the pitch, the rows are 1.5 times as far apart as the keys are across, the keys are 1.35 pitches tall (44-56 dp), the corners are 22 % of a key's width, the round keys are full stadiums.
 
-## Colours (dark; the light palette is a plain counterpart)
+## Colours (dark by default; the light palette is a plain counterpart)
+The keyboard is DARK until the person chooses otherwise (Settings > Colours: Dark / Automatic = follows the phone's day or night setting / Light), because the photo is the dark theme and a tablet or phone left in day mode would otherwise show a light keyboard (0.5.0-alpha3; before that the default was Automatic). `KeyboardPresenterTest.theKeyboardIsDarkUntilAnotherLookIsChosen`.
 background `0d1d1d`, letter keys and space `253535`, Shift / Backspace / comma / full stop `35494a`, ?123 `a4cedc` with dark text, Enter and the lit translate icon = the accent (cyan `00dde6` by default; dark ink on bright accents, white on dark ones), text `f1ffff`, digit hints `9babab`. Icons (Shift: outline when off, solid when on, bar when locked; Backspace: outlined tag with a cross; Enter: return arrow) are DRAWN, not font glyphs (the tablet's fonts may lack them).
 
 ## Readings chosen where the owner's words were ambiguous (he is away; change any of them with one setting or one line)
