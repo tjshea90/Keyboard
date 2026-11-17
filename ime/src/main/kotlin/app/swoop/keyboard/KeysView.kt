@@ -176,7 +176,7 @@ class KeysView(context: Context) : View(context) {
 
     /** Everything in flight stops (the keyboard closed or the field changed). */
     fun reset() {
-        handler.removeCallbacks(repeat); handler.removeCallbacks(unlight); handler.removeCallbacks(hold); handler.removeCallbacks(noWordOff); removeCallbacks(fadeStep)
+        handler.removeCallbacks(repeat); handler.removeCallbacks(unlight); handler.removeCallbacks(hold); handler.removeCallbacks(spaceHold); popup = null; spaceIsDown = false; spaceHeld = false; handler.removeCallbacks(noWordOff); removeCallbacks(fadeStep)
         armed = false; gliding = false; gn = 0; fadeStart = 0L; cands = emptyList(); noWordUntil = 0L; stripDown = -1
         activeId = -1; down = null; pressedLetter = null; litKey = null; holdAlt = null; bubbleKey = null; spaceDown = false; sliding = false
         invalidate()
@@ -248,6 +248,7 @@ class KeysView(context: Context) : View(context) {
         drawStrip(c)
         if (!gliding && keyPreview) drawBubble(c)
         if (trailOn) drawTrail(c)
+        drawPopup(c)
     }
 
     private fun drawKey(c: Canvas, k: KeySpec, kb: KeyBox, lit: Boolean, topRow: Boolean) {
@@ -403,8 +404,6 @@ class KeysView(context: Context) : View(context) {
         return (t == "." || t == ",") && kind != FieldKind.NUMBER && kind != FieldKind.PHONE
     }
 
-    private fun boxOf(k: KeySpec): KeyBox? { layoutKeys(); for ((i, row) in rows.withIndex()) for ((j, kk) in row.withIndex()) if (kk === k) return rects[i][j]; return null }
-
     private fun openPopup(k: KeySpec) {
         val kb = boxOf(k) ?: return
         val grid = ImeLayout.symbolRows
@@ -478,7 +477,9 @@ class KeysView(context: Context) : View(context) {
         spaceDown = spaceSlideOn && (k?.key as? Key.Ch)?.text == " "; sliding = false; slideStartX = x; slideAnchorX = x
         pressedLetter = if (isLetter(k)) k else null
         if (isBubbleKey(k)) { bubbleKey = k; bubbleText = k!!.label }
-        if (k != null) { haptic(); click(); if (altOf(k) != null) handler.postDelayed(hold, HOLD_MS) }
+        spaceIsDown = (k?.key as? Key.Ch)?.text == " "; spaceHeld = false
+        if (spaceIsDown) handler.postDelayed(spaceHold, SPACE_HOLD_MS)
+        if (k != null) { haptic(); click(); if (altOf(k) != null || isSymbolKey(k)) handler.postDelayed(hold, HOLD_MS) }
         if (k?.key === Key.Backspace) { listener?.onKey(Key.Backspace); handler.postDelayed(repeat, REPEAT_FIRST_MS) }
         downX = x; downY = y
         if (glideEnabled && page == Page.LETTERS && pressedLetter != null) { armed = true; glideDown = k; addPoint(x, y) }
@@ -486,6 +487,7 @@ class KeysView(context: Context) : View(context) {
 
     private fun pressMove(e: MotionEvent, i: Int) {
         val x = e.getX(i); val y = e.getY(i)
+        popup?.let { p -> val ns = popupSelect(p, x, y); if (ns != p.sel) { p.sel = ns; dyn() }; return }
         if (stripDown >= 0) return
         if (armed) {                                     // a letter: nothing happens until the finger leaves its key (a glide) or lifts (a tap)
             for (h in 0 until e.historySize) addPoint(e.getHistoricalX(i, h), e.getHistoricalY(i, h))
@@ -496,7 +498,7 @@ class KeysView(context: Context) : View(context) {
         }
         if (pressedLetter != null) return                // (glide off) a letter: a tap types the letter it went down on
         if (spaceDown) {                                 // press the space key and slide sideways: the text cursor follows the finger
-            if (!sliding && Math.abs(x - slideStartX) > dp(SLIDE_START_DP)) { sliding = true; slideAnchorX = x; litKey = down; dyn() }
+            if (!sliding && Math.abs(x - slideStartX) > dp(SLIDE_START_DP)) { sliding = true; handler.removeCallbacks(spaceHold); slideAnchorX = x; litKey = down; dyn() }
             if (sliding) {
                 val steps = ((x - slideAnchorX) / dp(SLIDE_STEP_DP)).toInt()
                 if (steps != 0) { slideAnchorX += steps * dp(SLIDE_STEP_DP); haptic(); listener?.onCursor(steps) }
@@ -509,6 +511,14 @@ class KeysView(context: Context) : View(context) {
 
     private fun pressUp(e: MotionEvent, i: Int) {
         val x = e.getX(i); val y = e.getY(i)
+        handler.removeCallbacks(spaceHold)
+        popup?.let { p ->                                  // the symbols grid is open: the cell under the finger is typed; lifting on the held key itself types that key; anywhere else types nothing
+            val sel = popupSelect(p, x, y); popup = null; clearHold(); down = null; pressedLetter = null; litKey = null; spaceDown = false; dyn()
+            if (sel >= 0) emit(Key.Ch(p.chars[sel])) else if (keyAt(x, y) === p.owner) emit(p.owner.key!!)
+            return
+        }
+        if (spaceHeld) { spaceHeld = false; spaceIsDown = false; spaceDown = false; sliding = false; down = null; litKey = null; dyn(); return }    // the picker was opened: no space is typed
+        spaceIsDown = false
         if (stripDown >= 0) {
             val c = chipAt(x, y); val was = stripDown; stripDown = -1; dyn()
             if (c == was && c in cands.indices) listener?.onCandidate(cands[c])
@@ -532,7 +542,7 @@ class KeysView(context: Context) : View(context) {
     }
 
     private fun pressCancel() {
-        handler.removeCallbacks(repeat); clearHold(); down = null; pressedLetter = null; armed = false; stripDown = -1; spaceDown = false; sliding = false; litKey = null; dyn()
+        handler.removeCallbacks(repeat); handler.removeCallbacks(spaceHold); clearHold(); popup = null; spaceIsDown = false; spaceHeld = false; down = null; pressedLetter = null; armed = false; stripDown = -1; spaceDown = false; sliding = false; litKey = null; dyn()
         if (gliding) { gliding = false; fadeStart = SystemClock.uptimeMillis(); postOnAnimation(fadeStep) }
     }
 
@@ -613,6 +623,8 @@ class KeysView(context: Context) : View(context) {
         const val REPEAT_MS = 70L
         /** Holding a top-row letter this long types its digit. */
         const val HOLD_MS = 420L
+        /** Holding the space bar this long (without sliding) opens the keyboard picker. */
+        const val SPACE_HOLD_MS = 600L
         private const val TOP_ROW = "qwertyuiop"
         private const val DIGITS = "1234567890"
         /** The strip of guesses above the keys (glide typing on). */
