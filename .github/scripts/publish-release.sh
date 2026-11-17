@@ -18,7 +18,7 @@ CERT="$(tr -d ' \r\n' < signing/CERT_SHA256)"
   echo
   echo "**$TITLE $VN** (versionCode $VC): a light glide + tap keyboard for the tablet and the phone."
   echo
-  echo "- Install: open this page on the device (a PRIVATE repository: you must be signed in to GitHub in that browser), tap \`$ASSET\`, and allow installing from this source if Android asks. It installs over the previous $TITLE because the signing certificate is the same."
+  echo "- Install: open this page on the device (the repository is public: no sign-in needed), tap \`$ASSET\`, and allow installing from this source if Android asks. It installs over the previous $TITLE because the signing certificate is the same."
   echo "- Then open the Swoop app: its Setup screen explains how to switch the keyboard on and select it. KEEP your old keyboard installed until you are sure Swoop works."
   echo "- Built and signed by GitHub Actions from commit \`${GITHUB_SHA:-unknown}\`; the certificate was verified on this exact APK (SHA-256 \`$CERT\`)."
   echo "- APK SHA-256: \`$SUM\`"

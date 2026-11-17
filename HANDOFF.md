@@ -35,7 +35,7 @@ docs/ research/ TASKS.md CHECKPOINT.md BUILDLOG.md INBOX.md OUTBOX.md .checkpoin
 - **The Browser repo is READ-ONLY.** In this sandbox it is checked out next to this repo. Never `cd` into it (its own hooks, if loaded, would commit and push there); use `git -C /home/user/Browser ...` or absolute paths. Copy files, never link them. Same for LinkMeter.
 - The sandbox shell blocks network-looking commands (curl/wget), recursive-delete text, and writing absolute home-directory paths into files. Use GitHub MCP tools, git, Gradle, the Edit tool.
 - Hooks: in the cloud sandbox with several repos under one session root the hooks are merged into the ROOT settings by `bash tools/install-hooks.sh` (it never touches other projects' hooks); with this repo as the only project the committed `.claude/settings.json` is read directly.
-- The repo is PRIVATE but treat it as if it could leak: no exports, replay logs, keystores, APKs or screenshots of the owner's screen, ever.
+- The repo is PUBLIC (since 2026-11-17): everything committed, including the INBOX/OUTBOX chat copies, is world-readable. No exports, replay logs, keystores, APKs, screenshots of the owner's screen, secrets or personal data, ever. Emulators on GitHub runners (KVM) and Actions minutes are free for public repos.
 - `INBOX.md`/`OUTBOX.md` contain the chat history of the project; they merge as unions.
 
 ## 6. Status

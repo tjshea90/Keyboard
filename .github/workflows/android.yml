@@ -4,7 +4,7 @@
 # Dispatch with  full_build = true  to test, build, verify and publish.  full_build = false is a ~1 minute check that the gates still pass.
 # Claude dispatches it through the GitHub API (mcp__github__actions_run_trigger, run_workflow) after `bash ship.sh "note"`.
 #
-# MINUTES ARE THE SCARCE RESOURCE (the repo is private: GitHub Free gives 2,000 Actions minutes a month; tools/test_handoff.sh fails if either rule is undone):
+# KEEP THE RUNS FEW (the repo is public, so standard-runner minutes are free, but autosave pushes constantly; tools/test_handoff.sh fails if either rule is undone):
 #   1. NEVER add a `push:` branch trigger. autosave commits and pushes after every tool call; a push trigger would start a run every few
 #      seconds. Tags and manual dispatch only.
 #   2. Cheap gates first; a manual run does the gates only unless full_build is ticked.
@@ -69,7 +69,7 @@ jobs:
           if [ "$full" = true ] && [ "$signed" = true ]; then
             echo "FULL BUILD (tests, signed release APK, certificate check, publish)." >> "$GITHUB_STEP_SUMMARY"
           elif [ "$full" = true ]; then
-            echo "FULL BUILD WITHOUT PUBLISHING: signing/CERT_SHA256 is UNSET (KB-003 not done), so this makes a debug-signed TEST APK (a private workflow artifact) and releases nothing." >> "$GITHUB_STEP_SUMMARY"
+            echo "FULL BUILD WITHOUT PUBLISHING: signing/CERT_SHA256 is UNSET (KB-003 not done), so this makes a debug-signed TEST APK (a workflow artifact) and releases nothing." >> "$GITHUB_STEP_SUMMARY"
           else
             echo "GATES ONLY. Re-run with **full_build** ticked, or create a Release tag, to build." >> "$GITHUB_STEP_SUMMARY"
           fi

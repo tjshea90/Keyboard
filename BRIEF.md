@@ -17,7 +17,7 @@
 5. **Safety first for a default keyboard:** a broken keyboard on a tablet with no other keyboard locks the owner out of typing. KB-106 (crash-loop fallback, globe key, "go back to my previous keyboard") comes before any feature work beyond the skeleton. The old keyboard stays installed until gate G2.
 
 ## Owner decisions (2026-11-16) - they override anything older
-Q1 name Swoop | Q2 private repo | Q3 no Spanish typing | Q4 friendly "tu" and Spanish-to-English for received messages | Q5 LinkMeter's service and method, online | Q15 everything in ONE app | Q16 translate works in any app but only while turned on (Gboard-style toolbar button) |
+Q1 name Swoop | Q2 repo (private at first; the owner made it PUBLIC on 2026-11-17: free Actions minutes and emulators, chat copies are public) | Q3 no Spanish typing | Q4 friendly "tu" and Spanish-to-English for received messages | Q5 LinkMeter's service and method, online | Q15 everything in ONE app | Q16 translate works in any app but only while turned on (Gboard-style toolbar button) |
 Q17 in apps with their own Send button, Enter translates and the owner taps the app's Send | Q18 received messages: the fewest presses (selection-menu route = 2) | Q19 do NOT change LinkMeter. Open questions with defaults: plan section 15.
 
 ## Privacy (the keyboard handles intimate data)
