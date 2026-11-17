@@ -5,7 +5,7 @@
   python3 -u -I tools/sim/dailysim.py --selftest        (no device: checks the parsers and the scoring)
 
 What a person does, in this order (every step is a recorded scene; a step that cannot be done is a FINDING in the report, never a crash of the run):
-  setup    install Swoop + Kestrel, make Swoop THE keyboard, start the lab server (tools/sim/labserver.py), the 5 Mbit/s hotspot is already imitated by the emulator options
+  setup    install Swoop + Kestrel, make Swoop THE keyboard, start the lab server (tools/sim/labserver.py); the link is FULL speed by default (the owner is on fast wifi most of the time), the 5 Mbit/s hotspot is an optional second pass (--net hotspot)
   swoop    type and glide into Swoop's OWN field (the baseline: no browser in between)
   fields   the same into a real web page's fields in Kestrel (text, search, textarea, contenteditable, url, e-mail): what the PAGE received is read from the lab server, not from a screenshot
   address  the same into Kestrel's address-and-search box
@@ -541,7 +541,7 @@ def main():
     ap.add_argument("--kestrel")
     ap.add_argument("--browser-dir", default="browser")
     ap.add_argument("--suite", default="typing")
-    ap.add_argument("--net", default="hotspot")
+    ap.add_argument("--net", default="full")
     ap.add_argument("--minutes", type=int, default=15)
     ap.add_argument("--quick", action="store_true", help="fewer phrases, words and field kinds (a run of about 10 minutes instead of 30)")
     ap.add_argument("--selftest", action="store_true")

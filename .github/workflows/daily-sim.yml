@@ -17,9 +17,9 @@ on:
         type: string
         default: 'typing'
       net:
-        description: 'hotspot = 5 Mbit/s and 60-120 ms (the owner hotspot) | full = no limit'
+        description: 'full = no limit (the normal case: the owner is on fast wifi most of the time) | hotspot = 5 Mbit/s and 60-120 ms (the exception: the phone hotspot)'
         type: string
-        default: 'hotspot'
+        default: 'full'
       minutes:
         description: 'How long the pages / video part may run, in minutes'
         type: string

@@ -404,3 +404,7 @@
 > - **Other Kestrel session:** it just shipped alpha67 and is active in the Browser repo. I merged its newest work into my branch with no conflicts and touched only my own branch. My Kestrel release will be alpha68, and I'll check the Browser repo has no queued release run before dispatching it.
 > - **Not done:** the simulation's results, fixes based on them, the real-sites and video runs under the 5 Mbit/s imitation, and the Swoop alpha4 and Kestrel alpha68 releases.
 <!-- sha:8abbf07a7f84 -->
+
+## 2026-11-17T18:53:42Z
+> Noted: fast Wi-Fi is the normal case, and the 5 Mbit hotspot is the exception. The simulation runs I've dispatched so far already used the unlimited link. I'm making that the default and recording your message in the task list.
+<!-- sha:8f300f1d448a -->
