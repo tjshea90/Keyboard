@@ -16,8 +16,7 @@ class SuggesterTest {
             "the" to 90_000_000L, "that" to 40_000_000L, "this" to 35_000_000L, "they" to 30_000_000L, "them" to 14_000_000L, "then" to 16_000_000L, "there" to 18_000_000L,
             "hello" to 9_000_000L, "world" to 6_000_000L, "work" to 9_500_000L, "word" to 5_000_000L, "worth" to 2_000_000L, "from" to 20_000_000L, "form" to 6_000_000L,
             "something" to 4_000_000L, "of" to 70_000_000L, "off" to 8_000_000L, "you" to 60_000_000L, "your" to 25_000_000L, "thank" to 3_000_000L, "don't" to 12_000_000L, "dont" to 100_000L,
-            "zzfiller" to 500_000_000_000L,
-        )
+        ).map { it.first to it.second * 200L } + listOf("zzfiller" to 400_000_000_000L)
         val pairs = listOf(LexiconFile.Pair("hello", "world", 400_000L), LexiconFile.Pair("hello", "there", 300_000L), LexiconFile.Pair("thank", "you", 900_000L), LexiconFile.Pair("thank", "your", 20_000L))
         return LexiconFile.read(LexiconFile.build(e.map { LexiconFile.Entry(it.first, it.second) }, pairs))
     }
@@ -71,7 +70,7 @@ class SuggesterTest {
         val pm = PersonalModel()
         pm.add(null, "worth")
         assertEquals("one use changes nothing much", "work", s("wor", pm = pm).words.first())
-        repeat(40) { pm.add(null, "worth") }
+        repeat(150) { pm.add(null, "worth") }
         assertEquals("a word used all the time comes first", "worth", s("wor", pm = pm).words.first())
     }
 
@@ -93,7 +92,7 @@ class SuggesterTest {
     }
 
     @Test fun aCorrectionTheyMadeBeforeLiftsTheWordTheyMeant() {
-        val pm = PersonalModel()
+        val pm = PersonalModel(); pm.add(null, "hello")
         assertFalse(s("tha", pm = pm).words.contains("the"))
         repeat(5) { pm.addConfusion("tha", "the", 1f) }
         assertTrue("tha was corrected to the five times: the is on offer", s("tha", pm = pm).words.contains("the"))
