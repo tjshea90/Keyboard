@@ -122,7 +122,8 @@ class RareWordTest {
         assertEquals("sat", firstWord(dec, sat, p))
         val pm = PersonalModel()
         dec.personal = pm
-        assertEquals("one use in a different word changes nothing", "sat", firstWord(dec, sat, p).also { pm.add(null, "the", 1f) })
+        pm.add(null, "the", 1f)
+        assertEquals("one use of a different word changes nothing", "sat", firstWord(dec, sat, p))
         repeat(6) { pm.add(null, "sar", 1f) }
         assertEquals("a word the person writes is no longer rare", "sar", firstWord(dec, sat, p))
     }
