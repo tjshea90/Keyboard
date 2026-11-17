@@ -252,3 +252,8 @@ The signing may remain public. The main keyboard usage will be on Android 10 go 
 ```
 [this message contained a keyboard learning export (private typing data): NOT saved here on purpose, plan 11.6]
 ```
+
+## 2026-11-17T18:53:26Z
+```
+Most of the time i won't have the 5mbit speed cap
+```
