@@ -1,7 +1,6 @@
 package app.swoop.keyboard.translate
 
 import app.kestrel.core.translate.TransportException
-import com.sun.net.httpserver.HttpServer
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -10,52 +9,36 @@ import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
 import org.junit.Before
 import org.junit.Test
-import java.net.InetAddress
-import java.net.InetSocketAddress
 import java.util.concurrent.CopyOnWriteArrayList
 
 /** The real HttpsTransport against a fake server on 127.0.0.1 (JVM only; no real network is ever used). */
 class HttpsTransportTest {
-    private lateinit var server: HttpServer
+    private lateinit var server: FakeServer
     private val seen = CopyOnWriteArrayList<String>()
-    private var port = 0
+    private val port: Int get() = server.port
 
     @Before fun start() {
-        server = HttpServer.create(InetSocketAddress(InetAddress.getByName("127.0.0.1"), 0), 0)
-        port = server.address.port
-        server.createContext("/get") { ex ->
-            seen.add("GET " + ex.requestURI.toString() + " ua=" + ex.requestHeaders.getFirst("User-Agent") + " cookie=" + ex.requestHeaders.getFirst("Cookie"))
-            val b = "{\"ok\":1}".toByteArray()
-            ex.sendResponseHeaders(200, b.size.toLong()); ex.responseBody.use { it.write(b) }
+        server = FakeServer()
+        server.route("/get") { r ->
+            seen.add("GET " + r.target + " ua=" + r.headers["user-agent"] + " cookie=" + r.headers["cookie"])
+            FakeServer.Res(200, "{\"ok\":1}".toByteArray())
         }
-        server.createContext("/post") { ex ->
-            val body = String(ex.requestBody.readBytes(), Charsets.UTF_8)
-            seen.add("POST " + ex.requestURI + " type=" + ex.requestHeaders.getFirst("Content-Type") + " body=" + body)
-            val b = "posted".toByteArray()
-            ex.sendResponseHeaders(200, b.size.toLong()); ex.responseBody.use { it.write(b) }
+        server.route("/post") { r ->
+            seen.add("POST " + r.target + " type=" + r.headers["content-type"] + " body=" + r.body)
+            FakeServer.Res(200, "posted".toByteArray())
         }
-        server.createContext("/redirect") { ex ->
+        server.route("/redirect") {
             seen.add("redirect")
-            ex.responseHeaders.add("Location", "https://www.google.com/sorry/index")
-            ex.sendResponseHeaders(302, -1); ex.close()
+            FakeServer.Res(302, headers = mapOf("Location" to "https://www.google.com/sorry/index"))
         }
-        server.createContext("/sorry") { ex -> seen.add("FOLLOWED"); ex.sendResponseHeaders(200, -1); ex.close() }
-        server.createContext("/limit") { ex ->
-            val b = ByteArray(5)
-            ex.sendResponseHeaders(429, b.size.toLong()); ex.responseBody.use { it.write(b) }
-        }
-        server.createContext("/big") { ex ->
-            val b = ByteArray(300 * 1024) { 'a'.code.toByte() }
-            ex.sendResponseHeaders(200, b.size.toLong()); ex.responseBody.use { it.write(b) }
-        }
-        server.createContext("/slow") { ex ->
-            try { Thread.sleep(2000) } catch (e: InterruptedException) { }
-            ex.sendResponseHeaders(200, -1); ex.close()
-        }
+        server.route("/sorry") { seen.add("FOLLOWED"); FakeServer.Res(200) }
+        server.route("/limit") { FakeServer.Res(429, ByteArray(5)) }
+        server.route("/big") { FakeServer.Res(200, ByteArray(300 * 1024) { 'a'.code.toByte() }) }
+        server.route("/slow") { FakeServer.Res(200, delayMs = 2000) }
         server.start()
     }
 
-    @After fun stop() { server.stop(0) }
+    @After fun stop() { server.stop() }
 
     private fun transport(connectMs: Int = 2000, readMs: Int = 2000) =
         HttpsTransport({ u -> "http://127.0.0.1:" + port + u.removePrefix("https://").substringAfter('/').let { "/$it" } }, connectMs, readMs)
@@ -106,9 +89,9 @@ class HttpsTransportTest {
     }
 
     @Test fun noServerIsNoInternet() {
-        val closed = HttpServer.create(InetSocketAddress(InetAddress.getByName("127.0.0.1"), 0), 0)
-        val p = closed.address.port
-        closed.stop(0)
+        val closed = FakeServer()
+        val p = closed.port
+        closed.stop()
         val t = HttpsTransport({ "http://127.0.0.1:$p/x" })
         try { t.call("$mm/get", null); fail() } catch (e: TransportException) { assertEquals(TransportException.Kind.NO_INTERNET, e.kind) }
     }

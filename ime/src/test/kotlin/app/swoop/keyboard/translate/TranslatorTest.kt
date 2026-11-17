@@ -4,14 +4,11 @@ import app.kestrel.core.translate.ErrorCode
 import app.kestrel.core.translate.Http
 import app.kestrel.core.translate.HttpReply
 import app.kestrel.core.translate.Translation
-import com.sun.net.httpserver.HttpServer
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.net.InetAddress
-import java.net.InetSocketAddress
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit
@@ -101,23 +98,22 @@ class TranslatorTest {
     }
 
     @Test fun endToEndThroughTheRealTransportToAFakeServer() {
-        val server = HttpServer.create(InetSocketAddress(InetAddress.getByName("127.0.0.1"), 0), 0)
+        val server = FakeServer()
         val hits = LinkedBlockingQueue<String>()
-        server.createContext("/get") { ex ->
-            hits.add(ex.requestURI.rawQuery)
-            val b = mm("Voy a alquilar un coche").toByteArray()
-            ex.sendResponseHeaders(200, b.size.toLong()); ex.responseBody.use { it.write(b) }
+        server.route("/get") { r ->
+            hits.add(r.rawQuery ?: "")
+            FakeServer.Res(200, mm("Voy a alquilar un coche").toByteArray())
         }
         server.start()
         try {
-            val port = server.address.port
+            val port = server.port
             val t = Translator(HttpsTransport({ u -> "http://127.0.0.1:$port/" + u.removePrefix("https://").substringAfter('/') }), null)
             val q = LinkedBlockingQueue<String>()
             t.translate("I will rent a car") { q.add(it.text) }
             assertEquals("Voy a rentar un carro", q.poll(5, TimeUnit.SECONDS))
             assertEquals("q=I+will+rent+a+car&langpair=en%7Ces-MX&onlyprivate=1&mt=1", hits.poll())
         } finally {
-            server.stop(0)
+            server.stop()
         }
     }
 }
