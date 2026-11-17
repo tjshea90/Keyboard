@@ -34,7 +34,7 @@ class KeyboardPresenterTest {
     private val dp get() = app.resources.displayMetrics.density
     private val list = LexiconFile.build(listOf("for" to 900L, "fir" to 300L, "fur" to 100L, "hello" to 500L, "world" to 800L, "there" to 700L).map { LexiconFile.Entry(it.first, it.second) }, emptyList())
 
-    private inner class Rig(inputType: Int = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_MULTI_LINE, imeOptions: Int = 0, glidePref: Boolean = true, suggest: Boolean = false, autoFix: Boolean = false, words: ByteArray = list) {
+    private inner class Rig(inputType: Int = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_MULTI_LINE, imeOptions: Int = 0, glidePref: Boolean = true, suggest: Boolean = false, autoFix: Boolean = false, words: ByteArray = list, extra: (android.content.SharedPreferences.Editor) -> Unit = {}) {
         val act: Activity = Robolectric.buildActivity(Activity::class.java).setup().get()
         val et = EditText(act)
         val info = EditorInfo()
@@ -45,7 +45,7 @@ class KeyboardPresenterTest {
         init {
             File(app.filesDir, "glide_personal.txt").delete(); File(app.filesDir, "glide_habit.txt").delete()
             File(app.filesDir, "own_words.txt").delete()
-            app.getSharedPreferences(Prefs.FILE, 0).edit().putBoolean(Prefs.GLIDE, glidePref).putBoolean(Prefs.SUGGEST, suggest).putBoolean(Prefs.AUTOFIX, autoFix).putBoolean(Prefs.LEARN, true).commit()
+            app.getSharedPreferences(Prefs.FILE, 0).edit().clear().putBoolean(Prefs.GLIDE, glidePref).putBoolean(Prefs.SUGGEST, suggest).putBoolean(Prefs.AUTOFIX, autoFix).putBoolean(Prefs.LEARN, true).also(extra).commit()
             et.inputType = inputType; et.imeOptions = imeOptions
             act.setContentView(et)
             info.inputType = inputType; info.imeOptions = imeOptions
@@ -250,5 +250,36 @@ class KeyboardPresenterTest {
         val m = r.memory()
         assertEquals("hello ", r.text)
         assertTrue("the correction is remembered: $m", m.lines().any { it.startsWith("c hellp hello ") })
+    }
+
+    // ------------------------------------------------------------------ N7: options
+
+    @Test fun aLetterAfterPunctuationGetsItsSpaceAndTheSwitchTurnsItOff() {
+        val r = Rig(glidePref = false); for (c in "hello") r.tap(c.toString()); r.tap("."); r.tap("w")
+        assertEquals("hello. w", r.text)
+        val off = Rig(glidePref = false, extra = { it.putBoolean(Prefs.AUTOSPACE, false) }); for (c in "hello") off.tap(c.toString()); off.tap("."); off.tap("w")
+        assertEquals("hello.w", off.text)
+    }
+
+    @Test fun twoQuickSpacesMakeAFullStopAndTheSwitchTurnsItOff() {
+        val r = Rig(glidePref = false); for (c in "hello") r.tap(c.toString()); r.tap("space"); r.tap("space")
+        assertEquals("hello. ", r.text)
+        val off = Rig(glidePref = false, extra = { it.putBoolean(Prefs.DOUBLESPACE, false) }); for (c in "hello") off.tap(c.toString()); off.tap("space"); off.tap("space")
+        assertEquals("hello  ", off.text)
+    }
+
+    @Test fun aLoneIBecomesACapitalI() {
+        val r = Rig(glidePref = false, suggest = true); r.tap("i"); r.tap("space"); for (c in "am") r.tap(c.toString())
+        assertEquals("I am", r.text)
+        val im = Rig(glidePref = false, suggest = true); for (c in "i'm") im.tap(if (c == '\'') "'" else c.toString()); im.tap("space")
+        assertEquals("I'm ", im.text)
+        val off = Rig(glidePref = false, suggest = true, extra = { it.putBoolean(Prefs.CAPI, false) }); off.tap("i"); off.tap("space")
+        assertEquals("i ", off.text)
+    }
+
+    @Test fun theViewTakesItsLookFromTheSettings() {
+        val r = Rig(extra = { it.putBoolean(Prefs.NUMBERROW, false).putInt(Prefs.KEYHEIGHT, 3).putInt(Prefs.THEME, 2).putInt(Prefs.ACCENT, 3).putBoolean(Prefs.HAPTIC, false).putBoolean(Prefs.PREVIEW, false).putBoolean(Prefs.SOUND, true).putBoolean(Prefs.TRAIL, false) })
+        assertFalse(r.view.numberRow); assertEquals(1.3f, r.view.keyHeightScale, 0f); assertEquals(2, r.view.themeMode); assertEquals(Settings.ACCENTS[3].color, r.view.accent)
+        assertFalse(r.view.hapticsOn); assertFalse(r.view.keyPreview); assertTrue(r.view.soundOn); assertFalse(r.view.trailOn)
     }
 }
