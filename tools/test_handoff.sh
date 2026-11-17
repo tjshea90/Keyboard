@@ -78,8 +78,8 @@ t=json.load(open(sys.argv[1]))
 cmds=[h[\"command\"] for ev in t[\"hooks\"].values() for e in ev for h in e[\"hooks\"]]
 assert cmds and all(\"swoop-checkpoint-hooks\" in c for c in cmds)
 " "$D/tools/session-root-hooks.json"'
-check "signing/CERT_SHA256 is a 64-hex certificate pin, or UNSET until KB-003 creates the private key" 'grep -Eq "^([0-9a-f]{64}|UNSET)$" "$D/signing/CERT_SHA256"'
-check "there is NO public/dev signing key in the repo (the keyboard's key is private, plan 11.5)" '! git -C "$D" ls-files 2>/dev/null | grep -Eq "\.(jks|keystore|p12)$"'
+check "signing/CERT_SHA256 pins the certificate of the public dev key signing/dev/swoop-dev.p12" '[ "$(keytool -list -v -keystore "$D/signing/dev/swoop-dev.p12" -storetype PKCS12 -storepass swoop-dev -alias swoop-dev 2>/dev/null | sed -n "s/.*SHA256: *//p" | head -1 | tr -d ":" | tr "A-F" "a-f")" = "$(tr -d " \r\n" < "$D/signing/CERT_SHA256")" ]'
+check "the only keystore in the repo is the public dev key in signing/dev/" '! git -C "$D" ls-files 2>/dev/null | grep -E "\.(jks|keystore|p12)$" | grep -qv "^signing/dev/"'
 check "tools/MIRROR_MAIN is on or off" 'grep -Eq "^(on|off)$" "$D/tools/MIRROR_MAIN"'
 check "HANDOFF.md, BRIEF.md, TASKS.md, BUILDLOG.md and CLAUDE.md exist" '[ -f "$D/HANDOFF.md" ] && [ -f "$D/BRIEF.md" ] && [ -f "$D/TASKS.md" ] && [ -f "$D/BUILDLOG.md" ] && [ -f "$D/CLAUDE.md" ]'
 check "the app is readable through appinfo.sh (version, tag, asset) and only swoop-v tags count" '[ "$(bash "$D/tools/appinfo.sh" tag)" = "swoop-v$(bash "$D/tools/appinfo.sh" vname)" ] && [ -n "$(bash "$D/tools/appinfo.sh" asset)" ] && bash "$D/tools/appinfo.sh" of-tag swoop-v1.0 && ! bash "$D/tools/appinfo.sh" of-tag kestrel-v1.0'
@@ -136,7 +136,7 @@ git reset -q; rm -f leak.txt
 mkdir -p signing/dev; echo pub > signing/dev/swoop-dev.jks; echo priv > my-private.jks; truncate -s 91M huge.bin
 git add -A >/dev/null 2>&1
 bash tools/secretscan.sh >/dev/null 2>&1
-check "path guard unstages every keystore (Swoop has no public dev key) and a 91 MB file" '[ -z "$(git diff --cached --name-only | grep -e swoop-dev.jks -e my-private.jks -e huge.bin)" ]'
+check "path guard unstages a private keystore and a 91 MB file but keeps the public dev key" '[ -n "$(git diff --cached --name-only | grep -x signing/dev/swoop-dev.jks)" ] && [ -z "$(git diff --cached --name-only | grep -e my-private.jks -e huge.bin)" ]'
 git reset -q; rm -rf signing/dev my-private.jks huge.bin
 # the keyboard's private data: learning export, replay log, APK, a screenshot of the owner's screen, a journal
 mkdir -p personal replay; echo x > personal/en.snap; echo x > replay/a.bin; echo x > app-debug.apk; printf 'PNG' > Screenshot_2026.png; echo x > en.journal
@@ -154,23 +154,6 @@ mkdir -p core/src/test/resources; printf 'KESTREL-KEYBOARD-LEARNING 1\nend 0\n' 
 git add -A >/dev/null 2>&1
 check "secretscan allows a learning-export fixture under src/test" 'bash tools/secretscan.sh'
 git reset -q; rm -rf core
-
-# ---------------------------------------------------------------- the private signing key (plan 11.5): create / refuse to overwrite / unlock / wrong passphrase / pin
-SK="$T/sk"; mkdir -p "$SK"
-export SWOOP_SIGNING_DIR="$SK/signing" SWOOP_KEYSTORE_PROPS="$SK/ks.properties" SWOOP_TMP="$SK/tmp" SWOOP_KEYSTORE_PASSPHRASE="throwaway test passphrase 0123456789" SWOOP_KDF_ITER=2000
-if command -v keytool >/dev/null 2>&1 && command -v openssl >/dev/null 2>&1; then
-  check "signing-key create writes an encrypted key file and a 64-hex pin"  'bash tools/signing-key.sh create >/dev/null && [ -s "$SK/signing/swoop.jks.enc" ] && grep -Eq "^[0-9a-f]{64}$" "$SK/signing/CERT_SHA256"'
-  check "the encrypted key file holds no keystore password or key material in clear" '! grep -qa -e PKCS12 -e storepass -e swoop.p12 "$SK/signing/swoop.jks.enc"'
-  check "the key file records the PBKDF2 iteration count it was made with (so a stronger setting can be read back)" '[ "$(cat "$SK/signing/KDF_ITER")" = 2000 ]'
-  check "signing-key create REFUSES to overwrite an existing key"          '! bash tools/signing-key.sh create'
-  check "signing-key unlock writes keystore.properties only with the right passphrase and the pinned certificate" 'bash tools/signing-key.sh unlock >/dev/null && grep -q "^storeType=pkcs12" "$SK/ks.properties" && [ "$(bash tools/signing-key.sh fingerprint)" = "$(cat "$SK/signing/CERT_SHA256")" ]'
-  check "a wrong passphrase cannot unlock the key"                         '! SWOOP_KEYSTORE_PASSPHRASE="another long passphrase 9876543210" bash tools/signing-key.sh unlock'
-  check "a too-short passphrase is refused"                                '! SWOOP_KEYSTORE_PASSPHRASE="short" bash tools/signing-key.sh unlock'
-  check "unlock refuses when the pin file does not match the key"          'cp "$SK/signing/CERT_SHA256" "$SK/pin.bak"; printf "%064d\n" 0 | tr 0 a > "$SK/signing/CERT_SHA256"; ! bash tools/signing-key.sh unlock; R=$?; cp "$SK/pin.bak" "$SK/signing/CERT_SHA256"; [ "$R" = 0 ]'
-else
-  echo "  note  keytool/openssl missing: signing-key tests skipped"
-fi
-unset SWOOP_SIGNING_DIR SWOOP_KEYSTORE_PROPS SWOOP_TMP SWOOP_KEYSTORE_PASSPHRASE SWOOP_KDF_ITER
 
 # ---------------------------------------------------------------- autosave + push
 echo hi > a.txt

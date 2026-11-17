@@ -9,10 +9,10 @@
 #      seconds. Tags and manual dispatch only.
 #   2. Cheap gates first; a manual run does the gates only unless full_build is ticked.
 #
-# SIGNING (plan 11.5): the keyboard's key is PRIVATE. Every release APK must carry the certificate pinned in signing/CERT_SHA256, because
-# Android refuses an update signed by anything else - and that is the only thing that stops a malicious APK from replacing a keyboard.
-# While signing/CERT_SHA256 is UNSET (task KB-003 not done) a full build produces a DEBUG-signed test APK as a private workflow artifact and
-# publishes NOTHING. tools/verify-apk.sh checks the ARTIFACT's certificate, not just the key that went in.
+# SIGNING (owner decision 2026-11-17: "the other repos use github actions to build apks that github signs"): every release is signed on the runner with the PUBLIC dev key
+# committed in signing/dev/ (no secrets, no passphrase), exactly like the Kestrel browser repo. Every APK must carry the certificate pinned in signing/CERT_SHA256, because
+# Android refuses an update signed by anything else; tools/verify-apk.sh checks the ARTIFACT's certificate, not just the key that went in. (Trade-off, accepted by the owner: the key is
+# public, so anyone could sign an APK that Android accepts as an update of an installed Swoop; only install Swoop APKs from this repository's Releases.)
 #
 # GitHub creates the release tag itself (`gh release create --target`): a tag PUSH from the Claude sandbox is refused (403). This workflow COMMITS
 # NOTHING (a workflow that pushed would retrigger the autosave machinery); tools/record-release.sh writes BUILDLOG.md after the run is green.
@@ -49,7 +49,6 @@ jobs:
     timeout-minutes: 10
     outputs:
       full: ${{ steps.plan.outputs.full }}
-      signed: ${{ steps.plan.outputs.signed }}
     steps:
       - uses: actions/checkout@v5
         with:
@@ -63,19 +62,22 @@ jobs:
         run: |
           full=false
           if [ "$EVENT" = "push" ]; then full=true; elif [ "$FULL" = "true" ]; then full=true; fi
-          signed=false
-          grep -Eq '^[0-9a-f]{64}$' signing/CERT_SHA256 && signed=true
-          { echo "full=$full"; echo "signed=$signed"; } >> "$GITHUB_OUTPUT"
-          if [ "$full" = true ] && [ "$signed" = true ]; then
-            echo "FULL BUILD (tests, signed release APK, certificate check, publish)." >> "$GITHUB_STEP_SUMMARY"
-          elif [ "$full" = true ]; then
-            echo "FULL BUILD WITHOUT PUBLISHING: signing/CERT_SHA256 is UNSET (KB-003 not done), so this makes a debug-signed TEST APK (a workflow artifact) and releases nothing." >> "$GITHUB_STEP_SUMMARY"
-          else
-            echo "GATES ONLY. Re-run with **full_build** ticked, or create a Release tag, to build." >> "$GITHUB_STEP_SUMMARY"
-          fi
+          echo "full=$full" >> "$GITHUB_OUTPUT"
+          if [ "$full" = true ]; then echo "FULL BUILD (tests, signed release APK, certificate check, publish)." >> "$GITHUB_STEP_SUMMARY"
+          else echo "GATES ONLY. Re-run with **full_build** ticked, or create a Release tag, to build." >> "$GITHUB_STEP_SUMMARY"; fi
 
       - name: Gate - shell tooling self-test (save ladder, secret scan, privacy guards, workflow rules)
         run: bash tools/test_handoff.sh
+
+      - name: Gate - the signing key is the pinned one
+        run: |
+          GOT="$(keytool -list -v -keystore signing/dev/swoop-dev.p12 -storetype PKCS12 -storepass swoop-dev -alias swoop-dev 2>/dev/null | sed -n 's/.*SHA256: *//p' | head -1 | tr -d ':' | tr 'A-F' 'a-f')"
+          WANT="$(tr -d ' \r\n' < signing/CERT_SHA256)"
+          if [ -z "$GOT" ] || [ "$GOT" != "$WANT" ]; then
+            echo "::error::The signing key in signing/dev does not have the pinned certificate. expected $WANT got ${GOT:-unreadable}. An APK signed with it would NOT update the installed keyboard in place."
+            exit 1
+          fi
+          echo "Signing with the public dev key; certificate $WANT matches the pin." >> "$GITHUB_STEP_SUMMARY"
 
       - name: Gate - versionCode is not a downgrade
         run: |
@@ -109,57 +111,25 @@ jobs:
     if: needs.check.outputs.full == 'true'
     runs-on: ubuntu-latest
     permissions:
-      contents: write # publishes the Release (signed runs only)
+      contents: write # publishes the Release
     timeout-minutes: 30
     concurrency:
       group: release-swoop
       cancel-in-progress: false
-    env:
-      SIGNED: ${{ needs.check.outputs.signed }}
     steps:
       - uses: actions/checkout@v5
         with:
           persist-credentials: false
       - uses: ./.github/actions/setup-build
 
-      - name: Unlock the private signing key (signed runs only)
-        if: env.SIGNED == 'true'
-        env:
-          SWOOP_KEYSTORE_PASSPHRASE: ${{ secrets.SWOOP_KEYSTORE_PASSPHRASE }}
-        run: bash tools/signing-key.sh unlock
-
-      - name: Build the release APK (R8, signed with the private key)
-        if: env.SIGNED == 'true'
+      - name: Build the release APK (R8, signed with the dev key in signing/dev)
         run: ./gradlew :ime:assembleRelease --console=plain
 
       - name: Verify the APK itself (certificate pin, package, version, permissions, no GMS, size)
-        if: env.SIGNED == 'true'
         run: bash tools/verify-apk.sh
 
       - name: Publish the Release
-        if: env.SIGNED == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
           NOTE: ${{ inputs.note }}
         run: bash .github/scripts/publish-release.sh
-
-      - name: Build a debug-signed TEST apk (no signing key exists yet, nothing is published)
-        if: env.SIGNED != 'true'
-        run: ./gradlew :ime:assembleDebug --console=plain
-
-      - name: Verify the structure of the test APK (everything except the certificate)
-        if: env.SIGNED != 'true'
-        run: bash tools/verify-apk.sh --no-cert ime/build/outputs/apk/debug/ime-debug.apk
-
-      - name: Keep the test APK as a private workflow artifact (unsigned-pin runs only)
-        if: env.SIGNED != 'true'
-        uses: actions/upload-artifact@v4
-        with:
-          name: swoop-test-apk
-          path: ime/build/outputs/apk/debug/ime-debug.apk
-          retention-days: 7
-          if-no-files-found: error
-
-      - name: Remove the signing material from the workspace
-        if: always()
-        run: rm -f keystore.properties "$RUNNER_TEMP"/*.jks "$RUNNER_TEMP"/*.p12

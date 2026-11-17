@@ -5,7 +5,7 @@
 # certificate, and a wrong one gives a perfectly valid APK that Android refuses as an update (the owner would have to uninstall first and
 # lose what the keyboard learned unless they exported it). For a KEYBOARD the certificate is also the only thing that stops a malicious APK
 # from silently replacing it, so the certificate is checked on the ARTIFACT, not just on the keystore that went in.
-# The pin is signing/CERT_SHA256 (64 hex digits once KB-003 has created the private key; the word UNSET before that, which refuses every APK).
+# The pin is signing/CERT_SHA256 (the certificate of the PUBLIC dev key in signing/dev/).
 #
 #   bash tools/verify-apk.sh [path/to.apk]            full check (release APK, certificate pinned)
 #   bash tools/verify-apk.sh --no-cert [path/to.apk]  CI "check" runs on debug-signed test builds: everything except the certificate
@@ -30,7 +30,7 @@ if [ "$CERT" -eq 1 ]; then
   PIN="${SWOOP_CERT_PIN_FILE:-signing/CERT_SHA256}"   # (the env override is for the signing dry-run in tools/test_handoff.sh and by hand)
   WANT="$(norm < "$PIN" 2>/dev/null | head -c 64)"
   if ! printf '%s' "$WANT" | grep -Eq '^[0-9a-f]{64}$'; then
-    bad "signing/CERT_SHA256 is '${WANT:-missing}': the private signing key does not exist yet (task KB-003). No release APK may be published or installed."
+    bad "signing/CERT_SHA256 is '${WANT:-missing}': it must be the 64-hex certificate of signing/dev/swoop-dev.p12"
   else
     GOT=""
     if [ -n "$BT" ] && [ -x "$BT/apksigner" ]; then
