@@ -237,17 +237,25 @@ def type_round(rep, scene, field_value, tap_target, glide=True):
     # gliding
     hit = n = 0
     got_all = ""
+    lats = []
     for w in GLIDE_WORDS:
         try:
-            drive.glide_word(w)
+            ev0 = state().get("events", 0)
+            t_end = drive.glide_word(w)
         except Exception as e:
             rep.row(scene + " glide '%s'" % w, "FAIL", str(e)[:100])
             continue
-        time.sleep(0.5)
+        st = wait_state(lambda s: s.get("events", 0) > ev0, timeout=6.0, step=0.03)
+        if st.get("events", 0) > ev0:
+            lats.append(time.time() - t_end)
+        time.sleep(0.4)
     time.sleep(1.0)
     got_all = field_value()
     hit, n = words_hit(GLIDE_WORDS, got_all)
-    rep.row(scene + " glide summary", "INFO", "%d of %d words decoded right: %r" % (hit, n, got_all[:160]))
+    lats.sort()
+    lat = "median %.2fs, slowest %.2fs over %d words" % (lats[len(lats) // 2], lats[-1], len(lats)) if lats else "no word appeared"
+    rep.row(scene + " glide summary", "INFO", "%d of %d words decoded right: %r; finger-up to word on the page: %s" % (hit, n, got_all[:160], lat))
+    rep.event(scene, glide_hit=hit, glide_n=n, lat_median=(lats[len(lats) // 2] if lats else None), lat_max=(lats[-1] if lats else None))
 
 
 class PageValue:

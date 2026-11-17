@@ -234,4 +234,4 @@ def glide_word(word, km=None, jitter=None):
     if km is None:
         raise RuntimeError("the keyboard is not showing (no key map)")
     inject(path_points(word, km, jitter=jitter))
-    time.sleep(0.5)
+    return time.time()          # the moment the finger lifted (the caller measures how long the word takes to appear)
