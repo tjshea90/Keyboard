@@ -610,27 +610,42 @@ def scene_pages(rep, minutes):
             len(dones), paints[len(paints) // 2] if paints else None, paints[-1] if paints else None, dones[len(dones) // 2], dones[-1]))
 
 
-VIDEOS = ["https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4",
-          "https://test-videos.co.uk/vids/bigbuckbunny/mp4/h264/720/Big_Buck_Bunny_720_10s_5MB.mp4"]
+VIDEOS = ["https://test-videos.co.uk/vids/bigbuckbunny/mp4/h264/360/Big_Buck_Bunny_360_10s_1MB.mp4",
+          "https://test-videos.co.uk/vids/bigbuckbunny/mp4/h264/720/Big_Buck_Bunny_720_10s_5MB.mp4",
+          "https://test-videos.co.uk/vids/bigbuckbunny/mp4/h264/1080/Big_Buck_Bunny_1080_10s_10MB.mp4"]
+FILM_LINES = re.compile(r"player|film|stats|inline|hand ?over|native|playback|dropped|rebuffer|stall|decoder|video info|probe page", re.I)
+FILM_BAD = re.compile(r"\b(error|errors|failed|failure|stall|stalls|stalled|rebuffer\w*|timeout|timed out)\b", re.I)
 
 
 def _one_film(rep, url, seconds):
+    """Opens a 10 second film, presses play like a person (Kestrel never plays a film by itself), lets it run, closes the player (its own `stats` line is written then) and reads what Kestrel's Health lines said."""
+    name = url.rsplit("/", 1)[-1][:34]
     n0 = len(health_lines())
     open_url(url)
-    time.sleep(seconds)
-    new = health_lines()[n0:]
-    keep = [l.split("KestrelHealth")[-1].strip() for l in new if re.search(r"player|film|video|stall|buffer|stats|inline|hand", l, re.I)]
-    bad = [l for l in keep if re.search(r"error|fail|stall|rebuffer|timeout", l, re.I)]
-    rep.row("video " + url.rsplit("/", 1)[-1][:30], "WARN" if bad else "INFO", "%d player lines in %ds%s; first: %s" % (len(keep), seconds, ("; PROBLEMS: " + " | ".join(bad[:2])[:200]) if bad else "", (keep[0][:140] if keep else "none")))
-    for l in keep[-8:]:
-        rep.fact("video line: " + l[:200])
-    shot(rep, "video-%d" % len(rep.rows))
+    secs, line = wait_page_loaded(n0, timeout=60.0)
+    if secs is None:
+        rep.row("video " + name, "FAIL", "the page did not load within 60 s (last Health line: %s)" % line[-90:])
+        shot(rep, "video-%d-noload" % len(rep.rows))
+        sh("input keyevent KEYCODE_BACK", check=False)
+        return
+    time.sleep(2.0)
+    w, h = screen()
+    drive.tap(w // 2, int(h * 0.40))
+    time.sleep(min(6.0, seconds / 2.0))
+    shot(rep, "video-%d-playing" % len(rep.rows))
+    time.sleep(max(1.0, seconds - min(6.0, seconds / 2.0)))
     sh("input keyevent KEYCODE_BACK", check=False)
-    time.sleep(1.5)
+    time.sleep(2.5)
+    new = health_lines()[n0:]
+    keep = [l.split("KestrelHealth")[-1].strip() for l in new if FILM_LINES.search(l) and "ui prof" not in l and "cosmetic" not in l]
+    bad = [l for l in keep if FILM_BAD.search(l)]
+    rep.row("video " + name, "WARN" if bad else "INFO", "page loaded in %.1fs; %d player lines in %ds%s" % (secs, len(keep), seconds, ("; PROBLEMS: " + " | ".join(bad[:2])[:220]) if bad else ""))
+    for l in keep[-12:]:
+        rep.fact("video line: " + l[:210])
 
 
-def scene_video(rep, seconds=45):
-    """A film: does it start, how long does it take, do the player's own Health lines mention stalls or errors."""
+def scene_video(rep, seconds=14):
+    """Films: does the page load, does the film start when pressed, what do the player's own lines (picture bitrate, stalls, dropped frames) say."""
     for url in VIDEOS:
         try:
             _one_film(rep, url, seconds)
