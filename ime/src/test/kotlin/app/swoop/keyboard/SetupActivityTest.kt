@@ -63,7 +63,7 @@ class SetupActivityTest {
         val a = launch()
         for ((label, key, def) in listOf(Triple("Glide typing", Prefs.GLIDE, true), Triple("Glide trail", Prefs.TRAIL, true), Triple("Word suggestions", Prefs.SUGGEST, true), Triple("Fix typos automatically", Prefs.AUTOFIX, true),
             Triple("Capital I", Prefs.CAPI, true), Triple("Capital letters", Prefs.AUTOCAPS, true), Triple("Space after punctuation", Prefs.AUTOSPACE, true), Triple("Double space for a full stop", Prefs.DOUBLESPACE, true),
-            Triple("Slide on the space bar", Prefs.SPACESLIDE, true), Triple("Learn from my typing", Prefs.LEARN, true), Triple("Number row", Prefs.NUMBERROW, true), Triple("Key pop-up", Prefs.PREVIEW, true),
+            Triple("Slide on the space bar", Prefs.SPACESLIDE, true), Triple("Learn from my typing", Prefs.LEARN, true), Triple("Number row", Prefs.NUMBERROW, false), Triple("Key pop-up", Prefs.PREVIEW, true),
             Triple("Vibrate on key press", Prefs.HAPTIC, true), Triple("Sound on key press", Prefs.SOUND, false))) {
             assertEquals("$label starts as installed", def, prefs().getBoolean(key, def))
             tapText(a, label); assertEquals("$label was tapped", !def, prefs().getBoolean(key, def))
@@ -73,7 +73,7 @@ class SetupActivityTest {
 
     @Test fun theLiveKeyboardFollowsTheSettings() {
         val a = launch()
-        tapText(a, "Number row"); assertFalse(Settings(app).numberRow)
+        tapText(a, "Number row"); assertTrue(Settings(app).numberRow)
         tapText(a, "Large"); assertEquals(2, Settings(app).keyHeight)
         tapText(a, "Light"); assertEquals(2, Settings(app).theme)
         val a2 = Robolectric.buildActivity(SetupActivity::class.java).setup().get()           // a fresh screen shows what was chosen
@@ -91,8 +91,8 @@ class SetupActivityTest {
 
     @Test fun resetPutsEverythingBack() {
         val a = launch(); tapText(a, "Number row"); tapText(a, "Large")
-        assertFalse(Settings(app).numberRow)
-        Settings(app).reset(); assertTrue(Settings(app).numberRow); assertEquals(1, Settings(app).keyHeight)
+        assertTrue(Settings(app).numberRow)
+        Settings(app).reset(); assertFalse("the number row is off at install, like the photo", Settings(app).numberRow); assertEquals(1, Settings(app).keyHeight)
     }
 
     @Test fun aTabletKeepsTheColumnNarrow() {
