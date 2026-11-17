@@ -152,3 +152,7 @@
 ## 2026-11-17T03:03:36Z
 > The emulator run is going. The new diagnostics should show where the long press on the neon bar stops.
 <!-- sha:d55f213ef129 -->
+
+## 2026-11-17T03:11:04Z
+> Last emulator confirmation is running on the fixed build. If it still shows 0 failures, I'll ship 0.2.1-alpha1.
+<!-- sha:d57e745efc73 -->
