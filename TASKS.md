@@ -103,3 +103,22 @@
 - [x] Q-KB003 Signing key: ANSWERED 2026-11-17 by the owner: same as the other repos (public dev key committed, GitHub signs). No secret, no passphrase. The encrypted-key machinery (tools/signing-key.sh, make-signing-key.yml) was removed; it is in git history if a private key is ever wanted (that would need an uninstall + re-import).
 - [ ] Q-HEARTBEAT May the session create ONE recurring wake (every 2 hours) that resumes the work after a usage cut-off? It spends a little usage each time (plan Appendix G).
 - [ ] Q-LINKMETER KB-600 needs READ access to the public repo tjshea90/LinkMeter (mcp__claude-code-remote__add_repo, access read); Browser is already readable here. Ask only when KB-600 starts.
+
+## Owner requests 2026-11-17 (scheduled "one major release", branch ccr-9cd8405a-34e17r) - in the owner's words (condensed, numbering = the owner's)
+> "Build all of this into one major release update. Use as much time and usage as needed ... For any work in any other repo, be careful not to break or interfere with another Claude session"
+- [ ] M1 "model the keyboard layout exactly like the attached photo, except without the bottom bar, down arrow and globe (nothing under the space bar). And no emoji buttons or voice type button. It should have the settings and clipboard button. I like the spacing of the space bar and the bottom right button brings up special characters." (the photo did NOT arrive with the scheduled prompt: modelled on Gboard's phone/tablet layout: toolbar strip, number row, 3 letter rows, bottom row ?123 / , / space / . / action)
+- [ ] M2 "build a good clipboard into this app modeled after Gboard clipboard." (history of copied items, pin, delete, clear, paste by tap, off switch)
+- [ ] M3 "include an option in the settings to turn off the glide trail." (exists as Prefs.TRAIL: verify it is in the Settings screen)
+- [ ] M4 "an option in the settings to turn off the letters completely, leaving a blank panel that I can type with but it still works as though the letters are there."
+- [ ] M5 "if I press the button to use special characters ... once I type the special character, automatically switch back to the regular keyboard immediately, just like Gboard."
+- [ ] M6 "by default, automatically capitalize the first letter after punctuation marks which usually end a sentence."
+- [ ] M7 "at the top of the keyboard next to clipboard and settings icons, include a translate icon ... English to Mexican Spanish translation which works just like the linkmeter app. The keyboard can connect to the internet only for this function." (KB-600..602; INTERNET permission only for translate package)
+- [ ] M8 "when the detachable keyboard is at the bottom of the screen docked in place, make a way where i can squeeze it to make it less wide (an intuitive way), and move the squeezed keyboard left or right ... so my right hand doesn't have to travel as far while glide typing."
+- [ ] M9 "sometimes glide typing doesn't immediately work and only types one letter. Adjust the sensitivity to always glide unless i am clearly only pressing one key."
+- [ ] M10 "do everything possible to improve the glide word prediction accuracy" (word lists, frequency lists, studies, learning; rare words such as 'tui' must never beat common/learned words unless the glide is very clear)
+- [ ] M11 "if i type a word with a corresponding emoji available, put the emoji in the recommended words above the numbers ... if i select an emoji this way, erase the written word and replace it with the emoji."
+- [ ] M12 "put in the settings a dictionary, which i can add or remove words from. Added words will be predicted if i glide their pattern. Removed words will never be predicted."
+- [ ] M13 "optimize the keyboard word prediction as good as possible, research online how to make it excellent."
+- [ ] M14 "ensure that any keyboard learning or data is saved and doesn't get removed or deleted by an app update." (a signed update keeps app data; also add automatic backup copy + versioned migrations + test)
+- [ ] M15 "if a word is in the recommended words above the numbers, i can long press it to permanently delete it from recommended words and glide type."
+- [ ] M16 "once all work is completed, copy the fixes/improvements to the keyboard inside the kestrel browser app. Find a way to link ... the kestrel browser uses this keyboard but keeps its own floating navigation panel ... learned data shared, must not diverge." (Browser repo: touch only own branch ccr-9cd8405a-34e17r, never main, never another session's branch; do LAST)
