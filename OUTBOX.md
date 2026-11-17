@@ -204,3 +204,13 @@
 ## 2026-11-17T04:46:39Z
 > Four changes and a research question, plus a bug. The suggestion tap not working in a URL bar most likely comes from Chrome and Brave's inline autocomplete, which makes our "last glide" bookkeeping give up. I'm writing your requests into `TASKS.md` in your words first, then starting a research helper for the prediction sources while I fix the bug.
 <!-- sha:003c3384660e -->
+
+## 2026-11-17T04:59:59Z
+> Quick status while the emulator runs:
+>
+> - **Brave strip tap:** fixed and tested. The keyboard now keeps track of its glided word when an address bar completes text inline, and falls back to a safe replacement if it ever loses track.
+> - **Keys:** the 123 and globe keys are gone, and the space bar is 6.4 of 10 units wide. Hold the full stop or comma for the symbols grid, and hold the space bar to switch keyboards.
+> - **Research:** written up in `research/PREDICTION-SOURCES.md`.
+>
+> I'm now running the Android emulator test on the new layout before shipping.
+<!-- sha:24f68d5c0ded -->
