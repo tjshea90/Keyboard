@@ -41,3 +41,24 @@
 ## 2026-11-17T00:53:55Z
 > The repo is public now, so before the signing step I'm checking three things: that it really is public, how the earlier full CI build ended, and what the Browser's emulator workflow looks like (read-only).
 <!-- sha:1ddc9971f101 -->
+
+## 2026-11-17T00:58:40Z
+> The first release is blocked on one thing only you can do. The signing secret isn't set on the repo, so GitHub refused to create the signing key. Until it exists I can't sign a release that will update cleanly later.
+>
+> **What to do (about a minute, on github.com)**
+> 1. Open the Keyboard repo, then **Settings → Secrets and variables → Actions → New repository secret**.
+> 2. Name: `SWOOP_KEYSTORE_PASSPHRASE`.
+> 3. Value: **five or more random, unrelated words**, written as one line. The repo is public, so the encrypted key file is too, and a guessable sentence could be attacked offline. I raised the key file's slowdown to 10 million rounds, but a strong passphrase still matters.
+> 4. Reply "secret added". I then create the key once, build, sign and publish `swoop-v0.1.0-alpha1` through GitHub Actions, and give you the Release link.
+>
+> **Already done for the release**
+> - The repo is public. I updated the docs, hook text, Release text and CI notes that said "private", and added a README.
+> - The Actions test build ran green with a debug test APK. The signing path is tested locally, but the real signed build hasn't run yet.
+> - I started an emulator test on a GitHub runner (Android 10 emulator). It checks that the keyboard registers, can be switched on and chosen, shows in a text field, types real key taps, deletes with Backspace, accepts a glide, survives the globe key, and doesn't crash. It's the first test on a real Android. It's still running, and I'll check it in about 8 minutes and fix it if it fails.
+>
+> **Two things to know**
+> - **Chat is public now.** The hooks copy our chat into `INBOX.md`/`OUTBOX.md` in the repo, so never paste a secret, passphrase or anything personal here. Say so if you want those chat copies switched off. That would weaken resuming after a usage cut-off.
+> - **Not run yet:** the keyboard on the tablet or the phone, and Android 16.
+>
+> **Still open:** the secret (item 1 above), whether I may set a 2-hourly wake-up after usage cut-offs, and later the LinkMeter access and your browser's learning export.
+<!-- sha:4633ce8db64d -->
