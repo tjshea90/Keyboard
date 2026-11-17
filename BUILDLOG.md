@@ -2,3 +2,4 @@
 # Format the gates read:  | swoop-v<versionName> | code <versionCode> | <time> | <what changed>
 | swoop-v0.1.0-alpha1 | code 1 | 2026-11-17T01:16Z | First alpha: glide and tap typing, learning, setup and diagnostics screens, safe layout
 | swoop-v0.2.0-alpha1 | code 2 | 2026-11-17T02:31Z | 0.2.0-alpha1: number row, instant glide start and faster trail, quicker key pop-up, word suggestions while tapping, learning from typing (words, pairs, corrections, erase and retype), automatic typo fix with undo, options (space after punctuation, double space, capitals, themes), redesigned settings screen
+| swoop-v0.2.1-alpha1 | code 3 | 2026-11-17T03:23Z | 0.2.1-alpha1: floating keyboard (press and hold the glowing bar, drag, resize by the corners, double-tap to dock) and a fix for the keyboard window being as tall as the screen (found by my own tests; use this build instead of 0.2.0). Proven on an Android 10 emulator in CI: typing, glide, floating, the app behind still tappable
