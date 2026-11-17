@@ -239,18 +239,16 @@ def type_round(rep, scene, field_value, tap_target, glide=True):
         if reset_field:
             reset_field()
         t0 = time.time()
-        miss = drive.type_text_fast(ph) if all(c.isalpha() and c.islower() or c == ' ' for c in ph) else drive.type_text(ph)     # plain words at a human 6 keys a second, anything with a capital or a symbol key by key
+        miss = drive.type_text(ph)          # lower-case words at a human 6 keys a second in one go; a capital, a digit or a symbol through Shift / ?123 the way a thumb does it
+        took = time.time() - t0
         time.sleep(0.8)
         got = field_value()
         d = edit_distance(ph.lower(), got.lower().rstrip())
         tot += 1
         ok += 1 if d == 0 else 0
-        rep.row(scene + " tap '%s'" % ph[:24], "OK" if d == 0 else "WARN", "got %r (distance %d, %.1fs%s)" % (got[:50], d, time.time() - t0, ", %d keys missing" % miss if miss else ""))
-        # clear for the next phrase: select all + delete through the page (long Backspace is slow): the driver uses repeated Backspace through the keyboard
-        km2 = drive.read_keymap() or km
-        if "back" in km2.keys:
-            drive.inject_taps([km2.keys["back"]] * (len(got) + 2), hold=0.03, gap=0.06)
-        time.sleep(0.6)
+        rep.row(scene + " tap '%s'" % ph[:24], "OK" if d == 0 else "WARN", "got %r (distance %d, %.1fs for %d characters%s)" % (got[:50], d, took, len(ph), ", %d keys missing" % miss if miss else ""))
+        drive.backspaces(len(got) + 2)          # clear for the next phrase (Backspace through the key map of the page the keyboard shows now)
+        time.sleep(0.8)
     rep.row(scene + " tap summary", "INFO", "%d of %d phrases exact" % (ok, tot))
     if not glide:
         return
@@ -351,15 +349,15 @@ def center(node):
 
 
 def find_edit(root, *hints):
-    """The first EditText whose hint or text contains one of the hints (case-insensitive)."""
+    """The first EditText whose hint or text contains one of the hints (case-insensitive); with no hints (or none matching) the first EditText of Kestrel's own window: the address box holds the address, so its hint is not in the dump."""
     if root is None:
         return None
-    for n in root.iter("node"):
-        if n.get("class") == "android.widget.EditText":
-            blob = (n.get("hint", "") + " " + n.get("text", "") + " " + n.get("content-desc", "")).lower()
-            if any(h.lower() in blob for h in hints):
-                return n
-    return None
+    edits = [n for n in root.iter("node") if n.get("class") == "android.widget.EditText" and n.get("package", KESTREL_PKG) == KESTREL_PKG]
+    for n in edits:
+        blob = (n.get("hint", "") + " " + n.get("text", "") + " " + n.get("content-desc", "")).lower()
+        if any(h.lower() in blob for h in hints):
+            return n
+    return edits[0] if edits else None
 
 
 HEALTH_LOADED = re.compile(r"page loaded host=(\S*).*?paint=(\S+).*?done=(\S+)")
@@ -388,6 +386,12 @@ def address_text():
     return n.get("text", "") if n is not None else None
 
 
+def last_start_input():
+    """Swoop's newest 'startInput' diagnostics line (what kind of field it was told about), or ''."""
+    lines = [l for l in adb("logcat", "-d", "-s", "SwoopDiag:D", check=False).splitlines() if "startInput" in l]
+    return lines[-1].split("SwoopDiag:")[-1].strip() if lines else ""
+
+
 def scene_address(rep):
     """Typing into Kestrel's own address-and-search box with Swoop (the keyboard shows the browser layout there), pressing Go, and watching the page load."""
     open_url("http://localhost:%d/" % PORT)
@@ -403,12 +407,13 @@ def scene_address(rep):
             continue
         drive.tap(*center(node))
         time.sleep(1.5)
-        km = drive.wait_keymap("letters", need=["k61"], timeout=12)
-        if km is None:
+        km = drive.wait_settled(timeout=15)
+        if km is None or km.page != "letters":
             rep.row(scene + " keyboard", "FAIL", "Swoop did not show for the address box (keyboard showing=%s)" % keyboard_showing())
             shot(rep, "address-nokeyboard")
             continue
-        rep.row(scene + " keyboard", "OK", "Swoop shows; browser layout keys: %s" % ", ".join(k for k in ("k2f", "k2e", "go") if k in km.keys))
+        si = last_start_input()
+        rep.row(scene + " keyboard", "OK" if "omnibox=true" in si else "WARN", "Swoop shows; browser layout keys: %s; field line: %s" % (", ".join(k for k in ("k2f", "k2e", "go") if k in km.keys), si[:150]))
         t0 = time.time()
         if mode == "tap":
             drive.type_text(what)
@@ -418,6 +423,8 @@ def scene_address(rep):
                 time.sleep(0.6)
         time.sleep(0.8)
         got = address_text()
+        if got is not None and expected.strip() not in got:
+            rep.fact("the address box after typing held %r (wanted %r)" % (got, expected))
         shot(rep, "address-typed-%d" % len(rep.rows))
         ok = got is not None and got.strip() == expected.strip()
         rep.row(scene + " text", "OK" if ok else "WARN", "the box holds %r, wanted %r (%.1fs of typing)" % (got, expected, time.time() - t0))
