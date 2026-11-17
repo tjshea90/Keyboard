@@ -57,12 +57,12 @@ class InlineReportsTest {
         r.act { enter() }; r.typeAll("y"); assertEquals("abX\nyc", r.text); assertEquals("abX\ny", r.c.before)
     }
 
-    @Test fun aReportThatNoEditExplainsInsideACallIsStillNoticedAsAForeignChange() {
-        // the app rewrites the text from inside the edit call (a text watcher): the report differs from what the keyboard predicted, and the next key repairs the picture from the editor
+    @Test fun aChangeNoEditExplainsInsideACallIsNoticedAtTheNextKey() {
+        // a text watcher in the app appends "!" the moment "c" has been typed and the editor reports both states inside the call: the keyboard explains the first with its own edit, and the second one repairs its picture at the next key
         val r = rig(caps = 0); r.typeAll("ab")
-        r.ed.inlineSink = { u -> r.c.onSelectionUpdate(u[0], u[1], u[2], u[3]) }
-        r.ed.userInsert("ZZ")                     // somebody else's change, reported at once outside any call
-        r.act { type("c") }
-        assertEquals("abZZc", r.text); assertEquals(r.text, r.c.before)
+        val sink = r.ed.inlineSink!!; var once = true
+        r.ed.inlineSink = { u -> sink(u); if (once && r.text.endsWith("c")) { once = false; r.ed.userInsert("!") } }
+        r.c.type("c"); r.c.type("d"); r.sync(); r.check()
+        assertEquals("abc!d", r.text); assertEquals(r.text, r.c.before)
     }
 }
