@@ -461,8 +461,8 @@ class KeysView(context: Context) : View(context) {
         val left = chipsLeft()
         if (list.isEmpty()) {
             val miss = SystemClock.uptimeMillis() < noWordUntil
-            val msg = if (miss) (notice ?: context.getString(R.string.strip_no_word)) else if (glideEnabled && page == Page.LETTERS && (kind == FieldKind.TEXT || kind == FieldKind.SEARCH)) context.getString(R.string.strip_hint) else ""
-            if (msg.isEmpty()) return
+            if (!miss) return                                                        // the icons are spread across the strip then (no hint text next to them)
+            val msg = notice ?: context.getString(R.string.strip_no_word)
             text.color = if (miss) cAccent else cMuted; text.textSize = h * 0.38f
             c.drawText(TextUtils.ellipsize(msg, text, width - left - dp(8f), TextUtils.TruncateAt.END).toString(), (left + width) / 2f, (h - gap) / 2f + pad - (fm.ascent + fm.descent) / 2f, text)
             return
