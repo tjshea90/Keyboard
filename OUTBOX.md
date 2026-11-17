@@ -373,3 +373,19 @@
 >
 > The project work itself is already complete and pushed, so this only adds a recap for the next session. I'll confirm the saved paths once the helper reports back.
 <!-- sha:28804facf6d7 -->
+
+## 2026-11-17T17:56:16Z
+> The handoff is saved and pushed, and the project work itself was already finished and recorded before this.
+>
+> - **Handoff files:** `.handoff/handoff.md` and `.handoff/handoff.json` in the Keyboard repo, plus a dated copy in `.handoff/handoffs/2026-11-17/`.
+> - **`AGENTS.md`:** the tool created it in the Keyboard repo with the same learnings.
+> - **`CLAUDE.md` learnings:** it got a new marked "Session Learnings" block. The older block (four notes, not marked) stayed beside it, so I renamed it "Older learnings (kept by hand)" and removed two bullets the new block repeats.
+> - **Auto-restore:** the tool warned that the session hooks won't restore this handoff on their own, because my working folder differs from the project folder those hooks use. Nothing is lost: a new session starts from `bash tools/resume.sh` and the latest checkpoint card (ckpt 313).
+>
+> What I told you in the final report still stands:
+> - **Releases:** Swoop 0.5.0-alpha3 and Kestrel G alpha66 are released and recorded. Neither has been tried on your tablet or phone.
+> - **Open for you:**
+>   1. Install alpha3 on the tablet and the phone and try the 16 items.
+>   2. Decide whether you want a private signing key for a live learned-data link between Swoop and Kestrel.
+>   3. Optionally set Key height to Extra large on the tablet.
+<!-- sha:9a985be2e43f -->
