@@ -419,3 +419,50 @@
 >
 > The in-progress run is still typing on the emulator. I'll read its report when the scheduled wake-up fires (about 19:01 UTC), fix what it shows, then run the real-sites and video pass at full speed.
 <!-- sha:51ed6aeb010d -->
+
+## 2026-11-17T21:54:25Z
+> **Status: the testing and the improvements are done and saved to GitHub, but nothing is released yet and none of it has run on your real tablet or phone.**
+>
+> **What the emulator runs showed (Android 10, tablet-shaped, real Firefox engine, full speed)**
+> - **Typing through Swoop works in Kestrel.**
+>   - Tapped phrases came out exact in all six kinds of page text box. One question mark was dropped once in the search box.
+>   - All 20 glided words were right in every kind of box.
+>   - A glided word showed up on the page within about 0.1 to 0.2 seconds at worst.
+> - **The link works as designed.**
+>   - Swoop gets the browser layout in Kestrel's address bar.
+>   - In a private tab Swoop learns nothing.
+>   - Autocorrect and one Backspace to undo it work inside web pages.
+> - **Ten real websites loaded fine.** First paint took 0.2 to 2.8 seconds and loading finished in 0.25 to 5.9 seconds. The slowest was apnews.com, with 54 blocked requests.
+> - **The long run stopped at site 11 of 14.** The emulated Android's own watchdog restarted the system after about 40 minutes. The film test never ran.
+> - **Two minor misses in that run.** After a Google results page my script couldn't find the address box, and "helo" and "wierd" aren't autocorrected, on purpose.
+>
+> **What I improved in the keyboard**
+> Swoop's word suggestions only knew book English, for example "on my" suggested "own". I added word pairs counted from 1.5 million everyday human-written sentences.
+>
+> | Measure (lab, no device) | Before | After |
+> | :- | :- | :- |
+> | Keystrokes saved by tapping suggestions | 46.2% | 51.7% |
+> | Right word on the strip after two letters | 63.4% | 77.0% |
+> | Next-word hits | 24.2% | 28.7% |
+>
+> - A test on separate human-written sentences showed the same direction.
+> - Shorthand like "thx", "brb" and "omw" was being turned into other words (25 of 88 tested). That is now 0.
+> - The core and keyboard-app unit tests pass.
+> - The new text data stays on GitHub's machines. Only the word counts are kept, with the required credit added.
+>
+> **Other sessions**
+> - **Kestrel repo:** I touched only my own branch. I started no builds there. A check just now shows its build queue is empty. The other session there has been idle for about 3.5 hours. I read its files and nothing else, though I mistakenly ran one `cd` into that folder (changed nothing).
+> - **Keyboard repo:** no other session is active, and no other branch changed.
+>
+> **Still open**
+> 1. Re-run the page and film tests in smaller pieces so the emulator doesn't hang.
+> 2. Release Swoop 0.5.0-alpha4 and Kestrel alpha68. Before each, I'll confirm no other build is running.
+> 3. Write the Kestrel-side findings into a new file on my own branch for the other session, without editing its files.
+> 4. Still unproven anywhere:
+>    - The navigation panel opening Swoop floating.
+>    - The keyboard picker.
+>    - Handing over what Kestrel's own keyboard learned.
+>    - Real-thumb accuracy.
+>    - Speed and memory on the real tablet.
+> 5. The 5 Mbit hotspot imitation is still an optional second pass.
+<!-- sha:9b55f326bb64 -->
