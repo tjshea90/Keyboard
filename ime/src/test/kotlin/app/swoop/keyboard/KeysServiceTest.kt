@@ -53,11 +53,11 @@ class KeysServiceTest {
         assertTrue("the keyboard must request no permission yet (tools/expected-permissions.txt): ${pi.requestedPermissions?.toList()}", pi.requestedPermissions == null || pi.requestedPermissions!!.isEmpty())
     }
 
-    @Test fun serviceCreatesItsViewAndIgnoresKeysWithoutAnEditor() {
+    @Test fun serviceCreatesItsViewAndSurvivesALifecycleWithoutAnEditor() {
         val s = Robolectric.setupService(KeysService::class.java)
         val view = s.onCreateInputView()
         assertTrue(view is KeysView)
-        s.onKey(Key.Ch("a")); s.onKey(Key.Backspace); s.onKey(Key.Go)   // no input connection: must not crash
+        s.onFinishInput(); s.onUpdateSelection(0, 0, 0, 0, -1, -1)          // no input connection: must not crash
         assertTrue(!s.onEvaluateFullscreenMode())
     }
 
