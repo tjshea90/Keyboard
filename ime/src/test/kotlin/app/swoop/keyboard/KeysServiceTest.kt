@@ -45,7 +45,8 @@ class KeysServiceTest {
         pi.services?.filter { it.exported }?.forEach { exported.add(it.name) }
         pi.receivers?.filter { it.exported }?.forEach { exported.add(it.name) }
         pi.providers?.filter { it.exported }?.forEach { exported.add(it.name) }
-        assertEquals(setOf("app.swoop.keyboard.SetupActivity", "app.swoop.keyboard.KeysService"), exported)
+        // ReceiveLearnedActivity: owner request 17, started with an EXPLICIT intent (no intent filter) by the Kestrel browser to hand over what its own keyboard learned; it only shows a question and adds nothing without a tap
+        assertEquals(setOf("app.swoop.keyboard.SetupActivity", "app.swoop.keyboard.KeysService", "app.swoop.keyboard.ReceiveLearnedActivity"), exported)
     }
 
     @Test fun noPermissionsAreRequested() {

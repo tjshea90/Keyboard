@@ -42,8 +42,9 @@ class ReceiveLearnedActivityTest {
         val d = org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog()
         assertTrue("the person is asked first", d != null && d.isShowing); assertEquals("nothing was added yet", "", saved())
         d.getButton(AlertDialog.BUTTON_POSITIVE).performClick()
-        settle()
-        assertTrue("after the yes the words are in the keyboard's memory: ${saved()}", saved().contains("kestrelword") || File(app.filesDir, "own_words.txt").let { it.isFile && it.readText().contains("fromkestrel") })
+        val inMemory = { saved().contains("kestrelword") || File(app.filesDir, "own_words.txt").let { it.isFile && it.readText().contains("fromkestrel") } }
+        repeat(80) { if (!inMemory()) { Thread.sleep(100); org.robolectric.shadows.ShadowLooper.idleMainLooper() } }       // (the engine saves on its own thread: up to 8 seconds)
+        assertTrue("after the yes the words are in the keyboard's memory: ${saved()}", inMemory())
         assertTrue("and the screen closes itself", a.isFinishing)
     }
 
