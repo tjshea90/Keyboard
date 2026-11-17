@@ -20,14 +20,13 @@ set -uo pipefail
 D="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"; cd "$D" || exit 0
 
 # ---- PATH GUARD: unstage (never block) key material by NAME and files GitHub would refuse ----------------------------------
-# Names: keystores, .env files, *.pem and friends must never be committed (Swoop has NO public dev key: the signing key is private, plan 11.5;
-# the passphrase-encrypted keystore signing/swoop.jks.enc has a different extension on purpose).
+# Names: keystores, .env files, *.pem and friends must never be committed (the one exception is the PUBLIC dev key in signing/dev/, owner decision 2026-11-17).
 # Size: GitHub rejects a push that contains a file over 100 MB, and that would wedge EVERY later autosave push, so anything over
 # 90 MB is unstaged too. Both are reported on stderr; the rest of the commit goes ahead.
 while IFS= read -r F; do
   [ -z "$F" ] && continue
   BADWHY=""
-  if printf '%s\n' "$F" | grep -qE '(^|/)(keystore\.properties|\.env(\..*)?|id_rsa[^/]*|local\.properties)$|\.(pem|p12|key|jks|keystore)$'; then BADWHY="key material"; fi
+  if printf '%s\n' "$F" | grep -E '(^|/)(keystore\.properties|\.env(\..*)?|id_rsa[^/]*|local\.properties)$|\.(pem|p12|key|jks|keystore)$' | grep -qv '^signing/dev/'; then BADWHY="key material"; fi
   # Swoop's private data (plan 11.6): learned data, replay logs, APKs and pictures of the owner's screen must never reach the repo.
   if [ -z "$BADWHY" ] && printf '%s\n' "$F" | grep -qE '(^|/)(personal|replay|exports?-private|owner-data)/|\.(apk|aab|journal|snap|replay)$|(^|/)(glide_personal|own_words)\.txt$'; then BADWHY="learned data / replay log / APK"; fi
   if [ -z "$BADWHY" ] && printf '%s\n' "$F" | grep -qiE '\.(png|jpe?g|webp|heic|gif|mp4|mov|webm)$' \

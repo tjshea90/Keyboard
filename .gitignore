@@ -10,14 +10,15 @@ local.properties
 captures/
 *.hprof
 
-# PRIVATE signing material (plan 11.5): the keystore never lives in the repo in the clear. The passphrase-encrypted
-# signing/swoop.jks.enc (extension .enc on purpose) is the only form that may be committed.
+# Private signing material never goes in the repo. The PUBLIC dev key in signing/dev/ is the one intentional exception (owner decision 2026-11-17).
 keystore.properties
 *.jks
 *.keystore
 *.p12
 *.pem
 *.key
+!signing/dev/*.p12
+!signing/dev/*.jks
 .env
 .env.*
 
