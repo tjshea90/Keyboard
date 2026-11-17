@@ -42,7 +42,7 @@ class ImeLayoutTest {
         for (kind in FieldKind.values()) for (page in Page.values()) {
             val rows = ImeLayout.rows(page, false, kind)
             val ks = keys(rows)
-            assertTrue("$kind/$page needs a space", ks.any { it is Key.Ch && it.text == " " })
+            if (kind != FieldKind.PHONE) assertTrue("$kind/$page needs a space", ks.any { it is Key.Ch && it.text == " " })   // a phone number has no spaces
             assertTrue("$kind/$page needs the action key", ks.any { it === Key.Go })
             assertTrue("$kind/$page needs backspace", ks.any { it === Key.Backspace })
             if (kind != FieldKind.NUMBER && kind != FieldKind.PHONE) for (r in rows) assertTrue(r.sumOf { it.weight.toDouble() } <= 10.001)
