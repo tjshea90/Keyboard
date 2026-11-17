@@ -34,17 +34,18 @@ class KeyboardPresenterTest {
     private val dp get() = app.resources.displayMetrics.density
     private val list = LexiconFile.build(listOf("for" to 900L, "fir" to 300L, "fur" to 100L, "hello" to 500L, "world" to 800L, "there" to 700L).map { LexiconFile.Entry(it.first, it.second) }, emptyList())
 
-    private inner class Rig(inputType: Int = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_MULTI_LINE, imeOptions: Int = 0, glidePref: Boolean = true) {
+    private inner class Rig(inputType: Int = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_MULTI_LINE, imeOptions: Int = 0, glidePref: Boolean = true, suggest: Boolean = false, autoFix: Boolean = false, words: ByteArray = list) {
         val act: Activity = Robolectric.buildActivity(Activity::class.java).setup().get()
         val et = EditText(act)
         val info = EditorInfo()
         val view = KeysView(app)
-        val host = GlideHost(app, Executor { it.run() }, Executor { it.run() }) { list }
+        val host = GlideHost(app, Executor { it.run() }, Executor { it.run() }) { words }
         val presenter: KeyboardPresenter
         val ic: android.view.inputmethod.InputConnection
         init {
             File(app.filesDir, "glide_personal.txt").delete(); File(app.filesDir, "glide_habit.txt").delete()
-            app.getSharedPreferences(Prefs.FILE, 0).edit().putBoolean(Prefs.GLIDE, glidePref).commit()
+            File(app.filesDir, "own_words.txt").delete()
+            app.getSharedPreferences(Prefs.FILE, 0).edit().putBoolean(Prefs.GLIDE, glidePref).putBoolean(Prefs.SUGGEST, suggest).putBoolean(Prefs.AUTOFIX, autoFix).putBoolean(Prefs.LEARN, true).commit()
             et.inputType = inputType; et.imeOptions = imeOptions
             act.setContentView(et)
             info.inputType = inputType; info.imeOptions = imeOptions
@@ -159,5 +160,88 @@ class KeyboardPresenterTest {
         r.ev(MotionEvent.ACTION_DOWN, x, y); r.ev(MotionEvent.ACTION_MOVE, x - 12 * dp, y); r.ev(MotionEvent.ACTION_MOVE, x - 12 * dp - 33 * dp, y); r.ev(MotionEvent.ACTION_UP, x - 50 * dp, y)
         assertEquals("hello ", r.text)                      // (Robolectric does not deliver the arrow keys to the EditText: the cursor itself is checked in InputConnectionBridgeTest)
         assertTrue(r.view.candidatesForTest().isEmpty()); assertTrue(r.memory().contains("hello"))
+    }
+
+    // ------------------------------------------------------------------ N4 / N6: suggestions and learning while tapping
+
+    private val tapList = LexiconFile.build(listOf("the" to 90_000_000L, "that" to 40_000_000L, "hello" to 9_000_000L, "world" to 6_000_000L, "work" to 9_500_000L, "help" to 7_000_000L, "hellp" to 10L, "from" to 20_000_000L)
+        .map { LexiconFile.Entry(it.first, it.second * 200L) } + LexiconFile.Entry("zzfiller", 400_000_000_000L), emptyList())
+
+    @Test fun tappingShowsCompletionsInTheStripEvenWithGlideTypingOff() {
+        val r = Rig(glidePref = false, suggest = true, words = tapList); r.relayout()
+        r.tap("w"); r.tap("o")
+        assertTrue("the strip offers completions: ${r.view.candidatesForTest()}", r.view.candidatesForTest().containsAll(listOf("world", "work")))
+        assertEquals("wo", r.text)
+    }
+
+    @Test fun tappingAWordInTheStripReplacesWhatWasTypedAndAddsASpace() {
+        val r = Rig(glidePref = false, suggest = true, words = tapList)
+        r.tap("h"); r.tap("e"); r.tap("l")
+        assertTrue(r.view.candidatesForTest().contains("hello"))
+        r.presenter.onCandidate("hello"); r.report()
+        assertEquals("hello ", r.text)
+        assertTrue("the strip moves on to what may follow", r.view.candidatesForTest().none { it == "hello" })
+    }
+
+    @Test fun theTypedWordInQuotesCanBeKept() {
+        val r = Rig(glidePref = false, suggest = true, words = tapList)
+        for (c in "kestrel") r.tap(c.toString())
+        val lit = r.view.candidatesForTest().first()
+        assertEquals("\u201Ckestrel\u201D", lit)
+        r.presenter.onCandidate(lit); r.report()
+        assertEquals("kestrel ", r.text)
+    }
+
+    @Test fun aSpaceFixesAnObviousTypoAndOneBackspaceTakesItBack() {
+        val r = Rig(glidePref = false, suggest = true, autoFix = true, words = tapList)
+        for (c in "teh") r.tap(c.toString())
+        r.tap("space")
+        assertEquals("the ", r.text)
+        r.tap("backspace")
+        assertEquals("one Backspace gives back what was typed", "teh", r.text)
+        r.tap("space")
+        assertEquals("and it is not fixed a second time", "teh ", r.text)
+    }
+
+    @Test fun withTheAutomaticFixOffATypoStaysAsTyped() {
+        val r = Rig(glidePref = false, suggest = true, autoFix = false, words = tapList)
+        for (c in "teh") r.tap(c.toString()); r.tap("space")
+        assertEquals("teh ", r.text)
+    }
+
+    @Test fun aWordKnownToTheListIsNeverFixed() {
+        val r = Rig(glidePref = false, suggest = true, autoFix = true, words = tapList)
+        for (c in "hellp") r.tap(c.toString()); r.tap("space")
+        assertEquals("hellp ", r.text)
+    }
+
+    @Test fun typedWordsAreLearnedIntoTheMemoryFile() {
+        val r = Rig(glidePref = false, suggest = true, words = tapList)
+        for (c in "hello") r.tap(c.toString()); r.tap("space"); for (c in "world") r.tap(c.toString()); r.tap("space")
+        val m = r.memory()
+        assertTrue("word learned: $m", m.lines().any { it.startsWith("w hello ") }); assertTrue(m.lines().any { it.startsWith("w world ") })
+        assertTrue("the pair hello world", m.lines().any { it.startsWith("p hello world ") })
+    }
+
+    @Test fun nothingIsLearnedOrSuggestedInAPasswordField() {
+        val r = Rig(inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD, glidePref = false, suggest = true, words = tapList)
+        for (c in "hello") r.tap(c.toString()); r.tap("space")
+        assertTrue(r.view.candidatesForTest().isEmpty()); assertEquals("", r.memory())
+    }
+
+    @Test fun withSuggestionsOffTheStripStaysEmptyButTheKeyboardStillLearns() {
+        val r = Rig(glidePref = false, suggest = false, words = tapList)
+        for (c in "hello") r.tap(c.toString()); r.tap("space")
+        assertTrue(r.view.candidatesForTest().isEmpty())
+        assertTrue(r.memory().lines().any { it.startsWith("w hello ") })
+    }
+
+    @Test fun erasingAWordAndRetypingItTeachesTheCorrection() {
+        val r = Rig(glidePref = false, suggest = false, words = tapList)
+        for (c in "hellp") r.tap(c.toString()); r.tap("space")
+        r.tap("backspace"); r.tap("backspace"); r.tap("o"); r.tap("space")
+        val m = r.memory()
+        assertEquals("hello ", r.text)
+        assertTrue("the correction is remembered: $m", m.lines().any { it.startsWith("c hellp hello ") })
     }
 }
