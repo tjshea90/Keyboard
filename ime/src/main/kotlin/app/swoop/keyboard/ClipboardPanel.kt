@@ -94,7 +94,7 @@ class ClipboardPanel(context: Context, private val keys: KeysView) : View(contex
             rowTop += h + gap; pending.clear(); rowMax = 0f
         }
         for (it in items) {
-            val sl = StaticLayout.Builder.obtain(it.text, 0, it.text.length, tp, (cw - dp(24f)).toInt().coerceAtLeast(1)).setMaxLines(MAX_LINES).setEllipsize(TextUtils.TruncateAt.END).setAlignment(Layout.Alignment.ALIGN_NORMAL).build()
+            val sl = StaticLayout.Builder.obtain(it.text, 0, it.text.length, tp, (cw - dp(46f)).toInt().coerceAtLeast(1)).setMaxLines(MAX_LINES).setEllipsize(TextUtils.TruncateAt.END).setAlignment(Layout.Alignment.ALIGN_NORMAL).build()
             pending.add(it to sl); rowMax = maxOf(rowMax, sl.height.toFloat())
             if (pending.size == c) flush()
         }
