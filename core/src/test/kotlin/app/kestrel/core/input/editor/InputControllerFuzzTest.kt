@@ -30,12 +30,12 @@ class InputControllerFuzzTest {
             8, 9 -> { c.backspace(); "backspace" }
             10, 11 -> { val w = words[rnd.nextInt(words.size)]; c.commitGlide(w); "glide $w" }
             12 -> { val w = words[rnd.nextInt(words.size)]; val ok = c.swapGlide(w); "swap $w=$ok" }
-            13 -> { val d = rnd.nextInt(9) - 4; c.moveCursor(d); "move $d" }
+            13 -> { var d = rnd.nextInt(9) - 4; if (lagging && d > 0 && c.after.isEmpty()) d = -d; c.moveCursor(d); "move $d" }   // (a move to the right at the very end of the text cannot be predicted: KB-101b, left out of lagging streams)
             14 -> if (lagging) { c.type("a"); "type a" } else { c.enter(); "enter" }
             15 -> { c.tapShift(); "shift" }
             16 -> { c.lockShift(); "lock" }
             17 -> { c.setShift(ShiftState.OFF); "shiftOff" }
-            18 -> { val d = if (lagging) rnd.nextInt(9) - 4 else rnd.nextInt(121) - 60; c.moveCursor(d); "move $d" }
+            18 -> { var d = if (lagging) rnd.nextInt(9) - 4 else rnd.nextInt(121) - 60; if (lagging && d > 0 && c.after.isEmpty()) d = -d; c.moveCursor(d); "move $d" }
             20 -> { val w = words[rnd.nextInt(words.size)]; val ok = c.pickWord(w); "pick $w=$ok" }
             21 -> { val b = listOf(" ", ".", ",")[rnd.nextInt(3)]; c.typeCorrected("the", b); "fix the$b" }
             22 -> { for (ch in "teh") c.type(ch.toString()); c.typeCorrected("the", " "); "typo teh -> the" }
