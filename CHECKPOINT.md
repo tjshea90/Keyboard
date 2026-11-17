@@ -1,13 +1,13 @@
-# CHECKPOINT 390 — read me first, then TASKS.md
+# CHECKPOINT 397 — read me first, then TASKS.md
 
-**Written:** 2026-11-17T22:18:40Z · **tests:** all 1 fast checks green (gradle suite: see ship.sh)
-**Branch:** `ccr-5531c47b-hl1gzo` · **builds on:** `ae73cdc` (this checkpoint is the commit after it)
+**Written:** 2026-11-17T22:28:09Z · **tests:** all 1 fast checks green (gradle suite: see ship.sh)
+**Branch:** `ccr-5531c47b-hl1gzo` · **builds on:** `3fbce27` (this checkpoint is the commit after it)
 
 ## Just done
-Swoop 0.5.0-alpha4 RELEASED (run 44187302136 green: check, test-jvm, build with R8, certificate verified on the APK, Release published: https://github.com/tjshea90/Keyboard/releases/tag/swoop-v0.5.0-alpha4, APK swoop-0.5.0-alpha4.apk 1.97 MB sha256 f129882187bd..., recorded in BUILDLOG.md). Kestrel alpha68 (gecko code 169) gated on my Browser branch ccr-5531c47b-hl1gzo (commit cef3338a: vendored keyboard engine + word list re-synced via tools/sync-keyboard-core.sh, KEYBOARD_PIN, docs/handoff/ALPHA68_RELEASE_NOTE.txt, SIM_FINDINGS_2026-11-17.md) and dispatched ONCE: Browser run 44188402392 (check green, test-js + test-jvm running, then build-gecko). The Browser android.yml had no queued or running run before (the other lane ccr-e89b9dfe-pl3lk5 shipped alpha67 at 18:27Z and is idle). Simulation runs in flight: typing quick with the NEW word list (44187463954), pages full speed (44186817159), pages hotspot (44187266683, queued behind it), film run that now PRESSES PLAY (just dispatched). dailysim.py: per-site/per-film hang recovery, address test restarts from the local page, film scene taps play + reads player lines.
+BOTH RELEASES PUBLISHED AND RECORDED: Swoop 0.5.0-alpha4 (https://github.com/tjshea90/Keyboard/releases/tag/swoop-v0.5.0-alpha4, code 9, APK 1.97 MB, run 44187302136, commit 7323b76, en.klx inside the APK = the new list sha aec767c5...) and Kestrel G 0.3.0-alpha68 (https://github.com/tjshea90/Browser/releases/tag/kestrel-g-v0.3.0-alpha68, code 169, APK 96.1 MB + .dm, Browser run 44188402392, commit cef3338a, recorded by 24421394 on my branch ccr-5531c47b-hl1gzo; the other lane ccr-e89b9dfe-pl3lk5 untouched and idle; next free number for it alpha69 / code 170). Simulation read: pages (2 runs: 10 sites load fine at full speed; pypi.org and a 1080p film each took the EMULATOR's graphics down: SurfaceFlinger on software GL, system_server watchdog loop; not a Kestrel defect shown), films (Kestrel's own player inline: first picture 1202 ms, 0 stalls, 5 dropped of ~300 frames, software decoder), findings in Browser docs/handoff/SIM_FINDINGS_2026-11-17.md. After the release I also found the book pairs made the strip offer vulgar words unprompted (alpha3: 15 of 5000 contexts, alpha4: 6): Suggester.VULGAR now keeps them out of NEXT-WORD guesses only (0 of 5000, test PredictionYardstickTest.theStripNeverOffersAVulgarWordOnItsOwn, SuggesterTest) - committed on my branch, NOT in alpha4. dailysim.py: pypi.org and the 1080p film removed from the lists, a scene stops after 3 dead sites, film check no longer flags '0 stall(s)'.
 
 ## Do this next
-1) WHEN Browser run 44188402392 is green (mcp__github__actions_list list_workflow_jobs, resource_id 44188402392, owner tjshea90 repo Browser): mcp__github__get_release_by_tag kestrel-g-v0.3.0-alpha68 must show the APK, then run bash /home/user/Browser/tools/record-release.sh kestrel-g-v0.3.0-alpha68 with the IDENTICAL note = the text of /home/user/Browser/docs/handoff/ALPHA68_RELEASE_NOTE.txt (absolute path, never cd into Browser); if the run FAILS read mcp__github__get_job_logs (failed_only) and fix on my own branch only, never ship a tag twice; 2) read the simulation artifacts (typing 44187463954 = the new list on the emulator; pages 44186817159; hotspot 44187266683; the new film run) and add the numbers to docs/handoff/SIM_FINDINGS_2026-11-17.md in the Browser repo (new file, my branch) and research/LEARNING_RESULTS.md; 3) final plain-words report to the owner with the two Release links on their own lines; end the reply with the amcheckpoint block (health red) because the active-memory hook asked for it.
+1) read the typing run 44187463954 (new word list on the emulator; artifact daily-sim-typing) and the hotspot pages run 44187266683 when they finish: any regression in Swoop alpha4 (typing exact? autocorrect? memory) means a Swoop alpha5 (also carries the VULGAR filter); if clean, the vulgar filter simply waits for the next release; 2) final plain-words report to the owner with both Release links (already published, recorded in both BUILDLOGs) and what is NOT proven on the real tablet/phone; end the reply with the amcheckpoint block (health red) as the active-memory hook asked.
 
 *(resuming? CLAUDE.md's "FIRST ACTION OF EVERY SESSION" says how; the briefing is tools/resume.sh. Do that first, or autosave may stay off all session.)*
 
@@ -16,6 +16,7 @@ Swoop 0.5.0-alpha4 RELEASED (run 44187302136 green: check, test-jvm, build with 
 
 ## Last ten checkpoints
 ```
+  67fccbc ckpt 390: Swoop 0.5.0-alpha4 RELEASED (run 44187302136 green: check, test-jvm, build wit
   7323b76 ckpt 386: gated swoop-v0.5.0-alpha4 (ime code 9) and pushed it: handoff self-test, unit 
   d40bb1f ckpt 380: R17c: the long run (daily-sim suite=all, full speed, run 44164818105, 20:01-20
   6d47af1 ckpt 369: R17c: emulator run 3 (typing quick, full speed, adb root) = FIRST FULL SUCCESS
@@ -25,8 +26,7 @@ Swoop 0.5.0-alpha4 RELEASED (run 44187302136 green: check, test-jvm, build with 
   ac28c95 ckpt 328: Keyboard test suites green again after today's work (3 policy / ordering fixes
   73e11f5 ckpt 324: daily-sim driver fixed after the first runs (runs 44145772330 / 44146747558 / 
   1e98758 ckpt 320: R17b4 Kestrel hand-over coded + tested in the Browser repo on my branch (HandO
-  1b1466f ckpt 319: R17b2/b3 Kestrel side coded in the Browser repo on MY branch only (auto-checkp
 ```
 
-(2 automatic checkpoint(s) since the last deliberate one — the
+(6 automatic checkpoint(s) since the last deliberate one — the
 session was still mid-step. `git diff` against it shows what changed.)
