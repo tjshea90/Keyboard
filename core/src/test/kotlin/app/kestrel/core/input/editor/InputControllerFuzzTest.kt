@@ -48,6 +48,7 @@ class InputControllerFuzzTest {
         val start = listOf("", "hello world", "x".repeat(130), "line one\nline two")[rnd.nextInt(4)]
         val log = ArrayList<String>()
         var firstForeign: String? = null
+        val traceLines = ArrayList<String>()
         val r = Rig(start, if (rnd.nextBoolean()) start.length else rnd.nextInt(start.length + 1), multiline = rnd.nextInt(4) != 0,
             action = if (rnd.nextInt(5) == 0) ImeActions.SEARCH else ImeActions.UNSPECIFIED)
         try {
@@ -58,12 +59,14 @@ class InputControllerFuzzTest {
                     r.ed.updates.clear(); r.c.startInput(FieldInfo(initialSelStart = r.ed.selS, initialSelEnd = r.ed.selE)); r.check(); continue
                 }
                 val f0 = r.foreign
-                log.add(op(r, rnd, external, lazy))
+                val d0 = op(r, rnd, external, lazy); log.add(d0)
+                if (System.getenv("SWOOP_TRACE_SEED") == seed.toString()) traceLines.add("#$i $d0 -> believed ${r.c.selStart} editor ${r.ed.selS} composing '${r.c.composing}' glide ${r.c.lastGlide?.text?.length} expected [${r.c.pendingForTest()}] queue ${r.ed.updates.map { "${it[0]}${if (it[2] >= 0) "c" else ""}" }}")
                 if (lazy) { repeat(rnd.nextInt(3)) { r.deliverOne() }; while (r.ed.updates.size > MAX_LAG) r.deliverOne() } else { r.sync(); r.check() }
                 if (r.foreign > f0 && firstForeign == null) firstForeign = "op #$i '${log.last()}' after '${log.getOrNull(log.size - 2)}' (text ...'${r.text.takeLast(20).replace("\n", "\\n")}')"
             }
             r.sync(); r.check()
         } catch (e: Throwable) {
+            System.getenv("SWOOP_TRACE_FILE")?.let { java.io.File(it).writeText(traceLines.takeLast(40).joinToString("\n")) }
             throw AssertionError("first foreign report: $firstForeign [${r.firstForeignInfo}]; seed $seed (lazy=$lazy external=$external flaky=$flaky) start='${start.take(20).replace("\n", "\\n")}' first ops: ${log.take(10)} last ops: ${log.takeLast(8)} text='${r.text.takeLast(40).replace("\n", "\\n")}': ${e.message}", e)
         }
     }
