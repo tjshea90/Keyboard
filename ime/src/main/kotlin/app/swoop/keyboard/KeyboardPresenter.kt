@@ -150,7 +150,8 @@ class KeyboardPresenter(
         literalShown = null
         if (res.typed.isNotEmpty() && !res.typedKnown) {
             val lit = "\u201C" + res.typed + "\u201D"
-            if (res.autoCorrect != null) { strip.add(res.autoCorrect); strip.add(lit) } else strip.add(lit)
+            val fix = res.autoCorrect
+            if (fix != null) { strip.add(fix); strip.add(lit) } else strip.add(lit)
             literalShown = lit
         }
         for (w in res.words) if (strip.size < 3 && strip.none { it.equals(w, ignoreCase = true) }) strip.add(w)
@@ -159,7 +160,7 @@ class KeyboardPresenter(
 
     override fun onGlideMove(xs: FloatArray, ys: FloatArray, count: Int) {
         if (!glideOn) return
-        if (suggestSeq != -1) { suggestSeq++; latest = null }                             // a glide began: no tap suggestion may land on the strip now
+        suggestSeq++; latest = null                                                        // a glide began: no tap suggestion may land on the strip now
         val (p2, p1) = session.context()
         glide.engine.preview(xs, ys, count, p1, p2) { res -> post(Runnable { if (view?.isGliding == true) session.onPreview(res) }) }
     }
