@@ -32,6 +32,7 @@ class GlideHost(
         loadPersonal = { if (personalFile.isFile) personalFile.readText() else null },
         savePersonal = { text -> writeAtomically(personalFile, text) },
         previewExecutor = previewExecutor,
+        saveOwn = { text -> saveOwn(text) },
     )
 
     private var preparedFor = ""

@@ -105,6 +105,7 @@ class KeysView(context: Context) : View(context) {
 
     // ---- glide (KB-103)
     private var glideEnabled = false
+    private var suggestionsEnabled = false
     private var armed = false                   // the finger went down on a letter: it may turn into a glide
     private var gliding = false
     private var glideDown: KeySpec? = null
@@ -144,11 +145,14 @@ class KeysView(context: Context) : View(context) {
     /** Glide typing on or off (off in password fields: the guesses would show what is being typed). Switching it changes the height: the strip of guesses sits above the keys. */
     fun setGlideEnabled(on: Boolean) { if (glideEnabled != on) { glideEnabled = on; if (!on) { cands = emptyList(); gn = 0 }; rectsW = -1; requestLayout(); invalidate() } }
 
+    /** Word suggestions while tapping on or off: the strip above the keys is there for them even when glide typing is off. */
+    fun setSuggestionsEnabled(on: Boolean) { if (suggestionsEnabled != on) { suggestionsEnabled = on; if (!on && !glideEnabled) { cands = emptyList(); gn = 0 }; rectsW = -1; requestLayout(); invalidate() } }
+
     fun showCandidates(words: List<String>) { cands = words; noWordUntil = 0L; dyn() }
     fun clearCandidates() { if (cands.isNotEmpty() || noWordUntil != 0L) { cands = emptyList(); noWordUntil = 0L; dyn() } }
     fun showNoWord() { cands = emptyList(); noWordUntil = SystemClock.uptimeMillis() + NO_WORD_MS; handler.removeCallbacks(noWordOff); handler.postDelayed(noWordOff, NO_WORD_MS); dyn() }
     val isGliding: Boolean get() = gliding
-    private fun stripPx() = if (glideEnabled) dp(STRIP_H_DP) else 0f
+    private fun stripPx() = if (glideEnabled || suggestionsEnabled) dp(STRIP_H_DP) else 0f
 
     /** Everything in flight stops (the keyboard closed or the field changed). */
     fun reset() {
@@ -297,7 +301,7 @@ class KeysView(context: Context) : View(context) {
         val fm = text.fontMetrics
         if (cands.isEmpty()) {
             val miss = SystemClock.uptimeMillis() < noWordUntil
-            val msg = if (miss) context.getString(R.string.strip_no_word) else if (page == Page.LETTERS && (kind == FieldKind.TEXT || kind == FieldKind.SEARCH)) context.getString(R.string.strip_hint) else ""
+            val msg = if (miss) context.getString(R.string.strip_no_word) else if (glideEnabled && page == Page.LETTERS && (kind == FieldKind.TEXT || kind == FieldKind.SEARCH)) context.getString(R.string.strip_hint) else ""
             if (msg.isEmpty()) return
             text.color = if (miss) cAccent else cMuted; text.textSize = h * 0.38f
             c.drawText(TextUtils.ellipsize(msg, text, width - dp(8f), TextUtils.TruncateAt.END).toString(), width / 2f, (h - gap) / 2f + pad - (fm.ascent + fm.descent) / 2f, text)
@@ -394,7 +398,7 @@ class KeysView(context: Context) : View(context) {
     private fun pressDown(x: Float, y: Float) {
         handler.removeCallbacks(repeat); clearHold()
         armed = false; gliding = false; stripDown = -1
-        if (glideEnabled && y < stripPx() + pad) { stripDown = chipAt(x, y); dyn(); return }   // a guess in the strip was touched
+        if (stripPx() > 0f && y < stripPx() + pad) { stripDown = chipAt(x, y); dyn(); return }   // a guess in the strip was touched
         removeCallbacks(fadeStep); gn = 0; fadeStart = 0L
         val k = keyAt(x, y); down = k; light(k)
         spaceDown = (k?.key as? Key.Ch)?.text == " "; sliding = false; slideStartX = x; slideAnchorX = x
