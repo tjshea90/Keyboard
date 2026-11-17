@@ -92,6 +92,11 @@ class KeysService : InputMethodService() {
     override fun onComputeInsets(outInsets: Insets) {
         super.onComputeInsets(outInsets)
         val r = root ?: return
+        if (!r.floating && r.squeezed && r.height > 0) {            // a narrow docked keyboard: only it takes touches, the app shows (and takes touches) on both sides
+            outInsets.touchableInsets = Insets.TOUCHABLE_INSETS_REGION
+            outInsets.touchableRegion.set(r.touchRegion())
+            return
+        }
         if (!r.floating || r.height <= 0) return
         val h = maxOf(r.height, window?.window?.decorView?.height ?: 0)
         Diag.d("onComputeInsets floating root=${r.height} decor=${window?.window?.decorView?.height} -> content/visible top=$h region=${r.touchRegion().bounds.flattenToString()}")

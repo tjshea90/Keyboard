@@ -10,6 +10,7 @@ import android.graphics.Region
 import android.graphics.drawable.GradientDrawable
 import android.os.Handler
 import android.os.Looper
+import android.os.Build
 import android.os.SystemClock
 import android.view.Gravity
 import android.view.HapticFeedbackConstants
@@ -46,6 +47,20 @@ class GripBar(context: Context) : View(context) {
         fun gripDrop()
         /** A double tap: dock. */
         fun gripDock()
+        /** Docked: the end arrow on [side] (0 left, 1 right) was dragged [dx] pixels from where the finger went down; the width at that moment is the reference. */
+        fun gripSqueezeStart(side: Int) {}
+        fun gripSqueeze(side: Int, dx: Float) {}
+        /** Docked: two fingers pinch the bar; [scale] is the distance between them now over the distance when they went down. */
+        fun gripPinchStart() {}
+        fun gripPinch(scale: Float) {}
+        /** Docked and narrow: the bar is dragged sideways by [dx] pixels (the whole keyboard follows). */
+        fun gripSlide(dx: Float) {}
+        /** The squeeze / slide gesture ended: save. */
+        fun gripSqueezeEnd() {}
+        /** Double tap on a narrow docked bar: full width again. */
+        fun gripFullWidth() {}
+        /** True when the docked keyboard is narrower than the screen. */
+        fun gripSqueezed(): Boolean = false
     }
     var host: Host? = null
     var accent = 0xFF1F6FEB.toInt(); set(v) { field = v; invalidate() }
@@ -57,6 +72,8 @@ class GripBar(context: Context) : View(context) {
     private val box = RectF()
     private var downX = 0f; private var downY = 0f; private var lastX = 0f; private var lastY = 0f
     private var moved = false; private var dragging = false
+    private var mode = 0                 // 0 none/detach, 1 squeeze from the left arrow, 2 from the right arrow, 3 pinch, 4 slide
+    private var pinchStart = 0f; private var pinchPointer = -1
     private var lastTapAt = Long.MIN_VALUE / 2
     private val longPress = Runnable { Diag.d("grip long press fired floating=$floating dragging=$dragging"); if (!floating && !dragging) { performHapticFeedback(HapticFeedbackConstants.LONG_PRESS); dragging = true; moved = true; host?.gripDetach(lastX, lastY) } }
 
@@ -73,15 +90,47 @@ class GripBar(context: Context) : View(context) {
         box.set(cx - len / 2 - 5 * d, cy - th / 2 - 3 * d, cx + len / 2 + 5 * d, cy + th / 2 + 3 * d); c.drawRoundRect(box, 8 * d, 8 * d, paint)
         paint.color = if (floating) lighten(accent) else accent
         box.set(cx - len / 2, cy - th / 2, cx + len / 2, cy + th / 2); c.drawRoundRect(box, th / 2, th / 2, paint)
+        if (!floating) {                       // the squeeze arrows at both ends: drag one inwards (or pinch the bar) to make the keyboard narrower
+            paint.style = Paint.Style.STROKE; paint.strokeCap = Paint.Cap.ROUND; paint.strokeWidth = 2.4f * d; paint.color = accent
+            val a = 5f * d
+            for (side in 0..1) {
+                val x = if (side == 0) 20f * d else width - 20f * d; val dir = if (side == 0) 1f else -1f
+                path.reset(); path.moveTo(x - dir * a * 0.6f, cy - a); path.lineTo(x + dir * a * 0.6f, cy); path.lineTo(x - dir * a * 0.6f, cy + a); c.drawPath(path, paint)
+                path.reset(); path.moveTo(x - dir * a * 2.2f, cy - a); path.lineTo(x - dir * a, cy); path.lineTo(x - dir * a * 2.2f, cy + a); c.drawPath(path, paint)
+            }
+            paint.style = Paint.Style.FILL
+        }
     }
+    private val path = Path()
 
     private fun half(x: Int) = x + (255 - x) / 2
     private fun lighten(c: Int): Int = 0xFF000000.toInt() or (half((c shr 16) and 255) shl 16) or (half((c shr 8) and 255) shl 8) or half(c and 255)
 
+    private fun pinchDistance(e: MotionEvent): Float = if (e.pointerCount < 2) 0f else Math.abs(e.getRawX(0) - e.getRawX(1)).let { dx -> if (Build.VERSION.SDK_INT >= 29) dx else dx }
+
     override fun onTouchEvent(e: MotionEvent): Boolean {
         val rx = e.rawX; val ry = e.rawY
+        if (!floating) {
+            // two fingers on the bar: pinch to squeeze the keyboard
+            if (e.actionMasked == MotionEvent.ACTION_POINTER_DOWN && e.pointerCount == 2) {
+                handler.removeCallbacks(longPress); mode = 3; pinchStart = Math.max(pinchDistance(e), 1f); moved = true; host?.gripPinchStart(); return true
+            }
+            if (mode == 3) {
+                when (e.actionMasked) {
+                    MotionEvent.ACTION_MOVE -> if (e.pointerCount >= 2) host?.gripPinch(pinchDistance(e) / pinchStart)
+                    MotionEvent.ACTION_POINTER_UP, MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> { host?.gripSqueezeEnd(); mode = 0; moved = false; dragging = false }
+                }
+                return true
+            }
+        }
         when (e.actionMasked) {
             MotionEvent.ACTION_DOWN -> {
+                mode = 0
+                if (!floating) {
+                    val z = ARROW_ZONE_DP * d
+                    if (e.x < z) mode = 1 else if (e.x > width - z) mode = 2
+                    if (mode != 0) { host?.gripSqueezeStart(mode - 1); downX = rx; downY = ry; lastX = rx; lastY = ry; moved = false; dragging = false; parent?.requestDisallowInterceptTouchEvent(true); performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP); return true }
+                }
                 Diag.d("grip down raw=${rx.toInt()},${ry.toInt()} floating=$floating")
                 downX = rx; downY = ry; lastX = rx; lastY = ry; moved = false; dragging = false
                 parent?.requestDisallowInterceptTouchEvent(true)
@@ -89,6 +138,9 @@ class GripBar(context: Context) : View(context) {
             }
             MotionEvent.ACTION_MOVE -> {
                 val dx = rx - downX; val dy = ry - downY
+                if (mode == 1 || mode == 2) { moved = true; host?.gripSqueeze(mode - 1, dx); return true }
+                if (mode == 4) { host?.gripSlide(rx - lastX); lastX = rx; lastY = ry; return true }
+                if (!floating && !dragging && host?.gripSqueezed() == true && Math.abs(dx) > SLOP_DP * 2 * d && Math.abs(dx) > Math.abs(dy)) { handler.removeCallbacks(longPress); mode = 4; moved = true; host?.gripSlide(rx - lastX); lastX = rx; lastY = ry; return true }
                 if (floating) {
                     if (!moved && Math.hypot(dx.toDouble(), dy.toDouble()) > SLOP_DP * d) moved = true
                     if (moved) host?.gripDrag(rx - lastX, ry - lastY)
@@ -100,7 +152,9 @@ class GripBar(context: Context) : View(context) {
             }
             MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
                 handler.removeCallbacks(longPress)
+                if (mode != 0) { host?.gripSqueezeEnd(); mode = 0; moved = false; dragging = false; return true }
                 if (e.actionMasked == MotionEvent.ACTION_UP) {
+                    if (!moved && !floating && host?.gripSqueezed() == true) { val now = SystemClock.uptimeMillis(); if (now - lastTapAt < DOUBLE_TAP_MS) { lastTapAt = Long.MIN_VALUE / 2; host?.gripFullWidth() } else lastTapAt = now }
                     if (moved) host?.gripDrop()
                     else if (floating) { val now = SystemClock.uptimeMillis(); if (now - lastTapAt < DOUBLE_TAP_MS) { lastTapAt = Long.MIN_VALUE / 2; host?.gripDock() } else lastTapAt = now }
                 }
@@ -113,7 +167,9 @@ class GripBar(context: Context) : View(context) {
     override fun onDetachedFromWindow() { handler.removeCallbacks(longPress); super.onDetachedFromWindow() }
 
     companion object {
-        const val HEIGHT_DP = 18f
+        const val HEIGHT_DP = 22f
+        /** The ends of the bar (this wide) are the squeeze arrows. */
+        const val ARROW_ZONE_DP = 52f
         const val LONG_PRESS_MS = 350L
         const val SLOP_DP = 4f
         const val DOUBLE_TAP_MS = 320L
@@ -152,6 +208,10 @@ class KeyboardRoot(context: Context) : FrameLayout(context), GripBar.Host {
     private var wDp = 0f                                        // 0 = the default width for this screen
     private var hMul = 1f
     private var settings: Settings? = null
+    /** The docked keyboard's width as a fraction of the screen (1 = full width) and where it stands (0..1 of the free room): squeezed with two fingers or the bar's arrows, moved by dragging the bar. */
+    private var dockFrac = 1f; private var dockX = 0.5f
+    val squeezed: Boolean get() = !floating && dockFrac < 0.995f
+    private var sqStartW = 0; private var sqStartLeft = 0; private var pinchW0 = 0
     /** How far the keyboard was dragged since it detached: letting go near the bottom docks it only after a real drag, so a long press that is released at once leaves it floating. */
     private var travelled = 0f
 
@@ -185,6 +245,7 @@ class KeyboardRoot(context: Context) : FrameLayout(context), GripBar.Host {
         grip.accent = st.accentColor
         posX = st.floatX / 1000f; posY = st.floatY / 1000f; wDp = st.floatWDp.toFloat(); hMul = FloatingMath.clampHeightMul(st.floatHMul)
         floatEnabled = st.floatEnabled && !safe
+        dockFrac = if (safe) 1f else st.dockFrac / 1000f; dockX = st.dockX / 1000f
         val want = floatEnabled && st.floating && !previewOnly
         if (want != floating) setFloating(want, save = false) else applyMode()
     }
@@ -202,7 +263,7 @@ class KeyboardRoot(context: Context) : FrameLayout(context), GripBar.Host {
         panel.measure(MeasureSpec.makeMeasureSpec(pw, MeasureSpec.EXACTLY), MeasureSpec.makeMeasureSpec(0, MeasureSpec.UNSPECIFIED))
         return panel.measuredHeight
     }
-    private fun panelWidthPx(): Int = if (!floating) ViewGroup.LayoutParams.MATCH_PARENT else Math.round(FloatingMath.clampWidthDp(if (wDp > 0f) wDp else FloatingMath.defaultWidthDp(screenW() / d), screenW() / d) * d)
+    private fun panelWidthPx(): Int = if (!floating) (if (dockFrac >= 0.995f) ViewGroup.LayoutParams.MATCH_PARENT else Math.round(dockFrac * screenW())) else Math.round(FloatingMath.clampWidthDp(if (wDp > 0f) wDp else FloatingMath.defaultWidthDp(screenW() / d), screenW() / d) * d)
 
     private fun setFloating(on: Boolean, save: Boolean = true) {
         if (floating == on || (on && previewOnly)) return
@@ -235,6 +296,9 @@ class KeyboardRoot(context: Context) : FrameLayout(context), GripBar.Host {
             val w = MeasureSpec.getSize(widthMeasureSpec).let { if (it > 0) it else screenW() }
             val h = MeasureSpec.getSize(heightMeasureSpec).let { if (it > 0 && MeasureSpec.getMode(heightMeasureSpec) != MeasureSpec.UNSPECIFIED) it else screenH() }
             lp.leftMargin = FloatingMath.posF(posX, w - pw); lp.topMargin = FloatingMath.posF(posY, h - ph)
+        } else if (dockFrac < 0.995f) {
+            val w = MeasureSpec.getSize(widthMeasureSpec).let { if (it > 0) it else screenW() }
+            lp.gravity = Gravity.BOTTOM or Gravity.LEFT; lp.leftMargin = Math.round(dockX * (w - lp.width).coerceAtLeast(0)); lp.topMargin = 0
         } else { lp.gravity = Gravity.BOTTOM; lp.leftMargin = 0; lp.topMargin = 0 }
         super.onMeasure(widthMeasureSpec, heightMeasureSpec)
     }
@@ -309,6 +373,33 @@ class KeyboardRoot(context: Context) : FrameLayout(context), GripBar.Host {
 
     override fun gripDock() { setFloating(false); host?.geometryChanged() }
 
+    // ---- squeeze and slide of the docked keyboard (M8)
+    private fun applyDock(left: Int, w: Int) {
+        val sw = screenW()
+        val ww = w.coerceIn(Math.round(MIN_DOCK_FRAC * sw), sw)
+        val l = left.coerceIn(0, sw - ww)
+        dockFrac = ww / sw.toFloat()
+        dockX = if (sw - ww <= 0) 0.5f else l / (sw - ww).toFloat()
+        requestLayout()
+    }
+    private fun curLeft(): Int = if (dockFrac >= 0.995f) 0 else Math.round(dockX * (screenW() - Math.round(dockFrac * screenW())))
+    private fun curWidth(): Int = if (dockFrac >= 0.995f) screenW() else Math.round(dockFrac * screenW())
+    override fun gripSqueezeStart(side: Int) { sqStartW = curWidth(); sqStartLeft = curLeft() }
+    override fun gripSqueeze(side: Int, dx: Float) {
+        // the left arrow dragged right (or the right arrow dragged left) squeezes from that side; the other edge stays where it is
+        if (side == 0) { val w = sqStartW - Math.round(dx); applyDock(sqStartLeft + sqStartW - w.coerceIn(Math.round(MIN_DOCK_FRAC * screenW()), screenW()), w) }
+        else applyDock(sqStartLeft, sqStartW + Math.round(dx))
+    }
+    override fun gripPinchStart() { sqStartW = curWidth(); sqStartLeft = curLeft() }
+    override fun gripPinch(scale: Float) {
+        val w = Math.round(sqStartW * scale).coerceIn(Math.round(MIN_DOCK_FRAC * screenW()), screenW())
+        applyDock(sqStartLeft + (sqStartW - w) / 2, w)                  // pinching keeps the middle where it was
+    }
+    override fun gripSlide(dx: Float) { applyDock(curLeft() + Math.round(dx), curWidth()) }
+    override fun gripSqueezeEnd() { settings?.saveDock(Math.round(dockFrac * 1000f), Math.round(dockX * 1000f)); host?.geometryChanged() }
+    override fun gripFullWidth() { dockFrac = 1f; dockX = 0.5f; requestLayout(); gripSqueezeEnd() }
+    override fun gripSqueezed(): Boolean = squeezed
+
     // ------------------------------------------------------------------ the corners
 
     override fun dispatchTouchEvent(ev: MotionEvent): Boolean {
@@ -364,6 +455,8 @@ class KeyboardRoot(context: Context) : FrameLayout(context), GripBar.Host {
     }
 
     companion object {
+        /** The docked keyboard is never narrower than this share of the screen. */
+        const val MIN_DOCK_FRAC = 0.5f
         const val FRAME_DP = 8f
         const val CORNER_DP = 24f
     }
