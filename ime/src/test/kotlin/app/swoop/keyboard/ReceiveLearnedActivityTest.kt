@@ -52,6 +52,7 @@ class ReceiveLearnedActivityTest {
         val a = start(Intent(Intent.ACTION_SEND).apply { putExtra(Intent.EXTRA_STREAM, export()) })
         settle()
         org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog().getButton(AlertDialog.BUTTON_NEGATIVE).performClick()
+        settle()
         assertEquals("", saved()); assertTrue(a.isFinishing)
         val junk = File(app.cacheDir, "junk.txt"); junk.writeText("this is not an export\nw hello 99\n")
         val b = start(Intent(Intent.ACTION_SEND).apply { putExtra(Intent.EXTRA_STREAM, Uri.fromFile(junk)) })
