@@ -80,14 +80,15 @@ class TypingLearner(
     private fun finishWord(g: GlideTyping, fix: String?) {
         val typed = controller.wordBeforeCursor() ?: run { return }
         val (p2, p1) = controller.contextBefore(typed)
-        var word = (fix ?: typed).lowercase()
+        val realFix = fix?.takeIf { !it.equals(typed, ignoreCase = true) }      // ("i" -> "I" only changes the capital: not a correction)
+        var word = (realFix ?: typed).lowercase()
         var weight = 1f
         var guessed: String? = null
         val e = erased
         if (e != null && now() - erasedAt <= RETYPE_MS && retypeLetters >= 1 && word.length >= 2 && word != e.word) {
             if (similar(e.word, word)) { weight = 3f; guessed = e.word; g.stats.onRetyped() }   // erased, retyped: the new word is what was meant
         }
-        if (fix != null) { guessed = typed.lowercase(); g.stats.onAutoCorrected() }              // the keyboard fixed a typo and it was not taken back (yet)
+        if (realFix != null) { guessed = typed.lowercase(); g.stats.onAutoCorrected() }              // the keyboard fixed a typo and it was not taken back (yet)
         erased = null
         g.learnWord(p1, word, weight, p2, guessed, if (weight > 1f) 2f else 1f)
         last = Done(word, p1, p2, weight)
