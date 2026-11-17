@@ -1,21 +1,22 @@
-# CHECKPOINT 249 — read me first, then TASKS.md
+# CHECKPOINT 253 — read me first, then TASKS.md
 
-**Written:** 2026-11-17T03:23:50Z · **tests:** all 1 fast checks green (gradle suite: see ship.sh)
-**Branch:** `ccr-c57dc9d3-149psl` · **builds on:** `b05c02b` (this checkpoint is the commit after it)
+**Written:** 2026-11-17T04:47:14Z · **tests:** all 1 fast checks green (gradle suite: see ship.sh)
+**Branch:** `ccr-c57dc9d3-149psl` · **builds on:** `f0abec1` (this checkpoint is the commit after it)
 
 ## Just done
-RELEASE swoop-v0.2.1-alpha1 (code 3) published (run 44009075923 green, pinned certificate verified) and recorded; N1-N9 all done; floating keyboard + tall-window fix proven on an Android 10 emulator (runs 44007433798, 44008340097)
+owner's new requests (Brave strip tap does nothing, remove 123 and globe keys, wider space bar, research online predictive engines) written into TASKS.md as N10-N14 in his words
 
 ## Do this next
-WAIT for the owner's feedback from the tablet and the phone on 0.2.1: trail speed, key pop-up, number row, suggestions, learning, settings screen, floating (long press the glowing bar). Possible next work, only on the owner's say: KB-107 Android 16 phone pass (emulator smoke api 36: dispatch emu-smoke.yml api=36), G1 numbers from Diagnostics, translation (KB-600+, needs Q-LINKMETER), emoji/clipboard, KB-101b. Open owner questions: Q-HEARTBEAT, Q-LINKMETER.
+N10 first: reproduce with FakeEditor (inline autocomplete = selection after the glide + rewritten text): core InputController.swapGlide must work with a selection that starts at the glide end and onSelectionUpdate must keep lastGlide when before still ends with the glide tail; add controller.replaceRecent(old, word) verified fallback and use it in KeyboardPresenter.onCandidate when session.pick fails; then N11-N13 (ImeLayout bottom row, symbols grid on hold of '.', GLOBE setting, hold space = picker, KeysView), N14 research doc via a research helper; update tools/emu/smoke.sh bottom row geometry; release 0.3.0-alpha1.
 
 *(resuming? CLAUDE.md's "FIRST ACTION OF EVERY SESSION" says how; the briefing is tools/resume.sh. Do that first, or autosave may stay off all session.)*
 
 ## Uncommitted right now
-    (nothing — the tree is clean as of this checkpoint)
+     M TASKS.md
 
 ## Last ten checkpoints
 ```
+  8ea6088 ckpt 249: RELEASE swoop-v0.2.1-alpha1 (code 3) published (run 44009075923 green, pinned 
   6f0e9b4 ckpt 245: swoop-v0.2.1-alpha1 (code 3) gated and android.yml dispatched (floating keyboa
   a7d984f ckpt 244: gated swoop-v0.2.1-alpha1 (ime code 3) and pushed it: handoff self-test, unit 
   5cb34be ckpt 241: N3 floating keyboard proven on an Android 10 emulator (run 44007433798: 0 fail
@@ -25,8 +26,7 @@ WAIT for the owner's feedback from the tablet and the phone on 0.2.1: trail spee
   79037e0 ckpt 224: FOUND AND FIXED a bug in 0.2.0-alpha1: the overlay layer (match_parent View) m
   61c5916 ckpt 212: RELEASE swoop-v0.2.0-alpha1 published (run 44002995655 green, certificate veri
   52a512f ckpt 205: release swoop-v0.2.0-alpha1 (code 2) gated, pushed and android.yml dispatched 
-  cb00f41 ckpt 204: gated swoop-v0.2.0-alpha1 (ime code 2) and pushed it: handoff self-test, unit 
 ```
 
-(2 automatic checkpoint(s) since the last deliberate one — the
+(3 automatic checkpoint(s) since the last deliberate one — the
 session was still mid-step. `git diff` against it shows what changed.)
