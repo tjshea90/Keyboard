@@ -81,7 +81,10 @@ for b in blocks:
 if not frame: sys.exit(1)
 l, t_, r, b_ = frame
 dp = dens / 160.0; pad = 3 * dp; gap = 3 * dp; strip = 30 * dp; grip = 18 * dp
-W = r - l; H = b_ - t_
+W = r - l
+# the IME window ALSO covers the navigation bar below the keyboard, so the keyboard's own height comes from its formula, not from the frame
+rowh = min(max((W - 2 * pad) / 10.0, 40 * dp), 52 * dp)
+H = grip + strip + rowh * 4.72 + 4 * gap + 2 * pad
 # the keys view starts under the neon bar; rows: digits (weight 0.72), q.., a.., z.., bottom (1 each)
 weights = [0.72, 1, 1, 1, 1]
 usable = H - grip - strip - 2 * pad - 4 * gap
@@ -105,7 +108,7 @@ for letters, xs, ri in rows:
 bx = row_x([1, 1.5, 1, 3.5, 1, 2])           # the bottom row: globe, 123, comma, space, dot, action
 out['globe'] = (int(bx[0]), int(row_y(4))); out['space'] = (int(bx[3]), int(row_y(4))); out['back'] = (int(row_x([1.5] + [1] * 7 + [1.5])[-1]), int(row_y(3)))
 out['grip'] = (int(l + W / 2), int(t_ + grip / 2))
-print(frame, H / dp, ' '.join('%s=%d,%d' % (k, v[0], v[1]) for k, v in out.items()))
+print(frame, (b_ - t_) / dp, ' '.join('%s=%d,%d' % (k, v[0], v[1]) for k, v in out.items()))
 PY
 )" || GEOM=""
 if [ -z "$GEOM" ]; then bad "could not find the keyboard window frame"; else ok "keyboard window: ${GEOM:0:60}"; fi
@@ -130,11 +133,11 @@ PY
 # ---- 3 type by tapping keys
 if [ -n "$GEOM" ]; then
   for c in h i; do adb shell input tap $(key $c); sleep 0.4; done
-  T="$(field_text)"; [ "$T" = "hi" ] && ok "tapping h and i typed 'hi'" || bad "expected 'hi' in the field, got '$T'"
+  T="$(field_text)"; [ "$(echo "$T" | tr A-Z a-z)" = "hi" ] && ok "tapping h and i typed '$T' (the field asks for a capital at the start)" || bad "expected 'hi' in the field, got '$T'"
   shot typed
   # ---- 5 Backspace
   adb shell input tap $(key back); sleep 0.5
-  T="$(field_text)"; [ "$T" = "h" ] && ok "Backspace removed the last letter" || bad "expected 'h' after Backspace, got '$T'"
+  T="$(field_text)"; [ "$(echo "$T" | tr A-Z a-z)" = "h" ] && ok "Backspace removed the last letter ($T)" || bad "expected 'h' after Backspace, got '$T'"
   # ---- 4 glide: a swipe along the top row from t to p (a word like top/tip/typo is decoded)
   adb shell input tap $(key space); sleep 0.4
   X0=$(key t | cut -d' ' -f1); Y0=$(key t | cut -d' ' -f2); X1=$(key p | cut -d' ' -f1)
@@ -162,6 +165,7 @@ fi
 
 # ---- 7 no crash
 adb logcat -d > "$OUT/logcat.txt"
+echo "---- SwoopDiag (geometry only) ----"; grep SwoopDiag "$OUT/logcat.txt" | sed 's/^.*SwoopDiag: //' | head -60; echo "----")
 if grep -E "FATAL EXCEPTION|AndroidRuntime: .*$PKG|Process: $PKG" "$OUT/logcat.txt" | head -3 | grep -q .; then bad "the app crashed (see logcat.txt)"; grep -E -A8 "FATAL EXCEPTION" "$OUT/logcat.txt" | head -20; else ok "no crash in logcat"; fi
 
 echo; echo "emulator smoke: $FAILS failure(s)"

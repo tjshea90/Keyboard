@@ -52,6 +52,7 @@ class KeysService : InputMethodService() {
      * takes touches and that the app behind is not covered at all (docs/FLOATING.md).
      */
     private fun applyWindow(floating: Boolean) {
+        Diag.d("applyWindow floating=$floating window=${window?.window != null}")
         try { window?.window?.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, if (floating) ViewGroup.LayoutParams.MATCH_PARENT else ViewGroup.LayoutParams.WRAP_CONTENT) } catch (_: Exception) { }
         root?.requestLayout()
     }
@@ -61,6 +62,7 @@ class KeysService : InputMethodService() {
         val r = root ?: return
         if (!r.floating || r.height <= 0) return
         val h = maxOf(r.height, window?.window?.decorView?.height ?: 0)
+        Diag.d("onComputeInsets floating root=${r.height} decor=${window?.window?.decorView?.height} -> content/visible top=$h region=${r.touchRegion().bounds.flattenToString()}")
         outInsets.contentTopInsets = h
         outInsets.visibleTopInsets = h
         outInsets.touchableInsets = Insets.TOUCHABLE_INSETS_REGION
@@ -79,6 +81,7 @@ class KeysService : InputMethodService() {
     override fun onStartInputView(editorInfo: EditorInfo, restarting: Boolean) {
         super.onStartInputView(editorInfo, restarting)
         root?.applySettings(Settings(this), safeMode)
+        Diag.d("onStartInputView safe=$safeMode floating=${root?.floating}")
         presenter.startInput(editorInfo)
     }
 

@@ -58,7 +58,7 @@ class GripBar(context: Context) : View(context) {
     private var downX = 0f; private var downY = 0f; private var lastX = 0f; private var lastY = 0f
     private var moved = false; private var dragging = false
     private var lastTapAt = Long.MIN_VALUE / 2
-    private val longPress = Runnable { if (!floating && !dragging) { performHapticFeedback(HapticFeedbackConstants.LONG_PRESS); dragging = true; moved = true; host?.gripDetach(lastX, lastY) } }
+    private val longPress = Runnable { Diag.d("grip long press fired floating=$floating dragging=$dragging"); if (!floating && !dragging) { performHapticFeedback(HapticFeedbackConstants.LONG_PRESS); dragging = true; moved = true; host?.gripDetach(lastX, lastY) } }
 
     init { contentDescription = "Keyboard handle. Press and hold, then drag, to float the keyboard."; isClickable = true }
 
@@ -82,6 +82,7 @@ class GripBar(context: Context) : View(context) {
         val rx = e.rawX; val ry = e.rawY
         when (e.actionMasked) {
             MotionEvent.ACTION_DOWN -> {
+                Diag.d("grip down raw=${rx.toInt()},${ry.toInt()} floating=$floating")
                 downX = rx; downY = ry; lastX = rx; lastY = ry; moved = false; dragging = false
                 parent?.requestDisallowInterceptTouchEvent(true)
                 if (!floating) handler.postDelayed(longPress, LONG_PRESS_MS)
@@ -159,6 +160,7 @@ class KeyboardRoot(context: Context) : FrameLayout(context), GripBar.Host {
     private val markPath = Path()
 
     init {
+        Diag.init(context)
         pane.addView(keys, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
         pane.addView(overlay, FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT))
         keys.overlay = overlay
@@ -195,6 +197,7 @@ class KeyboardRoot(context: Context) : FrameLayout(context), GripBar.Host {
 
     private fun setFloating(on: Boolean, save: Boolean = true) {
         if (floating == on || (on && previewOnly)) return
+        Diag.d("floating -> $on (x=$posX y=$posY wDp=$wDp hMul=$hMul)")
         floating = on
         applyMode()
         if (save) save()
@@ -226,6 +229,14 @@ class KeyboardRoot(context: Context) : FrameLayout(context), GripBar.Host {
             lp.leftMargin = FloatingMath.left(posX, w, pw); lp.topMargin = FloatingMath.top(posY, h, ph)
         } else { lp.gravity = Gravity.BOTTOM; lp.leftMargin = 0; lp.topMargin = 0 }
         super.onMeasure(widthMeasureSpec, heightMeasureSpec)
+    }
+
+    private var lastLayoutLog = ""
+    override fun onLayout(changed: Boolean, l: Int, t: Int, r: Int, b: Int) {
+        super.onLayout(changed, l, t, r, b)
+        val loc = IntArray(2); grip.getLocationOnScreen(loc)
+        val msg = "layout root=${r - l}x${b - t} panel=${panelRect().flattenToString()} grip=${grip.width}x${grip.height} at screen ${loc[0]},${loc[1]} keys=${keys.width}x${keys.height} floating=$floating"
+        if (msg != lastLayoutLog) { lastLayoutLog = msg; Diag.d(msg) }
     }
 
     /** The panel's rectangle in this view's coordinates. */
