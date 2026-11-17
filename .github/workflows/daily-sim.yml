@@ -120,6 +120,8 @@ jobs:
 
       - name: Play a day of keyboard + browser use
         run: |
+          set -o pipefail
+          export PATH="$ANDROID_HOME/emulator:$ANDROID_HOME/platform-tools:$PATH"
           mkdir -p sim-out
           python3 -u -I tools/sim/dailysim.py --out sim-out --suite "$SUITE" --net "$NET" --minutes "$MINUTES" \
             --swoop ime/build/outputs/apk/debug/ime-debug.apk --kestrel "$(ls browser/geckoapp/build/outputs/apk/debug/*.apk | head -1)" --browser-dir browser 2>&1 | tee sim-out/console.txt
