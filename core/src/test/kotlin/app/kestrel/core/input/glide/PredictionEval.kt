@@ -10,7 +10,7 @@ import java.util.Random
  *  - keystroke saving: letters not typed because the word was tapped on the strip at the first moment it showed,
  *  - typo repair: a word typed with one realistic slip (a neighbouring key, a letter left out, a letter doubled, two letters swapped) is on the strip / put in by the space, and a word typed RIGHT is never
  *    changed (the failure people hate most).
- * Run by [PredictionYardstickTest] (with stated floors) and by hand: java -cp <core main>:<core test>:<kotlin stdlib> app.kestrel.core.input.glide.PredictionEval [verbose] [klx=<file>] [corpus=<file> [limit=N]]
+ * Run by [PredictionYardstickTest] (with stated floors) and by hand: java -cp <core main>:<core test>:<kotlin stdlib> app.kestrel.core.input.glide.PredictionEval [verbose] [klx=<file>] [corpus=<file> [limit=N]] [glide [glides=N]]
  */
 object PredictionEval {
     class Tally(val name: String) {
@@ -181,7 +181,7 @@ object PredictionEval {
         val r = run(lex, null, keys, sentences, searches, verbose)
         println("sentences: ${sentences.size}, words: ${sentences.sumOf { it.size }}, searches: ${searches.size}")
         println(report(r))
-        for (nz in listOf(SimNoise.NORMAL, SimNoise.SLOPPY)) println(glideInContext(lex, keys, sentences, nz).toString())
+        if (args.contains("glide")) for (nz in listOf(SimNoise.NORMAL, SimNoise.SLOPPY)) println(glideInContext(lex, keys, sentences, nz, maxSentences = args.firstOrNull { it.startsWith("glides=") }?.substring(7)?.toInt() ?: 600).toString())
         if (verbose) for (n in r.notes) println(n)
     }
 }
