@@ -16,7 +16,7 @@ class Rig(text: String = "", sel: Int = text.length, multiline: Boolean = true,
     fun deliverOne(): Boolean {
         val u = ed.updates.removeFirstOrNull() ?: return false
         val believed = "${c.selStart}-${c.selEnd}"; val queued = ed.updates.size
-        if (!c.onSelectionUpdate(u[0], u[1], u[2], u[3])) { foreign++; if (firstForeignInfo == null) firstForeignInfo = "report sel ${u[0]}-${u[1]} comp ${u[2]}-${u[3]} but the keyboard believed $believed (queued behind it: $queued; composing='${c.composing}')" }
+        if (!c.onSelectionUpdate(u[0], u[1], u[2], u[3])) { foreign++; if (firstForeignInfo == null) firstForeignInfo = "report sel ${u[0]}-${u[1]} comp ${u[2]}-${u[3]} but the keyboard believed $believed (queued behind it: $queued; composing='${c.composing}'; expected [${c.pendingForTest()}])" }
         return true
     }
     fun sync() { while (deliverOne()) { } }

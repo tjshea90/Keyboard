@@ -43,13 +43,15 @@ class InputController(private val ed: EditorBridge, val stats: InputStats = Inpu
     private var composingUnknown = false
     /** Inside a batch the editor reports only the FINAL selection (and none at all when it did not change): intermediate states must not be expected. */
     private var batchDepth = 0
+    /** After Enter (or a failed move) the next few reports are taken as the truth instead of being compared: the result of Enter is unknown (newline, action, nothing). */
+    private var adopt = 0
 
     // ------------------------------------------------------------------------------------------------------------ session
 
     /** A new field got the focus (onStartInput / onStartInputView). Forgets everything about the previous one. */
     fun startInput(info: FieldInfo) {
         field = info
-        composing = null; lastGlide = null; shift = ShiftState.OFF; composingUnknown = true
+        composing = null; lastGlide = null; shift = ShiftState.OFF; composingUnknown = true; adopt = 0
         pending.clear()
         selStart = info.initialSelStart; selEnd = info.initialSelEnd
         refresh()
@@ -76,7 +78,7 @@ class InputController(private val ed: EditorBridge, val stats: InputStats = Inpu
         if (pending.matchAndDrop(newSelStart, newSelEnd)) { selStart = newSelStart; selEnd = newSelEnd; return true }
         // the same selection as believed: usually only the composing region changed; but an app that replaced the text and left the cursor where it was looks the same, so with no own edit outstanding the window is checked
         if (newSelStart == selStart && newSelEnd == selEnd && (!pending.isEmpty() || windowStillTrue())) return true
-        if (selStart < 0) { selStart = newSelStart; selEnd = newSelEnd; refresh(); return true } // the first report after an unknown state is the truth (and the text may have changed with it)
+        if (selStart < 0 || adopt > 0) { if (adopt > 0) adopt--; selStart = newSelStart; selEnd = newSelEnd; refresh(); return true } // the first reports after an unknown state are the truth (and the text may have changed with them)
         // somebody else moved the cursor or edited the text
         if (composing != null) ed.finishComposing()
         stats.foreignReports++
@@ -172,7 +174,7 @@ class InputController(private val ed: EditorBridge, val stats: InputStats = Inpu
         val ok = if (useAction) ed.performAction(a) else ed.sendKey(KeyCodes.ENTER)
         if (!ok) { resync(); return }
         if (shift == ShiftState.ONCE) shift = ShiftState.OFF
-        refresh(); selStart = -1; selEnd = -1; pending.clear()   // the next selection report is the truth
+        refresh(); selStart = -1; selEnd = -1; pending.clear(); adopt = 2   // the next selection reports are the truth
         autoCaps()
     }
 
@@ -238,7 +240,7 @@ class InputController(private val ed: EditorBridge, val stats: InputStats = Inpu
             }
         }
         if (selStart >= 0 && predicted) { selEnd = selStart; ensureWindow() }
-        else { selStart = -1; selEnd = -1; pending.clear(); refresh() }
+        else { selStart = -1; selEnd = -1; pending.clear(); adopt = 2; refresh() }
     }
 
     /** The word before the cursor in the window, lowercase, for the language (null when there is none or it is not a plain word). */
@@ -312,13 +314,15 @@ class InputController(private val ed: EditorBridge, val stats: InputStats = Inpu
 
     private fun verifyBefore(tail: String): Boolean = ed.textBefore(tail.length) == tail && before.endsWith(tail)
 
+    internal fun pendingForTest(): String = pending.describe()
+
     private fun refresh() { before = ed.textBefore(WINDOW_BEFORE) ?: ""; after = ed.textAfter(WINDOW_AFTER) ?: "" }
 
     /** Something failed or surprised us: forget every assumption and re-read the editor. */
     private fun resync() {
         stats.resyncs++
         composing = null; lastGlide = null; pending.clear(); composingUnknown = true
-        selStart = -1; selEnd = -1
+        selStart = -1; selEnd = -1; adopt = 2
         refresh()
     }
 
@@ -342,6 +346,7 @@ class InputController(private val ed: EditorBridge, val stats: InputStats = Inpu
         private var head = 0; private var size = 0
         fun clear() { size = 0 }
         fun isEmpty() = size == 0
+        fun describe(): String = (0 until size).joinToString(",") { val i = (head + it) % CAP; "${a[i]}" }
         fun push(s: Int, e: Int) {
             if (size == CAP) { head = (head + 1) % CAP; size-- }
             val i = (head + size) % CAP; a[i] = s; b[i] = e; size++
