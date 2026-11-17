@@ -298,7 +298,7 @@ class InputController(private val ed: EditorBridge, val stats: InputStats = Inpu
         val shown = if (typed.length > 1 && typed.all { it.isUpperCase() }) fix.uppercase() else if (typed.first().isUpperCase()) fix.replaceFirstChar { it.uppercase() } else fix
         if (!ed.setComposingText(shown)) { resync(); type(boundary); return }
         before = (before.dropLast(typed.length) + shown).takeLast(WINDOW_BEFORE)
-        if (shown.length != typed.length) moveSel(shown.length - typed.length)
+        moveSel(shown.length - typed.length)    // (the editor reports the changed composing text even when the selection did not move: expect that report)
         composing = shown
         type(boundary)
         val tail = shown + boundary
