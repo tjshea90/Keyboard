@@ -20,7 +20,8 @@ class Correction(val typed: String, val word: String, val tail: String)
  *  1. PREDICT, THEN VALIDATE. After each own edit it predicts where the selection will be and remembers that in [pending]. Android reports every
  *     selection change back through onUpdateSelection; a report that matches a prediction is "ours". Anything else means the user or the app
  *     changed the text: composing, glide and anything else that assumed the old text is dropped and the window is re-read. (Updates arrive
- *     late, batched or merged, so several predictions may be outstanding and one report may confirm several.)
+ *     late, batched or merged, so several predictions may be outstanding and one report may confirm several; an editor in this keyboard's own
+ *     process on Android 10 even reports INSIDE the edit call, before the edit is noted: see [early].)
  *  2. VERIFY BEFORE REPLACING. Removing or replacing the last glide first reads the text before the cursor and refuses when it is not what was
  *     put there. A wrong belief therefore costs a missed shortcut, never someone else's text.
  *  3. NEVER ASSUME SUCCESS. Every editor call can fail; a failure re-reads the editor and forgets what was assumed.
