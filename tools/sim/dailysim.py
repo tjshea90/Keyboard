@@ -418,6 +418,21 @@ def center(node):
     return (x1 + x2) // 2, (y1 + y2) // 2
 
 
+def dismiss_dialogs(root=None):
+    """Kestrel asks before a site may use the location or send notifications (the Google results page asked: a dialog on top hides the address box from the UI dump). A person taps Block; so does the simulation."""
+    root = root if root is not None else ui_dump()
+    if root is None:
+        return False
+    for n in root.iter("node"):
+        if n.get("text", "").strip().upper() in ("BLOCK", "DENY", "NOT NOW", "DON'T ALLOW"):
+            c = center(n)
+            if c:
+                drive.tap(*c)
+                time.sleep(0.8)
+                return True
+    return False
+
+
 def find_edit(root, *hints):
     """The first EditText whose hint or text contains one of the hints (case-insensitive); with no hints (or none matching) the first EditText of Kestrel's own window: the address box holds the address, so its hint is not in the dump."""
     if root is None:
@@ -472,7 +487,11 @@ def scene_address(rep):
         scene = "address %s %s" % (mode, what if isinstance(what, str) else " ".join(what))
         open_url("http://localhost:%d/" % PORT)           # start every test from the plain local page: after a heavy page the bar can be tucked away
         time.sleep(3.0)
-        node = find_edit(ui_dump(), "type address", "type a url", "search")
+        ui = ui_dump()
+        if dismiss_dialogs(ui):                              # a permission dialog of the page before (location) covers Kestrel: Block it
+            rep.fact("a permission dialog was on top of Kestrel; the simulation tapped Block")
+            ui = ui_dump()
+        node = find_edit(ui, "type address", "type a url", "search")
         if node is None:
             time.sleep(2.0)
             node = find_edit(ui_dump(), "type address", "type a url", "search")
