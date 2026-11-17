@@ -242,3 +242,9 @@
 > - Do you want me to read the LinkMeter repo, which the translation feature needs later?
 > - Your device check of 0.2.1, especially the floating bar and the trail speed.
 <!-- sha:372ec790951a -->
+
+## 2026-11-17T05:04:42Z
+> That notification is the emulator run from before you asked me to stop. It ran the layout without the 123 key, so it no longer matches what's in the code, and I'm leaving its result alone. The next session will re-run the emulator test with the 123 layout, as the saved next steps say.
+>
+> Everything is pushed (checkpoint 282), and I'm not starting any new work. To pick up: tell Claude to "resume Swoop" and it will continue from the saved next steps, which are the emulator test and then shipping 0.3.0-alpha1.
+<!-- sha:baee908fb2ee -->
