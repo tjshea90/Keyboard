@@ -75,7 +75,11 @@ class InputController(private val ed: EditorBridge, val stats: InputStats = Inpu
      */
     fun onSelectionUpdate(newSelStart: Int, newSelEnd: Int, candStart: Int = -1, candEnd: Int = -1): Boolean {
         if (candStart >= 0 && composing == null) composingUnknown = true           // the editor shows a composing word this keyboard does not know about
-        if (pending.matchAndDrop(newSelStart, newSelEnd)) { selStart = newSelStart; selEnd = newSelEnd; return true }
+        if (pending.matchAndDrop(newSelStart, newSelEnd)) {
+            // an older edit was confirmed: while newer own edits are still outstanding the keyboard is AHEAD of this report and keeps what it predicted
+            if (pending.isEmpty()) { selStart = newSelStart; selEnd = newSelEnd }
+            return true
+        }
         // the same selection as believed: usually only the composing region changed; but an app that replaced the text and left the cursor where it was looks the same, so with no own edit outstanding the window is checked
         if (newSelStart == selStart && newSelEnd == selEnd && (!pending.isEmpty() || windowStillTrue())) return true
         if (selStart < 0 || adopt > 0) { if (adopt > 0) adopt--; selStart = newSelStart; selEnd = newSelEnd; refresh(); return true } // the first reports after an unknown state are the truth (and the text may have changed with them)
