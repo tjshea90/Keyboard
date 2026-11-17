@@ -617,10 +617,9 @@ def scene_pages(rep, minutes):
 
 
 VIDEOS = ["https://test-videos.co.uk/vids/bigbuckbunny/mp4/h264/360/Big_Buck_Bunny_360_10s_1MB.mp4",
-          "https://test-videos.co.uk/vids/bigbuckbunny/mp4/h264/720/Big_Buck_Bunny_720_10s_5MB.mp4",
-          "https://test-videos.co.uk/vids/bigbuckbunny/mp4/h264/1080/Big_Buck_Bunny_1080_10s_10MB.mp4"]
+          "https://test-videos.co.uk/vids/bigbuckbunny/mp4/h264/720/Big_Buck_Bunny_720_10s_5MB.mp4"]       # (a 1080p film took the emulator's software graphics down: not in the list)
 FILM_LINES = re.compile(r"player|film|stats|inline|hand ?over|native|playback|dropped|rebuffer|stall|decoder|video info|probe page", re.I)
-FILM_BAD = re.compile(r"\b(error|errors|failed|failure|stall|stalls|stalled|rebuffer\w*|timeout|timed out)\b", re.I)
+FILM_BAD = re.compile(r"\b(error|errors|failed|failure|rebuffer\w*|timeout|timed out)\b|(?<![0-9])[1-9][0-9]* stall|ui STALL", re.I)      # a stall COUNT above zero or a blocked UI thread; "0 stall(s)" is good news
 
 
 def _one_film(rep, url, seconds):
