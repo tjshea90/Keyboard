@@ -215,6 +215,13 @@ class KeyboardRoot(context: Context) : FrameLayout(context), GripBar.Host {
     /** How far the keyboard was dragged since it detached: letting go near the bottom docks it only after a real drag, so a long press that is released at once leaves it floating. */
     private var travelled = 0f
 
+    /**
+     * Android 15+ (edge to edge, and this app targets 36): the system navigation bar is drawn OVER the bottom of the keyboard window, so without this the bottom row (?123, space, Enter) sat under it. The keys stand
+     * above that bar and the keyboard's own colour fills the strip behind it. Zero before Android 15, where the window already ends above the bar (the Android 10 tablet), and whenever the bar does not overlap.
+     */
+    private var navBottom = 0
+    private fun navInset(ins: android.view.WindowInsets): Int = if (Build.VERSION.SDK_INT >= 35) ins.getInsets(android.view.WindowInsets.Type.navigationBars()).bottom else 0
+
     // the corner grab
     private var resizeCorner = -1
     private var rsLeft = 0; private var rsTop = 0; private var rsW = 0; private var rsH = 0; private var rsX = 0f; private var rsY = 0f
@@ -233,8 +240,11 @@ class KeyboardRoot(context: Context) : FrameLayout(context), GripBar.Host {
         grip.host = this
         addView(panel, LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.BOTTOM))
         setWillNotDraw(false)
+        setOnApplyWindowInsetsListener { _, ins -> val n = navInset(ins); if (n != navBottom) { navBottom = n; applyMode() }; ins }
         applyMode()
     }
+
+    override fun onAttachedToWindow() { super.onAttachedToWindow(); requestApplyInsets() }
 
     // ------------------------------------------------------------------ the person's settings
 
@@ -282,8 +292,9 @@ class KeyboardRoot(context: Context) : FrameLayout(context), GripBar.Host {
         grip.floating = floating
         keys.floatMul = if (floating) hMul else 1f
         val f = frame()
-        panel.setPadding(f, f / 2, f, f)
-        panel.background = if (floating) GradientDrawable().apply { setColor(keys.backgroundColor); cornerRadius = 16 * d; setStroke((2 * d).toInt(), grip.accent) } else null
+        panel.setPadding(f, f / 2, f, f + (if (floating) 0 else navBottom))
+        panel.background = if (floating) GradientDrawable().apply { setColor(keys.backgroundColor); cornerRadius = 16 * d; setStroke((2 * d).toInt(), grip.accent) }
+            else if (navBottom > 0) android.graphics.drawable.ColorDrawable(keys.backgroundColor) else null
         panel.elevation = if (floating) 12 * d else 0f
         minimumHeight = if (floating) screenH() else 0
         requestLayout()
@@ -298,7 +309,7 @@ class KeyboardRoot(context: Context) : FrameLayout(context), GripBar.Host {
             val ph = panelHeightAt(pw)
             val w = MeasureSpec.getSize(widthMeasureSpec).let { if (it > 0) it else screenW() }
             val h = MeasureSpec.getSize(heightMeasureSpec).let { if (it > 0 && MeasureSpec.getMode(heightMeasureSpec) != MeasureSpec.UNSPECIFIED) it else screenH() }
-            lp.leftMargin = FloatingMath.posF(posX, w - pw); lp.topMargin = FloatingMath.posF(posY, h - ph)
+            lp.leftMargin = FloatingMath.posF(posX, w - pw); lp.topMargin = FloatingMath.posF(posY, h - navBottom - ph)
         } else if (dockFrac < 0.995f) {
             val w = MeasureSpec.getSize(widthMeasureSpec).let { if (it > 0) it else screenW() }
             lp.gravity = Gravity.BOTTOM or Gravity.LEFT; lp.leftMargin = Math.round(dockX * (w - lp.width).coerceAtLeast(0)); lp.topMargin = 0
@@ -346,7 +357,7 @@ class KeyboardRoot(context: Context) : FrameLayout(context), GripBar.Host {
 
     override fun gripDetach(rawX: Float, rawY: Float) {
         // the panel leaves the bottom and stands with its bar under the finger; the window becomes the whole screen first, so the position is worked out in screen terms
-        val w = screenW(); val h = screenH()
+        val w = screenW(); val h = screenH() - navBottom
         val pw = Math.round(FloatingMath.clampWidthDp(if (wDp > 0f) wDp else FloatingMath.defaultWidthDp(w / d), w / d) * d)
         keys.floatMul = hMul
         floating = true; applyMode(); floating = false           // (the frame and the row height count in the measure below)
@@ -359,7 +370,7 @@ class KeyboardRoot(context: Context) : FrameLayout(context), GripBar.Host {
 
     override fun gripDrag(dx: Float, dy: Float) {
         if (!floating) return
-        val w = if (width > 0) width else screenW(); val h = if (height > 0) height else screenH()
+        val w = if (width > 0) width else screenW(); val h = (if (height > 0) height else screenH()) - navBottom
         if (dx == 0f && dy == 0f) return                          // a finger held still moves nothing
         val r = panelRect(); val pw = r.width().coerceAtLeast(1); val ph = r.height().coerceAtLeast(1)
         val left = FloatingMath.clampPos(r.left + Math.round(dx), pw, w); val top = FloatingMath.clampPos(r.top + Math.round(dy), ph, h)
@@ -370,7 +381,7 @@ class KeyboardRoot(context: Context) : FrameLayout(context), GripBar.Host {
 
     override fun gripDrop() {
         val r = panelRect()
-        if (travelled > 48 * d && FloatingMath.dropsToDock(r.bottom, if (height > 0) height else screenH(), d)) { gripDock(); return }
+        if (travelled > 48 * d && FloatingMath.dropsToDock(r.bottom, (if (height > 0) height else screenH()) - navBottom, d)) { gripDock(); return }
         save(); host?.geometryChanged()
     }
 
@@ -427,7 +438,7 @@ class KeyboardRoot(context: Context) : FrameLayout(context), GripBar.Host {
     }
 
     private fun doResize(ev: MotionEvent) {
-        val sw = if (width > 0) width else screenW(); val sh = if (height > 0) height else screenH()
+        val sw = if (width > 0) width else screenW(); val sh = (if (height > 0) height else screenH()) - navBottom
         val f = frame(); val gripH = (GripBar.HEIGHT_DP * d).toInt()
         val minW = Math.round(FloatingMath.clampWidthDp(FloatingMath.MIN_W_DP, sw / d) * d); val maxW = Math.round(FloatingMath.clampWidthDp(FloatingMath.MAX_W_DP, sw / d) * d)
         val baseKeysH = keys.heightFor(rsW - 2 * f, 1f)
