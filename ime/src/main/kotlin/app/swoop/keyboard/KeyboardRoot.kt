@@ -250,7 +250,16 @@ class KeyboardRoot(context: Context) : FrameLayout(context), GripBar.Host {
         applyMode()
     }
 
-    override fun onAttachedToWindow() { super.onAttachedToWindow(); requestApplyInsets() }
+    override fun onAttachedToWindow() { super.onAttachedToWindow(); requestApplyInsets(); if (Diag.enabled) post(keymapTick) }
+    override fun onDetachedFromWindow() { removeCallbacks(keymapTick); super.onDetachedFromWindow() }
+    /** Debug builds only: the key map again every half second while the keyboard is attached, when it changed (the window may still be sliding or moving after the first layout, and the emulator tools tap where the LAST line says). */
+    private val keymapTick = object : Runnable {
+        override fun run() {
+            if (!Diag.enabled || !isAttachedToWindow) return
+            keys.keymapLine()?.let { if (it != lastKeymapLog) { lastKeymapLog = it; Diag.d(it) } }
+            postDelayed(this, 500)
+        }
+    }
 
     // ------------------------------------------------------------------ the person's settings
 

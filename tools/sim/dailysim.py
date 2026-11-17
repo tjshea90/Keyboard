@@ -214,9 +214,16 @@ def jitter_for(word, km, sigma_pitch, rnd):
 def type_round(rep, scene, field_value, tap_target, glide=True):
     """One kind of field: tap it, wait for the keyboard, tap-type the phrases and glide the words; [field_value]() returns what the field holds."""
     x, y = tap_target
-    drive.tap(x, y)
-    time.sleep(2.0)
-    km = drive.wait_keymap("letters", need=["k61"], timeout=12)
+    km = None
+    for attempt, dy in enumerate((0, 40, -40, 80)):          # the page may still be settling: tap again a little lower / higher before giving up
+        drive.tap(x, y + dy)
+        time.sleep(2.0)
+        km = drive.wait_settled(timeout=10)
+        if km is not None and km.page == "letters" and keyboard_showing():
+            break
+        km = None if not keyboard_showing() else km
+        if km is not None:
+            break
     if km is None:
         rep.row(scene + " keyboard", "FAIL", "Swoop did not show (no key map in logcat); keyboard showing=%s" % keyboard_showing())
         return

@@ -138,7 +138,11 @@ class Keymap:
         self.page, self.shift, self.keys = page, shift, keys
 
     def char(self, c):
-        return self.keys.get("k%x" % ord(c))
+        """The centre of the key that types [c]; a letter is found under either case (the keys read as capitals while Shift is on, and their place is the same)."""
+        xy = self.keys.get("k%x" % ord(c))
+        if xy is None and c.isalpha():
+            xy = self.keys.get("k%x" % ord(c.upper() if c.islower() else c.lower()))
+        return xy
 
     def __repr__(self):
         return "Keymap(%s shift=%d %d keys)" % (self.page, self.shift, len(self.keys))
@@ -171,13 +175,28 @@ def clear_log():
     adb("logcat", "-c", check=False)
 
 
+def wait_settled(page="letters", need=("k61",), timeout=20.0):
+    """A key map that did not change between two reads half a second apart: the keyboard window has stopped moving (a slide-in at the first draw would put every tap off)."""
+    end = time.time() + timeout
+    prev = None
+    km = None
+    while time.time() < end:
+        km = read_keymap()
+        if km and km.page == page and all(n in km.keys or n.replace("k61", "k41") in km.keys for n in need):
+            if prev is not None and prev.keys == km.keys:
+                return km
+            prev = km
+        time.sleep(0.6)
+    return km
+
+
 def wait_keymap(page=None, timeout=15.0, need=None):
     """Polls logcat until a key map (of [page]) that has the keys in [need] shows up."""
     end = time.time() + timeout
     km = None
     while time.time() < end:
         km = read_keymap()
-        if km and (page is None or km.page == page) and (not need or all(n in km.keys for n in need)):
+        if km and (page is None or km.page == page) and (not need or all(n in km.keys or (n == 'k61' and 'k41' in km.keys) for n in need)):
             return km
         time.sleep(0.4)
     return km
@@ -202,7 +221,7 @@ def tap_char(km, c):
 
 def type_text_fast(text, km=None, hold=0.04, gap=0.10):
     """Letters and spaces only (the letters page stays up): all the taps of [text] in one call, at human speed. Returns the number of characters that could not be tapped."""
-    km = km or wait_keymap("letters", need=["k61"])
+    km = km or wait_settled()
     if km is None:
         raise RuntimeError("the keyboard is not showing (no key map)")
     pts, missing = [], 0
@@ -273,7 +292,7 @@ def path_points(word, km, step_px=6.0, jitter=None):
 
 
 def glide_word(word, km=None, jitter=None):
-    km = km or wait_keymap("letters", need=["k61"])
+    km = km or wait_settled()
     if km is None:
         raise RuntimeError("the keyboard is not showing (no key map)")
     inject(path_points(word, km, jitter=jitter))
