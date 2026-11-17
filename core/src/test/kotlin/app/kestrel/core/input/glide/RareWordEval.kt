@@ -46,7 +46,8 @@ object RareWordEval {
     private fun distinct(lex: GlideLexicon, id: Int): Int { var m = 0; var p = -1; for (i in 0 until lex.length(id)) { val l = lex.letter(id, i); if (l != p) { m++; p = l } }; return m }
 
     /** Decode a simulated glide of every word with [lex] and [params]; [judge] is the list whose probabilities decide what is rare. */
-    fun run(lex: BinaryLexicon, judge: BinaryLexicon, keys: GlideKeys, params: GlideParams, noise: SimNoise, words: List<String>, seed: Long, prevs: List<String?>? = null): Stats {
+    fun run(lex: BinaryLexicon, judge: BinaryLexicon, keys: GlideKeys, params: GlideParams, noise: SimNoise, words: List<String>, seed: Long, prevs: List<String?>? = null, debug: Int = 0): Stats {
+        var shown = 0
         val sim = GestureSim(keys, Random(seed))
         val dec = GlideDecoder(keys, params)
         var n = 0; var t1 = 0; var t3 = 0; var steals = 0; var rareFirst = 0; var nanos = 0L
@@ -61,7 +62,10 @@ object RareWordEval {
             val hit1 = first != null && String(GlideLetters.keyOf(first.text)) == key
             if (hit1) t1++
             if (c.any { String(GlideLetters.keyOf(it.text)) == key }) t3++
-            if (first != null && !hit1 && isRare(judge, first.text)) { rareFirst++; if (!isRare(judge, w)) steals++ }
+            if (first != null && !hit1 && isRare(judge, first.text)) {
+                rareFirst++
+                if (!isRare(judge, w)) { steals++; if (shown++ < debug) println("      STEAL meant '%s' (lp %.1f) got %s lm %.2f".format(w, judge.logProb(judge.idOf(w)), c.joinToString(" | ") { "%s cost %.2f prior %.1f score %.2f".format(it.text, it.cost, it.prior, it.score) }, dec.lastLm)) }
+            }
         }
         return Stats(n, t1, t3, steals, rareFirst, nanos / 1e6 / n.coerceAtLeast(1))
     }
@@ -90,7 +94,7 @@ object RareWordEval {
             val noise = GlideEval.noiseFrom(a + mapOf("noise" to nm))
             println("${noise.name}")
             if (a["old"] != null) println("   OLD list     : " + run(old, new, keys, GlideParams(rareW = 0f), noise, common, seed))
-            println("   common words : " + run(new, new, keys, params, noise, common, seed))
+            println("   common words : " + run(new, new, keys, params, noise, common, seed, debug = a["dbg"]?.toInt() ?: 0))
             if (a["rare"] != "0") println("   rare words   : " + run(new, new, keys, params, noise, rare, seed + 1))
         }
     }
