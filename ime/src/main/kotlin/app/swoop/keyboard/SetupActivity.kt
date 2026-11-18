@@ -127,7 +127,7 @@ class SetupActivity : Activity() {
         val look = u.card()
         with(u) {
             look.row(switchRow("Number row", "Off: the digits are the small numbers on the top row (hold a key to type one). On: a row of digits above the letters.", st.numberRow) { change(Prefs.NUMBERROW, it) })
-            look.row(switchRow("Hide the letters", "Draws blank keys. The keys are still there and still type the letters they always did, so you can type by feel with nothing showing.", st.hideLetters) { change(Prefs.HIDE_LETTERS, it) })
+            look.row(switchRow("Hide the letters", "Draws nothing in the key area: one solid blank panel. The keys are still there and still type the letters they always did, so you can type by feel with nothing showing.", st.hideLetters) { change(Prefs.HIDE_LETTERS, it) })
             look.row(switchRow("Floating keyboard", "Shows a glowing bar on top of the keyboard. Press and hold it, then drag, to lift the keyboard off the bottom and move it anywhere. Drag a corner to resize it; double-tap the bar to dock it again.", st.floatEnabled) { change(Prefs.FLOAT_ON, it) })
             look.row(switchRow("Keyboard-switch key", "A globe key at the left of the space bar. Without it, press and hold the space bar to switch keyboards.", st.showGlobe) { change(Prefs.GLOBE, it) })
             look.row(note("Symbols: tap ?123 at the bottom right; after one symbol you are back on the letters. Or press and hold the full stop or the comma to open a grid of symbols, slide to one and let go."))
