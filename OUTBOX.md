@@ -681,3 +681,7 @@
 ## 2026-11-18T04:53:46Z
 > Pushed the one pending auto-checkpoint, so the branch is in sync with GitHub. The `ship.sh` gates are still running in the background and will push their own commit when they finish; I'll continue from there.
 <!-- sha:3e3a629f0f00 -->
+
+## 2026-11-18T05:01:10Z
+> The gates are re-running with the corrected test (about 8 minutes). When they pass I'll dispatch the build once and follow it through to the Release.
+<!-- sha:c97fe304b982 -->
