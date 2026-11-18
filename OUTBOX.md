@@ -979,3 +979,9 @@
 ## 2026-11-18T21:05:34Z
 > Waiting for the runner's tests and the signed build; I'll check again shortly.
 <!-- sha:a69b9997e56a -->
+
+## 2026-11-18 (session ccr-2630e41a-palpyu): release 0.7.0-alpha4 and what I found
+> **Translating won't turn off - fixed.** Three causes: in a password box, a browser address bar, or with the Settings switch off, the toggle refused to turn off (it only said "not available in this box"); Enter in such a box could still send that text to the translation services; and the key's lit state could disagree with the real state. Off now always works in every field, Enter never translates in a password or address-bar box, and the key always shows the real state.
+> **"Could not be reached (SocketException)".** I could not reproduce it: the real engine and the keyboard's own network code reach MyMemory and Google on Android 10 and Android 16 emulators and from a GitHub runner, so the cause is your device or hotspot. The message now says which step broke, a dropped connection is retried once, and Diagnostics has a **Test translation connection** button: tap it on the tablet, wait, and read me the last "Result:" line.
+> **Glide.** First time tested on real thumbs (a public corpus of real swipes): 87-88% first choice, 94-95% in the top three. A re-tune is worth about +1 point on phone-sized keyboards (checked on two independent sets of people). The tablet's bigger keys keep the old settings: I have no real swipes for them.
+> **Open:** install 0.7.0-alpha4 and tell me if translating now switches off, plus the Test connection result from the tablet. Kestrel browser sync of the changed input code is NOT done. Nothing was run on the tablet.
