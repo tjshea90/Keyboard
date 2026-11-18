@@ -393,10 +393,11 @@ class KeyboardPresenterTest {
 
     @Test fun aDayTypedInSmallLettersGetsItsCapitalAndOneBackspaceTakesItBackAndTeachesIt() {
         val r = Rig(glidePref = false, extra = caps)
+        assertEquals("a day is a name to the keyboard", "Monday", r.host.engine.caseFormOf("monday", "on"))
         typeText(r, "see you on monday "); assertEquals("the first word of the box and the day get capitals", "See you on Monday ", r.text)
         r.tap("\u232B"); assertEquals("one Backspace puts what was typed back", "See you on monday", r.text)
         r.tap("space"); assertEquals("and it is not capitalised again", "See you on monday ", r.text)
-        assertEquals("the person writes it small now", "", r.host.engine.caseFormOf("monday", "on"))
+        assertNull("the person writes it small now: no capital for it any more", r.host.engine.caseFormOf("monday", "on"))
         assertEquals("and the same for the next time", "monday", run { typeText(r, "monday "); r.text.removeSuffix(" ").substringAfterLast(' ') })
     }
 
