@@ -368,7 +368,7 @@ class KeyboardRootTest {
         touch(r, MotionEvent.ACTION_DOWN, tall.right - 20 * dp, y2)
         touch(r, MotionEvent.ACTION_MOVE, tall.right - 20 * dp, y2 + 40 * dp); touch(r, MotionEvent.ACTION_MOVE, tall.right - 20 * dp, y2 + 150 * dp); touch(r, MotionEvent.ACTION_UP, tall.right - 20 * dp, y2 + 150 * dp)
         val short = r.panelRect(); assertTrue("shorter than before: ${short.height()} vs ${tall.height()}", short.height() < tall.height() - 50 * dp); assertEquals(sw, short.width())
-        assertTrue("never below the lowest rows: ${Settings(app).dockH}", Settings(app).dockH >= 700)
+        assertTrue("never below the lowest rows: ${Settings(app).dockH}", Settings(app).dockH >= 450)
     }
 
     @Test fun theHeightStopsAtItsLimitsAndNeverFillsTheScreen() {
@@ -377,8 +377,12 @@ class KeyboardRootTest {
         val q = r.panelRect(); assertTrue("at most 60 % of the screen: ${q.height()} of $sh", q.height() <= 0.6f * sh + 2); assertTrue(Settings(app).dockH <= 1800)
         val z = arrowY(r)
         touch(r, MotionEvent.ACTION_DOWN, q.right - 20 * dp, z); touch(r, MotionEvent.ACTION_MOVE, q.right - 20 * dp, z + 40 * dp); touch(r, MotionEvent.ACTION_MOVE, q.right - 20 * dp, z + 5000 * dp); touch(r, MotionEvent.ACTION_UP, q.right - 20 * dp, z + 5000 * dp)
-        val s2 = r.panelRect(); assertTrue("some keyboard is left: ${s2.height()}", s2.height() > 100 * dp); assertEquals(700, Settings(app).dockH)
+        val s2 = r.panelRect(); assertTrue("some keyboard is left: ${s2.height()}", s2.height() > 100 * dp); assertEquals(450, Settings(app).dockH)
+        assertTrue("clearly lower than the old floor of 0.7 rows (R23e): ${s2.height()} px", s2.height() < 0.8f * firstFloorHeight())
     }
+
+    /** What the lowest docked keyboard was before R23e: rows at 0.7 of their height, at the full width. */
+    private fun firstFloorHeight(): Int { val (r, _) = root { it.putInt(Prefs.DOCK_H, 700) }; return r.panelRect().height() }
 
     @Test fun aLittleDriftWhileSqueezingSidewaysChangesNeitherTheHeightNorTheWindow() {
         val (r, c) = root(); val p = r.panelRect(); val y = arrowY(r)
