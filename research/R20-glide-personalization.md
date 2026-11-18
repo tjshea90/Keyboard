@@ -402,7 +402,7 @@ The simulator says what a new owner will feel: first stretch of 300 glides 86.0 
 | 4.9 cold start | `GlideEval curve=1` first stretch; `GlideHabitEval` | priming option in `learningCurve` |
 | 4.10 weights | `GlideEval ... lmA= lenW=` | none |
 
-Rules for every result (from the plan's gates and my seed experience): report calm / normal / sloppy / bad; use identical paths for the variants; at n = 3000 two seeds of the same setting differ by about 1 point, so a claim under 1 point needs paired paths or n of at least 10 000; keep the hand-less (no offset) and uniform-offset rows as no-regression gates; never tune on a single sentence set (`research/LEARNING_RESULTS.md`); the simulator is only a relative ruler [V S3 makes the same warning for its own simulations via Conway and Sangaline in `research/kestrel-ref/GLIDE_RESEARCH.md`].
+Rules for every result (from the plan's gates and my seed experience): report calm / normal / sloppy / bad; use identical paths for the variants; at n = 3000 two seeds of the same setting differ by about 1 point, so a claim under 1 point needs paired paths or n of at least 10 000; keep the hand-less (no offset) and uniform-offset rows as no-regression gates; never tune on a single sentence set (`research/LEARNING_RESULTS.md`); the simulator is only a relative ruler (the earlier survey cites Conway and Sangaline's warning that an untrained simulator only supports relative comparisons: [S] via `research/kestrel-ref/GLIDE_RESEARCH.md`, source A12, not re-read).
 
 ---
 
