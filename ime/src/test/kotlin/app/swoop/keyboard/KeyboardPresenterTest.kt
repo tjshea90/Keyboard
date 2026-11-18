@@ -385,7 +385,8 @@ class KeyboardPresenterTest {
     @Test fun theSidesAreTheOtherGuessesOfTheGlideAndTappingOneReplacesTheGlidedWord() {
         val r = Rig(suggest = true, words = pairedList); r.glide("for")
         val c = r.view.candidatesForTest()
-        assertEquals("fir is the other guess of the glide, left of the next word: $c", listOf("fir", "world", "there"), c)
+        // R24b: with the straight-line price tuned on real swipes "fur" is a second look-alike guess, so both sides hold other guesses of the glide
+        assertEquals("fir and fur are the other guesses of the glide, on both sides of the next word: $c", listOf("fir", "world", "fur"), c)
         r.tapChip(0)
         assertEquals("fir ", r.text)
         assertTrue("and the strip follows the new word: ${r.view.candidatesForTest()}", r.view.candidatesForTest().contains("for"))
@@ -398,9 +399,9 @@ class KeyboardPresenterTest {
     }
 
     @Test fun aSideBoxThatHoldsAnotherNextWordPutsItInInsteadOfReplacingTheGlidedWord() {
-        val r = Rig(suggest = true, words = pairedList); r.glide("for")
-        assertEquals("there", r.view.candidatesForTest()[2]); r.tapChip(2)
-        assertEquals("for there ", r.text)
+        val r = Rig(suggest = true, words = pairedList); r.glide("hello")      // (R24b: "for" now has two look-alike guesses of its own, so a glide with none shows the case)
+        assertEquals("you", r.view.candidatesForTest()[2]); r.tapChip(2)
+        assertEquals("hello you ", r.text)
     }
 
     @Test fun withNoPredictionTheStripIsTheOldListOfGuesses() {
@@ -723,9 +724,5 @@ class KeyboardPresenterTest {
         assertTrue("a new keys view starts in the real state, not unlit", v2.translateOn)
         tool(r); assertFalse(v2.translateOn)
         val v3 = KeysView(app); r.presenter.view = v3; assertFalse(v3.translateOn)
-    }
-
-    @Test fun zzProbeStrips() {
-        for (w in listOf("for", "hello", "world", "there", "fur", "fir")) { val r = Rig(suggest = true, words = pairedList); r.glide(w); println("PROBE glide $w -> " + r.view.candidatesForTest()) }
     }
 }
