@@ -396,6 +396,8 @@ class KeyboardPresenter(
     }
 
     override fun onCandidate(word: String) {
+        if (word.isEmpty()) return
+        if (glideMiddle != null && word == glideMiddle && controller.lastGlide != null) { pickNextAfterGlide(word); return }
         if (editWord != null && controller.lastGlide == null && editRaw.containsKey(word)) { replaceTappedWord(word); return }
         userMoved = false
         if (EmojiMap.isEmoji(word)) { chooseEmoji(word); return }
@@ -416,11 +418,52 @@ class KeyboardPresenter(
 
     /** What the strip shows for a glide's guesses -> the word the decoder gave (a name shows with its capital; tapping it picks the decoder's word). */
     private var glideRaw: Map<String, String> = emptyMap()
+    /**
+     * Owner R20b (2026-11-18): after a glide the strip is [other guess] [NEXT word] [other guess]: the sides replace the word the glide just put in (they are what the finger may have meant, by its pattern), the middle box
+     * is the word that probably comes next (the person's own pairs and triples, then the shipped list's), and one tap on it puts it in. The decoder's best guess is already in the text, so it is not shown again. The middle box
+     * is empty (nothing drawn, no touch) for the instant it takes the engine to answer, so nothing jumps; with no prediction at all the strip is the plain list of guesses, best first.
+     */
+    private var glideBest: String = ""
+    private var glideAlts: List<String> = emptyList()
+    private var glideNext: List<String> = emptyList()
+    private var glideNextWaiting = false
+    /** The middle box while the glide layout is showing, else null: a tap on exactly this text is "the next word", not a replacement of the glided word. */
+    private var glideMiddle: String? = null
+
     override fun showCandidates(words: List<String>) {
         val cased = if (properOn) words.map { w -> glide.engine.caseFormOf(w.lowercase(), controller.previousWord())?.takeIf { it.lowercase() == w.lowercase() } ?: w } else words
         val shown = if (controller.capitalizeI) cased.map { InputController.pronounI(it) } else cased                  // (R20c: the strip shows I'm, as the text will)
         glideRaw = if (properOn || controller.capitalizeI) words.indices.filter { shown[it] != words[it] }.associate { shown[it] to words[it] } else emptyMap()
-        view?.showCandidates(withEmoji(shown, words.firstOrNull()))
+        glideMiddle = null
+        if (view?.isGliding == true || controller.lastGlide == null || !suggestOn || shown.isEmpty()) { view?.showCandidates(withEmoji(shown, words.firstOrNull())); return }     // (the live guess while the finger is down, or no suggestions: the plain list)
+        glideBest = shown[0]; glideAlts = shown.drop(1).take(2); glideNext = emptyList(); glideNextWaiting = true
+        renderGlideStrip()
+        val (p2, p1) = controller.previousTwo()
+        val my = ++suggestSeq
+        glide.engine.suggest("", p1, p2, 4) { res -> post(Runnable { if (my == suggestSeq && controller.lastGlide != null) { glideNext = res.words; glideNextWaiting = false; renderGlideStrip() } }) }
+    }
+
+    private fun renderGlideStrip() {
+        val taken = (listOf(glideBest) + glideAlts).map { it.lowercase() }
+        val next = glideNext.filter { it.lowercase() !in taken }
+        if (next.isEmpty() && !glideNextWaiting) { glideMiddle = null; view?.showCandidates(listOf(glideBest) + glideAlts); return }          // no prediction: the plain guesses
+        val fill = next.drop(1).iterator()
+        val left = glideAlts.getOrNull(0) ?: (if (fill.hasNext()) fill.next() else "")
+        val right = glideAlts.getOrNull(1) ?: (if (fill.hasNext()) fill.next() else "")
+        val mid = next.firstOrNull() ?: ""
+        glideMiddle = mid.ifEmpty { null }
+        view?.showCandidates(listOf(left, mid, right), accent = -1)
+    }
+
+    /** The middle box was tapped: the glided word stays (and is learned), the predicted word goes in after it, with its space, and counts double like any word taken from the strip. */
+    private fun pickNextAfterGlide(word: String) {
+        userMoved = false
+        session.settle()
+        latest = null; literalShown = null; suggestSeq++; glideMiddle = null
+        learner.pick(word)
+        noFixFor = null
+        view?.setShift(controller.shift)
+        refreshSuggestions()
     }
     override fun clearCandidates() { if (!suggestOn) view?.clearCandidates() }   // (with suggestions on, the next answer replaces the strip: no flicker)
     override fun showNoWord() { view?.showNoWord() }

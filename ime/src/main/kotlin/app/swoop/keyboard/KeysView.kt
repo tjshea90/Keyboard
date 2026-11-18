@@ -207,8 +207,13 @@ class KeysView(context: Context) : View(context) {
     /** Word suggestions while tapping on or off: the strip above the keys is there for them even when glide typing is off. */
     fun setSuggestionsEnabled(on: Boolean) { if (suggestionsEnabled != on) { suggestionsEnabled = on; if (!on && !glideEnabled) { cands = emptyList(); gn = 0 }; rectsW = -1; requestLayout(); invalidate() } }
 
-    fun showCandidates(words: List<String>) { cands = words; noWordUntil = 0L; dyn() }
-    fun clearCandidates() { if (cands.isNotEmpty() || noWordUntil != 0L) { cands = emptyList(); noWordUntil = 0L; dyn() } }
+    /**
+     * The guesses in the strip, left to right. [accent] is the box that gets the accent outline (the one a Space would take): the first by default, none (-1) after a glide, where the middle box is the NEXT word and the others
+     * replace the glided one (owner R20b). An empty string is a box that is not filled yet: nothing is drawn there and it takes no touch.
+     */
+    fun showCandidates(words: List<String>, accent: Int = 0) { cands = words; accentChip = accent; noWordUntil = 0L; dyn() }
+    private var accentChip = 0
+    fun clearCandidates() { if (cands.isNotEmpty() || noWordUntil != 0L) { cands = emptyList(); accentChip = 0; noWordUntil = 0L; dyn() } }
     private var notice: String? = null
     /** A short message in the strip (translating, an error) for a few seconds. */
     fun showNotice(msg: String) { notice = msg; cands = emptyList(); noWordUntil = SystemClock.uptimeMillis() + NOTICE_MS; handler.removeCallbacks(noWordOff); handler.postDelayed(noWordOff, NOTICE_MS); dyn() }
@@ -463,7 +468,8 @@ class KeysView(context: Context) : View(context) {
     }
     private fun chipAt(x: Float, y: Float): Int {
         if (y >= stripPx() + pad || chips().isEmpty()) return -1
-        for ((i, r) in chipBoxes().withIndex()) if (x >= r.left - gap / 2 && x < r.right + gap / 2) return i
+        val list = chips()
+        for ((i, r) in chipBoxes().withIndex()) if (x >= r.left - gap / 2 && x < r.right + gap / 2) return if (list[i].isEmpty()) -1 else i       // (a box not filled yet takes no touch)
         return -1
     }
 
@@ -498,10 +504,11 @@ class KeysView(context: Context) : View(context) {
         }
         val boxes = chipBoxes()
         for ((i, w) in list.withIndex()) {
+            if (w.isEmpty()) continue
             val rect = boxes[i]
             fill.color = if (i == stripDown) cLit else if (confirmWord != null && i == 0) cAccent else cKey
             c.drawRoundRect(rect, r, r, fill)
-            if (i == 0 && confirmWord == null) { line.strokeWidth = dp(1.2f); line.color = cAccent; box.set(rect); box.inset(dp(0.6f), dp(0.6f)); c.drawRoundRect(box, r, r, line) }
+            if (i == accentChip && confirmWord == null) { line.strokeWidth = dp(1.2f); line.color = cAccent; box.set(rect); box.inset(dp(0.6f), dp(0.6f)); c.drawRoundRect(box, r, r, line) }
             text.color = if (confirmWord != null && i == 0) cAccentText else cText
             c.drawText(TextUtils.ellipsize(w, text, rect.width() - dp(8f), TextUtils.TruncateAt.END).toString(), rect.centerX(), rect.centerY() - (fm.ascent + fm.descent) / 2f, text)
         }
