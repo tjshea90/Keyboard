@@ -1112,3 +1112,10 @@
 ## 2026-11-18T23:29:01Z
 > The signed 0.7.0-alpha5 build is running on GitHub (about 12 minutes). It's recorded as dispatched once, so a cut-off session won't dispatch it twice. I'll check it, confirm the Release holds the APK, and send you the link.
 <!-- sha:79b2d7eb5cd1 -->
+
+## 2026-11-18 (session ccr-2630e41a-palpyu): release 0.7.0-alpha5, "Android is not letting the keyboard use the socket"
+> **What I measured (Android 10 emulator, the keyboard running in the background):** Data Saver makes connections **refused** (fixed by switching Swoop on under Data Saver, Unrestricted data); battery saver and doze make them **time out**; none of them gives a socket refusal. So your message is a different block, and my first guess (Data Saver) was wrong for it.
+> **What it can be:** Android did not give the Swoop process its internet access (can happen after an update that adds the permission; a restart fixes it), or a firewall / VPN / ad-block app, a vendor switch that blocks an app's internet, or a parental-control or school profile.
+> **0.7.0-alpha5** makes the connection test say which: it checks Android's internet group, tells a refused connection (Data Saver, with a button to the right settings page) from a blocked socket, and no longer guesses in its messages.
+> **Please send me:** the lines that start with FAIL, and the "Result:" line, from Diagnostics > Test translation connection (which step, and the code EPERM or EACCES; and whether "Internet access group" says OK). Try restarting the tablet once first.
+> **Not run on the tablet. Kestrel browser sync of the changed input code is still not done.**
