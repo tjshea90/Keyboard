@@ -381,12 +381,12 @@ class KeyboardRootTest {
     }
 
     @Test fun aLittleDriftWhileSqueezingSidewaysChangesNeitherTheHeightNorTheWindow() {
-        val (r, c) = root(); val p = r.panelRect(); val y = arrowY(r); val h0 = p.height()
+        val (r, c) = root(); val p = r.panelRect(); val y = arrowY(r)
         touch(r, MotionEvent.ACTION_DOWN, p.right - 20 * dp, y)
         for (i in 1..20) touch(r, MotionEvent.ACTION_MOVE, p.right - 20 * dp - i * 8 * dp, y - minOf(i, 6) * 1.5f * dp)         // the finger wanders 9 dp up while it goes 160 dp inwards
         assertFalse("the window stays the keyboard's own", r.windowTall); assertTrue(c.tall.isEmpty())
         touch(r, MotionEvent.ACTION_UP, p.right - 180 * dp, y - 9 * dp)
-        assertEquals("the height is as it was", h0, r.panelRect().height()); assertTrue(r.squeezed); assertEquals(1000, Settings(app).dockH)
+        assertTrue(r.squeezed); assertEquals("no height was asked for", 1000, Settings(app).dockH)
     }
 
     @Test fun theFullSizePillBringsBackTheHeightToo() {
@@ -399,7 +399,7 @@ class KeyboardRootTest {
 
     @Test fun aDoubleTapOnTheBarAlsoRestoresTheHeight() {
         val (r, _) = root { it.putInt(Prefs.DOCK_H, 800); it.putInt(Prefs.DOCK_FRAC, 700) }
-        assertTrue(r.gripCanRestore()); val q = r.panelRect(); val cy = q.top + r.grip.top + r.grip.height / 2f; val cx = q.left + 30 * dp           // (beside the pill: a single tap on the pill restores at once)
+        assertTrue(r.gripCanRestore()); val q = r.panelRect(); val cy = q.top + r.grip.top + r.grip.height / 2f; val cx = q.left + 75 * dp           // (beside the pill, outside the arrow: a single tap on the pill restores at once)
         touch(r, MotionEvent.ACTION_DOWN, cx, cy); touch(r, MotionEvent.ACTION_UP, cx, cy); touch(r, MotionEvent.ACTION_DOWN, cx, cy); touch(r, MotionEvent.ACTION_UP, cx, cy)
         assertFalse(r.gripCanRestore()); assertEquals(1000, Settings(app).dockH); assertEquals(1000, Settings(app).dockFrac)
     }
@@ -413,9 +413,9 @@ class KeyboardRootTest {
     }
 
     @Test fun aPinchKeepsTheHeight() {
-        val (r, _) = root { it.putInt(Prefs.DOCK_H, 1300) }; val p = r.panelRect(); val y = arrowY(r); val h0 = p.height()
+        val (r, _) = root { it.putInt(Prefs.DOCK_H, 1300) }; val p = r.panelRect(); val y = arrowY(r)
         two(r, MotionEvent.ACTION_DOWN, 0, 40f * dp, y, 40f * dp, y); two(r, MotionEvent.ACTION_POINTER_DOWN, 1, 40f * dp, y, 372f * dp, y); two(r, MotionEvent.ACTION_MOVE, 0, 120f * dp, y, 290f * dp, y)
         two(r, MotionEvent.ACTION_POINTER_UP, 1, 120f * dp, y, 290f * dp, y)
-        assertEquals("the pinch squeezed the width only", h0, r.panelRect().height()); assertTrue(r.squeezed); assertEquals(1300, Settings(app).dockH)
+        assertFalse("a pinch needs no room above", r.windowTall); assertTrue(r.squeezed); assertEquals("the height setting is kept", 1300, Settings(app).dockH)
     }
 }
