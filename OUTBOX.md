@@ -1249,3 +1249,31 @@
 >
 > I can't tell from this whether you also powered the tablet fully off and on (a restart wouldn't show up in the test). Since you may end up reinstalling anyway, I'm building 0.7.0-alpha6 now with the clearer wording, so a fresh install gets the newest version.
 <!-- sha:639e37bdb87c -->
+
+## 2026-11-18T23:58:01Z
+> Version 0.7.0-alpha6 (code 17) is set and the release gates are running. Here is where this leaves you.
+>
+> ## What this result tells us
+> - **Battery saver is ruled out.** It's no longer on in the limits line, and the socket is still refused.
+> - **Everything else in the test is healthy:** internet permission granted, internet group present, DNS working.
+> - **Swoop alone is refused.** I'd expect your browser to load pages normally on the same tablet. If so, the block is specific to Swoop and not to the tablet's connection.
+>
+> ## What to do now (stop at the first one that works)
+> 1. **Power the tablet fully off and on** (hold the power button, choose Power off, then switch it on). Then run Diagnostics → **Test translation connection** again. Skip this only if you already did it.
+> 2. **Settings → Apps → Swoop:** look for anything about mobile data, network access or data usage, and make sure it's allowed. Also check for a VPN, firewall or ad-blocking app, or a parental-control or school profile.
+> 3. **Reinstall (the likely fix if the first two don't work).** Swoop's internet permission arrived in an update (0.4.0), and Android sometimes doesn't pass that on until a fresh install. In order:
+>    - In Swoop's Setup screen tap **Export what it learned**. Keep that file private: it lists your words.
+>    - Uninstall Swoop, then install the newest Release (I'm building 0.7.0-alpha6 now; the link follows).
+>    - Re-enable the keyboard, then use **Import what it learned**.
+>
+>    Without the export step, uninstalling deletes your 999 learned words.
+>
+> ## One question
+> Did you power the tablet off and on between the two test runs (23:49 and 23:56)? If yes, skip step 1 and go to steps 2–3.
+>
+> ## Open
+> - **R25** (your socket error): waiting on the steps above. The reinstall is the one that would prove or disprove my theory.
+> - **Release 0.7.0-alpha6:** gates running; I'll send the link once it's built and signed.
+> - **Kestrel browser sync:** the changed input code is not synced.
+> - **Tablet glide re-tune:** the larger keys keep the old settings, with no real-swipe data.
+<!-- sha:514faab8889e -->
