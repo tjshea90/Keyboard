@@ -50,6 +50,11 @@ class SetupActivity : Activity() {
             }
         })
         build()
+        // R24a: the emulator check (net-probe) starts THIS exported screen with probe=true and it hands on to the Diagnostics connection test; a debug build only
+        // (adb cannot start the non-exported Diagnostics screen itself); an installed release ignores the extra
+        if ((applicationInfo.flags and android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE) != 0 && intent?.getBooleanExtra("probe", false) == true) {
+            startActivity(Intent(this, DiagnosticsActivity::class.java).putExtra("probe", true))
+        }
     }
 
     /** (Re)builds the whole screen: the first time, and again when the colours change. */
