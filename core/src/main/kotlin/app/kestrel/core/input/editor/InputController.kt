@@ -80,10 +80,11 @@ class InputController(editor: EditorBridge, val stats: InputStats = InputStats()
      */
     private var autoTrailAt = -1
     /**
-     * Owner R23b (2026-11-18): "never at any time allow the keyboard to learn and save anything from the clipboard. Just because i copy and paste something doesn't mean it is a word to learn." The letters of the word before the
-     * cursor that were TYPED on this keyboard by key presses ("" when the word, or any of it, came from anywhere else: a paste, an app, a glide, a strip word). Only such a word is ever learned from tapping ([typedWord]).
+     * Owner R23b (2026-11-18): "never at any time allow the keyboard to learn and save anything from the clipboard. Just because i copy and paste something doesn't mean it is a word to learn." The end of the text before the
+     * cursor that was TYPED on this keyboard by key presses, key by key (Backspace takes from its end; a paste, an app, a glide, a strip word, a cursor move or a new field empty it). Only a word that lies wholly inside it is ever
+     * learned from tapping ([typedWord]).
      */
-    private var typedRun = ""
+    private var typedTail = ""
     /** The ends of the last pastes (the keyboard's own paste: the copied-text box, the clipboard panel): words before them are not the language the person is writing, so they are no context for what comes after ([afterPaste]). */
     private val pastedTails = ArrayList<String>(3)
 
@@ -114,7 +115,7 @@ class InputController(editor: EditorBridge, val stats: InputStats = InputStats()
     /** A new field got the focus (onStartInput / onStartInputView). Forgets everything about the previous one. */
     fun startInput(info: FieldInfo) {
         field = info
-        composing = null; lastGlide = null; shift = ShiftState.OFF; composingUnknown = true; adopt = 0; keepTight = -1; autoTrailAt = -1; typedRun = ""; pastedTails.clear()
+        composing = null; lastGlide = null; shift = ShiftState.OFF; composingUnknown = true; adopt = 0; keepTight = -1; autoTrailAt = -1; typedTail = ""; pastedTails.clear()
         clearPending("c1"); early.clear(); inlineEditor = false
         selStart = info.initialSelStart; selEnd = info.initialSelEnd
         refresh()
@@ -164,7 +165,7 @@ class InputController(editor: EditorBridge, val stats: InputStats = InputStats()
         // the same selection as believed: usually only the composing region changed; but an app that replaced the text and left the cursor where it was looks the same, so with no own edit outstanding the window is checked
         if (newSelStart == selStart && newSelEnd == selEnd && (!pending.isEmpty() || windowStillTrue())) return true
         if (selStart < 0) {                                           // the first reports after an unknown state are the truth (and the text may have changed with them)
-            keepTight = -1; autoTrailAt = -1; typedRun = ""
+            keepTight = -1; autoTrailAt = -1; typedTail = ""
             if (adopt > 0) adopt--
             selStart = newSelStart; selEnd = newSelEnd; refresh()
             if (composing != null && candStart < 0) composing = null                // the editor no longer shows the word being tapped
@@ -175,7 +176,7 @@ class InputController(editor: EditorBridge, val stats: InputStats = InputStats()
         if (composing != null) ed.finishComposing()
         stats.foreignReports++
         val glide = lastGlide; val wasAt = selStart
-        composing = null; lastGlide = null; keepTight = -1; autoTrailAt = -1; typedRun = ""
+        composing = null; lastGlide = null; keepTight = -1; autoTrailAt = -1; typedTail = ""
         clearPending("c3")
         selStart = newSelStart; selEnd = newSelEnd
         refresh()
@@ -200,7 +201,7 @@ class InputController(editor: EditorBridge, val stats: InputStats = InputStats()
         if (autoSpace && composing == null && isLetter(key) && needsAutoSpace() && commit(" ")) { lastGlide = null; autoCaps() }   // "hello." "w" -> "hello. w", and the new sentence starts with a capital
         if (composing == null && key.length == 1 && (key[0] == ' ' || key[0] in PRONOUN_BOUNDARY)) fixLoneI()
         val t = if (shift != ShiftState.OFF && isSingleCodePoint(key)) key.uppercase() else key
-        typedRun = if (isSingleCodePoint(t) && (isLetter(t) || t == "'")) (typedRun + t).takeLast(TYPED_RUN_MAX) else ""       // (R23b: the word being typed key by key)
+        typedTail = (typedTail + t).takeLast(TYPED_TAIL_MAX)                                                                       // (R23b: what was typed key by key, ending at the cursor)
         if (isLetter(t) || (composing != null && isWordConnector(t))) {
             if (field.composingAllowed) { typeComposing(t); return }
         }
@@ -233,7 +234,7 @@ class InputController(editor: EditorBridge, val stats: InputStats = InputStats()
         if (text.isEmpty()) return false
         settle()
         endComposing()
-        lastGlide = null; keepTight = -1; autoTrailAt = -1; typedRun = ""
+        lastGlide = null; keepTight = -1; autoTrailAt = -1; typedTail = ""
         text.takeLast(PASTE_TAIL).takeIf { it.isNotBlank() }?.let { pastedTails.add(it); while (pastedTails.size > 3) pastedTails.removeAt(0) }       // (R23b: nothing before this counts as context)
         val ok = commit(text)
         ensureWindow()
@@ -274,10 +275,10 @@ class InputController(editor: EditorBridge, val stats: InputStats = InputStats()
 
     /** One press of Backspace. A tapped word loses its last letter; the word a glide just added goes whole; otherwise the editor deletes (selection or one character). */
     fun backspace() {
-        val had = typedRun; val s0 = selStart
+        val had = typedTail; val s0 = selStart
         backspaceInner()
-        // R23b: a letter taken off the end of the word being typed shortens the typed run (a typo fixed mid-word is still a typed word); anything bigger ends it
-        typedRun = if (had.isEmpty() || s0 < 0 || selStart < 0) "" else { val d = s0 - selStart; if (d in 1..had.length) had.dropLast(d) else "" }
+        // R23b: what Backspace takes off the end shortens the typed tail (a typo fixed on the way, or a space taken back into the word, is still typed text); a bigger change ends it
+        typedTail = if (had.isEmpty() || s0 < 0 || selStart < 0) "" else { val d = s0 - selStart; if (d in 1..had.length) had.dropLast(d) else "" }
         autoCaps()
     }
 
@@ -346,8 +347,16 @@ class InputController(editor: EditorBridge, val stats: InputStats = InputStats()
      * the spaces before it. A word still being tapped goes whole; a glide just made goes whole (as one Backspace does); a selection is deleted. Nothing before the cursor in the window: one plain Backspace.
      */
     fun deleteWord() {
-        settle(); typedRun = ""
-        if (composing != null || lastGlide != null || selStart != selEnd) { backspaceInner(); autoCaps(); return }
+        settle(); typedTail = ""
+        val c = composing
+        if (c != null && lastGlide == null && selStart == selEnd) {                       // the word being tapped goes whole
+            stats.backspaces++; revertedCorrection = null
+            val ok = ed.setComposingText(""); ed.finishComposing(); composing = null
+            if (!ok) { resync(); return }
+            before = before.dropLast(c.length); moveSel(-c.length)
+            ensureWindow(); autoCaps(); return
+        }
+        if (c != null || lastGlide != null || selStart != selEnd) { backspaceInner(); autoCaps(); return }
         stats.backspaces++
         revertedCorrection = null
         val b = before; var i = b.length
@@ -373,7 +382,7 @@ class InputController(editor: EditorBridge, val stats: InputStats = InputStats()
     fun enter() {
         settle()
         stats.enters++
-        endComposing(); lastGlide = null; keepTight = -1; autoTrailAt = -1; typedRun = ""
+        endComposing(); lastGlide = null; keepTight = -1; autoTrailAt = -1; typedTail = ""
         fixLoneI()
         val a = field.imeAction
         val useAction = !field.noEnterAction && a != ImeActions.UNSPECIFIED && a != ImeActions.NONE
@@ -393,7 +402,7 @@ class InputController(editor: EditorBridge, val stats: InputStats = InputStats()
         val lead = leadForNewWord()
         val w = written(when (shiftWithLead(lead)) { ShiftState.LOCK -> word.uppercase(); ShiftState.ONCE -> if (form != null && form.first().isUpperCase()) form else (form ?: word).replaceFirstChar { it.uppercase() }; ShiftState.OFF -> form ?: word })
         val tail = lead + w + " "
-        typedRun = ""
+        typedTail = ""
         if (!commit(tail)) return
         stats.glides++
         lastGlide = GlideTail(tail, w); autoTrailAt = if (selStart >= 0) selStart else -1
@@ -453,7 +462,7 @@ class InputController(editor: EditorBridge, val stats: InputStats = InputStats()
         }
         if (ok) ok = commit(" ")
         endBatch(s0, e0)
-        lastGlide = null; autoTrailAt = if (ok && selStart >= 0) selStart else -1; typedRun = ""
+        lastGlide = null; autoTrailAt = if (ok && selStart >= 0) selStart else -1; typedTail = ""
         if (!ok) { resync(); return false }
         stats.swaps++
         if (shift == ShiftState.ONCE) shift = ShiftState.OFF
@@ -484,7 +493,7 @@ class InputController(editor: EditorBridge, val stats: InputStats = InputStats()
      * glide (an app rewrote the field) but the person still taps the right word in the strip. Verified against the editor first, like every replacement. False (nothing changed) when the text no longer ends with [old].
      */
     fun replaceRecent(old: String, word: String): Boolean {
-        typedRun = ""
+        typedTail = ""
         if (old.isEmpty() || word.isEmpty()) return false
         settle()
         val k = before.length - before.trimEnd(' ').length
@@ -513,7 +522,7 @@ class InputController(editor: EditorBridge, val stats: InputStats = InputStats()
         if (delta == 0) return
         settle()
         stats.cursorMoves++
-        endComposing(); lastGlide = null; keepTight = -1; autoTrailAt = -1; typedRun = ""
+        endComposing(); lastGlide = null; keepTight = -1; autoTrailAt = -1; typedTail = ""
         val left = delta < 0
         val steps = minOf(Math.abs(delta), 64)
         var predicted = selStart >= 0 && selStart == selEnd   // a selection collapses to one end and the selected text joins the window: re-read instead of predicting
@@ -591,7 +600,7 @@ class InputController(editor: EditorBridge, val stats: InputStats = InputStats()
      * false (nothing changed) when there is no word, the editor shows something else, or it refuses.
      */
     fun replaceWordAround(word: String): Boolean {
-        typedRun = ""
+        typedTail = ""
         if (word.isEmpty()) return false
         settle()
         endComposing()
@@ -645,8 +654,7 @@ class InputController(editor: EditorBridge, val stats: InputStats = InputStats()
      */
     fun typedWord(): String? {
         val w = wordBeforeCursor() ?: return null
-        val r = typedRun.trimStart('\'')
-        return if (r.isNotEmpty() && r == w && before.endsWith(typedRun)) w else null
+        return if (typedTail.endsWith(w)) w else null
     }
 
     /** R23b: [word] stands inside one of the last pastes (so a correction of it is a correction of the clipboard's text, which teaches nothing). */
@@ -935,8 +943,8 @@ class InputController(editor: EditorBridge, val stats: InputStats = InputStats()
         fun isPronounI(w: String): Boolean = w == "i" || (w.length in 3..4 && w[0] == 'i' && (w[1] == '\'' || w[1] == '\u2019') && w.substring(2) in PRONOUN_ENDINGS)
         fun pronounI(w: String): String = if (isPronounI(w)) "I" + w.substring(1) else w
 
-        /** How many typed letters are remembered as "the word being typed" (longer than any word is learned). */
-        private const val TYPED_RUN_MAX = 26
+        /** How much of what was typed is remembered as typed (a few words: enough to take a finished word back). */
+        private const val TYPED_TAIL_MAX = 120
         /** How much of the end of a paste is remembered to tell where it stood. */
         private const val PASTE_TAIL = 30
         const val WINDOW_BEFORE = 64
