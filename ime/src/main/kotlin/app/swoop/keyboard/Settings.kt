@@ -33,6 +33,7 @@ object Prefs {
     const val EMOJI_SUGGEST = "emoji_suggestions"
     const val DOCK_FRAC = "dock_frac_x1000"
     const val DOCK_X = "dock_x"
+    const val DOCK_H = "dock_h_x1000"
     const val KEYHEIGHT = "key_height"
     const val GLOBE = "show_globe"
     const val THEME = "theme"
@@ -78,7 +79,10 @@ class Settings(private val p: SharedPreferences) {
     /** How wide the docked keyboard is, in thousandths of the screen (1000 = full width), and where it stands (0..1000 of the free room). */
     val dockFrac get() = i(Prefs.DOCK_FRAC, 1000).coerceIn(500, 1000)
     val dockX get() = i(Prefs.DOCK_X, 500).coerceIn(0, 1000)
-    fun saveDock(frac: Int, x: Int) { p.edit().putInt(Prefs.DOCK_FRAC, frac).putInt(Prefs.DOCK_X, x).apply() }
+    /** The docked keyboard's row height as a multiplier x 1000 (owner R19c: it can be made taller or shorter while it sits at the bottom); 1000 = as the settings say. */
+    val dockH get() = i(Prefs.DOCK_H, 1000).coerceIn(700, 1800)
+    /** [h] = -1 keeps the saved height. */
+    fun saveDock(frac: Int, x: Int, h: Int = -1) { p.edit().putInt(Prefs.DOCK_FRAC, frac).putInt(Prefs.DOCK_X, x).also { if (h >= 0) it.putInt(Prefs.DOCK_H, h) }.apply() }
     /** A key that switches keyboards, at the left of the space bar. Off by default: hold the space bar instead. */
     val showGlobe get() = b(Prefs.GLOBE, false)
     val keyHeight get() = i(Prefs.KEYHEIGHT, 1).coerceIn(0, KEY_HEIGHTS.size - 1)
