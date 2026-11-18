@@ -74,4 +74,34 @@ class TouchFieldTest {
         time(GlideParams()); val without = time(GlideParams(touchField = false)); val with = time(GlideParams())
         assertTrue("220 glides: $with ms with the map, $without ms without", with <= without * 1.5 + 200)
     }
+
+    // ------------------------------------------------------------------ it is kept, exported and forgotten like the rest of what is learned
+
+    @Test fun theExportCarriesTheMapAndAnOlderFileWithoutOneStillReads() {
+        val f = TouchField(); repeat(60) { f.learn(0.1f, 0.2f, 0.25f, -0.1f, 0.08f) }
+        val habit = floatArrayOf(0.1f, -0.05f) + f.toArray()
+        val text = LearnedExport.write(PersonalModel().also { it.learn(null, "hello", 2f, null, null, 1f) }, habit, null)
+        assertTrue(text.lines().any { it.startsWith("touch ") })
+        val back = LearnedExport.read(text)!!
+        assertEquals(0.1f, back.habit!![0], 0.001f); assertTrue("the map came back", back.touch != null && back.touch!!.size == f.toArray().size)
+        val g = TouchField(); assertTrue(g.fromArray(back.touch!!)); assertEquals(f.dx[0], g.dx[0], 0.002f)
+        val old = LearnedExport.write(PersonalModel().also { it.learn(null, "hello", 2f, null, null, 1f) }, floatArrayOf(0.1f, -0.05f), null)
+        assertTrue("a file without the map has no touch line", old.lines().none { it.startsWith("touch ") }); assertEquals(null, LearnedExport.read(old)!!.touch)
+        val broken = text.lines().joinToString("\n") { if (it.startsWith("touch ")) "touch 1 2 3" else it }
+        assertEquals("a map of the wrong size is ignored, the rest is read", null, LearnedExport.read(broken)!!.touch)
+    }
+
+    @Test fun theEngineRestoresTheMapAfterARestartAndForgetsItWhenAsked() {
+        val saved = ArrayList<FloatArray>()
+        fun engine(habit: FloatArray?): GlideTyping {
+            val e = GlideTyping({ LexiconFile.build(listOf("for" to 900L, "fir" to 300L, "hello" to 500L, "world" to 800L).map { LexiconFile.Entry(it.first, it.second) }, emptyList()) }, java.util.concurrent.Executor { it.run() })
+            e.prepare(keys, habit, null); return e
+        }
+        val e = engine(null); val sim = GestureSim(keys, Random(2)); val noise = SimNoise.NORMAL.withZone(12f, 6f, -12f, 6f)
+        repeat(120) { for (w in listOf("hello", "world", "for")) sim.path(w, noise)?.let { p -> e.decode(p.xs, p.ys, p.xs.size, null, null) { }; e.accepted(w) { h -> saved.add(h) } } }
+        val last = saved.last(); assertEquals("two habit numbers and the map", 2 + TouchField().toArray().size, last.size); assertTrue("it learned something: ${last.toList()}", last.drop(2).take(18).any { Math.abs(it) > 0.05f })
+        val again = engine(last); var restored: FloatArray? = null
+        again.exportText(null, null) { t -> restored = LearnedExport.read(t)?.touch }; assertTrue("the restarted engine has the map", restored != null && restored!!.take(18).any { Math.abs(it) > 0.05f })
+        again.forgetAll(); var gone = false; again.exportText(null, null) { t -> gone = LearnedExport.read(t)?.touch == null }; assertTrue("forgetting clears it", gone)
+    }
 }
