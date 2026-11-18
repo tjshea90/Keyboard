@@ -320,6 +320,36 @@ class KeyboardPresenterTest {
         assertEquals("hello.w", off.text)
     }
 
+    // ------------------------------------------------------------------ R19 (owner 2026-11-18): capitals after a full stop, a space deleted on purpose, a glide that always answers
+
+    @Test fun aGlideRightAfterAFullStopGetsItsSpaceAndACapitalLikeATappedLetter() {
+        val r = Rig(extra = { it.putBoolean(Prefs.AUTOCAPS, true) })
+        for (c in "hello") r.tapLetter(c.toString()); r.tap("."); r.glide("world")
+        assertEquals("Hello. World ", r.text)
+        val q = Rig(extra = { it.putBoolean(Prefs.AUTOCAPS, true) }); for (c in "hello") q.tapLetter(c.toString()); q.tap(","); q.glide("world")
+        assertEquals("after a comma the word stays small", "Hello, world ", q.text)
+    }
+
+    @Test fun aSpaceDeletedOnPurposeAfterAFullStopIsNotAddedAgainSoAnAddressCanBeTyped() {
+        val r = Rig(glidePref = false, extra = { it.putBoolean(Prefs.AUTOCAPS, true) })
+        for (c in "ok") r.tapLetter(c.toString()); r.tap("."); r.tapLetter("c")
+        assertEquals("the keyboard adds the space and the capital", "Ok. C", r.text)
+        r.tap("\u232B"); r.tap("\u232B")
+        assertEquals("Ok.", r.text)
+        r.tap("c"); r.tap("o"); r.tap("m")
+        assertEquals("the deleted space stays deleted", "Ok.com", r.text)
+        r.tap("space"); r.tapLetter("n"); assertEquals("Ok.com n", r.text)
+    }
+
+    @Test fun aGlideThatFitsNothingStillTypesTheClosestWordInsteadOfSayingNoWordFits() {
+        val r = Rig()
+        r.glide("zebra")                                                                    // none of the six words in the tiny list is anything like it
+        val typed = r.text.trim()
+        assertTrue("a word went in: '${r.text}'", typed.isNotEmpty() && r.text.endsWith(" ") && typed in listOf("for", "fir", "fur", "hello", "world", "there"))
+        assertTrue("the strip offers it (and the others)", r.view.candidatesForTest().isNotEmpty())
+        r.tap("\u232B"); assertEquals("Backspace takes the wrong guess back whole", "", r.text)
+    }
+
     @Test fun twoQuickSpacesMakeAFullStopAndTheSwitchTurnsItOff() {
         val r = Rig(glidePref = false); for (c in "hello") r.tap(c.toString()); r.tap("space"); r.tap("space")
         assertEquals("hello. ", r.text)
