@@ -622,3 +622,7 @@
 > - [ ] Optional: emulator smoke run for the resize
 > - [ ] Optional: Kestrel pinned-copy sync (no Browser checkout in this session)
 <!-- sha:af32f524da67 -->
+
+## 2026-11-18T03:37:04Z
+> The gates are still running; the monitor will report as soon as `ship.sh` finishes. After the gates pass I dispatch the build, wait for it to go green, then record the release and give you the link.
+<!-- sha:01061b779363 -->
