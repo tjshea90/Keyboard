@@ -10,7 +10,7 @@ import android.os.PowerManager
  * R25 (2026-11-18): the owner's connection test said "Android refuses the keyboard a network socket" (EPERM / EACCES). Android can refuse a background app the network on purpose, and a
  * keyboard process is a background app: Data Saver (ON by default on many Android Go tablets) blocks every app that is not on the "Unrestricted data" list on a METERED network, and a phone's
  * hotspot counts as metered; battery saver, doze and a restricted standby bucket do the same. This reads those facts about THIS app (no permission needed: each call answers for the calling app
- * only) so the connection test can name the one that applies. Pure facts, never anything typed.
+ * only; Data Saver is the exception on Android 10: that one needs the network-state permission, which Swoop does not hold, so it often reads "unknown") so the connection test can name the one that applies. Pure facts, never anything typed.
  */
 object AndroidLimits {
     /** Data Saver as the system reports it for this app. */
@@ -27,7 +27,7 @@ object AndroidLimits {
                 DataSaver.OFF -> "Data Saver off"
                 DataSaver.ON_NOT_ALLOWED -> "Data Saver ON and Swoop is NOT on the Unrestricted data list"
                 DataSaver.ON_ALLOWED -> "Data Saver on, Swoop is on the Unrestricted data list"
-                DataSaver.UNKNOWN -> "Data Saver unknown"
+                DataSaver.UNKNOWN -> "Data Saver cannot be read (Android only tells apps with the network-state permission, which Swoop does not have)"
             })
             if (batterySaver) parts.add("battery saver ON")
             if (doze) parts.add("device is dozing")

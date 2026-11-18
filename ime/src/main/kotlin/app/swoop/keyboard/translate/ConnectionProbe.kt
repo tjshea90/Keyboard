@@ -153,7 +153,7 @@ object ConnectionProbe {
         val blocked = steps.firstOrNull { !it.ok && it.name != "Android limits" && (it.note.contains("EPERM") || it.note.contains("EACCES")) }
         if (blocked != null) {
             val fix = if (limits != null) " The cause is on this device (${limits.note}). Open Settings, Network and internet, Data Saver, Unrestricted data and switch Swoop on (the button below opens it), or turn Data Saver off."
-            else " Check Settings, Apps, Swoop, mobile data and data saver (the buttons below open them); switch off any firewall app; restart the device once."
+            else " Most likely Data Saver or a background-data limit (Data Saver is on by default on many Android Go tablets, and a phone's hotspot counts as a metered connection): open Settings, Network and internet, Data Saver, Unrestricted data and switch Swoop on (the first button below opens it), or turn Data Saver off. Also check the app's mobile data and battery settings (second button), switch off any firewall app, restart the device once."
             return "Result: Android refuses the keyboard a network socket (${blocked.name}: ${SafeReason.errnoOf(blocked.note) ?: "refused"})." + fix
         }
         bad("name lookup")?.let { return "Result: the name of ${it.name.substringBefore(':')} could not be looked up: the device is offline, or private DNS / a filter blocks it. Is the phone's mobile data on?" }

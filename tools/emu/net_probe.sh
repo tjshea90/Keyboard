@@ -36,23 +36,32 @@ APP_UID="$(adb shell dumpsys package "$PKG" | grep -m1 -oE 'userId=[0-9]+' | cut
 echo "---- R25: app uid $APP_UID"
 adb shell cmd netpolicy list wifi-networks > "$OUT/netpolicy-wifi.txt" 2>&1; cat "$OUT/netpolicy-wifi.txt" | head -8
 WIFI_ID="$(grep -oE 'AndroidWifi' "$OUT/netpolicy-wifi.txt" | head -1)"; WIFI_ID="${WIFI_ID:-AndroidWifi}"
-background_probe(){   # $1 = label
-  adb logcat -c
-  adb shell am start -n "$PKG/app.swoop.keyboard.SetupActivity" --ez probe true --ei probe_delay 8 >/dev/null 2>&1 || true
+background_probe(){   # $1 = label. Fresh process every time (am start -S: without it the old task is only brought forward and no probe runs); counts finished probes instead of trusting a log clear.
+  local before; before=$(adb logcat -d -s SwoopProbe:D 2>/dev/null | grep -c 'done:')
+  adb shell am start -S -n "$PKG/app.swoop.keyboard.SetupActivity" --ez probe true --ei probe_delay 8 >/dev/null 2>&1 || true
   sleep 3; adb shell input keyevent KEYCODE_HOME; sleep 1
-  for i in $(seq 1 60); do adb logcat -d -s SwoopProbe:D > "$OUT/probe-$1.log" 2>&1; if grep -q 'done:' "$OUT/probe-$1.log"; then break; fi; sleep 2; done
-  echo "---- probe $1"; grep -E 'Android limits|connect IPv4|handshake|answer|done:|FAIL' "$OUT/probe-$1.log" | cut -c1-230
+  for i in $(seq 1 60); do
+    adb logcat -d -s SwoopProbe:D > "$OUT/probe-$1.full" 2>&1
+    if [ "$(grep -c 'done:' "$OUT/probe-$1.full")" -gt "$before" ]; then break; fi
+    sleep 2
+  done
+  local L=0; [ "$before" -gt 0 ] && L="$(grep -n 'done:' "$OUT/probe-$1.full" | sed -n "${before}p" | cut -d: -f1)"
+  tail -n +$((L+1)) "$OUT/probe-$1.full" > "$OUT/probe-$1.log"
+  echo "---- probe $1 (the lines of this run: $(grep -c 'SwoopProbe' "$OUT/probe-$1.log"))"; grep -E 'Android limits|connect IPv4|handshake|answer|done:|FAIL' "$OUT/probe-$1.log" | cut -c1-230
 }
 adb shell cmd netpolicy set restrict-background true 2>&1 | head -2
 adb shell cmd netpolicy set metered-network "$WIFI_ID" true 2>&1 | head -2
 adb shell cmd netpolicy get restrict-background 2>&1 | head -2
 adb shell dumpsys netpolicy 2>/dev/null | grep -iE 'restrict|metered' | head -6
 background_probe B
-if grep -qE 'EPERM|EACCES' "$OUT/probe-B.log"; then echo "R25 REPRODUCED: with Data Saver on, a metered Wi-Fi and the app in the background Android refuses the sockets (EPERM/EACCES)"; else echo "R25 not reproduced in phase B (see probe-B.log)"; fi
+adb shell dumpsys netpolicy 2>/dev/null | grep -E "UID=$APP_UID" | head -2
+if [ ! -s "$OUT/probe-B.log" ]; then echo "R25 phase B: no probe output (harness problem)";
+elif grep -qE 'EPERM|EACCES' "$OUT/probe-B.log"; then echo "R25 REPRODUCED: with Data Saver on, a metered Wi-Fi and the app in the background Android refuses the sockets (EPERM/EACCES)"; else echo "R25 not reproduced in phase B (see probe-B.log)"; fi
 adb shell cmd netpolicy add restrict-background-whitelist "$APP_UID" 2>&1 | head -2
 adb shell cmd netpolicy get restrict-background 2>&1 | head -2
 background_probe C
-if grep -qE 'EPERM|EACCES' "$OUT/probe-C.log"; then echo "R25: still refused with the app on the Unrestricted data list (phase C)"; else echo "R25: with the app on the Unrestricted data list the sockets work (phase C)"; fi
+if [ ! -s "$OUT/probe-C.log" ]; then echo "R25 phase C: no probe output (harness problem)";
+elif grep -qE 'EPERM|EACCES' "$OUT/probe-C.log"; then echo "R25: still refused with the app on the Unrestricted data list (phase C)"; else echo "R25: with the app on the Unrestricted data list the sockets work (phase C)"; fi
 adb shell cmd netpolicy remove restrict-background-whitelist "$APP_UID" >/dev/null 2>&1 || true
 adb shell cmd netpolicy set metered-network "$WIFI_ID" undefined >/dev/null 2>&1 || true
 adb shell cmd netpolicy set restrict-background false >/dev/null 2>&1 || true
