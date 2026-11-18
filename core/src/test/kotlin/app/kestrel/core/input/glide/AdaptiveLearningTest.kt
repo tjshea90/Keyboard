@@ -30,7 +30,7 @@ class AdaptiveLearningTest {
     @Test fun theKeyboardLearnsWhatThisPersonBeginsSentencesWith() {
         val test = starts(200, 9)
         val before = hitRate(null, test)
-        val pm = PersonalModel(); for (w in starts(60, 1)) pm.addStart(w)
+        val pm = PersonalModel(); for (w in starts(60, 1)) { pm.add(null, w); pm.addStart(w) }          // (what the learner does for every finished word)
         val after = hitRate(pm, test)
         println("sentence starters in the first three: before learning %.2f, after 60 sentences %.2f".format(before, after))
         assertTrue("before: $before", before < 0.15f); assertTrue("after learning the start of the next sentence is on the strip: $after", after >= 0.95f)
@@ -38,7 +38,7 @@ class AdaptiveLearningTest {
 
     @Test fun fewStartsAreTrustedLessThanManyAndNothingIsOfferedBeforeThereAreAny() {
         assertTrue(PersonalModel().startWords(5).isEmpty())
-        val few = PersonalModel(); few.addStart("hey"); val many = PersonalModel(); repeat(40) { many.addStart("hey") }
+        val few = PersonalModel(); few.add(null, "hey"); few.addStart("hey"); val many = PersonalModel(); repeat(40) { many.add(null, "hey"); many.addStart("hey") }
         assertTrue(few.startWords(1)[0].second < 0.25f); assertTrue(many.startWords(1)[0].second > 0.8f)
         // one start of a word that is neither common nor theirs does not push the usual guesses off the strip
         val w = Suggester.suggest(main, few, keys, "", null, null, 3).words
@@ -67,15 +67,18 @@ class AdaptiveLearningTest {
     }
 
     @Test fun aPersonWhoUndoesFixesHasFewerAutomaticChangesAndOneWhoNeverDoesKeepsTheStandardOnes() {
+        // "vat" is one neighbouring key from "bat" and from "cat"; "jit" from "hit" and "kit": a fix that is only a little likelier than the next word is where the margin decides
+        val l = LexiconFile.read(LexiconFile.build(listOf("bat" to 40_000_000L, "cat" to 10_800_000L, "hit" to 70_000_000L, "kit" to 30_000_000L, "zzfiller" to 300_000_000_000L).map { LexiconFile.Entry(it.first, it.second) }, emptyList()))
+        val strict = PersonalModel(); repeat(40) { strict.addFix(false) }; repeat(16) { strict.addFix(true) }
+        val bold = PersonalModel(); repeat(100) { bold.addFix(false) }
+        fun fix(typed: String, pm: PersonalModel?) = Suggester.suggest(l, pm, keys, typed, null, null, 3).autoCorrect
+        assertEquals("standard: a fix 1.3 nats ahead is made", "bat", fix("vat", null)); assertNull("strict: not any more", fix("vat", strict)); assertEquals("bold keeps it", "bat", fix("vat", bold))
+        assertNull("standard: a fix 0.85 nats ahead is not made", fix("jit", null)); assertEquals("bold: made", "hit", fix("jit", bold)); assertNull(fix("jit", strict))
+        // and over a whole list of typos the strict person never gets MORE fixes, the bold one never fewer
         val typos = ArrayList<String>()
         for (w in common) if (w.length >= 4) { for (i in 1 until w.length - 1) typos.add(w.removeRange(i, i + 1)); typos.add(w.substring(0, w.length - 1) + (if (w.last() == 'e') 'r' else 'e')) }
         fun count(pm: PersonalModel?): Int = typos.count { Suggester.suggest(main, pm, keys, it, null, null, 3).autoCorrect != null }
-        val plain = count(null)
-        val strict = PersonalModel(); repeat(40) { strict.addFix(false) }; repeat(16) { strict.addFix(true) }
-        val bold = PersonalModel(); repeat(100) { bold.addFix(false) }
-        val s = count(strict); val b = count(bold)
-        println("automatic fixes among ${typos.size} typos: standard $plain, a person who undoes a third $s, one who never undoes $b")
-        assertTrue("stricter: $s of $plain", s < plain); assertTrue("bolder or equal: $b of $plain", b >= plain)
+        assertTrue(count(strict) <= count(null)); assertTrue(count(bold) >= count(null))
     }
 
     // ---- the learner feeds them
