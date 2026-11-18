@@ -16,13 +16,17 @@ object Alternatives {
     const val LM_W = 1.0f
     /** Weight of ln P(the word after | this word). */
     const val NEXT_W = 0.30f
-    /** A fix the tap model proposes (swap, neighbour, missing / extra letter, a correction the person made before) starts a little ahead. */
-    const val FIX_BONUS = 0.8f
-    private const val POOL = 14
+    /**
+     * A fix the tap model proposes (two letters swapped, a neighbouring key, a letter left out or put in, a correction the person made before) starts ahead by this much if it is the tap model's first choice, less for
+     * each place further down: a swap is the commonest slip of the fingers but a long way off as a glide shape.
+     */
+    const val FIX_BONUS = 2.4f
+    const val FIX_STEP = 0.5f
+    private const val POOL = 24
     private const val FAR_SHAPE = 3.5f
     private const val UNKNOWN_NEXT = -9f
 
-    private class Cand(val text: String, var fix: Boolean)
+    private class Cand(val text: String, var fix: Boolean) { var rank = 0 }
 
     fun find(
         main: BinaryLexicon, extra: GlideLexicon?, personal: PersonalModel?, decoder: GlideDecoder?, keys: GlideKeys,
@@ -44,7 +48,7 @@ object Alternatives {
             }
         }
         // 2. what the tap model would fix it to
-        for (w in Suggester.suggest(main, personal, keys, t, prev, prev2, POOL, fixesOnly = true).words) pool.getOrPut(w.lowercase()) { Cand(w.lowercase(), true) }.fix = true
+        for ((rank, w) in Suggester.suggest(main, personal, keys, t, prev, prev2, 8, fixesOnly = true).words.withIndex()) pool.getOrPut(w.lowercase()) { Cand(w.lowercase(), true) }.also { it.fix = true; it.rank = rank }
         // 3. rank
         val scored = ArrayList<Pair<String, Float>>(pool.size)
         for (c in pool.values) {
@@ -53,7 +57,7 @@ object Alternatives {
             val shape = Fingerprint.ofWord(w, keys)
             val d = if (shape != null && typedShape != null) Fingerprint.distance(typedShape, shape) else FAR_SHAPE
             val lp = Suggester.contextLogP(main, personal, w, prev, prev2)
-            scored.add(w to (-SHAPE_W * d + LM_W * lp + NEXT_W * nextTerm(main, personal, w, next) + if (c.fix) FIX_BONUS else 0f))
+            scored.add(w to (-SHAPE_W * d + LM_W * lp + NEXT_W * nextTerm(main, personal, w, next) + if (c.fix) Math.max(0.4f, FIX_BONUS - FIX_STEP * c.rank) else 0f))
         }
         return scored.sortedByDescending { it.second }.take(limit).map { it.first }
     }

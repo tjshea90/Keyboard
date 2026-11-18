@@ -45,10 +45,10 @@ class AlternativesTest {
     }
 
     @Test fun theOffersLookLikeTheWordWhenGlided() {
-        // every offer is a close glide pattern of the word (a shape within about two keys), whatever the language says
+        // every offer is a close glide pattern of the word (a shape within about three keys: two swapped letters far apart on the keyboard are the furthest a typo fix goes), whatever the language says
         for ((k, got) in run()) {
             val a = Fingerprint.ofWord(k.typed, keys) ?: continue
-            for (w in got) { val b = Fingerprint.ofWord(w, keys) ?: continue; assertTrue("${k.typed} -> $w is ${Fingerprint.distance(a, b)} keys away", Fingerprint.distance(a, b) <= 2.6f) }
+            for (w in got) { val b = Fingerprint.ofWord(w, keys) ?: continue; assertTrue("${k.typed} -> $w is ${Fingerprint.distance(a, b)} keys away", Fingerprint.distance(a, b) <= 3.2f) }
         }
     }
 
