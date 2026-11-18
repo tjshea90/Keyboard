@@ -648,4 +648,34 @@ class KeyboardPresenterTest {
         val url = Rig(inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_URI, glidePref = false, suggest = true, words = editList); url.et.setText("teh"); url.report(); url.tapText(2)
         assertTrue(url.view.candidatesForTest().isEmpty())
     }
+
+    // ------------------------------------------------------------------ owner R23: held Backspace, the clipboard is never learned, the number pad
+
+    @Test fun aLongHoldOfBackspaceTakesAWholeWordPerRepeat() {
+        val r = Rig(glidePref = false, suggest = true, words = tapList)
+        for (c in "hello world") if (c == ' ') r.tap("space") else r.tap(c.toString())
+        r.presenter.onDeleteWord(); assertEquals("the word being tapped goes whole", "hello ", r.text)
+        r.presenter.onDeleteWord(); assertEquals("then the spaces and the word before them", "", r.text)
+    }
+
+    @Test fun textCopiedAndPastedFromTheStripIsNeverLearnedAsWordsOrPairs() {
+        val r = Rig(glidePref = false, suggest = true, words = tapList)
+        r.copied("zebrafish quokka")
+        r.tapChip(0); assertEquals("zebrafish quokka", r.text)
+        r.tap("space")
+        for (c in "hello") r.tap(c.toString()); r.tap("space")
+        val m = r.memory()
+        assertFalse("no pasted word is remembered: $m", m.contains("zebrafish") || m.contains("quokka"))
+        assertTrue("what was typed by hand still is: $m", m.lines().any { it.startsWith("w hello ") })
+    }
+
+    @Test fun aNumberOnlyFieldShowsTheBigNumberPadAndPinsLearnNothing() {
+        val r = Rig(inputType = InputType.TYPE_CLASS_NUMBER, glidePref = false)
+        assertNull("no letters on a number field", r.view.centerOf("q")); assertNotNull(r.view.centerOf("5"))
+        r.tap("7"); r.tap("0"); assertEquals("70", r.text)
+        val pin = Rig(inputType = InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_VARIATION_PASSWORD, glidePref = false, suggest = true)
+        assertNull("a PIN gets the pad too", pin.view.centerOf("q")); pin.tap("1"); pin.tap("2"); assertEquals("12", pin.text); assertEquals("", pin.memory())
+        val text = Rig(glidePref = false)
+        assertNotNull("a text field keeps its letters", text.view.centerOf("q"))
+    }
 }
