@@ -724,4 +724,8 @@ class KeyboardPresenterTest {
         tool(r); assertFalse(v2.translateOn)
         val v3 = KeysView(app); r.presenter.view = v3; assertFalse(v3.translateOn)
     }
+
+    @Test fun zzProbeStrips() {
+        for (w in listOf("for", "hello", "world", "there", "fur", "fir")) { val r = Rig(suggest = true, words = pairedList); r.glide(w); println("PROBE glide $w -> " + r.view.candidatesForTest()) }
+    }
 }
