@@ -60,7 +60,7 @@ object LearnedExport {
         var entries = 0
         if (habit != null && habit.size >= 2 && !habit[0].isNaN() && !habit[1].isNaN()) { sb.append("habit ").append(PersonalModel.f3(habit[0])).append(' ').append(PersonalModel.f3(habit[1])).append('\n'); entries++ }
         // R20d: where the thumb lands on each part of the keyboard (the TouchField numbers after the two habit numbers); older readers skip the line
-        if (habit != null && habit.size == 2 + TouchField().toArray().size && habit.drop(2).all { it.isFinite() } && habit.drop(2).any { it != 0f }) { sb.append("touch"); for (v in habit.drop(2)) sb.append(' ').append(PersonalModel.f3(v)); sb.append('\n'); entries++ }
+        if (habit != null && habit.size == 2 + TouchField.SIZE && habit.drop(2).all { it.isFinite() } && habit.drop(2).any { it != 0f }) { sb.append("touch"); for (v in habit.drop(2)) sb.append(' ').append(PersonalModel.f3(v)); sb.append('\n'); entries++ }
         if (own != null) for (line in own.serialize().lineSequence()) { val p = line.trim().split(' '); if (p.size == 2 && p[1].toIntOrNull() != null) { sb.append("own ").append(p[0]).append(' ').append(p[1]).append('\n'); entries++ } }
         for (line in body.lineSequence()) { if (line.isBlank()) continue; sb.append(line).append('\n'); entries++ }
         sb.append("end ").append(entries).append('\n')
@@ -88,7 +88,7 @@ object LearnedExport {
             val f = line.split(' ')
             when (f[0]) {
                 "habit" -> if (f.size == 3) { val x = f[1].toFloatOrNull(); val y = f[2].toFloatOrNull(); if (x != null && y != null && x.isFinite() && y.isFinite()) { habit = floatArrayOf(x.coerceIn(-MAX_BIAS, MAX_BIAS), y.coerceIn(-MAX_BIAS, MAX_BIAS)); entries++ } }
-                "touch" -> { val a = FloatArray(f.size - 1) { f[it + 1].toFloatOrNull() ?: Float.NaN }; if (a.size == TouchField().toArray().size && a.all { it.isFinite() }) { touch = a; entries++ } }
+                "touch" -> { val a = FloatArray(f.size - 1) { f[it + 1].toFloatOrNull() ?: Float.NaN }; if (a.size == TouchField.SIZE && a.all { it.isFinite() }) { touch = a; entries++ } }
                 "own" -> if (f.size == 3 && own.size < MAX_OWN) { val n = f[2].toIntOrNull(); val word = f[1].lowercase(); if (n != null && n in 1..1000 && UserWords.glideable(word)) { own.add(word to n); entries++ } }
                 "w", "p", "t", "c", "r", "k", "b", "f" -> { body.append(line).append('\n'); entries++; when (f[0]) { "w" -> w++; "p" -> p++; "t" -> t++; "c" -> c++ } }
                 "s" -> { body.append(line).append('\n'); entries++; s++; if (f.size > 1) shapeWords.add(f[1]) }

@@ -67,7 +67,7 @@ class GlideHost(
 
     /** The thumb habit (where this person's finger lands, in key pitches), kept between sessions. */
     private fun loadHabit(): FloatArray? = try {
-        if (habitFile.isFile) habitFile.readText().trim().split(' ').map { it.toFloat() }.takeIf { it.size == 2 || it.size == 2 + app.kestrel.core.input.glide.TouchField().toArray().size }?.toFloatArray() else null
+        if (habitFile.isFile) habitFile.readText().trim().split(' ').map { it.toFloat() }.takeIf { it.size == 2 || it.size == 2 + app.kestrel.core.input.glide.TouchField.SIZE }?.toFloatArray() else null
     } catch (e: Exception) { null }
 
     /** The saved thumb habit, for an export (null when none was learned yet). */
