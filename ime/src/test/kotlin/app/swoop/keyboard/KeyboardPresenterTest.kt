@@ -47,7 +47,7 @@ class KeyboardPresenterTest {
         init {
             File(app.filesDir, "glide_personal.txt").delete(); File(app.filesDir, "glide_habit.txt").delete()
             File(app.filesDir, "own_words.txt").delete()
-            app.getSharedPreferences(Prefs.FILE, 0).edit().clear().putBoolean(Prefs.GLIDE, glidePref).putBoolean(Prefs.SUGGEST, suggest).putBoolean(Prefs.AUTOFIX, autoFix).putBoolean(Prefs.LEARN, true).also(extra).commit()
+            app.getSharedPreferences(Prefs.FILE, 0).edit().clear().putBoolean(Prefs.GLIDE, glidePref).putBoolean(Prefs.SUGGEST, suggest).putBoolean(Prefs.AUTOFIX, autoFix).putBoolean(Prefs.LEARN, true).putBoolean(Prefs.AUTOCAPS, false).also(extra).commit()   // (capitals are off unless a test asks: an empty box now starts with one, R18b)
             et.inputType = inputType; et.imeOptions = imeOptions
             act.setContentView(et)
             info.inputType = inputType; info.imeOptions = imeOptions

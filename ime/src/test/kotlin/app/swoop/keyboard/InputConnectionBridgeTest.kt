@@ -51,6 +51,7 @@ class InputConnectionBridgeTest {
             info.inputType = et.inputType
             rec = Rec(et.onCreateInputConnection(info)!!); live = rec     // (this also fills info.imeOptions the way the framework does)
             controller = InputController(InputConnectionBridge { live })
+            controller.sentenceCaps = false                       // (an empty box starts with a capital now, R18b: these tests are about the editor calls, not about capitals)
             controller.startInput(FieldInfos.from(info))
         }
         /** What Android's InputMethodManager would do after each change. */
