@@ -482,6 +482,68 @@ class InputController(editor: EditorBridge, val stats: InputStats = InputStats()
         return if (w.isEmpty() || w.length > 24) null else w
     }
 
+    /** The word the cursor is in or touches: [text] as written and [left], how many of its letters are before the cursor (the rest, [right], are after it). */
+    class WordSpan(val text: String, val left: Int) { val right: Int get() = text.length - left }
+
+    /**
+     * R18a: the whole word at the cursor, wherever the cursor is in it (before its first letter, inside it, after its last): what a tap on an old word means. Null when something is selected, when the cursor is not
+     * at a word, when the run of letters touches a digit or an @ (a code, an address), when the window may cut it, or when it is not 2 to 24 letters.
+     */
+    fun wordAround(): WordSpan? {
+        if (selStart >= 0 && selStart != selEnd) return null
+        var i = before.length
+        while (i > 0 && isWordChar(before[i - 1])) i--
+        if (i == 0 && before.length >= WINDOW_BEFORE) return null
+        if (i > 0 && (before[i - 1].isDigit() || before[i - 1] == '@')) return null
+        var j = 0
+        while (j < after.length && isWordChar(after[j])) j++
+        if (j == after.length && after.length >= WINDOW_AFTER) return null
+        if (j < after.length && (after[j].isDigit() || after[j] == '@')) return null
+        val l = before.substring(i).trimStart('\'')                      // (a leading apostrophe is a quote)
+        val r = after.substring(0, j).trimEnd('\'')
+        if (r.isEmpty() && l.endsWith("'")) return null
+        val w = l + r
+        if (w.length !in 2..24 || w.none { it.isLetter() }) return null
+        return WordSpan(w, l.length)
+    }
+    private fun isWordChar(c: Char) = c.isLetter() || c == '\''
+
+    /** (the second last word, the last word, the next word) around [span], lowercase: the language's context for the word. A neighbour is null when it is not a plain word or the window cuts it. */
+    fun contextAround(span: WordSpan): Triple<String?, String?, String?> {
+        val (p2, p1) = twoBefore(before.dropLast(span.left))
+        val tail = after.drop(span.right)
+        val t2 = tail.trimStart(' ')
+        val gap = tail.length - t2.length
+        val tok = t2.takeWhile { isWordChar(it) }
+        val next = if (gap in 1..3 && tok.length in 1..24 && tok.length < t2.length) tok.lowercase() else null
+        return Triple(p2, p1, next)
+    }
+
+    /**
+     * R18a: the word at the cursor ([wordAround]) is replaced by [word] where it stands: no space is added and the cursor ends after it. Verified against the editor first (what is removed is really there);
+     * false (nothing changed) when there is no word, the editor shows something else, or it refuses.
+     */
+    fun replaceWordAround(word: String): Boolean {
+        if (word.isEmpty()) return false
+        settle()
+        endComposing()
+        val span = wordAround() ?: return false
+        val l = span.left; val r = span.right
+        if (ed.textBefore(l) != before.takeLast(l) || ed.textAfter(r) != after.take(r)) return false
+        val s0 = selStart; val e0 = selEnd
+        beginBatch()
+        var ok = ed.deleteSurrounding(l, r)
+        if (ok) { before = before.dropLast(l); moveSel(-l); after = after.drop(r); ok = commit(word) }
+        endBatch(s0, e0)
+        lastGlide = null
+        if (!ok) { resync(); return false }
+        after = ed.textAfter(WINDOW_AFTER) ?: after
+        stats.swaps++
+        ensureWindow()
+        autoCaps()
+        return true
+    }
+
     /** (the second last, the last) plain word BEFORE the word [word] that ends at the cursor (as [wordBeforeCursor] gave it): the language's context for it. */
     fun contextBefore(word: String): Pair<String?, String?> =
         if (before.endsWith(word)) twoBefore(before.dropLast(word.length)) else null to null
