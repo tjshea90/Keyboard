@@ -677,3 +677,7 @@
 ## 2026-11-18T04:53:35Z
 > The release gates for 0.7.0-alpha1 are running (full core and ime suites, about 8 minutes). Once they pass and the commit is pushed, I'll dispatch the build once, wait for it to go green, record it, and send you the link.
 <!-- sha:1dabf072d1b7 -->
+
+## 2026-11-18T04:53:46Z
+> Pushed the one pending auto-checkpoint, so the branch is in sync with GitHub. The `ship.sh` gates are still running in the background and will push their own commit when they finish; I'll continue from there.
+<!-- sha:3e3a629f0f00 -->
