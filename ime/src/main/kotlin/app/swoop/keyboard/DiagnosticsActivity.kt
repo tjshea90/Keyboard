@@ -4,7 +4,10 @@ import android.app.Activity
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
+import android.content.Intent
 import android.content.pm.ApplicationInfo
+import android.net.Uri
+import android.provider.Settings as AndroidSettings
 import android.os.Build
 import android.os.Bundle
 import android.util.TypedValue
@@ -36,6 +39,9 @@ class DiagnosticsActivity : Activity() {
         col.addView(Button(this).apply { text = getString(R.string.diag_copy); setOnClickListener { copy() } })
         col.addView(Button(this).apply { text = getString(R.string.diag_refresh); setOnClickListener { refresh() } })
         col.addView(Button(this).apply { text = getString(R.string.diag_probe); setOnClickListener { probe() } })
+        // R25: the two system pages that decide whether Android lets the keyboard use the network in the background (neither needs a permission)
+        col.addView(Button(this).apply { text = getString(R.string.diag_unrestricted); setOnClickListener { openSystemPage(AndroidSettings.ACTION_IGNORE_BACKGROUND_DATA_RESTRICTIONS_SETTINGS) } })
+        col.addView(Button(this).apply { text = getString(R.string.diag_app_settings); setOnClickListener { openSystemPage(AndroidSettings.ACTION_APPLICATION_DETAILS_SETTINGS) } })
         probeBody = TextView(this).apply { setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f); setTextIsSelectable(true); typeface = android.graphics.Typeface.MONOSPACE }
         col.addView(probeBody, ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
         val scroll = ScrollView(this).apply { addView(col) }
@@ -45,6 +51,14 @@ class DiagnosticsActivity : Activity() {
         setContentView(scroll)
         // the emulator check on GitHub (net-probe.yml) starts this screen with probe=true: only in a debug build, so no installed keyboard can be made to connect from outside
         if ((applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE) != 0 && intent?.getBooleanExtra("probe", false) == true) probe()
+    }
+
+    /** Opens a system settings page for THIS app; falls back to the app's own settings page, and says so when the device has neither. */
+    private fun openSystemPage(action: String) {
+        val data = Uri.parse("package:$packageName")
+        try { startActivity(Intent(action, data)) } catch (e: Exception) {
+            try { startActivity(Intent(AndroidSettings.ACTION_APPLICATION_DETAILS_SETTINGS, data)) } catch (e2: Exception) { Toast.makeText(this, R.string.diag_no_page, Toast.LENGTH_LONG).show() }
+        }
     }
 
     /**
@@ -58,7 +72,10 @@ class DiagnosticsActivity : Activity() {
         probeBody.text = getString(R.string.diag_probe_running)
         val app = applicationContext
         val debug = (applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE) != 0
+        // debug build only (the emulator check of Data Saver, R25): wait first, so the test can send this screen to the background and run the connection test the way the keyboard does
+        val delay = if (debug) (intent?.getIntExtra("probe_delay", 0) ?: 0).coerceIn(0, 60) else 0
         Thread({
+            if (delay > 0) try { Thread.sleep(delay * 1000L) } catch (_: InterruptedException) { }
             val lines = ArrayList<String>()
             val steps = try {
                 ConnectionProbe.run(app) { st ->

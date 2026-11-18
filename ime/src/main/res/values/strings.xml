@@ -78,6 +78,9 @@
     <string name="diag_refresh">Refresh</string>
     <string name="diag_probe">Test translation connection</string>
     <string name="diag_probe_running">Testing the connection to the two translation services\u2026 (up to a minute on a slow link)</string>
+    <string name="diag_unrestricted">Allow Swoop to use data when Data Saver is on</string>
+    <string name="diag_app_settings">Swoop app settings (mobile data, battery)</string>
+    <string name="diag_no_page">This device has no such settings page. Open Settings, Apps, Swoop.</string>
     <string name="diag_probe_failed">The connection test could not run.</string>
     <string name="diag_copied">Copied. It holds numbers only, nothing you typed.</string>
     <string name="setup_diag_button">Diagnostics (numbers to paste into the chat)</string>

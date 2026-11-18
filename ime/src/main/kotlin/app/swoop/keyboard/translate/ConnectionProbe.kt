@@ -58,6 +58,12 @@ object ConnectionProbe {
             val granted = try { context.checkSelfPermission("android.permission.INTERNET") == PackageManager.PERMISSION_GRANTED } catch (e: RuntimeException) { false }
             add(ProbeStep("Internet permission", granted, 0, if (granted) "granted" else "NOT granted to this app"))
         }
+        if (context != null) {
+            // R25: Data Saver / battery saver / doze / a restricted app: what can make Android refuse a BACKGROUND app (a keyboard is one) the network on purpose
+            val f = AndroidLimits.read(context)
+            val blocksNetwork = f.dataSaver == AndroidLimits.DataSaver.ON_NOT_ALLOWED || f.backgroundRestricted || f.standbyBucket == "restricted"
+            add(ProbeStep("Android limits", !blocksNetwork, 0, f.note()))
+        }
         val cal = java.util.Calendar.getInstance(TimeZone.getTimeZone("UTC"))
         val year = cal.get(java.util.Calendar.YEAR)
         val fmt = SimpleDateFormat("yyyy-MM-dd HH:mm 'UTC'", Locale.US).also { it.timeZone = TimeZone.getTimeZone("UTC") }
@@ -143,9 +149,12 @@ object ConnectionProbe {
         steps.firstOrNull { it.name == "Internet permission" && !it.ok }?.let {
             return "Result: the keyboard has no internet permission. Reinstall Swoop from the Release."
         }
-        val blocked = steps.firstOrNull { !it.ok && (it.note.contains("EPERM") || it.note.contains("EACCES")) }
+        val limits = steps.firstOrNull { it.name == "Android limits" && !it.ok }
+        val blocked = steps.firstOrNull { !it.ok && it.name != "Android limits" && (it.note.contains("EPERM") || it.note.contains("EACCES")) }
         if (blocked != null) {
-            return "Result: Android refuses the keyboard a network socket (${blocked.name}). Check Settings, Apps, Swoop, mobile data and data saver; switch off any firewall app; restart the device once."
+            val fix = if (limits != null) " The cause is on this device (${limits.note}). Open Settings, Network and internet, Data Saver, Unrestricted data and switch Swoop on (the button below opens it), or turn Data Saver off."
+            else " Check Settings, Apps, Swoop, mobile data and data saver (the buttons below open them); switch off any firewall app; restart the device once."
+            return "Result: Android refuses the keyboard a network socket (${blocked.name}: ${SafeReason.errnoOf(blocked.note) ?: "refused"})." + fix
         }
         bad("name lookup")?.let { return "Result: the name of ${it.name.substringBefore(':')} could not be looked up: the device is offline, or private DNS / a filter blocks it. Is the phone's mobile data on?" }
         val connects = steps.filter { it.name.contains(": connect ") }
@@ -153,6 +162,7 @@ object ConnectionProbe {
         bad("secure handshake")?.let { return "Result: the secure handshake with ${it.name.substringBefore(':')} failed (${it.note}). Check the date and time; a hotspot filter may be cutting it." }
         bad("answer")?.let { return "Result: ${it.name.substringBefore(':')} was reached but the exchange broke (${it.note}). Flaky link: try again." }
         steps.firstOrNull { it.name == "Device clock" && !it.ok }?.let { return "Result: the device date is wrong; fix it." }
+        if (limits != null) return "Result: Android limits what Swoop may use in the background (${limits.note}). This test passed because this screen is in front, but the keyboard runs in the background, so translating from it may be refused. Open Settings, Network and internet, Data Saver, Unrestricted data and switch Swoop on (the button below opens it)."
         val answers = steps.filter { it.name.endsWith(": answer") }
         if (answers.any { it.note.contains("became") }) return "Result: translation can work from here."
         return "Result: the services were reached but did not translate the test word (see the answer lines)."
