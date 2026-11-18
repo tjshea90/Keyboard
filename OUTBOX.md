@@ -865,3 +865,17 @@
 > - The Kestrel release is the other session's or your call.
 > - Optional, not started: an emulator smoke run and learning the gesture length per person.
 <!-- sha:46e5bd324455 -->
+
+## 2026-11-18T19:55:34Z
+> Status so far, in plain words:
+>
+> **Translation `SocketException` (R24a).** The real engine, run here against the live MyMemory and Google services, translates correctly. So the services and my code's URLs and parsers are fine, and the failure is specific to your device or its link. What I've built:
+> - The app now says **which step** failed (blocked by Android, connection dropped, secure handshake, offline), with a safe short reason such as `ECONNRESET` or `EPERM`. It never includes your text or an address.
+> - A dropped connection gets one automatic quick retry.
+> - Diagnostics has a new **"Test translation connection"** button that checks each step and tells you in plain words what's wrong.
+> - A network test is running now on GitHub on real Android 10 and Android 16 emulators.
+>
+> **Glide research (R24b).** I found a way to test on **real** thumbs for the first time: a public MIT-licensed corpus of about a million real swipes. I'm building a replay that checks our decoder against them. Nothing ships unless it measurably beats today's accuracy.
+>
+> Still waiting on the full local test suite and the emulator run. Open items: R24a (verify on emulators, then ship), R24b (replay, tune, measure), and the 0.7.0-alpha4 release.
+<!-- sha:0df9374f2acf -->
