@@ -729,3 +729,7 @@
 > - [ ] Not built, ranked lower in the research: correcting the previous glided word using the next word, learning from tap positions, and A/B measurement on your real thumb
 > - [ ] Optional: emulator smoke run, and syncing the Kestrel browser copy
 <!-- sha:7abed7e1c1ba -->
+
+## 2026-11-18T05:29:55Z
+> The 0.7.0-alpha2 build is dispatched and checkpointed. I'll check the run when the timer fires.
+<!-- sha:57c652eb7aa9 -->
