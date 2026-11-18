@@ -310,7 +310,7 @@ class KeysView(context: Context) : View(context) {
     fun drawOverlay(c: Canvas) {
         layoutKeys()
         val lit = litKey
-        if (lit != null) { val kb = boxOf(lit); if (kb != null) drawKey(c, lit, kb, true, rows[0].contains(lit)) }
+        if (lit != null && !blankSlate()) { val kb = boxOf(lit); if (kb != null) drawKey(c, lit, kb, true, rows[0].contains(lit)) }
         drawStrip(c)
         if (!gliding && keyPreview && !hideLetters) drawBubble(c)
         if (trailOn) drawTrail(c)
