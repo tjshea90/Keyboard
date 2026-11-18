@@ -419,13 +419,21 @@ class KeyboardPresenterTest {
     private fun Rig.copied(text: String, at: Long = 1_000L) { presenter.clipChipSource = { ClipItem(text, at, false) }; presenter.onClipboardChanged() }
 
     @Test fun whatWasJustCopiedIsTheFirstBoxAndOneTapPastesTheWholeCopy() {
-        val r = Rig(suggest = true, words = pairedList); r.glide("hello")
-        r.copied("https://example.com/a/very/long/address?with=parts&and=more#fragment " .repeat(1).trim())
+        val r = Rig(suggest = true, words = pairedList)
+        val url = "https://example.com/a/very/long/address?with=parts&and=more#fragment"
+        r.copied(url)
         val chips = r.view.candidatesForTest()
-        assertTrue("the copy is first: $chips", chips.first().startsWith("https://example.com/a/very/long/address")); assertEquals("three boxes at most: $chips", true, chips.size <= 3)
+        assertTrue("the copy is first: $chips", chips.first().startsWith("https://example.com/a/very/long/address")); assertTrue("three boxes at most: $chips", chips.size <= 3)
         r.tapChip(0)
-        assertEquals("hello https://example.com/a/very/long/address?with=parts&and=more#fragment", r.text.trimEnd().let { if (it.startsWith("hello ")) it else it })
+        assertEquals("the whole copy goes in, not the shortened text", url, r.text)
         assertTrue("the pasted copy is not offered a second time: ${r.view.candidatesForTest()}", r.view.candidatesForTest().none { it.startsWith("https://") })
+    }
+
+    @Test fun duringAGlideTheStripKeepsTheGlideGuessesAndTheCopyWaitsForTheNextWord() {
+        val r = Rig(suggest = true, words = pairedList); r.glide("hello"); r.copied("my copied note")
+        assertTrue("the glide's strip stays: ${r.view.candidatesForTest()}", r.view.candidatesForTest().none { it == "my copied note" })
+        r.tap("space"); r.tap("\u232B"); r.tap("space")
+        assertEquals("my copied note", r.view.candidatesForTest().firstOrNull())
     }
 
     @Test fun theCopyIsFirstAtTheStartOfAWordAndGoesAwayAsSoonAsLettersAreTyped() {
