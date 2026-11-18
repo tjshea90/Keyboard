@@ -132,7 +132,7 @@ object Suggester {
                 if (id < 0 && pm.weightOf(w) < OWN_WORD_USES && w.length > 1) continue
                 out[w] = Math.log(share.toDouble()).toFloat() + START_BONUS; shown[w] = if (id >= 0) main.text(id) else w
             }
-            for (w in (pm?.topWords(6) ?: emptyList())) { if (w in out) continue val id = main.idOf(w); out[w] = logP(main, pm, id.takeIf { it >= 0 && main.text(it).lowercase() == w } ?: -1, w, -1, null, null, total); shown[w] = w }
+            for (w in (pm?.topWords(6) ?: emptyList())) { if (w in out) continue; val id = main.idOf(w); out[w] = logP(main, pm, id.takeIf { it >= 0 && main.text(it).lowercase() == w } ?: -1, w, -1, null, null, total); shown[w] = w }
             for (w in STARTERS) if (w.lowercase() !in out) { val id = main.idOf(w); if (id >= 0) { out[w.lowercase()] = main.logProb(id) - 1f; shown[w.lowercase()] = main.text(id) } }
         } else {
             val prevId = main.idOf(prev)
