@@ -25,6 +25,35 @@ done
 adb logcat -d > "$OUT/logcat-full.txt" 2>&1 || true
 echo "---- probe log"; cat "$OUT/probe.log"; echo "----"
 if [ "$done" != 1 ]; then echo "::error::the probe gave no result (see logcat-full.txt in the artifact)"; grep -iE 'FATAL|AndroidRuntime|swoop' "$OUT/logcat-full.txt" | head -20; exit 1; fi
-if grep -q ' FAIL ' "$OUT/probe.log" || grep -q 'D SwoopProbe: *FAIL' "$OUT/probe.log"; then echo "::error::a network step failed on this Android (see the log above)"; exit 1; fi
-echo "every step worked on this Android"
-exit 0
+PHASE_A_BAD=0
+if grep -q ' FAIL ' "$OUT/probe.log" || grep -q 'D SwoopProbe: *FAIL' "$OUT/probe.log"; then echo "::error::a network step failed on this Android (see the log above)"; PHASE_A_BAD=1; else echo "phase A (plain): every step worked on this Android"; fi
+
+# ---- R25 (2026-11-18): the owner's tablet says "Android refuses the keyboard a network socket" (EPERM). Hypothesis: Data Saver (on by default on Android Go) + a METERED Wi-Fi (a phone's
+# hotspot is one) + a BACKGROUND app (a keyboard process) = the sockets are refused unless the app is on the "Unrestricted data" list. Reproduce it here, informational (never fails the job):
+#   phase B: Data Saver on, Wi-Fi metered, the probe runs while the app is in the background (HOME pressed 2 s after the start; the probe waits 8 s)
+#   phase C: the same with the app on the Unrestricted data list (cmd netpolicy add restrict-background-whitelist <uid>)
+APP_UID="$(adb shell dumpsys package "$PKG" | grep -m1 -oE 'userId=[0-9]+' | cut -d= -f2 | tr -d '\r')"
+echo "---- R25: app uid $APP_UID"
+adb shell cmd netpolicy list wifi-networks > "$OUT/netpolicy-wifi.txt" 2>&1; cat "$OUT/netpolicy-wifi.txt" | head -8
+WIFI_ID="$(grep -oE 'AndroidWifi' "$OUT/netpolicy-wifi.txt" | head -1)"; WIFI_ID="${WIFI_ID:-AndroidWifi}"
+background_probe(){   # $1 = label
+  adb logcat -c
+  adb shell am start -n "$PKG/app.swoop.keyboard.SetupActivity" --ez probe true --ei probe_delay 8 >/dev/null 2>&1 || true
+  sleep 3; adb shell input keyevent KEYCODE_HOME; sleep 1
+  for i in $(seq 1 60); do adb logcat -d -s SwoopProbe:D > "$OUT/probe-$1.log" 2>&1; if grep -q 'done:' "$OUT/probe-$1.log"; then break; fi; sleep 2; done
+  echo "---- probe $1"; grep -E 'Android limits|connect IPv4|handshake|answer|done:|FAIL' "$OUT/probe-$1.log" | cut -c1-230
+}
+adb shell cmd netpolicy set restrict-background true 2>&1 | head -2
+adb shell cmd netpolicy set metered-network "$WIFI_ID" true 2>&1 | head -2
+adb shell cmd netpolicy get restrict-background 2>&1 | head -2
+adb shell dumpsys netpolicy 2>/dev/null | grep -iE 'restrict|metered' | head -6
+background_probe B
+if grep -qE 'EPERM|EACCES' "$OUT/probe-B.log"; then echo "R25 REPRODUCED: with Data Saver on, a metered Wi-Fi and the app in the background Android refuses the sockets (EPERM/EACCES)"; else echo "R25 not reproduced in phase B (see probe-B.log)"; fi
+adb shell cmd netpolicy add restrict-background-whitelist "$APP_UID" 2>&1 | head -2
+adb shell cmd netpolicy get restrict-background 2>&1 | head -2
+background_probe C
+if grep -qE 'EPERM|EACCES' "$OUT/probe-C.log"; then echo "R25: still refused with the app on the Unrestricted data list (phase C)"; else echo "R25: with the app on the Unrestricted data list the sockets work (phase C)"; fi
+adb shell cmd netpolicy remove restrict-background-whitelist "$APP_UID" >/dev/null 2>&1 || true
+adb shell cmd netpolicy set metered-network "$WIFI_ID" undefined >/dev/null 2>&1 || true
+adb shell cmd netpolicy set restrict-background false >/dev/null 2>&1 || true
+[ "$PHASE_A_BAD" = 0 ] && exit 0 || exit 1

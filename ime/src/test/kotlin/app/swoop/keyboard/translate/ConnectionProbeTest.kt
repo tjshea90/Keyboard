@@ -73,6 +73,31 @@ class ConnectionProbeTest {
         assertTrue(ConnectionProbe.verdict(listOf(st("Device clock", false, "1970"))).contains("date is wrong"))
     }
 
+    @Test fun aBlockedSocketWithDataSaverOnNamesDataSaverAndTheFix() {
+        val limit = st("Android limits", false, "Data Saver ON and Swoop is NOT on the Unrestricted data list, standby bucket active")
+        val v = ConnectionProbe.verdict(healthy + limit + st("MyMemory: connect IPv4", false, "ConnectException (EPERM, not permitted)"))
+        assertTrue(v, v.contains("refuses the keyboard a network socket (MyMemory: connect IPv4: EPERM)"))
+        assertTrue(v, v.contains("Data Saver ON") && v.contains("Unrestricted data"))
+        val plain = ConnectionProbe.verdict(healthy + st("Google: connect IPv4", false, "ConnectException (EACCES, permission denied)"))
+        assertTrue(plain, plain.contains("EACCES") && !plain.contains("The cause is on this device"))
+    }
+
+    @Test fun aLimitAloneIsAWarningThatTheKeyboardMayBeRefused() {
+        val v = ConnectionProbe.verdict(healthy + st("Android limits", false, "Data Saver ON and Swoop is NOT on the Unrestricted data list"))
+        assertTrue(v, v.startsWith("Result: Android limits what Swoop may use in the background"))
+        assertTrue(v, v.contains("Unrestricted data"))
+    }
+
+    @Test fun theFactsAreReadAsWords() {
+        val on = AndroidLimits.Facts(AndroidLimits.DataSaver.ON_NOT_ALLOWED, false, false, false, "active")
+        assertTrue(on.limits); assertTrue(on.note(), on.note().contains("Data Saver ON and Swoop is NOT on the Unrestricted data list"))
+        val ok = AndroidLimits.Facts(AndroidLimits.DataSaver.ON_ALLOWED, false, false, false, "active")
+        assertFalse(ok.limits); assertTrue(ok.note(), ok.note().contains("on the Unrestricted data list"))
+        assertFalse(AndroidLimits.Facts(AndroidLimits.DataSaver.OFF, false, false, false, "working set").limits)
+        assertTrue(AndroidLimits.Facts(AndroidLimits.DataSaver.OFF, true, false, false, "active").note().contains("battery saver ON"))
+        assertTrue(AndroidLimits.Facts(AndroidLimits.DataSaver.OFF, false, false, true, "restricted").limits)
+    }
+
     @Test fun theTextHasOneLinePerStepAndTheVerdictLast() {
         val t = ConnectionProbe.format(healthy)
         val lines = t.split("\n")
