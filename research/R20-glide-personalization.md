@@ -411,8 +411,8 @@ Rules for every result (from the plan's gates and my seed experience): report ca
 * Full covariance per key: no gain in the production study [V S3]. Means only.
 * Decayed weighting of touch history: "no difference" against uniform weights [V S3]; a plain window of the last 400 to 800 accepted touches is enough. For words the same: decaying cache no better than uniform [V S5] (my recency ablation agrees [M]).
 * Federated learning and server training: not applicable (no network use for learning); the lesson is only that a 1.4 MB model beat an n-gram [V S10].
-* A neural decoder in pure Kotlin: FUTO's encoder is 1.0 MB int8 with 1.5 to 7.6 ms on a Pixel 4 core pair [V S16, Appendix B read in the text I fetched] and reaches 92.9 % against a SHARK2 baseline at 80.1 % on ITS data; our decoder is already above that baseline on simulated paths, and the next measurable step is real data (rank 2), not a model.
-* Pressure and touch size: the Weir et al. pressure model changed the typing interaction, not accuracy of ordinary use [V S6]; Android touch-size data on the owner's tablet is unknown; skip.
+* A neural decoder in pure Kotlin: FUTO's encoder takes 1.5 ms (A76 core) to 7.6 ms (A55 core) per swipe on a Pixel 4 [V S16] and reaches 92.9 % top-1 against a SHARK2-style baseline at 80.1 % on its own real swipes (its size, about 1 MB int8, is from `research/PREDICTION-SOURCES.md` [S]); our decoder's accuracy on real thumbs is simply unknown (the simulated numbers in section 2 are not comparable), so the next measurable step is real data (rank 2), not a model. The earlier plan keeps it as the last-resort item 5.
+* Pressure and touch size: Weir et al.'s second system lets the user control uncertainty by pressing harder and entered phrases more than 20 % faster [V S6], but it needs a pressure-sensitive screen and a changed interaction; the owner's tablet touch hardware is unknown; skip.
 
 ---
 
