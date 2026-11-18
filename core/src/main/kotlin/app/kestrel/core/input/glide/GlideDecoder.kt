@@ -105,7 +105,9 @@ class GlideParams(
      * it is judged. [fieldRate] is how far each kept letter moves the map (per letter, of the way to what it saw). False = the old single shift only (the tests and evaluation tools compare the two).
      */
     val touchField: Boolean = true,
-    val fieldRate: Float = 0.06f,
+    val fieldRate: Float = 0.03f,
+    val fieldCols: Int = TouchField.COLS,
+    val fieldRows: Int = TouchField.ROWS,
 )
 
 /** What counts as a rare word (shared by the glide decoder and the tap suggester). ln-probabilities are on the scale of the shipped list: -12.5 is about rank 13 000 of 140 000. */
@@ -150,7 +152,7 @@ class GlideDecoder(private val keys: GlideKeys, private val p: GlideParams = Gli
     /** The offset the learned finger habit adds to every path (pitches): what the finger usually lands beside the key it aims at. Set by [learnFrom]. */
     var biasX = 0f; var biasY = 0f
     /** R20d: where the thumb lands on each part of the keyboard, on top of the single shift. Learned by [learnFrom]; owned by whoever owns the decoder. */
-    val field = TouchField()
+    val field = TouchField(p.fieldCols, p.fieldRows)
     private val fo = FloatArray(2)
     private val fx0 = kx.min(); private val fx1 = kx.max(); private val fy0 = ky.min(); private val fy1 = ky.max()
     private fun fu(x: Float) = if (fx1 > fx0) (x - fx0) / (fx1 - fx0) else 0.5f

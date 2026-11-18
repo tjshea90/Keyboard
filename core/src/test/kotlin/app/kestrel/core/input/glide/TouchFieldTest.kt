@@ -43,10 +43,14 @@ class TouchFieldTest {
 
     @Test fun probe() {
         val out = StringBuilder()
-        val z = SimNoise.NORMAL.withZone(12f, 6f, -12f, 6f); val sl = SimNoise.SLOPPY.withZone(12f, 6f, -12f, 6f)
-        out.append("pitch ${keys.pitch}\n")
-        for (rate in listOf(0f, 0.03f, 0.06f, 0.12f, 0.25f)) out.append("normal zone 12, rate $rate: ${runDetail(z, GlideParams(touchField = rate > 0f, fieldRate = rate))}\n")
-        for (rate in listOf(0f, 0.06f, 0.12f, 0.25f)) out.append("sloppy zone 12, rate $rate: ${runDetail(sl, GlideParams(touchField = rate > 0f, fieldRate = rate))}\n")
+        val z = SimNoise.NORMAL.withZone(12f, 6f, -12f, 6f); val z6 = SimNoise.NORMAL.withZone(6f, 3f, -6f, 3f); val sl = SimNoise.SLOPPY.withZone(12f, 6f, -12f, 6f)
+        for ((c, r) in listOf(2 to 2, 3 to 2, 3 to 3, 5 to 3, 4 to 4)) {
+            val p = GlideParams(fieldCols = c, fieldRows = r, fieldRate = 0.03f)
+            out.append("grid ${c}x$r: normal12 %.1f  normal6 %.1f  sloppy12 %.1f\n".format(lastThird(z, p), lastThird(z6, p), lastThird(sl, p)))
+        }
+        out.append("none: normal12 %.1f  normal6 %.1f  sloppy12 %.1f\n".format(lastThird(z, GlideParams(touchField = false)), lastThird(z6, GlideParams(touchField = false)), lastThird(sl, GlideParams(touchField = false))))
+        for (rate in listOf(0.015f, 0.03f)) { val p = GlideParams(fieldRate = rate); out.append("3x3 rate $rate: normal12 %.1f  normal6 %.1f  sloppy12 %.1f  calm-none %.1f\n".format(lastThird(z, p), lastThird(z6, p), lastThird(sl, p), lastThird(SimNoise.NORMAL, p))) }
+        out.append("no zone, field off %.1f, on %.1f\n".format(lastThird(SimNoise.NORMAL, GlideParams(touchField = false)), lastThird(SimNoise.NORMAL, GlideParams())))
         println(out); org.junit.Assert.fail(out.toString())
     }
 }
