@@ -33,7 +33,7 @@ class AdaptiveLearningTest {
         val pm = PersonalModel(); for (w in starts(60, 1)) { pm.add(null, w); pm.addStart(w) }          // (what the learner does for every finished word)
         val after = hitRate(pm, test)
         println("sentence starters in the first three: before learning %.2f, after 60 sentences %.2f".format(before, after))
-        assertTrue("before: $before", before < 0.15f); assertTrue("after learning the start of the next sentence is on the strip: $after", after >= 0.95f)
+        assertTrue("before: $before", before < 0.15f); assertTrue("after learning the start of the next sentence is on the strip (three slots, four starters: 90 % is the most there is): $after", after >= 0.85f)
     }
 
     @Test fun fewStartsAreTrustedLessThanManyAndNothingIsOfferedBeforeThereAreAny() {
@@ -69,8 +69,8 @@ class AdaptiveLearningTest {
     @Test fun aPersonWhoUndoesFixesHasFewerAutomaticChangesAndOneWhoNeverDoesKeepsTheStandardOnes() {
         // "vat" is one neighbouring key from "bat" and from "cat"; "jit" from "hit" and "kit": a fix that is only a little likelier than the next word is where the margin decides
         val l = LexiconFile.read(LexiconFile.build(listOf("bat" to 40_000_000L, "cat" to 10_800_000L, "hit" to 70_000_000L, "kit" to 30_000_000L, "zzfiller" to 300_000_000_000L).map { LexiconFile.Entry(it.first, it.second) }, emptyList()))
-        val strict = PersonalModel(); repeat(40) { strict.addFix(false) }; repeat(16) { strict.addFix(true) }
-        val bold = PersonalModel(); repeat(100) { bold.addFix(false) }
+        val strict = PersonalModel(); strict.add(null, "hello"); repeat(40) { strict.addFix(false) }; repeat(16) { strict.addFix(true) }
+        val bold = PersonalModel(); bold.add(null, "hello"); repeat(100) { bold.addFix(false) }
         fun fix(typed: String, pm: PersonalModel?) = Suggester.suggest(l, pm, keys, typed, null, null, 3).autoCorrect
         assertEquals("standard: a fix 1.3 nats ahead is made", "bat", fix("vat", null)); assertNull("strict: not any more", fix("vat", strict)); assertEquals("bold keeps it", "bat", fix("vat", bold))
         assertNull("standard: a fix 0.85 nats ahead is not made", fix("jit", null)); assertEquals("bold: made", "hit", fix("jit", bold)); assertNull(fix("jit", strict))
