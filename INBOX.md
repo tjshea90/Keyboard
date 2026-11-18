@@ -352,3 +352,43 @@ FAIL Google: connect IPv4 (3 ms): SocketException (EPERM, not permitted)
 FAIL Google: answer (3 ms): BLOCKED, SocketException (EPERM, not permitted)
 Result: Android refuses the keyboard a network socket (MyMemory: connect IPv4: EPERM). That is not Data Saver or battery saver (they show as refused or timed out). Restart the device once; then look for a firewall, VPN or ad-blocking app, a vendor setting that blocks an app's internet (Settings, Apps, Swoop: mobile data / network switches), or a parental-control or school profile on this device.
 ```
+
+## 2026-11-18T23:53:21Z
+```
+Swoop 0.7.0-alpha5 (code 16)
+Android 10 (API 29), 711
+keyboard switched on: true, chosen now: true
+memory: process 44 MB, java heap 8 of 128 MB
+safe layout (crash-loop guard): off
+glide engine ready: true
+glide: Glide typing: 19 glides: best word kept 15 (88 %), another candidate picked 2, deleted right away 0; decode avg 70 ms, worst 124 ms; word shown 72 ms after the lift (worst 126 ms); live preview 59 times, avg 73 ms; word list 140494 words ready after 210 ms, first decode (warm-up) 138 ms; thumb habit x 7.6 y -4.7 dp; own words 17; learned 999 words and 2871 word pairs from your typing, a learned word was the first guess 16 times; 492 corrections and 3267 three-word phrases remembered; 1129 glide shapes of 633 words remembered, a remembered shape helped 11 times and changed the first guess 0 times; tap typing: 0 words learned, suggestions made 73 times (avg 42 ms, worst 633 ms), 0 picked from the strip, 0 erased and retyped
+input: keys 10, backspaces 34, enters 3, glides 19, picks 2, cursor moves 0, foreign changes 4, resyncs 0
+translate connections (service, time, result; never words):
+18:47:23 translate (MyMemory) 164 ms failed (BLOCKED: SocketException (EPERM, not permitted))
+18:47:23 translate (Google Translate) 59 ms failed (BLOCKED: SocketException (EPERM, not permitted))
+18:47:27 translate (MyMemory) 21 ms failed (BLOCKED: SocketException (EPERM, not permitted))
+18:47:27 translate (Google Translate) 9 ms failed (BLOCKED: SocketException (EPERM, not permitted))
+18:47:56 translate (MyMemory) 15 ms failed (BLOCKED: SocketException (EPERM, not permitted))
+18:47:56 translate (Google Translate) 6 ms failed (BLOCKED: SocketException (EPERM, not permitted))
+18:47:57 translate (MyMemory) 12 ms failed (BLOCKED: SocketException (EPERM, not permitted))
+18:47:57 translate (Google Translate) 6 ms failed (BLOCKED: SocketException (EPERM, not permitted))
+18:48:32 translate (MyMemory) 195 ms failed (BLOCKED: SocketException (EPERM, not permitted))
+18:48:33 translate (Google Translate) 76 ms failed (BLOCKED: SocketException (EPERM, not permitted))
+18:48:36 translate (MyMemory) 15 ms failed (BLOCKED: SocketException (EPERM, not permitted))
+18:48:36 translate (Google Translate) 45 ms failed (BLOCKED: SocketException (EPERM, not permitted))
+18:48:38 translate (MyMemory) 90 ms failed (BLOCKED: SocketException (EPERM, not permitted))
+18:48:38 translate (Google Translate) 14 ms failed (BLOCKED: SocketException (EPERM, not permitted))
+(numbers only: this text never contains anything you typed)
+
+OK   Internet permission (0 ms): granted
+OK   Internet access group (0 ms): this process has Android's internet group (inet)
+OK   Android limits (0 ms): Data Saver cannot be read (Android only tells apps with the network-state permission, which Swoop does not have), battery saver ON, standby bucket active
+OK   Device clock (0 ms): 2026-11-18 23:49 UTC
+OK   MyMemory: name lookup (79 ms): 3 address(es): 3 IPv4, 0 IPv6
+FAIL MyMemory: connect IPv4 (3 ms): SocketException (EPERM, not permitted)
+FAIL MyMemory: answer (10 ms): BLOCKED, SocketException (EPERM, not permitted)
+OK   Google: name lookup (46 ms): 1 address(es): 1 IPv4, 0 IPv6
+FAIL Google: connect IPv4 (3 ms): SocketException (EPERM, not permitted)
+FAIL Google: answer (3 ms): BLOCKED, SocketException (EPERM, not permitted)
+Result: Android refuses the keyboard a network socket (MyMemory: connect IPv4: EPERM). That is not Data Saver or battery saver (they show as refused or timed out). Restart the device once; then look for a firewall, VPN or ad-blocking app, a vendor setting that blocks an app's internet (Settings, Apps, Swoop: mobile data / network switches), or a parental-control or school profile on this device.
+```
