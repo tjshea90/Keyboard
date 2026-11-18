@@ -1,13 +1,13 @@
-# CHECKPOINT 480 — read me first, then TASKS.md
+# CHECKPOINT 490 — read me first, then TASKS.md
 
-**Written:** 2026-11-18T03:27:48Z · **tests:** all 1 fast checks green (gradle suite: see ship.sh)
-**Branch:** `claude/keyboard-caps-space-resize-glide-r72nmp` · **builds on:** `3ab3486` (this checkpoint is the commit after it)
+**Written:** 2026-11-18T03:34:21Z · **tests:** all 1 fast checks green (gradle suite: see ship.sh)
+**Branch:** `claude/keyboard-caps-space-resize-glide-r72nmp` · **builds on:** `978c082` (this checkpoint is the commit after it)
 
 ## Just done
-R19a/b/d core done+tested: always-answer relaxed decode pass (GlideDecoder.alwaysAnswer, relax flag, GlideResult.ready), capital after '.'+glide/strip word (shiftWithLead/nextWordStartsSentence), flagged-field caps fallback, 'I.' sentence end, keepTight (deleted space after punctuation stays deleted). R19c core math (FloatingMath.dockedResize) + KeyboardRoot/GripBar/KeysService/Settings edits written, NOT yet compiled/tested
+R19c done+tested (docked two-axis resize via bar arrows, window-tall during drag, dockH setting, Full size pill/double-tap restore height, overlay stale-height fix in KeyboardRoot.onMeasure): KeyboardRootTest 36 + FloatingMathTest pass. NB: :ime tests need ONLINE gradle (no --offline) in this container
 
 ## Do this next
-compile :ime (./gradlew --offline :ime:compileDebugKotlin), then update ime/src/test KeyboardRootTest (layout() must use r.windowTall; add docked two-axis resize tests) + KeyboardPresenterTest for R19a/b/d; FloatingMathTest for dockedResize; docs FLOATING.md/README/SetupActivity note; then full :core:test :ime:testDebugUnitTest :ime:lintDebug, ship 0.6.0-alpha2 (code 11)
+add KeyboardPresenterTest cases for R19a/b/d end-to-end (glide after '.', deleted space stays, glide never says no word fits); docs FLOATING.md/README/SetupActivity note+label; then full :core:test :ime:testDebugUnitTest :ime:lintDebug; bump ime/build.gradle.kts to 0.6.0-alpha2 code 11; bash ship.sh; dispatch android.yml
 
 *(resuming? CLAUDE.md's "FIRST ACTION OF EVERY SESSION" says how; the briefing is tools/resume.sh. Do that first, or autosave may stay off all session.)*
 
@@ -16,6 +16,7 @@ compile :ime (./gradlew --offline :ime:compileDebugKotlin), then update ime/src/
 
 ## Last ten checkpoints
 ```
+  60344cb ckpt 480: R19a/b/d core done+tested: always-answer relaxed decode pass (GlideDecoder.alw
   02723ef ckpt 469: wrote owner's four 2026-11-18 requests R19a-d into TASKS.md (his words)
   3839c16 ckpt 466: handoff saved (.handoff/handoff.md + archive; CLAUDE.md/AGENTS.md learnings bl
   c028463 ckpt 464: 0.6.0-alpha1 RELEASED AND RECORDED: run 44220063374 green (check, test-jvm inc
@@ -25,8 +26,7 @@ compile :ime (./gradlew --offline :ime:compileDebugKotlin), then update ime/src/
   f6c6db4 ckpt 432: R18b done: auto-capitals. InputController.startsSentence (empty TEXT box, newl
   0ff76f7 ckpt 415: R18c done: smooth resize (view-transform preview while dragging corner/arrow/p
   b17d0e8 ckpt 409: R18e done: hide-letters draws one solid blank slate (KeysView.blankSlate: no k
-  2a3d366 ckpt 404: R18: wrote the owner's five 2026-11-18 requests (R18a-e) into TASKS.md in his 
 ```
 
-(10 automatic checkpoint(s) since the last deliberate one — the
+(9 automatic checkpoint(s) since the last deliberate one — the
 session was still mid-step. `git diff` against it shows what changed.)
