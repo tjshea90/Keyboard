@@ -70,12 +70,13 @@ class TypingLearner(
         val typed = controller.wordBeforeCursor()
         val (p2, p1) = if (typed != null) controller.contextBefore(typed) else controller.previousTwo()
         val atStart = typed == null && InputController.startsSentence(controller.before, controller.selStart)
+        val mine = typed != null && controller.typedWord() == typed                                                // (R23b: asked before the pick, which ends the typed text)
         if (!controller.pickWord(word)) return false
         if (g == null || !active()) return true
         if (atStart) g.learnStart(word)
         g.stats.onSuggestionPicked()
         val w = word.lowercase()
-        val fixed = typed != null && controller.typedWord() == typed && !w.startsWith(typed.lowercase())          // it replaced a typo the person typed (R23b: not letters that were pasted), it did not finish the word
+        val fixed = typed != null && mine && !w.startsWith(typed.lowercase())          // it replaced a typo the person typed (R23b: not letters that were pasted), it did not finish the word
         g.learnWord(p1, w, 2f, p2, if (fixed) typed!!.lowercase() else null, 2f)
         last = Done(w, p1, p2, 2f); erased = null
         return true
