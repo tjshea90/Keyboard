@@ -74,6 +74,11 @@ class InputController(editor: EditorBridge, val stats: InputStats = InputStats()
      */
     private var keepTight = -1
     private fun tightHere() = keepTight >= 0 && selStart == keepTight && selStart == selEnd
+    /**
+     * Owner R21: the cursor offset right after the space a glide or a strip word added behind itself, until anything else is done. A closing quote typed exactly here takes that space away ("this" and not "this "); a space the
+     * person typed is never touched. -1 = none.
+     */
+    private var autoTrailAt = -1
 
     private val pending = Pending()
     /** The editor may still hold a composing region this keyboard lost track of (a failed call, a new session): it is closed before the next edit. */
@@ -102,7 +107,7 @@ class InputController(editor: EditorBridge, val stats: InputStats = InputStats()
     /** A new field got the focus (onStartInput / onStartInputView). Forgets everything about the previous one. */
     fun startInput(info: FieldInfo) {
         field = info
-        composing = null; lastGlide = null; shift = ShiftState.OFF; composingUnknown = true; adopt = 0; keepTight = -1
+        composing = null; lastGlide = null; shift = ShiftState.OFF; composingUnknown = true; adopt = 0; keepTight = -1; autoTrailAt = -1
         clearPending("c1"); early.clear(); inlineEditor = false
         selStart = info.initialSelStart; selEnd = info.initialSelEnd
         refresh()
@@ -152,7 +157,7 @@ class InputController(editor: EditorBridge, val stats: InputStats = InputStats()
         // the same selection as believed: usually only the composing region changed; but an app that replaced the text and left the cursor where it was looks the same, so with no own edit outstanding the window is checked
         if (newSelStart == selStart && newSelEnd == selEnd && (!pending.isEmpty() || windowStillTrue())) return true
         if (selStart < 0) {                                           // the first reports after an unknown state are the truth (and the text may have changed with them)
-            keepTight = -1
+            keepTight = -1; autoTrailAt = -1
             if (adopt > 0) adopt--
             selStart = newSelStart; selEnd = newSelEnd; refresh()
             if (composing != null && candStart < 0) composing = null                // the editor no longer shows the word being tapped
@@ -163,7 +168,7 @@ class InputController(editor: EditorBridge, val stats: InputStats = InputStats()
         if (composing != null) ed.finishComposing()
         stats.foreignReports++
         val glide = lastGlide; val wasAt = selStart
-        composing = null; lastGlide = null; keepTight = -1
+        composing = null; lastGlide = null; keepTight = -1; autoTrailAt = -1
         clearPending("c3")
         selStart = newSelStart; selEnd = newSelEnd
         refresh()
@@ -193,8 +198,12 @@ class InputController(editor: EditorBridge, val stats: InputStats = InputStats()
         }
         endComposing()
         val g = lastGlide
+        val glideTrail = g != null && g.text.endsWith(" ")
+        val ownTrail = glideTrail || (autoTrailAt >= 0 && autoTrailAt == selStart)
+        // owner R21: a closing quote also takes away the space our own glide or strip word left behind it ("this" and not "this ")
+        val closingQuote = ownTrail && ((key == "\"" && insideQuotes(false)) || (key == "\u201D" && insideQuotes(true)))
         // right after a glide, ".", ",", "/", ".com" ... close the word instead of standing after the space the glide added ("hello" ".com" = "hello.com")
-        if (g != null && key in CLOSES_WORD && g.text.endsWith(" ") && before.endsWith(" ") && selStart == selEnd) {
+        if (((glideTrail && key in CLOSES_WORD) || closingQuote) && before.endsWith(" ") && selStart == selEnd) {
             val s0 = selStart; val e0 = selEnd
             beginBatch()
             val ok = ed.deleteSurrounding(1, 0)
@@ -203,7 +212,7 @@ class InputController(editor: EditorBridge, val stats: InputStats = InputStats()
             endBatch(s0, e0)
             if (!ok) resync()
         } else commit(t)
-        lastGlide = null
+        lastGlide = null; autoTrailAt = -1
         if (shift == ShiftState.ONCE) shift = ShiftState.OFF
         ensureWindow()
         autoCaps()                                                  // after ". " (or a newline) the next letter is a capital
@@ -216,7 +225,7 @@ class InputController(editor: EditorBridge, val stats: InputStats = InputStats()
         if (text.isEmpty()) return false
         settle()
         endComposing()
-        lastGlide = null; keepTight = -1
+        lastGlide = null; keepTight = -1; autoTrailAt = -1
         val ok = commit(text)
         ensureWindow()
         autoCaps()
@@ -268,7 +277,7 @@ class InputController(editor: EditorBridge, val stats: InputStats = InputStats()
     fun backspace() { backspaceInner(); autoCaps() }
 
     private fun backspaceInner() {
-        settle()
+        settle(); autoTrailAt = -1
         stats.backspaces++
         revertedCorrection = null
         val fix = lastCorrection
@@ -331,7 +340,7 @@ class InputController(editor: EditorBridge, val stats: InputStats = InputStats()
     fun enter() {
         settle()
         stats.enters++
-        endComposing(); lastGlide = null; keepTight = -1
+        endComposing(); lastGlide = null; keepTight = -1; autoTrailAt = -1
         fixLoneI()
         val a = field.imeAction
         val useAction = !field.noEnterAction && a != ImeActions.UNSPECIFIED && a != ImeActions.NONE
@@ -353,7 +362,7 @@ class InputController(editor: EditorBridge, val stats: InputStats = InputStats()
         val tail = lead + w + " "
         if (!commit(tail)) return
         stats.glides++
-        lastGlide = GlideTail(tail, w)
+        lastGlide = GlideTail(tail, w); autoTrailAt = if (selStart >= 0) selStart else -1
         if (shift == ShiftState.ONCE) shift = ShiftState.OFF
         ensureWindow()
     }
@@ -410,7 +419,7 @@ class InputController(editor: EditorBridge, val stats: InputStats = InputStats()
         }
         if (ok) ok = commit(" ")
         endBatch(s0, e0)
-        lastGlide = null
+        lastGlide = null; autoTrailAt = if (ok && selStart >= 0) selStart else -1
         if (!ok) { resync(); return false }
         stats.swaps++
         if (shift == ShiftState.ONCE) shift = ShiftState.OFF
@@ -469,7 +478,7 @@ class InputController(editor: EditorBridge, val stats: InputStats = InputStats()
         if (delta == 0) return
         settle()
         stats.cursorMoves++
-        endComposing(); lastGlide = null; keepTight = -1
+        endComposing(); lastGlide = null; keepTight = -1; autoTrailAt = -1
         val left = delta < 0
         val steps = minOf(Math.abs(delta), 64)
         var predicted = selStart >= 0 && selStart == selEnd   // a selection collapses to one end and the selected text joins the window: re-read instead of predicting
@@ -599,6 +608,7 @@ class InputController(editor: EditorBridge, val stats: InputStats = InputStats()
         val last = before.lastOrNull() ?: return ""
         if (last.isWhitespace() || last in NO_SPACE_AFTER) return ""
         if (last in AUTO_SPACE_AFTER && tightHere()) return ""
+        if (last == '"' && quoteOpens()) return ""                   // owner R21: no space between an opening quote and the word inside it
         return " "
     }
 
@@ -614,6 +624,28 @@ class InputController(editor: EditorBridge, val stats: InputStats = InputStats()
         if (selStart >= 0 && selStart != selEnd) return false
         val lead = leadForNewWord()
         return startsSentence(before + lead, if (selStart >= 0) selStart + lead.length else -1)
+    }
+
+    /** The straight quote that ends the text before the cursor OPENS a quotation: it stands at the start of the text, or after a space, a newline, an opening bracket or a dash (not after a word or a closing mark). */
+    private fun quoteOpens(): Boolean {
+        val n = before.length
+        if (n == 0 || before[n - 1] != '"') return false
+        if (n == 1) return true
+        val prev = before[n - 2]
+        return prev.isWhitespace() || prev in "([{\u2014\u2013"
+    }
+
+    /**
+     * The cursor stands inside a pair of quotes that was opened within the text window: the last quote mark before the cursor is an opening one ([curly]: an opening “ that no closing ” follows). A straight quote counts as opening when
+     * it stands at the start of the text (known only when the window reaches back that far) or after a space, a newline, an opening bracket or a dash. Unknown (no opening mark in the window) is "not inside": the space is then left alone.
+     */
+    private fun insideQuotes(curly: Boolean): Boolean {
+        if (curly) return before.lastIndexOf('\u201C') > before.lastIndexOf('\u201D')
+        val i = before.lastIndexOf('"')
+        if (i < 0) return false
+        if (i == 0) return before.length < WINDOW_BEFORE
+        val prev = before[i - 1]
+        return prev.isWhitespace() || prev in "([{\u2014\u2013"
     }
 
     /**
