@@ -903,3 +903,7 @@
 >
 > Open: R24a (emulator result), R24b (real-swipe glide replay), R24c (run its tests), then release 0.7.0-alpha4.
 <!-- sha:6b681c448190 -->
+
+## 2026-11-18T20:31:43Z
+> Waiting on the sweep to finish; I'll apply the winning settings once I can see the numbers.
+<!-- sha:232759a51100 -->
