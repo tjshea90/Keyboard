@@ -1108,3 +1108,7 @@
 ## 2026-11-18T23:17:23Z
 > The release gates for 0.7.0-alpha5 are running (about 11 minutes). One finding to flag in the meantime: the new "Internet access group" check read "OK" on a healthy Android 10, so it will only complain if your tablet is genuinely missing its internet access.
 <!-- sha:437c268822f7 -->
+
+## 2026-11-18T23:29:01Z
+> The signed 0.7.0-alpha5 build is running on GitHub (about 12 minutes). It's recorded as dispatched once, so a cut-off session won't dispatch it twice. I'll check it, confirm the Release holds the APK, and send you the link.
+<!-- sha:79b2d7eb5cd1 -->
