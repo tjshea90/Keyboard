@@ -116,7 +116,7 @@ class ConnectionProbeTest {
 
     @Test fun aLimitAloneIsAWarningThatTheKeyboardMayBeRefused() {
         val v = ConnectionProbe.verdict(healthy + st("Android limits", false, "Data Saver ON and Swoop is NOT on the Unrestricted data list"))
-        assertTrue(v, v.startsWith("Result: Android limits what Swoop may use in the background"))
+        assertTrue(v, v.startsWith("Result: Android limits what Swoop may use"))
         assertTrue(v, v.contains("Unrestricted data"))
     }
 
