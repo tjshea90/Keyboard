@@ -156,17 +156,29 @@ class KeyboardPresenter(
         c.endBatchEdit()
     }
 
+    /**
+     * The toolbar toggle. R24c (2026-11-18, the owner could not turn translating OFF): turning it OFF always works, in every field (it used to refuse in a password box, an address
+     * bar and with the setting off, because "not available in this box" was checked first); only turning it ON needs a field where translating is allowed.
+     */
     private fun toggleTranslate() {
+        if (flow.isOn()) { turnTranslateOff(); onTranslateMessage(context.getString(R.string.translate_off)); return }
         if (translateAllowed.not()) { onTranslateMessage(context.getString(R.string.translate_not_here)); return }
-        flow.setOn(!flow.isOn(), clock())
-        view?.translateOn = flow.isOn()
-        if (flow.isOn()) onTranslateMessage(context.getString(R.string.translate_on_hint)) else translator?.cancel()
+        flow.setOn(true, clock())
+        view?.translateOn = true
+        onTranslateMessage(context.getString(R.string.translate_on_hint))
+    }
+
+    /** Off: forget everything that was going on, cancel a request in flight (its answer is dropped) and show the key unlit. */
+    private fun turnTranslateOff() {
+        flow.setOn(false, clock())
+        translator?.cancel()
+        view?.translateOn = false
     }
     private var translateAllowed = true
 
     /** Enter with translating on. True when the flow took the key (translating, or a message shown); false means "do the normal Enter". */
     private fun translateEnter(): Boolean {
-        if (!flow.isOn()) return false
+        if (!flow.isOn() || !translateAllowed) return false        // (R24c: never translate in a password box or an address bar, whatever the toggle says: the text would go to the internet)
         val field = fieldText() ?: return false
         when (flow.enter(field, clock())) {
             app.kestrel.core.translate.TranslateFlow.Do.SEND -> { controller.enter(); flow.sent(); view?.translateOn = flow.isOn(); return true }
@@ -195,7 +207,7 @@ class KeyboardPresenter(
     }
 
     var view: KeysView? = null
-        set(v) { field = v; v?.listener = this; session.ui = this; prepareGlide() }
+        set(v) { field = v; v?.listener = this; v?.translateOn = flow.isOn(); session.ui = this; prepareGlide() }
 
     // ------------------------------------------------------------------ lifecycle (the service forwards these)
 
@@ -222,10 +234,13 @@ class KeyboardPresenter(
         latest = null; literalShown = null; noFixFor = null; suggestSeq++
         userMoved = false; editWord = null; editRaw = emptyMap()
         flow.leaveField(); translator?.cancel(); translateAllowed = !safeMode && field.kind != FieldKind.PASSWORD && field.kind != FieldKind.OMNIBOX && st.translateEnabled
+        if (safeMode || !st.translateEnabled) flow.setOn(false, clock())      // (R24c: the feature switched off in Settings is OFF, not just hidden)
+        else flow.tick(clock())                                               // (the inactivity timer may have switched it off meanwhile)
         view?.let {
             it.reset()
             it.applyOptions(st)
             if (safeMode) it.showGlobe = true                // (the crash-loop safe layout always has the key that leaves this keyboard)
+            it.translateOn = flow.isOn()                      // (R24c: the key always shows the real state, also after the keyboard view was rebuilt)
             it.setField(field.kind, ImeLayout.actionLabel(field.imeAction, field.noEnterAction), field.pad)
             it.setGlideEnabled(glideOn)
             it.setSuggestionsEnabled(suggestOn)
