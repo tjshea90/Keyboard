@@ -665,3 +665,7 @@
 > - [ ] Optional: copy these changes into the Kestrel browser's keyboard code; there was no Browser checkout this session.
 > - [ ] Anything you find goes into 0.6.0-alpha3. Everything is saved to GitHub, and the next session resumes from `CHECKPOINT.md`.
 <!-- sha:2e8d0d859dcf -->
+
+## 2026-11-18T04:03:19Z
+> Four new requests. Per the working agreement I write them into TASKS.md in your words first, then start. The two research items (how other keyboards do clipboard chips and next-word placement; glide-learning techniques) I'll hand to research agents while I investigate the "I" bug myself.
+<!-- sha:b83ccaa52f20 -->
