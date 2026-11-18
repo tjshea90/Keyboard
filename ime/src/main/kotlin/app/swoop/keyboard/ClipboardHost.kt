@@ -2,6 +2,7 @@ package app.swoop.keyboard
 
 import android.content.ClipboardManager
 import android.content.Context
+import app.kestrel.core.clipboard.ClipItem
 import app.kestrel.core.clipboard.ClipboardStore
 import java.io.File
 
