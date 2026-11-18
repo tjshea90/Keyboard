@@ -733,3 +733,45 @@
 ## 2026-11-18T05:29:55Z
 > The 0.7.0-alpha2 build is dispatched and checkpointed. I'll check the run when the timer fires.
 <!-- sha:57c652eb7aa9 -->
+
+## 2026-11-18T05:35:07Z
+> 📌 **Chat checkpoint: 🟡 Yellow**
+>
+> **Goal:** Improve the Swoop Android keyboard (repo `tjshea90/Keyboard`, branch `claude/keyboard-caps-space-resize-glide-r72nmp`) from your device feedback, and release it through GitHub Actions.
+>
+> **Decisions made:**
+> - The 5-minute clipboard window and the `[glide guess][next word][glide guess]` strip are our own picks, from the research notes.
+> - Thumb learning is a 6-number plane fitted on the first and last letter of kept glides.
+> - Gates run through `ship.sh`, then one dispatch of `android.yml` per release.
+>
+> **Changed / rejected:**
+> - An 18-number grid for thumb learning, because it hurt hands with no pattern. It was replaced by the plane.
+> - The old rule that a glide may say "no word fits", replaced by always typing the closest word.
+>
+> **Key details:**
+> - Released: 0.6.0-alpha2 (R19a–d) and 0.7.0-alpha1 (R20a–d), both recorded in BUILDLOG.
+> - In flight: 0.7.0-alpha2 (code 13, R21 no spaces inside quotes), run 44244608905, dispatched once. Do not dispatch again.
+> - `:ime` tests need online Gradle in this container.
+>
+> **Done so far:**
+> - R19a–d, R20a–d and R21 are coded, tested and ticked in TASKS.md.
+> - Research notes are in `research/R20-*.md`; `docs/STRIP.md` is new.
+>
+> **Open / next steps:**
+> 1. When the run is green, confirm the Release has the APK and record it with `bash tools/record-release.sh swoop-v0.7.0-alpha2 "<identical note>"` (the note is in CHECKPOINT.md).
+> 2. You test on the tablet and phone.
+> 3. Optional: emulator smoke run, Kestrel sync, and the lower-ranked research items.
+>
+> **Rules to remember:**
+> - Save to GitHub often.
+> - Write each new request into TASKS.md in your words before coding.
+> - Never ship a tag twice.
+> - Say plainly that nothing was run on the tablet, phone or emulator.
+>
+> ⚠️ **Health:** Fine for the facts above, but the chat is long.
+>
+> 💡 This chat is getting long. Consider `/amhandoff` at the next good stopping point.
+> 💡 The code word is off in this chat. Type `/amcodeword` and I'll start every reply with 'Yes Boss!', so you'll notice if I start losing track.
+>
+> Back to the release: waiting for the build job to finish.
+<!-- sha:0e9457fcd0d5 -->
