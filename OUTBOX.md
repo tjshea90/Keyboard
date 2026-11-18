@@ -779,3 +779,7 @@
 ## 2026-11-18T05:35:13Z
 > Waiting on the 0.7.0-alpha2 build; I'll confirm the Release and record it as soon as it's green.
 <!-- sha:7185aaf0bb7b -->
+
+## 2026-11-18T05:38:37Z
+> Waiting for the APK build to finish.
+<!-- sha:41dfb5ae61c0 -->
