@@ -6,8 +6,8 @@ package app.kestrel.core.translate
  * is dropped, because an exception message can hold the address and the address holds the text being translated. Pure: the transport
  * hands it the class name and the message.
  *
- * Why it exists: 2026-11-18 the owner saw "could not be reached (SocketException)" and the class name alone cannot tell a blocked
- * socket (EPERM) from a dropped connection (ECONNRESET) from a closed one: the next report must say which.
+ * Why it exists: 2026-11-18 the owner saw "could not be reached (...Exception)" and the class name alone cannot tell a blocked
+ * network socket (EPERM) from a dropped connection (ECONNRESET) from a closed one: the next report must say which.
  */
 object SafeReason {
     /** Errno names that can appear in a socket failure. An allowlist: nothing else is ever copied out of a message. */
@@ -26,11 +26,12 @@ object SafeReason {
         "socket closed" to "socket closed",
         "unexpected end of stream" to "cut off mid-answer",
         "end of file from server" to "cut off mid-answer",
-        "trust anchor" to "certificate not trusted",
-        "chain validation" to "certificate not trusted",
         "not yet valid" to "certificate date wrong (check the clock)",
         "notbefore" to "certificate date wrong (check the clock)",
+        "notafter" to "certificate date wrong (check the clock)",
         "expired" to "certificate date wrong (check the clock)",
+        "trust anchor" to "certificate not trusted",
+        "chain validation" to "certificate not trusted",
         "certificate" to "certificate problem",
         "handshake" to "secure handshake failed",
         "network is unreachable" to "network unreachable",
@@ -49,7 +50,7 @@ object SafeReason {
         return null
     }
 
-    /** e.g. `SocketException (ECONNRESET, connection reset)`, `SSLHandshakeException (certificate not trusted)`, or just `SocketException`. */
+    /** e.g. `NetException (ECONNRESET, connection reset)`, `SSLHandshakeException (certificate not trusted)`, or just the class name. */
     fun of(className: String, message: String?): String {
         val parts = ArrayList<String>(2)
         val errno = errnoOf(message)
