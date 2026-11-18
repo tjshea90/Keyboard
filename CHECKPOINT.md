@@ -1,13 +1,13 @@
-# CHECKPOINT 506 — read me first, then TASKS.md
+# CHECKPOINT 511 — read me first, then TASKS.md
 
-**Written:** 2026-11-18T03:42:16Z · **tests:** all 1 fast checks green (gradle suite: see ship.sh)
-**Branch:** `claude/keyboard-caps-space-resize-glide-r72nmp` · **builds on:** `ae7bda6` (this checkpoint is the commit after it)
+**Written:** 2026-11-18T03:50:07Z · **tests:** all 1 fast checks green (gradle suite: see ship.sh)
+**Branch:** `claude/keyboard-caps-space-resize-glide-r72nmp` · **builds on:** `c5f9d32` (this checkpoint is the commit after it)
 
 ## Just done
-DISPATCHED android.yml ONCE for swoop-v0.6.0-alpha2 (code 11) on ref claude/keyboard-caps-space-resize-glide-r72nmp at 03:42Z. Do NOT dispatch again.
+swoop-v0.6.0-alpha2 RELEASED AND RECORDED: run 44232237543 green (check, test-jvm incl lint, build+verify+publish); Release has swoop-0.6.0-alpha2.apk (SHA-256 5b440dee...). R19a-d done. NOT run on tablet/phone/emulator
 
 ## Do this next
-WAIT for the run (mcp__github__actions_list list_workflow_runs android.yml, newest run on this branch) to finish green: jobs check, test-jvm incl lint, build+verify+publish. Then mcp__github__get_release_by_tag swoop-v0.6.0-alpha2 shows swoop-0.6.0-alpha2.apk, then run: bash tools/record-release.sh swoop-v0.6.0-alpha2 "0.6.0-alpha2: a glide always types the closest word (never 'no word fits'); capital after a full stop also for glided and strip words; a space you delete after a full stop stays deleted (example.com); docked keyboard resizes both ways from the bar's arrows, Full size restores both" and give the owner the Release link. If the run FAILED: read job logs (get_job_logs), fix, bump to alpha3 code 12, ship again (never reuse the tag if a Release exists). Owner then tests on tablet+phone.
+Nothing running. Owner installs https://github.com/tjshea90/Keyboard/releases/tag/swoop-v0.6.0-alpha2 on tablet+phone and tests: glide after a full stop (capital), deleting the space after a full stop then typing com, docked arrow drag up/down/sideways + Full size, gibberish glide types a word. Then fix what they report (next release 0.6.0-alpha3 code 12 via bash ship.sh). Optional: emu-smoke.yml (api 29+36) for the docked height drag window; Kestrel pinned-copy sync when a Browser checkout exists
 
 *(resuming? CLAUDE.md's "FIRST ACTION OF EVERY SESSION" says how; the briefing is tools/resume.sh. Do that first, or autosave may stay off all session.)*
 
@@ -16,6 +16,7 @@ WAIT for the run (mcp__github__actions_list list_workflow_runs android.yml, newe
 
 ## Last ten checkpoints
 ```
+  cffd8a8 ckpt 506: DISPATCHED android.yml ONCE for swoop-v0.6.0-alpha2 (code 11) on ref claude/ke
   ae7bda6 ckpt 505: gated swoop-v0.6.0-alpha2 (ime code 11) and pushed it: handoff self-test, unit
   01a8630 ckpt 504: pre-ship: 0.6.0-alpha2: a glide always types the closest word (never 'no word 
   2ddf8c6 ckpt 490: R19c done+tested (docked two-axis resize via bar arrows, window-tall during dr
@@ -25,5 +26,7 @@ WAIT for the run (mcp__github__actions_list list_workflow_runs android.yml, newe
   c028463 ckpt 464: 0.6.0-alpha1 RELEASED AND RECORDED: run 44220063374 green (check, test-jvm inc
   37209dd ckpt 462: 0.6.0-alpha1 shipped to GitHub: ship.sh gates green, android.yml DISPATCHED ON
   6e52915 ckpt 461: gated swoop-v0.6.0-alpha1 (ime code 10) and pushed it: handoff self-test, unit
-  2b21971 ckpt 446: R18a done: tap any earlier word -> strip offers words with close glide pattern
 ```
+
+(3 automatic checkpoint(s) since the last deliberate one — the
+session was still mid-step. `git diff` against it shows what changed.)
