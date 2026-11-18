@@ -817,3 +817,7 @@
 ## 2026-11-18T05:52:09Z
 > New request (R22). Per the working agreement I'm writing it into TASKS.md first. Then I check how the Kestrel browser repo is linked to this one, because that decides how the updates can be moved across.
 <!-- sha:5542e2af6bc7 -->
+
+## 2026-11-18T06:13:41Z
+> Waiting for the full core suite; then I run the new model tests, commit, push, and pin the Browser to that commit.
+<!-- sha:fb4ea3e17831 -->
