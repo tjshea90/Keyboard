@@ -64,6 +64,33 @@ class KeysViewLookTest {
         assertEquals("the pad around the keys is the background", 0xFFE4EDED.toInt(), bg)
     }
 
+    /** R18e: every pixel of the key area (from the top of the first row down) is the plain background: no key shape, no icon, no lit key. */
+    private fun assertSlate(v: KeysView, b: Bitmap, what: String) {
+        val bg = corner(b)
+        val top = (v.centerOf("q")!!.second - 8 * dp).toInt()
+        var y = top
+        while (y < v.height) { var x = 0; while (x < v.width) { assertEquals("$what: pixel $x,$y is not the plain background", bg, b.getPixel(x, y + 60)); x += 3 }; y += 3 }
+    }
+
+    @Test fun hiddenLettersLeaveOneSolidBlankSlateByDay() {
+        val v = view(); v.hideLetters = true
+        assertEquals("the pad is the day background", 0xFFE4EDED.toInt(), corner(render(v, "slate-day")))
+        assertSlate(v, render(v, "slate-day"), "resting")
+        val (x, y) = v.centerOf("g")!!; touch(v, MotionEvent.ACTION_DOWN, x, y)
+        assertSlate(v, render(v, "slate-day-pressed"), "while a key is held")
+        touch(v, MotionEvent.ACTION_UP, x, y); shadowOf(Looper.getMainLooper()).idleFor(java.time.Duration.ofMillis(KeysView.FLASH_MS + 20))
+        v.hideLetters = false
+        val bg = corner(render(v, "slate-off"))
+        assertNotEquals("with the setting off the keys are drawn again", bg, render(v, "slate-off").getPixel(v.centerOf("g")!!.first.toInt() - 12 * dp.toInt(), v.centerOf("g")!!.second.toInt() + 60))
+    }
+
+    @Test @Config(qualifiers = "night", sdk = [29]) fun hiddenLettersLeaveOneSolidBlankSlateByNight() {
+        val v = view(); v.hideLetters = true
+        val b = render(v, "slate-night")
+        assertEquals("the pad is the dark background", 0xFF0D1D1D.toInt(), corner(b))
+        assertSlate(v, b, "night")
+    }
+
     @Test fun theActionKeyIsTheAccentColourAndSaysWhatEnterDoes() {
         val v = view(action = "Search"); val b = render(v, "light-search")
         assertEquals(0xFF00DDE6.toInt(), pixelAtKey(b, v, "Search", dx = 14 * dp, dy = -12 * dp))
