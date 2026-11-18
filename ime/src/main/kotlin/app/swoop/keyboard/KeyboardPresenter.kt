@@ -378,7 +378,7 @@ class KeyboardPresenter(
         val (p2, p1, _) = controller.contextAround(span)
         session.settle(); learner.settle()
         if (!controller.replaceWordAround(shown)) { refreshSuggestions(); return }
-        learner.replaced(span.text, shown, p2, p1)
+        if (!controller.wasPasted(span.text)) learner.replaced(span.text, shown, p2, p1)          // (R23b: a correction of text that came from the clipboard teaches nothing)
         editWord = null; userMoved = true; suggestSeq++
         view?.setShift(controller.shift)
         refreshSuggestions()

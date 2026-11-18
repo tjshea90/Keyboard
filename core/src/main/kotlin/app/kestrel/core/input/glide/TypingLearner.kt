@@ -75,7 +75,7 @@ class TypingLearner(
         if (atStart) g.learnStart(word)
         g.stats.onSuggestionPicked()
         val w = word.lowercase()
-        val fixed = typed != null && !w.startsWith(typed.lowercase())                                              // it replaced a typo, it did not finish the word
+        val fixed = typed != null && controller.typedWord() == typed && !w.startsWith(typed.lowercase())          // it replaced a typo the person typed (R23b: not letters that were pasted), it did not finish the word
         g.learnWord(p1, w, 2f, p2, if (fixed) typed!!.lowercase() else null, 2f)
         last = Done(w, p1, p2, 2f); erased = null
         return true

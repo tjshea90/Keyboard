@@ -484,6 +484,7 @@ class InputController(editor: EditorBridge, val stats: InputStats = InputStats()
      * glide (an app rewrote the field) but the person still taps the right word in the strip. Verified against the editor first, like every replacement. False (nothing changed) when the text no longer ends with [old].
      */
     fun replaceRecent(old: String, word: String): Boolean {
+        typedRun = ""
         if (old.isEmpty() || word.isEmpty()) return false
         settle()
         val k = before.length - before.trimEnd(' ').length
@@ -590,6 +591,7 @@ class InputController(editor: EditorBridge, val stats: InputStats = InputStats()
      * false (nothing changed) when there is no word, the editor shows something else, or it refuses.
      */
     fun replaceWordAround(word: String): Boolean {
+        typedRun = ""
         if (word.isEmpty()) return false
         settle()
         endComposing()
