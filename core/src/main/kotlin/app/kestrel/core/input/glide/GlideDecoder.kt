@@ -105,7 +105,7 @@ class GlideParams(
      * it is judged. [fieldRate] is how far each kept letter moves the map (per letter, of the way to what it saw). False = the old single shift only (the tests and evaluation tools compare the two).
      */
     val touchField: Boolean = true,
-    val fieldRate: Float = 0.03f,
+    val fieldRate: Float = 0.02f,
     val fieldCols: Int = TouchField.COLS,
     val fieldRows: Int = TouchField.ROWS,
 )

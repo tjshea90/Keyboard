@@ -524,7 +524,7 @@ class GlideTyping(
 
     /** What the keyboard has learned, as the text of the export file (see [LearnedExport]), for the Settings export: it is built on the executor's thread and handed to [done] there. [habit] null = the thumb habit the engine holds now. */
     fun exportText(habit: FloatArray?, own: UserWords?, done: (String) -> Unit) {
-        executor.execute { ensurePersonal(); done(LearnedExport.write(personal, habit ?: floatArrayOf(bx, by), own)) }
+        executor.execute { ensurePersonal(); done(LearnedExport.write(personal, habit ?: (floatArrayOf(bx, by) + (touchSaved ?: FloatArray(0))), own)) }
     }
 
     /**
@@ -541,7 +541,7 @@ class GlideTyping(
             for ((w, n) in parsed.ownWords) if (!own.contains(w)) own.add(w, n)
             // the thumb habit of a file is taken only while this keyboard has not learned one of its own (what it learned here is newer than any file)
             if (parsed.touch != null && touchSaved == null) { touchSaved = parsed.touch; decoder?.field?.fromArray(parsed.touch); previewDecoder?.field?.fromArray(parsed.touch); habit(floatArrayOf(bx, by) + parsed.touch) }
-            if (parsed.habit != null && Math.abs(bx) + Math.abs(by) < 0.01f) { bx = parsed.habit[0]; by = parsed.habit[1]; habitX = bx; habitY = by; decoder?.let { it.biasX = bx; it.biasY = by }; habit(floatArrayOf(bx, by)); keys?.let { stats.onHabit(bx * it.pitch, by * it.pitch) } }
+            if (parsed.habit != null && Math.abs(bx) + Math.abs(by) < 0.01f) { bx = parsed.habit[0]; by = parsed.habit[1]; habitX = bx; habitY = by; decoder?.let { it.biasX = bx; it.biasY = by }; habit(floatArrayOf(bx, by) + (touchSaved ?: FloatArray(0))); keys?.let { stats.onHabit(bx * it.pitch, by * it.pitch) } }
             setOwn(own)
             personalDirty = true
             stats.onLearned(personal.wordCount, personal.pairCount, personal.confusionCount, personal.tripleCount, personal.patterns.patternCount, personal.patterns.wordCount)
