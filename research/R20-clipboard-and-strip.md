@@ -69,7 +69,7 @@ What the evidence says in one paragraph: every keyboard that has the feature sho
 
 ### 2.3 After a space with nothing typed, and while typing a prefix (questions b, c)
 
-- Next-word list (no typed word): centre = highest-probability prediction, left = second, right = third. [V: Gboard paper; AOSP layout code gives the same order for a list without a typed word, as read from the code]
+- Next-word list (no typed word): centre = highest-probability prediction, left = second, right = third. [V: Gboard paper. For AOSP this is my reading of the layout code (best to the centre, second to the left, the rest alternating outward), not a separately observed behaviour: treat as S/U]
 - While typing a prefix: centre = best completion or the auto-correction (the one that Space/continued typing will apply); left = the literal typed word (or the second best); right = the next completion. [V for AOSP and SwiftKey (spacebar inserts the middle); S for Gboard]
 - This "centre = what Space will accept" convention is the strongest agreement across Gboard, SwiftKey and AOSP.
 
