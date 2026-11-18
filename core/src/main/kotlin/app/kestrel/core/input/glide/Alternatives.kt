@@ -26,6 +26,9 @@ object Alternatives {
     private const val FAR_SHAPE = 3.5f
     private const val UNKNOWN_NEXT = -9f
 
+    /** Tests: sees every candidate with the parts of its score (shape distance, ln P in context, next-word term, fix bonus). */
+    internal var trace: ((String) -> Unit)? = null
+
     private class Cand(val text: String, var fix: Boolean) { var rank = 0 }
 
     fun find(
@@ -57,7 +60,10 @@ object Alternatives {
             val shape = Fingerprint.ofWord(w, keys)
             val d = if (shape != null && typedShape != null) Fingerprint.distance(typedShape, shape) else FAR_SHAPE
             val lp = Suggester.contextLogP(main, personal, w, prev, prev2)
-            scored.add(w to (-SHAPE_W * d + LM_W * lp + NEXT_W * nextTerm(main, personal, w, next) + if (c.fix) Math.max(0.4f, FIX_BONUS - FIX_STEP * c.rank) else 0f))
+            val nx = nextTerm(main, personal, w, next); val fb = if (c.fix) Math.max(0.4f, FIX_BONUS - FIX_STEP * c.rank) else 0f
+            val sc = -SHAPE_W * d + LM_W * lp + NEXT_W * nx + fb
+            trace?.invoke("%-10s total %6.2f  shape %.2f lp %6.2f next %6.2f fix %.1f".format(w, sc, d, lp, nx, fb))
+            scored.add(w to sc)
         }
         return scored.sortedByDescending { it.second }.take(limit).map { it.first }
     }

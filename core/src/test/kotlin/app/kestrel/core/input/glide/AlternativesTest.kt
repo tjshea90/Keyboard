@@ -40,6 +40,15 @@ class AlternativesTest {
         assertTrue("the meant word first: $first of ${cases.size}", first >= cases.size * 0.55)
     }
 
+    @Test fun trace() {
+        for (k in cases.filter { it.typed in setOf("adn", "there", "hear", "teh") }) {
+            println("== ${k.typed} -> ${k.meant}  (${k.prev2} ${k.prev} _ ${k.next})")
+            val lines = ArrayList<String>(); Alternatives.trace = { lines.add(it) }
+            Alternatives.find(lex, null, null, decoder, keys, k.typed, k.prev2, k.prev, k.next, 3); Alternatives.trace = null
+            for (l in lines.sortedByDescending { it.substringAfter("total").trim().substringBefore(' ').toFloat() }.take(8)) println("   $l")
+        }
+    }
+
     @Test fun theWordItselfIsNeverOfferedAndNothingIsOfferedTwice() {
         for ((k, got) in run(limit = 6)) { assertFalse("${k.typed} offered itself: $got", k.typed in got); assertEquals("${k.typed}: $got", got.size, got.toSet().size) }
     }
