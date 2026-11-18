@@ -77,6 +77,23 @@ breaks, sentences, words, then letters (never inside an emoji).
   translates where translating is not allowed (password box, address bar, safe mode, Settings off), whatever the toggle says. The key's lit state is set from the real state whenever a field starts and
   whenever a keys view is attached. The Settings switch "Translate icon" off also switches the toggle off.
 
+## R25 (2026-11-18): "Android is not letting the keyboard use the socket" - what each Android limit does to a background app (measured)
+Owner's connection test said Android refuses the keyboard a network socket (EPERM / EACCES). Measured on an Android 10 emulator (GitHub runner, `emu-smoke.yml` mode net-probe with scenarios=true; the probe runs with the app
+sent to the background, the way a keyboard process runs):
+
+| limit | what the app sees |
+| :- | :- |
+| Data Saver on, Wi-Fi metered, Swoop NOT on the Unrestricted data list | every connect: **ECONNREFUSED** (Kind.REFUSED, "the connection was refused ... usually Data Saver") |
+| same, Swoop on the Unrestricted data list (`cmd netpolicy add restrict-background-whitelist`) | works |
+| Battery saver on | connect **times out** |
+| Doze (force-idle) | connect **times out** |
+| App standby, rare bucket, device unplugged | works |
+
+So none of Android's data / power limits gives EPERM / EACCES. A socket refusal means: the process is not in the `inet` group (EACCES from every socket() on the 4.9 kernels of Android 10 tablets; can happen after an update that
+ADDED the INTERNET permission, Swoop did in 0.4.0, until a restart: the probe reads `/proc/self/status` below API 33 and says so), or a firewall / VPN / ad-block app, a vendor "block this app's internet" switch, or a parental-control /
+school profile (netfilter DROP gives EPERM). The data-saver "refused" case has its own message; the diagnostics screen has buttons for the Unrestricted data page and the app settings. Data Saver's state cannot be READ by
+Swoop (ConnectivityManager.getRestrictBackgroundStatus needs the network-state permission, which Swoop does not hold): the probe says so instead of guessing.
+
 ## Guard rails (plan 9.2) provided by this work
 - `tools/expected-permissions.txt` lists exactly `android.permission.INTERNET`; the manifest has that one `uses-permission` and
   `android:usesCleartextTraffic="false"`; `TranslateGuardTest` checks both, and that no other URL/host appears in the translate package.

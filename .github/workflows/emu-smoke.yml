@@ -15,6 +15,10 @@ on:
         type: choice
         options: ['smoke', 'net-probe']
         default: 'smoke'
+      scenarios:
+        description: 'mode net-probe only: also run the Android limit scenarios (Data Saver, battery saver, doze, app standby; about 15 minutes more) that show which limit gives which socket error to a background app'
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -115,6 +119,8 @@ jobs:
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
       - name: Boot the emulator and run the connection probe (tools/emu/net_probe.sh)
+        env:
+          SWOOP_SCENARIOS: ${{ inputs.scenarios }}
         uses: reactivecircus/android-emulator-runner@v2.33.0
         with:
           api-level: ${{ matrix.api }}

@@ -31,6 +31,9 @@ PHASE_A_BAD=0
 # (an IPv6 failure with IPv4 fine is not a failure here; a first probe right after boot can find the emulator's DNS not up yet: one retry below)
 if grep -v 'connect IPv6' "$OUT/probe.log" | grep -q ' FAIL '; then echo "::error::a network step failed on this Android (see the log above)"; PHASE_A_BAD=1; else echo "phase A (plain): every step worked on this Android"; fi
 
+# the limit scenarios below take about 15 minutes: only when asked for (emu-smoke.yml input scenarios=true -> SWOOP_SCENARIOS=true)
+if [ "${SWOOP_SCENARIOS:-false}" != "true" ]; then [ "$PHASE_A_BAD" = 0 ] && exit 0 || exit 1; fi
+
 # ---- R25 (2026-11-18): the owner's tablet says "Android refuses the keyboard a network socket" (EPERM / EACCES). Which Android limits do that to a BACKGROUND app (a keyboard process)?
 # Each scenario starts a fresh process (am start -S), sends it to the background after 3 s (HOME), the probe waits 8 s and then runs, and the errno of the failures is reported. Informational: never fails the job.
 APP_UID="$(adb shell dumpsys package "$PKG" | grep -m1 -oE 'userId=[0-9]+' | cut -d= -f2 | tr -d '\r')"
