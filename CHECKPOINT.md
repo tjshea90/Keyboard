@@ -1,13 +1,13 @@
-# CHECKPOINT 490 — read me first, then TASKS.md
+# CHECKPOINT 504 — read me first, then TASKS.md
 
-**Written:** 2026-11-18T03:34:21Z · **tests:** all 1 fast checks green (gradle suite: see ship.sh)
-**Branch:** `claude/keyboard-caps-space-resize-glide-r72nmp` · **builds on:** `978c082` (this checkpoint is the commit after it)
+**Written:** 2026-11-18T03:39:19Z · **tests:** all 1 fast checks green (gradle suite: see ship.sh)
+**Branch:** `claude/keyboard-caps-space-resize-glide-r72nmp` · **builds on:** `f1bf0d4` (this checkpoint is the commit after it)
 
 ## Just done
-R19c done+tested (docked two-axis resize via bar arrows, window-tall during drag, dockH setting, Full size pill/double-tap restore height, overlay stale-height fix in KeyboardRoot.onMeasure): KeyboardRootTest 36 + FloatingMathTest pass. NB: :ime tests need ONLINE gradle (no --offline) in this container
+pre-ship: 0.6.0-alpha2: a glide always types the closest word (never 'no word fits'); capital after a full stop also for glided and strip words; a space you delete after a full stop stays deleted (example.com); docked keyboard resizes both ways from the bar's arrows, Full size restores both
 
 ## Do this next
-add KeyboardPresenterTest cases for R19a/b/d end-to-end (glide after '.', deleted space stays, glide never says no word fits); docs FLOATING.md/README/SetupActivity note+label; then full :core:test :ime:testDebugUnitTest :ime:lintDebug; bump ime/build.gradle.kts to 0.6.0-alpha2 code 11; bash ship.sh; dispatch android.yml
+ship.sh gates and releases this (ime)
 
 *(resuming? CLAUDE.md's "FIRST ACTION OF EVERY SESSION" says how; the briefing is tools/resume.sh. Do that first, or autosave may stay off all session.)*
 
@@ -16,6 +16,7 @@ add KeyboardPresenterTest cases for R19a/b/d end-to-end (glide after '.', delete
 
 ## Last ten checkpoints
 ```
+  2ddf8c6 ckpt 490: R19c done+tested (docked two-axis resize via bar arrows, window-tall during dr
   60344cb ckpt 480: R19a/b/d core done+tested: always-answer relaxed decode pass (GlideDecoder.alw
   02723ef ckpt 469: wrote owner's four 2026-11-18 requests R19a-d into TASKS.md (his words)
   3839c16 ckpt 466: handoff saved (.handoff/handoff.md + archive; CLAUDE.md/AGENTS.md learnings bl
@@ -25,8 +26,7 @@ add KeyboardPresenterTest cases for R19a/b/d end-to-end (glide after '.', delete
   2b21971 ckpt 446: R18a done: tap any earlier word -> strip offers words with close glide pattern
   f6c6db4 ckpt 432: R18b done: auto-capitals. InputController.startsSentence (empty TEXT box, newl
   0ff76f7 ckpt 415: R18c done: smooth resize (view-transform preview while dragging corner/arrow/p
-  b17d0e8 ckpt 409: R18e done: hide-letters draws one solid blank slate (KeysView.blankSlate: no k
 ```
 
-(9 automatic checkpoint(s) since the last deliberate one — the
+(13 automatic checkpoint(s) since the last deliberate one — the
 session was still mid-step. `git diff` against it shows what changed.)
