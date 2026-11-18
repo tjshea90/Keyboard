@@ -971,3 +971,7 @@
 ## 2026-11-18T20:56:52Z
 > The signed 0.7.0-alpha4 build is running on GitHub. I'll check it in a few minutes, confirm the Release has the APK, record it, and give you the link.
 <!-- sha:7d07f3211b19 -->
+
+## 2026-11-18T21:01:28Z
+> Build still in progress; I'll check again in four minutes.
+<!-- sha:5bbf51d376a1 -->
