@@ -12,6 +12,8 @@ adb shell 'while [ "$(getprop sys.boot_completed)" != 1 ]; do sleep 2; done'
 adb shell settings put global hide_error_dialogs 1
 echo "Android $(adb shell getprop ro.build.version.release | tr -d '\r') (API $(adb shell getprop ro.build.version.sdk | tr -d '\r')), $(adb shell getprop ro.product.model | tr -d '\r')"
 adb install -r -t "$APK" >/dev/null 2>&1 && echo "installed $PKG" || { echo "::error::install failed"; exit 1; }
+# the emulator's DNS can still be coming up right after boot: wait until a name resolves (at most 30 s), else the first probe sees UnknownHostException for no app reason
+for i in $(seq 1 15); do adb shell ping -c 1 -W 2 translate.googleapis.com >/dev/null 2>&1 && break; sleep 2; done
 adb logcat -c
 # (the exported Setup screen; adb cannot start the non-exported Diagnostics one: "not exported from uid")
 adb shell am start -n "$PKG/app.swoop.keyboard.SetupActivity" --ez probe true >"$OUT/am-start.txt" 2>&1 || true
@@ -48,7 +50,7 @@ background_probe(){   # $1 = label. Counts finished probes instead of trusting a
   tail -n +$((L+1)) "$OUT/probe-$1.full" > "$OUT/probe-$1.log"
   echo "---- scenario $1 (probe lines of this run: $(grep -c 'SwoopProbe' "$OUT/probe-$1.log"))"; grep -E 'connect IPv4|answer|done:|FAIL' "$OUT/probe-$1.log" | grep -v 'connect IPv6' | cut -c1-200 | head -8
   local E; E="$(grep -oE 'E(PERM|ACCES|CONNREFUSED|CONNRESET|NETUNREACH|HOSTUNREACH)' "$OUT/probe-$1.log" | grep -v NETUNREACH | sort | uniq -c | tr '\n' ' ')"
-  if grep -q 'translation can work' "$OUT/probe-$1.log"; then echo "SCENARIO $1: works"; else echo "SCENARIO $1: BLOCKED, errno seen: ${E:-none (UnknownHost / timeout)}"; fi
+  if grep -q 'translation can work' "$OUT/probe-$1.log"; then echo "SCENARIO $1: works" | tee -a "$OUT/scenarios.txt"; else echo "SCENARIO $1: BLOCKED, errno seen: ${E:-none (UnknownHost / timeout)}" | tee -a "$OUT/scenarios.txt"; fi
 }
 reset_all(){
   adb shell dumpsys battery reset >/dev/null 2>&1 || true
@@ -92,5 +94,5 @@ reset_all
 adb shell am set-standby-bucket "$PKG" restricted 2>&1 | head -1
 background_probe standby-restricted
 reset_all
-echo "---- R25 summary"; grep -h '^SCENARIO' /dev/null; true
+echo "---- R25 summary (which limit gives which errno for a background app)"; cat "$OUT/scenarios.txt" 2>/dev/null; true
 [ "$PHASE_A_BAD" = 0 ] && exit 0 || exit 1
