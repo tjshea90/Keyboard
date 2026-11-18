@@ -25,6 +25,7 @@ object SafeReason {
         "broken pipe" to "broken pipe",
         "socket closed" to "socket closed",
         "unexpected end of stream" to "cut off mid-answer",
+        "end of file from server" to "cut off mid-answer",
         "trust anchor" to "certificate not trusted",
         "chain validation" to "certificate not trusted",
         "not yet valid" to "certificate date wrong (check the clock)",

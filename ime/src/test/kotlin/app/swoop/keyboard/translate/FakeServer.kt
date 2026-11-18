@@ -13,7 +13,10 @@ class FakeServer {
         val rawQuery: String? get() = if (target.contains('?')) target.substringAfter('?') else null
     }
 
-    class Res(val code: Int, val body: ByteArray = ByteArray(0), val headers: Map<String, String> = emptyMap(), val delayMs: Long = 0)
+    /** ANSWER = a normal reply; DROP = close without a byte (the client sees the connection end); RESET = close with a TCP reset (SO_LINGER 0). */
+    enum class Mode { ANSWER, DROP, RESET }
+
+    class Res(val code: Int, val body: ByteArray = ByteArray(0), val headers: Map<String, String> = emptyMap(), val delayMs: Long = 0, val mode: Mode = Mode.ANSWER)
 
     private val ss = ServerSocket(0, 50, InetAddress.getByName("127.0.0.1"))
     val port: Int get() = ss.localPort
@@ -65,6 +68,8 @@ class FakeServer {
             val h = routes[req.path]
             val res = if (h == null) Res(404) else h(req)
             if (res.delayMs > 0) try { Thread.sleep(res.delayMs) } catch (e: InterruptedException) { }
+            if (res.mode == Mode.DROP) return
+            if (res.mode == Mode.RESET) { s.setSoLinger(true, 0); return }
             val o = s.getOutputStream()
             val sb = StringBuilder("HTTP/1.1 ${res.code} X\r\nContent-Length: ${res.body.size}\r\nConnection: close\r\n")
             for ((k, v) in res.headers) sb.append(k).append(": ").append(v).append("\r\n")

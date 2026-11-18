@@ -94,30 +94,33 @@ class HttpsTransport internal constructor(
             return HttpReply(code, location, body)
         } catch (e: TransportException) {
             throw e
-        } catch (e: UnknownHostException) {
-            throw TransportException(TransportException.Kind.NO_INTERNET, SafeReason.of(e.javaClass.simpleName, e.message))
-        } catch (e: NoRouteToHostException) {
-            throw TransportException(TransportException.Kind.NO_INTERNET, SafeReason.of(e.javaClass.simpleName, e.message))
-        } catch (e: ConnectException) {
-            // refused / unreachable / timed out while connecting = no internet; EPERM / EACCES = Android refused the socket
-            throw TransportException(if (blocked(e)) TransportException.Kind.BLOCKED else TransportException.Kind.NO_INTERNET, SafeReason.of(e.javaClass.simpleName, e.message))
-        } catch (e: SocketTimeoutException) {
-            throw TransportException(TransportException.Kind.TIMEOUT, SafeReason.of(e.javaClass.simpleName, e.message))
-        } catch (e: SSLException) {
-            throw TransportException(if (droppedNotRejected(e)) TransportException.Kind.DROPPED else TransportException.Kind.SECURE, SafeReason.of(e.javaClass.simpleName, e.message))
-        } catch (e: SocketException) {
-            // a plain SocketException: the socket was refused (EPERM), or a connection that was made got reset / aborted / closed
-            throw TransportException(if (blocked(e)) TransportException.Kind.BLOCKED else TransportException.Kind.DROPPED, SafeReason.of(e.javaClass.simpleName, e.message))
-        } catch (e: EOFException) {
-            throw TransportException(TransportException.Kind.DROPPED, SafeReason.of(e.javaClass.simpleName, e.message))
         } catch (e: IOException) {
-            // only the SafeReason (class name, errno, known phrase): the message of an IOException can hold the address, and the address holds the text
-            val cut = (e.message ?: "").lowercase().contains("unexpected end of stream")
-            throw TransportException(if (cut) TransportException.Kind.DROPPED else TransportException.Kind.OTHER, SafeReason.of(e.javaClass.simpleName, e.message))
+            throw classify(e)
         } finally {
             current = null
             try { c?.disconnect() } catch (e: RuntimeException) { }
         }
+    }
+
+    /**
+     * WHICH step broke, from the exception alone. Only a [SafeReason] (class name, an errno name, a known phrase) goes into the error: the
+     * message of an IOException can hold the address, and the address holds the text.
+     */
+    internal fun classify(e: IOException): TransportException {
+        val why = SafeReason.of(e.javaClass.simpleName, e.message)
+        val low = (e.message ?: "").lowercase()
+        val kind = when (e) {
+            is UnknownHostException, is NoRouteToHostException -> TransportException.Kind.NO_INTERNET
+            // refused / unreachable / timed out while connecting = no internet; EPERM / EACCES = Android refused the socket
+            is ConnectException -> if (blocked(e)) TransportException.Kind.BLOCKED else TransportException.Kind.NO_INTERNET
+            is SocketTimeoutException -> TransportException.Kind.TIMEOUT
+            is SSLException -> if (droppedNotRejected(low)) TransportException.Kind.DROPPED else TransportException.Kind.SECURE
+            // a plain SocketException: the socket was refused (EPERM), or a connection that was made got reset / aborted / closed
+            is SocketException -> if (blocked(e)) TransportException.Kind.BLOCKED else TransportException.Kind.DROPPED
+            is EOFException -> TransportException.Kind.DROPPED
+            else -> if (low.contains("unexpected end of stream") || low.contains("end of file from server")) TransportException.Kind.DROPPED else TransportException.Kind.OTHER
+        }
+        return TransportException(kind, why)
     }
 
     override fun abort() {
@@ -131,11 +134,9 @@ class HttpsTransport internal constructor(
     }
 
     /** An SSL failure that is the connection being cut (reset, aborted, closed by the peer), not a refusal of the certificate or protocol. */
-    private fun droppedNotRejected(e: SSLException): Boolean {
-        val m = (e.message ?: "").lowercase()
-        return m.contains("connection reset") || m.contains("abort") || m.contains("i/o error during system call") || m.contains("broken pipe") ||
+    private fun droppedNotRejected(m: String): Boolean =
+        m.contains("connection reset") || m.contains("abort") || m.contains("i/o error during system call") || m.contains("broken pipe") ||
             m.contains("closed by peer") || m.contains("connection closed") || m.contains("unexpected end") || m.contains("socket closed")
-    }
 
     private fun read(stream: InputStream): String {
         val deadline = System.currentTimeMillis() + TOTAL_MS
