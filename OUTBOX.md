@@ -1061,3 +1061,42 @@
 ## 2026-11-18T23:02:53Z
 > The blocked-network scenarios each take a couple of minutes, so I'm giving them four more.
 <!-- sha:79194028aff6 -->
+
+## 2026-11-18T23:09:38Z
+> The quick check of the new internet-access-group test is running on a healthy Android 10 and 16 emulator. I'll read it in about five minutes.
+>
+> **Where this stands**
+> - **Your socket error is not Data Saver.** On an Android 10 emulator, Data Saver gives "connection refused", while battery saver and doze give time-outs. None of them gives a socket refusal.
+> - **Likely causes of your error:** a firewall, VPN or ad-block app, a vendor "block this app's internet" switch, or the keyboard not having been given its internet access after the update that added it. A restart is the cheap first step.
+> - **What I need from you:** the exact line that starts with `FAIL` in the Test translation connection result (which step it names, and the code such as `EPERM` or `EACCES`). That tells me which of these it is.
+>
+> 📌 **Chat checkpoint: 🔴 Red**
+>
+> **Goal:** Swoop keyboard (`tjshea90/Keyboard`, branch `ccr-2630e41a-palpyu`): translation problems (R24a "SocketException", R24c "won't turn off", R25 "Android is not letting the keyboard use the socket") and glide research (R24b).
+>
+> **Decisions made:**
+> - 0.7.0-alpha4 is released (R24a/b/c done).
+> - R25 is in progress, aimed at 0.7.0-alpha5 (code 16).
+> - Messages follow measured facts: Data Saver is "refused" (reproduced), socket refusal is a different cause.
+>
+> **Changed / rejected:**
+> - My Data Saver hypothesis for EPERM is rejected by the emulator measurements.
+> - Reading Data Saver's state in the app is not possible without a new permission, so no new permission was added.
+>
+> **Key details:** TASKS.md R25 is still open `[ ]`. The emulator table is in `docs/TRANSLATE.md`. New code: `AndroidLimits.kt`, REFUSED kind, "Internet access group" probe step. Checkpoint 753 is pushed. A quick `net-probe` run is in flight.
+>
+> **Done so far:** all R25 code, with focused tests green. Full suite, release gates and R25 tick are still pending.
+>
+> **Open / next steps:**
+> 1. Read the quick probe: "Internet access group" must be OK on a healthy Android 10, or I remove it.
+> 2. Full suite, `ship.sh`, dispatch, record 0.7.0-alpha5.
+> 3. Ask you for the exact `FAIL` line from the test.
+> 4. Kestrel sync is still not done.
+>
+> **Rules to remember:** `ckpt` after each step; the repo is public, so no secrets or real swipes; no new manifest permissions without your decision; say what wasn't run on the tablet.
+>
+> 🔴 **Health:** Red: this chat is very long and I mis-guessed once (Data Saver), so a fresh session is safer.
+>
+> 🔴 I'd move to a fresh chat now. Run `/amhandoff` and I'll write a file that brings the new chat fully up to speed.
+> 💡 The code word is off in this chat. Type `/amcodeword` and I'll start every reply with 'Yes Boss!', so you'll notice if I start losing track.
+<!-- sha:bb08a54bb568 -->
