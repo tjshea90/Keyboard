@@ -130,7 +130,7 @@ class KeysView(context: Context) : View(context) {
     private var shift = ShiftState.OFF
     private var kind = FieldKind.TEXT
     /** The number pad the field wants instead of the letters (R23d), or [Pad.NONE]. */
-    private var pad = Pad.NONE
+    private var numberPad = Pad.NONE
     private var actionLabel = "⏎"
     private var rows: List<List<KeySpec>> = ImeLayout.rows(page, false, kind, actionLabel, false)
     private var rects: List<List<KeyBox>> = emptyList()
@@ -252,7 +252,7 @@ class KeysView(context: Context) : View(context) {
     }
 
     private fun rebuildRows() {
-        rows = ImeLayout.rows(page, shift != ShiftState.OFF, kind, actionLabel, numberRow, showGlobe, pad)
+        rows = ImeLayout.rows(page, shift != ShiftState.OFF, kind, actionLabel, numberRow, showGlobe, numberPad)
         rectsW = -1
         invalidate()
         if (Diag.enabled) post { keymapLine()?.let { Diag.d(it) } }          // (debug builds: the tools see the new page's keys)
@@ -389,13 +389,13 @@ class KeysView(context: Context) : View(context) {
         if (key === Key.Backspace) { drawBackspace(c, box, ink); return }
         if (key === Key.Go && k.label == "⏎") { drawEnter(c, box, ink); return }
         val t = (key as? Key.Ch)?.text
-        if (t == " " && pad == Pad.NONE) return          // the space bar is blank, like the photo
+        if (t == " " && numberPad == Pad.NONE) return          // the space bar is blank, like the photo
         val label = if (key === Key.ToLetters) "ABC" else k.label
         text.textSize = h * (if (label.length > 1) 0.30f else if (topRow && ImeLayout.hasNumberRow(rows)) 0.52f else 0.44f)
         val fm = text.fontMetrics
         val low = (t == "." || t == ",") && rows.lastOrNull()?.contains(k) == true      // the photo sets the comma and the full stop low in their keys
         c.drawText(label, box.centerX(), if (low) box.top + h * 0.80f else box.centerY() - (fm.ascent + fm.descent) / 2f, text)
-        if (!numberRow && topRow && page == Page.LETTERS && pad == Pad.NONE && label.length == 1) {   // without the number row: the digit a held top-row letter types, small in its corner
+        if (!numberRow && topRow && page == Page.LETTERS && numberPad == Pad.NONE && label.length == 1) {   // without the number row: the digit a held top-row letter types, small in its corner
             val d = TOP_ROW.indexOf(label.lowercase())
             if (d >= 0) {
                 text.color = cMuted; text.textSize = h * 0.22f
@@ -653,7 +653,7 @@ class KeysView(context: Context) : View(context) {
     private fun isBubbleKey(k: KeySpec?): Boolean { val c = (k?.key as? Key.Ch)?.text ?: return false; return c.length == 1 && c != " " }
     /** The digit a top-row letter types when it is held (null for every other key and page). */
     private fun altOf(k: KeySpec?): String? {
-        if (numberRow || page != Page.LETTERS || pad != Pad.NONE || k == null || k.label.length != 1) return null
+        if (numberRow || page != Page.LETTERS || numberPad != Pad.NONE || k == null || k.label.length != 1) return null
         val i = TOP_ROW.indexOf(k.label.lowercase()); return if (i >= 0 && rows[0].contains(k)) DIGITS.substring(i, i + 1) else null
     }
 
@@ -667,7 +667,7 @@ class KeysView(context: Context) : View(context) {
 
     private fun isSymbolKey(k: KeySpec?): Boolean {
         val t = (k?.key as? Key.Ch)?.text ?: return false
-        return (t == "." || t == ",") && pad == Pad.NONE
+        return (t == "." || t == ",") && numberPad == Pad.NONE
     }
 
     private fun openPopup(k: KeySpec) {
