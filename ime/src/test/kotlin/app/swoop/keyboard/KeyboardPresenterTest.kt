@@ -428,12 +428,13 @@ class KeyboardPresenterTest {
         val offers = r.view.candidatesForTest(); assertEquals("the first offer is the word the fingers meant: $offers", "the", offers.first()); assertTrue("not the word itself: $offers", "teh" !in offers)
         val (x, y) = r.view.chipCenterForTest(0)!!; r.ev(MotionEvent.ACTION_DOWN, x, y); r.ev(MotionEvent.ACTION_UP, x, y)
         assertEquals("exactly that word, nothing else, no extra space", "went to the store", r.text); assertEquals("the cursor ends after it", 11, r.et.selectionStart)
+        println("DEBUG after pick: strip=${r.view.candidatesForTest()} around=${r.presenter.controller.wordAround()?.text} before='${r.presenter.controller.before}' after='${r.presenter.controller.after}' sel=${r.presenter.controller.selStart}")
         assertTrue("the other offers for the new word stay on the strip: ${r.view.candidatesForTest()}", r.view.candidatesForTest().isNotEmpty())
     }
 
     @Test fun aWordSeveralWordsBackIsJustAsGoodAndTheStripFollowsTheCursor() {
         val r = Rig(glidePref = false, suggest = true, words = editList); r.et.setText("went to teh store and teh food"); r.report()
-        r.tapText(21)                                                                  // the SECOND "teh" (several words after the first)
+        r.tapText(24)                                                                  // the SECOND "teh" (several words after the first)
         assertEquals("the", r.view.candidatesForTest().first())
         r.tapText(2)                                                                   // "went": nothing close to offer is fine, but the strip must not still show the old word's offers
         assertFalse("the" == r.view.candidatesForTest().firstOrNull() && r.view.candidatesForTest().size == 3 && "ten" in r.view.candidatesForTest() && "tea" in r.view.candidatesForTest() && "tech" in r.view.candidatesForTest())
