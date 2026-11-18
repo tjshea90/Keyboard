@@ -196,6 +196,7 @@ class KeyboardPresenter(
         suggestOn = !safeMode && st.suggest && field.composingAllowed
         autoFixOn = suggestOn && st.autoFix && field.kind != FieldKind.OMNIBOX            // (never rewrite what is typed into an address box)
         capitalizeI = !safeMode && st.capitalizeI && field.composingAllowed && field.kind != FieldKind.OMNIBOX
+        controller.capitalizeI = !safeMode && st.capitalizeI && field.kind != FieldKind.OMNIBOX          // (R20c: also in boxes that show no composing text, for glided and strip words, and at Enter)
         properOn = !safeMode && st.autoCaps && field.composingAllowed && field.kind != FieldKind.OMNIBOX
         doubleSpaceOn = !safeMode && st.doubleSpace
         emojiOn = !safeMode && st.emojiSuggestions && field.composingAllowed && field.kind != FieldKind.OMNIBOX
@@ -296,7 +297,7 @@ class KeyboardPresenter(
     }
 
     /** "i" -> "I", "i'm" -> "I'm", "i'll", "i've", "i'd": the one fix that needs no word list. */
-    private fun capitalizedI(typed: String): String? = if (typed == "i" || (typed.length in 3..4 && typed.startsWith("i'") && typed.substring(2) in I_ENDINGS)) "I" + typed.substring(1) else null
+    private fun capitalizedI(typed: String): String? = if (InputController.isPronounI(typed)) InputController.pronounI(typed) else null
 
     /** Asks the engine what to offer for the word at the cursor (or the likely next word); the answer is shown only if it still fits what is on screen. */
     private fun refreshSuggestions() {
