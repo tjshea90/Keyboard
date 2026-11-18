@@ -659,6 +659,7 @@ class InputController(editor: EditorBridge, val stats: InputStats = InputStats()
          */
         fun startsSentence(text: String, selStart: Int = -1): Boolean {
             if (text.isBlank()) return (text.isEmpty() && selStart <= 0) || (text.isNotEmpty() && text.length < WINDOW_BEFORE)
+            if (text.endsWith("\n")) return true                                // a new line or paragraph
             val trimmed = text.trimEnd(' ', '\t')
             if (trimmed.length == text.length) return false                    // nothing after the punctuation yet
             if (trimmed.endsWith("\n")) return true

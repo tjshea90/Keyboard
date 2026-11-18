@@ -11,7 +11,7 @@ class AutoCapsTest {
     }
     @Test fun aWordsFieldStartsWithShiftOnAtTheStart() { assertEquals(ShiftState.ONCE, Rig(caps = CapFlags.WORDS).c.shift) }
     @Test fun aCharactersFieldAlwaysAsksForCapitals() { assertEquals(ShiftState.ONCE, Rig("abc", caps = CapFlags.CHARACTERS).c.shift) }
-    @Test fun aFieldThatAskedForNothingStartsLowercase() { assertEquals(ShiftState.OFF, Rig().c.shift) }
+    @Test fun aFieldThatAskedForNothingAndIsNotATextBoxStartsLowercase() { assertEquals(ShiftState.OFF, Rig(kind = FieldKind.SEARCH).c.shift) }
     @Test fun inTheMiddleOfASentenceShiftStaysOff() { assertEquals(ShiftState.OFF, Rig("hello", caps = CapFlags.SENTENCES).c.shift) }
     @Test fun afterAFullStopAndASpaceShiftIsOn() { assertEquals(ShiftState.ONCE, Rig("Hello. ", caps = CapFlags.SENTENCES).c.shift) }
     @Test fun afterANewlineShiftIsOn() { assertEquals(ShiftState.ONCE, Rig("one\n", caps = CapFlags.SENTENCES).c.shift) }
@@ -47,8 +47,8 @@ class AutoCapsTest {
     }
     @Test fun typingAFullStopAndASpaceTurnsShiftOnAndALetterSpendsIt() {
         val r = Rig("").typeAll("hi.")
-        assertEquals(ShiftState.OFF, r.c.shift); r.typeAll(" "); assertEquals(ShiftState.ONCE, r.c.shift)
-        r.typeAll("a"); assertEquals("hi. A", r.text); assertEquals(ShiftState.OFF, r.c.shift)
+        assertEquals("Hi.", r.text); assertEquals(ShiftState.OFF, r.c.shift); r.typeAll(" "); assertEquals(ShiftState.ONCE, r.c.shift)
+        r.typeAll("a"); assertEquals("Hi. A", r.text); assertEquals(ShiftState.OFF, r.c.shift)
     }
     @Test fun theSettingTurnsItOffAndEmailUrlAndPasswordFieldsNeverAsk() {
         val off = Rig("Hi. ", kind = FieldKind.TEXT); off.c.autoCapsOn = false; off.act { setShift(ShiftState.OFF) }; off.c.autoCaps(); assertEquals(ShiftState.OFF, off.c.shift)
