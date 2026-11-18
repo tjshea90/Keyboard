@@ -41,8 +41,7 @@ class SafeReasonTest {
     }
 
     @Test fun theClassNameIsCleaned() {
-        assertEquals("Weird", SafeReason.of("Weird<>/ ?q=x", null).replace("q", "").let { "Weird" })
-        assertFalse(SafeReason.of("a b/c?d=e", null).contains("/"))
+        assertEquals("abcde", SafeReason.of("a b/c?d=e", null))
         assertEquals("Exception", SafeReason.of("", null))
     }
 }

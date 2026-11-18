@@ -1,6 +1,16 @@
 package app.swoop.keyboard.translate
 
 import app.kestrel.core.translate.TransportException
+import java.io.EOFException
+import java.io.IOException
+import java.net.ConnectException
+import java.net.NoRouteToHostException
+import java.net.SocketException
+import java.net.SocketTimeoutException
+import java.net.UnknownHostException
+import java.util.concurrent.atomic.AtomicInteger
+import javax.net.ssl.SSLException
+import javax.net.ssl.SSLHandshakeException
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -16,6 +26,7 @@ class HttpsTransportTest {
     private lateinit var server: FakeServer
     private val seen = CopyOnWriteArrayList<String>()
     private val port: Int get() = server.port
+    private val flakyCalls = AtomicInteger()
 
     @Before fun start() {
         server = FakeServer()
@@ -35,13 +46,18 @@ class HttpsTransportTest {
         server.route("/limit") { FakeServer.Res(429, ByteArray(5)) }
         server.route("/big") { FakeServer.Res(200, ByteArray(300 * 1024) { 'a'.code.toByte() }) }
         server.route("/slow") { FakeServer.Res(200, delayMs = 2000) }
+        server.route("/drop") { FakeServer.Res(200, mode = FakeServer.Mode.DROP) }
+        server.route("/reset") { FakeServer.Res(200, mode = FakeServer.Mode.RESET) }
+        server.route("/flaky") { // the hotspot drops the first connection, the second one is fine
+            if (flakyCalls.incrementAndGet() == 1) FakeServer.Res(200, mode = FakeServer.Mode.DROP) else FakeServer.Res(200, "{\"ok\":2}".toByteArray())
+        }
         server.start()
     }
 
     @After fun stop() { server.stop() }
 
-    private fun transport(connectMs: Int = 2000, readMs: Int = 2000) =
-        HttpsTransport({ u -> "http://127.0.0.1:" + port + u.removePrefix("https://").substringAfter('/').let { "/$it" } }, connectMs, readMs)
+    private fun transport(connectMs: Int = 2000, readMs: Int = 2000, retryMs: Int = 50) =
+        HttpsTransport({ u -> "http://127.0.0.1:" + port + u.removePrefix("https://").substringAfter('/').let { "/$it" } }, connectMs, readMs, retryMs)
 
     private val mm = "https://api.mymemory.translated.net"
 
@@ -109,5 +125,83 @@ class HttpsTransportTest {
         assertFalse(TranslateGuard.allows("https://translate.googleapis.com.evil.com/"))
         assertFalse(TranslateGuard.allows("https://evil.com/?https://translate.googleapis.com/"))
         assertEquals(setOf("api.mymemory.translated.net", "translate.googleapis.com"), TranslateGuard.HOSTS)
+    }
+
+    // ---- R24a (2026-11-18): the owner saw only "SocketException"; now every failure says WHICH step broke, and a dropped connection gets one quick retry
+
+    private fun kind(e: IOException) = HttpsTransport({ it }).classify(e).kind
+    private fun why(e: IOException) = HttpsTransport({ it }).classify(e).message
+
+    @Test fun everyFailureShapeIsClassifiedByTheStepThatBroke() {
+        assertEquals(TransportException.Kind.BLOCKED, kind(SocketException("socket failed: EPERM (Operation not permitted)")))
+        assertEquals(TransportException.Kind.BLOCKED, kind(ConnectException("connect failed: EACCES (Permission denied)")))
+        assertEquals(TransportException.Kind.NO_INTERNET, kind(UnknownHostException("Unable to resolve host \"x\": No address associated with hostname")))
+        assertEquals(TransportException.Kind.NO_INTERNET, kind(NoRouteToHostException("Host unreachable")))
+        assertEquals(TransportException.Kind.NO_INTERNET, kind(ConnectException("failed to connect to x (port 443) after 8000ms: isConnected failed: ECONNREFUSED (Connection refused)")))
+        assertEquals(TransportException.Kind.TIMEOUT, kind(SocketTimeoutException("failed to connect to x after 8000ms")))
+        assertEquals(TransportException.Kind.DROPPED, kind(SocketException("Connection reset")))
+        assertEquals(TransportException.Kind.DROPPED, kind(SocketException("Socket closed")))
+        assertEquals(TransportException.Kind.DROPPED, kind(SocketException("recvfrom failed: ECONNRESET (Connection reset by peer)")))
+        assertEquals(TransportException.Kind.DROPPED, kind(SocketException("sendto failed: EPIPE (Broken pipe)")))
+        assertEquals(TransportException.Kind.DROPPED, kind(SocketException("Software caused connection abort")))
+        assertEquals(TransportException.Kind.DROPPED, kind(SocketException()))
+        assertEquals(TransportException.Kind.DROPPED, kind(EOFException()))
+        assertEquals(TransportException.Kind.DROPPED, kind(IOException("unexpected end of stream on Connection{api.mymemory.translated.net:443}")))
+        assertEquals(TransportException.Kind.DROPPED, kind(SSLException("Read error: ssl=0x1: I/O error during system call, Connection reset by peer")))
+        assertEquals(TransportException.Kind.DROPPED, kind(SSLHandshakeException("Connection closed by peer")))
+        assertEquals(TransportException.Kind.SECURE, kind(SSLHandshakeException("java.security.cert.CertPathValidatorException: Trust anchor for certification path not found.")))
+        assertEquals(TransportException.Kind.SECURE, kind(SSLHandshakeException("Chain validation failed")))
+        assertEquals(TransportException.Kind.OTHER, kind(IOException("who knows")))
+    }
+
+    @Test fun theReasonNamesTheErrnoAndNeverTheAddressOrTheWords() {
+        assertEquals("SocketException (EPERM, not permitted)", why(SocketException("socket failed: EPERM (Operation not permitted)")))
+        val w = why(ConnectException("failed to connect to api.mymemory.translated.net/203.0.113.7 (port 443): https://api.mymemory.translated.net/get?q=top%20secret ECONNREFUSED"))
+        assertEquals("ConnectException (ECONNREFUSED)", w)
+        assertFalse(w!!.contains("secret") || w.contains("203"))
+    }
+
+    @Test fun aDroppedConnectionIsRetriedOnceAndThenWorks() {
+        val t = transport()
+        val r = t.call("$mm/flaky", null)
+        assertEquals(200, r.code); assertEquals("{\"ok\":2}", r.body)
+        assertEquals(2, t.attempts)
+        assertEquals(2, flakyCalls.get())
+    }
+
+    @Test fun aConnectionThatKeepsDroppingEndsAsDroppedAfterTwoTriesOnly() {
+        val t = transport()
+        try { t.call("$mm/drop", null); fail() } catch (e: TransportException) {
+            assertEquals(TransportException.Kind.DROPPED, e.kind)
+            assertTrue(e.message, e.message!!.startsWith("SocketException"))
+        }
+        assertEquals(2, t.attempts)
+    }
+
+    @Test fun aResetIsDroppedToo() {
+        val t = transport(retryMs = 0)
+        try { t.call("$mm/reset", null); fail() } catch (e: TransportException) { assertEquals(TransportException.Kind.DROPPED, e.kind) }
+        assertEquals("no retry when it is switched off", 1, t.attempts)
+    }
+
+    @Test fun otherFailuresAreNotRetried() {
+        val t = transport(readMs = 300)
+        try { t.call("$mm/slow", null); fail() } catch (e: TransportException) { assertEquals(TransportException.Kind.TIMEOUT, e.kind) }
+        assertEquals(1, t.attempts)
+        val big = transport()
+        try { big.call("$mm/big", null); fail() } catch (e: TransportException) { assertEquals(TransportException.Kind.TOO_BIG, e.kind) }
+        assertEquals(1, big.attempts)
+    }
+
+    @Test fun anAbortDuringTheRetryWaitEndsItWithoutASecondTry() {
+        val t = transport(retryMs = 3000)
+        val result = java.util.concurrent.LinkedBlockingQueue<Any>()
+        Thread { try { t.call("$mm/drop", null); result.add("returned") } catch (e: TransportException) { result.add(e.kind) } }.start()
+        Thread.sleep(400)   // the first try dropped; the call is now waiting to retry
+        val t0 = System.currentTimeMillis()
+        t.abort()
+        assertEquals(TransportException.Kind.DROPPED, result.poll(3, java.util.concurrent.TimeUnit.SECONDS))
+        assertTrue("the wait ended at once", System.currentTimeMillis() - t0 < 1500)
+        assertEquals(1, t.attempts)
     }
 }
