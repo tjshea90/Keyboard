@@ -270,10 +270,21 @@ class KeysView(context: Context) : View(context) {
     }
 
     /** The height this keyboard has when [w] pixels wide and its rows are [mul] times as tall as the settings say (the floating keyboard asks this to turn a corner drag into a height). */
-    fun heightFor(w: Int, mul: Float): Int {
-        // the photo's keys are taller than wide (1.6 to 1) on a phone: a row is 1.35 key pitches tall, within sensible bounds on a phone (about 54 dp) and on the tablet (56 dp)
-        val rowH = (((w - 2 * pad) / 10f) * ROW_H_PITCHES).coerceIn(dp(ROW_H_MIN_DP), dp(ROW_H_MAX_DP)) * keyHeightScale * mul
-        return (stripPx() + rowH * ImeLayout.rowWeights(rows).sum() + (rows.size - 1) * gapY(w.toFloat()) + 2 * pad).toInt()
+    fun heightFor(w: Int, mul: Float): Int = (fixedHeight(w) + rowHeight(w) * mul * ImeLayout.rowWeights(rows).sum()).toInt()
+
+    /** What does not scale with the row multiplier: the strip, the gaps between the rows and the padding. */
+    private fun fixedHeight(w: Int): Float = stripPx() + (rows.size - 1) * gapY(w.toFloat()) + 2 * pad
+
+    /** The height of one row of weight 1 at [w] pixels wide with the settings' key height, before the floating multiplier. The photo's keys are taller than wide (1.6 to 1) on a phone: a row is 1.35 key pitches tall, within sensible bounds on a phone (about 54 dp) and on the tablet (56 dp). */
+    private fun rowHeight(w: Int): Float = (((w - 2 * pad) / 10f) * ROW_H_PITCHES).coerceIn(dp(ROW_H_MIN_DP), dp(ROW_H_MAX_DP)) * keyHeightScale
+
+    /**
+     * The row multiplier that makes this view [keysH] pixels tall at [w] pixels wide: the exact inverse of [heightFor] (the strip, gaps and padding do not scale, so "target over the height at 1" is only an
+     * approximation, and a corner drag that used it drifted a few pixels from the finger).
+     */
+    fun mulFor(w: Int, keysH: Int): Float {
+        val per = rowHeight(w) * ImeLayout.rowWeights(rows).sum()
+        return if (per <= 0f) 1f else ((keysH - fixedHeight(w)) / per).coerceAtLeast(0f)
     }
 
     private fun layoutKeys() {
