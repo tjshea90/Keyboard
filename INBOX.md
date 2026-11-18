@@ -335,3 +335,20 @@ It says Android is not letting the keyboard use the socket
 ```
 Hello hire are joy 
 ```
+
+## 2026-11-18T23:50:25Z
+```
+Ignore the last message i sent that starts with the word hello.
+
+OK   Internet permission (0 ms): granted
+OK   Internet access group (0 ms): this process has Android's internet group (inet)
+OK   Android limits (0 ms): Data Saver cannot be read (Android only tells apps with the network-state permission, which Swoop does not have), battery saver ON, standby bucket active
+OK   Device clock (0 ms): 2026-11-18 23:49 UTC
+OK   MyMemory: name lookup (79 ms): 3 address(es): 3 IPv4, 0 IPv6
+FAIL MyMemory: connect IPv4 (3 ms): SocketException (EPERM, not permitted)
+FAIL MyMemory: answer (10 ms): BLOCKED, SocketException (EPERM, not permitted)
+OK   Google: name lookup (46 ms): 1 address(es): 1 IPv4, 0 IPv6
+FAIL Google: connect IPv4 (3 ms): SocketException (EPERM, not permitted)
+FAIL Google: answer (3 ms): BLOCKED, SocketException (EPERM, not permitted)
+Result: Android refuses the keyboard a network socket (MyMemory: connect IPv4: EPERM). That is not Data Saver or battery saver (they show as refused or timed out). Restart the device once; then look for a firewall, VPN or ad-blocking app, a vendor setting that blocks an app's internet (Settings, Apps, Swoop: mobile data / network switches), or a parental-control or school profile on this device.
+```
