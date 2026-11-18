@@ -116,6 +116,14 @@ class RealSwipeEval {
         "endW 1.5" to GlideParams(endW = 1.5f), "endW 6" to GlideParams(endW = 6f),
         "visitCap 2" to GlideParams(visitCap = 2f), "visitCap 5" to GlideParams(visitCap = 5f),
         "length off" to GlideParams(lengthW = 0f), "length x2" to GlideParams(lengthW = 2f),
+        "len 1.09 s.13/.20" to GlideParams(lengthExpect = 1.09f, lengthSigmaLow = 0.13f, lengthSigmaHigh = 0.20f),
+        "len 1.09 s.13/.13" to GlideParams(lengthExpect = 1.09f, lengthSigmaLow = 0.13f, lengthSigmaHigh = 0.13f),
+        "len 1.09 s.10/.16" to GlideParams(lengthExpect = 1.09f, lengthSigmaLow = 0.10f, lengthSigmaHigh = 0.16f),
+        "len 1.09 s.16/.25" to GlideParams(lengthExpect = 1.09f, lengthSigmaLow = 0.16f, lengthSigmaHigh = 0.25f),
+        "len 1.09 s.13/.20 W2" to GlideParams(lengthExpect = 1.09f, lengthSigmaLow = 0.13f, lengthSigmaHigh = 0.20f, lengthW = 2f),
+        "len 1.09 s.13/.20 W.5" to GlideParams(lengthExpect = 1.09f, lengthSigmaLow = 0.13f, lengthSigmaHigh = 0.20f, lengthW = 0.5f),
+        "len 1.0 s.15/.20" to GlideParams(lengthExpect = 1.0f, lengthSigmaLow = 0.15f, lengthSigmaHigh = 0.20f),
+        "len 1.09 s.13/.20 cap6" to GlideParams(lengthExpect = 1.09f, lengthSigmaLow = 0.13f, lengthSigmaHigh = 0.20f, lengthCap = 6f),
         "bias off" to GlideParams(biasGain = 0f), "bias 1.0" to GlideParams(biasGain = 1.0f),
         "bigramMix .6" to GlideParams(bigramMix = 0.6f), "rare off" to GlideParams(rareW = 0f)
     )
