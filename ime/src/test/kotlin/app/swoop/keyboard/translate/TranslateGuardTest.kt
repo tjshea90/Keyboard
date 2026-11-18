@@ -43,9 +43,10 @@ class TranslateGuardTest {
         }
     }
 
-    @Test fun onlyTheTransportOpensConnections() {
+    @Test fun onlyTheTransportAndTheProbeOpenConnections() {
+        // HttpsTransport (a translation) and ConnectionProbe (the Diagnostics "Test translation connection", R24a): both only to the two hosts of TranslateGuard
         for (f in kt(translateDir)) {
-            if (f.name == "HttpsTransport.kt") continue
+            if (f.name == "HttpsTransport.kt" || f.name == "ConnectionProbe.kt") continue
             val t = f.readText()
             assertFalse(f.name, t.contains("openConnection") || t.contains("java.net"))
         }

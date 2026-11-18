@@ -174,7 +174,7 @@ class KeyboardPresenter(
             app.kestrel.core.translate.TranslateFlow.Do.TOO_LONG -> { onTranslateMessage(flow.why()); return true }
             app.kestrel.core.translate.TranslateFlow.Do.TRANSLATE -> {
                 val n = flow.start(field, clock())
-                val t = translator ?: app.swoop.keyboard.translate.Translator().also { translator = it }
+                val t = translator ?: app.swoop.keyboard.translate.Translator(app.swoop.keyboard.translate.ConnectionLog).also { translator = it }
                 onTranslateMessage(context.getString(R.string.translate_working))
                 t.translate(field) { res -> post(Runnable {
                     val out = flow.answer(n, fieldText() ?: "", res, clock())

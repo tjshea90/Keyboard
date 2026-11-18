@@ -75,6 +75,9 @@
     <string name="diag_title">Swoop diagnostics</string>
     <string name="diag_copy">Copy</string>
     <string name="diag_refresh">Refresh</string>
+    <string name="diag_probe">Test translation connection</string>
+    <string name="diag_probe_running">Testing the connection to the two translation services\u2026 (up to a minute on a slow link)</string>
+    <string name="diag_probe_failed">The connection test could not run.</string>
     <string name="diag_copied">Copied. It holds numbers only, nothing you typed.</string>
     <string name="setup_diag_button">Diagnostics (numbers to paste into the chat)</string>
     <string name="setup_back_button">Go back to my previous keyboard</string>
