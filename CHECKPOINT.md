@@ -1,15 +1,13 @@
-# CHECKPOINT 759 — read me first, then TASKS.md
+# CHECKPOINT 760 — read me first, then TASKS.md
 
-**Written:** 2026-11-18T23:28:31Z · **tests:** all 1 fast checks green (gradle suite: see ship.sh)
-**Branch:** `ccr-2630e41a-palpyu` · **builds on:** `428a632` (this checkpoint is the commit after it)
+**Written:** 2026-11-18T23:28:57Z · **tests:** all 1 fast checks green (gradle suite: see ship.sh)
+**Branch:** `ccr-2630e41a-palpyu` · **builds on:** `2688041` (this checkpoint is the commit after it)
 
 ## Just done
-gated swoop-v0.7.0-alpha5 (ime code 16) and pushed it: handoff self-test, unit suites and the versionCode check passed here. NOT yet built - GitHub has not been asked.
+swoop-v0.7.0-alpha5 (code 16) DISPATCHED ONCE: android.yml run 44421068703 on sha 2688041 (queued 2026-11-18T23:28Z). Do NOT dispatch again. R25a ticked; R25b waits for the owner's exact FAIL line.
 
 ## Do this next
-TRIGGER THE BUILD: mcp__github__actions_run_trigger, method run_workflow, workflow_id android.yml, ref ccr-2630e41a-palpyu, inputs {"full_build":"true","note":"0.7.0-alpha5: the translation connection test now tells apart a refused connection (Data Saver: button to the Unrestricted data page) from a blocked socket (firewall, VPN, missing internet access) and checks whether Android gave Swoop its internet access; error messages no longer guess"}.
-When the run is green, confirm the Release shows the APK (mcp__github__get_release_by_tag swoop-v0.7.0-alpha5), then:  bash tools/record-release.sh swoop-v0.7.0-alpha5 "0.7.0-alpha5: the translation connection test now tells apart a refused connection (Data Saver: button to the Unrestricted data page) from a blocked socket (firewall, VPN, missing internet access) and checks whether Android gave Swoop its internet access; error messages no longer guess"
-NEVER ship swoop-v0.7.0-alpha5 twice (check BUILDLOG.md and the Releases first).
+wait for run 44421068703 green (actions_get get_workflow_run; ~12 min), confirm Release swoop-v0.7.0-alpha5 has the APK (get_release_by_tag), then bash tools/record-release.sh swoop-v0.7.0-alpha5 with the IDENTICAL note (see CHECKPOINT ckpt 759), give the owner the Release link on its own line. If red: get_job_logs failed_only run_id, fix, ship 0.7.0-alpha6 code 17. Owner questions open: exact FAIL line + Result line of Diagnostics > Test translation connection (R25b); Kestrel sync not done; tablet side of GlideParams.forPitchDp unvalidated
 
 *(resuming? CLAUDE.md's "FIRST ACTION OF EVERY SESSION" says how; the briefing is tools/resume.sh. Do that first, or autosave may stay off all session.)*
 
@@ -18,6 +16,7 @@ NEVER ship swoop-v0.7.0-alpha5 twice (check BUILDLOG.md and the Releases first).
 
 ## Last ten checkpoints
 ```
+  2688041 ckpt 759: gated swoop-v0.7.0-alpha5 (ime code 16) and pushed it: handoff self-test, unit
   7c4dd02 ckpt 757: pre-ship: 0.7.0-alpha5: the translation connection test now tells apart a refu
   66682b9 ckpt 753: R25: measured table (Android 10 emulator, background app): Data Saver -> ECONN
   837228c ckpt 746: R25 EVIDENCE (run 44414888824, Android 10 emulator): Data Saver ON + metered W
@@ -27,8 +26,4 @@ NEVER ship swoop-v0.7.0-alpha5 twice (check BUILDLOG.md and the Releases first).
   b445988 ckpt 731: swoop-v0.7.0-alpha4 RELEASED AND RECORDED (run 44396244888 green: check, test-
   9892412 ckpt 726: swoop-v0.7.0-alpha4 (code 15) DISPATCHED ONCE: android.yml run 44396244888 on 
   bfef0d3 ckpt 725: gated swoop-v0.7.0-alpha4 (ime code 15) and pushed it: handoff self-test, unit
-  defb85a ckpt 716: R24c presenter tests 75/75 green; R24a emulator probe on Android 10 AND 16 emu
 ```
-
-(1 automatic checkpoint(s) since the last deliberate one — the
-session was still mid-step. `git diff` against it shows what changed.)
