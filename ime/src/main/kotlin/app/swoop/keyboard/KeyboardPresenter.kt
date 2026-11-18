@@ -181,8 +181,9 @@ class KeyboardPresenter(
         val field = FieldInfos.from(info)
         if (Diag.enabled) Diag.d("startInput kind=${field.kind} noLearn=${field.noPersonalizedLearning} noSuggest=${field.noSuggestions} caps=${field.capsFlags} action=${field.imeAction} pkgIsKestrel=${info.packageName?.startsWith("app.kestrel.browser") == true} omnibox=${FieldInfos.hasOmniboxOption(info.privateImeOptions)}")     // (debug builds: facts only, never text)
         session.settle(); learner.settle()
-        controller.startInput(field)
         val st = Settings(context)
+        controller.autoCapsOn = st.autoCaps; controller.sentenceCaps = st.autoCaps          // (before the field starts: its first Shift state already depends on them)
+        controller.startInput(field)
         glideOn = !safeMode && st.glide && field.kind != FieldKind.PASSWORD
         learnOn = !safeMode && st.learn && field.learningAllowed
         suggestOn = !safeMode && st.suggest && field.composingAllowed
@@ -193,7 +194,6 @@ class KeyboardPresenter(
         emojiOn = !safeMode && st.emojiSuggestions && field.composingAllowed && field.kind != FieldKind.OMNIBOX
         if (emojiOn) loadEmoji()
         controller.autoSpace = !safeMode && st.autoSpace
-        controller.autoCapsOn = st.autoCaps; controller.sentenceCaps = st.autoCaps
         controller.caseForm = { w, prev -> if (properOn) glide.engine.caseFormOf(w, prev) else null }
         latest = null; literalShown = null; noFixFor = null; suggestSeq++
         flow.leaveField(); translator?.cancel(); translateAllowed = !safeMode && field.kind != FieldKind.PASSWORD && field.kind != FieldKind.OMNIBOX && st.translateEnabled
