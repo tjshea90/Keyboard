@@ -129,11 +129,11 @@ class GlideParams(
          * R24b (2026-11-18): the numbers the keyboard really decodes with. On 6 000+ REAL swipes (FUTO Swipe corpus, research/R24-glide-next.md) the straight-line price [shapeW] of 2.0 was too strict: real thumbs stray
          * from the straight lines between letters more than the simulated finger did, and 1.0 raised first-choice accuracy by about 1.1 points and top-3 by about 1.2 (held-out donors confirmed it). That evidence is for a PHONE-sized keyboard
          * (the donors' keys were 32-45 dp apart). A finger's scatter is roughly the same size in dp whatever the keyboard, so on big keys (a tablet: 60+ dp apart) it is a SMALLER share of a key and the straighter-line price fits better:
-         * the price therefore slides from 1.0 at [SMALL_PITCH_DP] or less to the earlier 2.0 at [LARGE_PITCH_DP] or more. The tablet side is NOT validated on real swipes (there are none); it keeps the values the tests were tuned on.
+         * the price therefore slides from 1.0 at [SMALL_PITCH_DP] or less to the earlier 2.0 at [LARGE_PITCH_DP] or more, and the price of a letter the path never came near ([visitCap]) from 5 to the earlier 3 (+0.2 to +0.3 points on both slices). The tablet side is NOT validated on real swipes (there are none); it keeps the values the tests were tuned on.
          */
         fun forPitchDp(pitchDp: Float): GlideParams {
             val t = ((pitchDp - SMALL_PITCH_DP) / (LARGE_PITCH_DP - SMALL_PITCH_DP)).coerceIn(0f, 1f)
-            return GlideParams(shapeW = 1.0f + t)
+            return GlideParams(shapeW = 1.0f + t, visitCap = 5.0f - 2.0f * t)
         }
     }
 }

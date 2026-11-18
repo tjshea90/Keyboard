@@ -919,3 +919,7 @@
 ## 2026-11-18T20:37:17Z
 > Slice B is still running its first pass; the monitor will report when it finishes.
 <!-- sha:b042a8620f2e -->
+
+## 2026-11-18T20:41:36Z
+> Held-out donors (slice B) tell the honest story: the gain is **real but smaller than slice A suggested** — shapeW 1.0 gives +0.1 first-choice (all words), **+0.6 on everyday words**, and +0.4–0.5 top-3; adding visitCap 5 is slightly better again on both slices (+0.2–0.3). The "length recalibration + end weight" combo was *worse* on B, so it's out. Averaged over both slices the shipped change is worth roughly **+0.8 first-choice and +1 top-3**. I'll adopt shapeW + visitCap (sliding with key size, as designed), nothing else.
+<!-- sha:b83a5dddd726 -->
