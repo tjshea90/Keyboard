@@ -9,6 +9,7 @@ import android.view.View
 import android.view.inputmethod.BaseInputConnection
 import android.view.inputmethod.EditorInfo
 import android.widget.EditText
+import app.kestrel.core.clipboard.ClipItem
 import app.kestrel.core.input.Key
 import app.kestrel.core.input.glide.EmojiMap
 import app.kestrel.core.input.glide.LexiconFile
@@ -415,7 +416,7 @@ class KeyboardPresenterTest {
 
     // ------------------------------------------------------------------ R20a (owner 2026-11-18): what was just copied is the first box of the strip
 
-    private fun Rig.copied(text: String, at: Long = 1_000L) { presenter.clipChipSource = { app.kestrel.core.clipboard.ClipItem(text, at, false) }; presenter.onClipboardChanged() }
+    private fun Rig.copied(text: String, at: Long = 1_000L) { presenter.clipChipSource = { ClipItem(text, at, false) }; presenter.onClipboardChanged() }
 
     @Test fun whatWasJustCopiedIsTheFirstBoxAndOneTapPastesTheWholeCopy() {
         val r = Rig(suggest = true, words = pairedList); r.glide("hello")
