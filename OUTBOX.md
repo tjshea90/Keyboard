@@ -634,3 +634,7 @@
 ## 2026-11-18T03:42:32Z
 > Waiting on the build; I'll check the result when the timer fires.
 <!-- sha:ce66e1c5409d -->
+
+## 2026-11-18T03:42:49Z
+> That notification was just the short pause I'd already used. The 5-minute timer is still running; when it fires I'll check run 44232237543, confirm the Release has the APK, record it, and send you the link.
+<!-- sha:f01e7d5bf9af -->
