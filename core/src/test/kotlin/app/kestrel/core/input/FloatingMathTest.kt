@@ -40,4 +40,39 @@ class FloatingMathTest {
         val big = FloatingMath.resize(3, 100, 200, 400, 300, 900, 900, 232, 620, 150, 800, 1000, 2000); assertEquals(620, big.width); assertEquals(800, big.height); assertTrue(big.left + big.width <= 1000)
         val edge = FloatingMath.resize(3, 600, 200, 400, 300, 200, 0, 232, 620, 150, 800, 1000, 2000); assertTrue("never off the right edge", edge.left + edge.width <= 1000)
     }
+
+    // ---- owner R19c: the docked keyboard is resized both ways from the arrows of its bar
+
+    @Test fun anArrowDragSidewaysAndUpResizesBothWaysAndTheOtherEdgeStays() {
+        // a 1000 px wide screen, the keyboard full width and 400 tall
+        val right = FloatingMath.dockedResize(1, 0, 1000, 400, -300, -120, 1000, 500, 280, 600)
+        assertEquals(0, right.left); assertEquals(700, right.width); assertEquals("up = taller", 520, right.height)
+        val left = FloatingMath.dockedResize(0, 0, 1000, 400, 300, 60, 1000, 500, 280, 600)
+        assertEquals("the left arrow moves the left edge, the right edge stays at 1000", 300, left.left); assertEquals(700, left.width); assertEquals("down = shorter", 340, left.height)
+    }
+
+    @Test fun theDockedSizeStopsAtItsLimitsAndStaysOnTheScreen() {
+        val a = FloatingMath.dockedResize(1, 0, 1000, 400, -900, -900, 1000, 500, 280, 600)
+        assertEquals(500, a.width); assertEquals(600, a.height)
+        val b = FloatingMath.dockedResize(0, 200, 800, 400, 5000, 5000, 1000, 500, 280, 600)
+        assertEquals(500, b.width); assertEquals("the right edge (1000) stays", 500, b.left); assertEquals(280, b.height)
+        val c = FloatingMath.dockedResize(1, 300, 600, 400, 900, 0, 1000, 500, 280, 600)
+        assertEquals("never wider than the room that is left", 700, c.width); assertEquals(300, c.left)
+        val d = FloatingMath.dockedResize(1, 0, 1000, 700, 0, 0, 1000, 500, 280, 600)
+        assertEquals("a keyboard already taller than the cap is not cut by a mere touch", 700, d.height)
+    }
+
+    @Test fun aFingerHeldStillResizesNothing() {
+        val r = FloatingMath.dockedResize(0, 100, 800, 400, 0, 0, 1000, 500, 280, 600)
+        assertEquals(100, r.left); assertEquals(800, r.width); assertEquals(400, r.height)
+    }
+
+    @Test fun theVerticalDeadZoneIsContinuous() {
+        assertEquals(0f, FloatingMath.softDead(8f, 10f), 0f); assertEquals(0f, FloatingMath.softDead(-10f, 10f), 0f)
+        assertEquals(5f, FloatingMath.softDead(15f, 10f), 0f); assertEquals(-5f, FloatingMath.softDead(-15f, 10f), 0f)
+    }
+
+    @Test fun dockedRowMultipliersAreKeptInTheirRange() {
+        assertEquals(FloatingMath.DOCK_MIN_H_MUL, FloatingMath.clampDockMul(0.1f), 0f); assertEquals(FloatingMath.DOCK_MAX_H_MUL, FloatingMath.clampDockMul(9f), 0f); assertEquals(1f, FloatingMath.clampDockMul(1f), 0f)
+    }
 }

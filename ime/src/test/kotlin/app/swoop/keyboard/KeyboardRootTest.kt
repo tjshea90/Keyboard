@@ -340,7 +340,6 @@ class KeyboardRootTest {
     // ------------------------------------------------------------------ R19c: resize the docked keyboard both ways (owner 2026-11-18)
 
     private fun arrowY(r: KeyboardRoot): Float { val p = r.panelRect(); return p.top + r.grip.top + r.grip.height / 2f }
-    private val ph get() = ViewGroup.LayoutParams.WRAP_CONTENT
 
     @Test fun draggingAnArrowUpAndInwardsMakesTheDockedKeyboardTallerAndNarrowerAndStaysOnTheBottom() {
         val (r, c) = root(); val p = r.panelRect(); val y = arrowY(r); val h0 = p.height(); val keysH0 = r.keys.height
@@ -409,7 +408,7 @@ class KeyboardRootTest {
         val (r, _) = root { it.putInt(Prefs.DOCK_H, 1400) }
         val h = r.panelRect().height(); val (p, _) = root { it.putInt(Prefs.DOCK_H, 1000) }
         assertTrue("1.4 rows are taller than 1.0: $h vs ${p.panelRect().height()}", h > p.panelRect().height() + 40 * dp)
-        val (f, _) = root { it.putInt(Prefs.DOCK_H, 1400); it.putBoolean(Prefs.FLOATING, true); it.putInt(Prefs.FLOAT_H_MUL, 1000) }
+        val (f, _) = root { it.putInt(Prefs.DOCK_H, 1400); it.putBoolean(Prefs.FLOATING, true); it.putInt(Prefs.FLOAT_H, 100) }
         assertTrue(f.floating); assertEquals("the floating keyboard has its own height setting", 1f, f.keys.floatMul, 0.001f)
     }
 
