@@ -237,17 +237,7 @@ class InputController(editor: EditorBridge, val stats: InputStats = InputStats()
         if (selStart >= 0 && selStart != selEnd) return false
         if (tightHere()) return false                                 // the owner deleted this very space on purpose (R19b)
         if (field.kind != FieldKind.TEXT && field.kind != FieldKind.SEARCH) return false
-        val n = before.length
-        if (n < 2) return false
-        val p = before[n - 1]
-        if (p !in AUTO_SPACE_AFTER) return false
-        val q = before[n - 2]
-        if (!(q.isLetterOrDigit() || q in ")]\"”’'")) return false
-        val tok = before.substringAfterLast(' ').substringAfterLast('\n')
-        if (tok.any { it == '@' || it == '/' || it == '\\' }) return false
-        if (p == '.') { val core = tok.dropLast(1); if ((core.length <= 1 && core != "I" && core != "i") || core.contains('.')) return false }   // e.g, U.S, example.com, a.m (but "so did I." ends a sentence)
-        if (p == ':' && tok.length > 1 && tok.dropLast(1).all { it.isDigit() }) return false           // 10:30
-        return true
+        return wantsSpaceBefore(before)
     }
 
     /**
@@ -626,27 +616,9 @@ class InputController(editor: EditorBridge, val stats: InputStats = InputStats()
         return startsSentence(before + lead, if (selStart >= 0) selStart + lead.length else -1)
     }
 
-    /** The straight quote that ends the text before the cursor OPENS a quotation: it stands at the start of the text, or after a space, a newline, an opening bracket or a dash (not after a word or a closing mark). */
-    private fun quoteOpens(): Boolean {
-        val n = before.length
-        if (n == 0 || before[n - 1] != '"') return false
-        if (n == 1) return true
-        val prev = before[n - 2]
-        return prev.isWhitespace() || prev in "([{\u2014\u2013"
-    }
+    private fun quoteOpens(): Boolean = quoteOpensAt(before)
 
-    /**
-     * The cursor stands inside a pair of quotes that was opened within the text window: the last quote mark before the cursor is an opening one ([curly]: an opening “ that no closing ” follows). A straight quote counts as opening when
-     * it stands at the start of the text (known only when the window reaches back that far) or after a space, a newline, an opening bracket or a dash. Unknown (no opening mark in the window) is "not inside": the space is then left alone.
-     */
-    private fun insideQuotes(curly: Boolean): Boolean {
-        if (curly) return before.lastIndexOf('\u201C') > before.lastIndexOf('\u201D')
-        val i = before.lastIndexOf('"')
-        if (i < 0) return false
-        if (i == 0) return before.length < WINDOW_BEFORE
-        val prev = before[i - 1]
-        return prev.isWhitespace() || prev in "([{\u2014\u2013"
-    }
+    private fun insideQuotes(curly: Boolean): Boolean = insideQuotesAt(before, curly, before.length >= WINDOW_BEFORE)
 
     /**
      * A lone i (or i'm, i'll, i've, i'd) stands before the cursor as plain text and the key about to be typed ends the word: it becomes a capital. Only a whole word counts: it must begin the text, a line, or stand after a space or
@@ -838,6 +810,49 @@ class InputController(editor: EditorBridge, val stats: InputStats = InputStats()
                 if (parts.isNotEmpty() && parts.all { it.length == 1 && it[0].isLetter() }) return false          // an initial (j.) or dotted letters (u.s., a.m.)
             }
             return true
+        }
+
+        /** Punctuation after which a letter that follows at once needs a space (when the person has that option on). */
+        private const val AUTO_SPACE_AFTER_CHARS = ".,!?;:"
+
+        /**
+         * [before] (the text before the cursor) ends in sentence punctuation that touches a word or a number, and that word is not part of an address, an abbreviation or a number: a letter typed now needs a space in front of it
+         * ("hello." "w" -> "hello. w"). Pure, shared with the small keyboard of the Kestrel browser ([app.kestrel.core.input.MiniKeyboardModel]).
+         */
+        fun wantsSpaceBefore(before: String): Boolean {
+            val n = before.length
+            if (n < 2) return false
+            val p = before[n - 1]
+            if (p !in AUTO_SPACE_AFTER_CHARS) return false
+            val q = before[n - 2]
+            if (!(q.isLetterOrDigit() || q in ")]\"\u201D\u2019'")) return false
+            val tok = before.substringAfterLast(' ').substringAfterLast('\n')
+            if (tok.any { it == '@' || it == '/' || it == '\\' }) return false
+            if (p == '.') { val core = tok.dropLast(1); if ((core.length <= 1 && core != "I" && core != "i") || core.contains('.')) return false }   // e.g, U.S, example.com, a.m (but "so did I." ends a sentence)
+            if (p == ':' && tok.length > 1 && tok.dropLast(1).all { it.isDigit() }) return false           // 10:30
+            return true
+        }
+
+        /** The straight quote that ends [text] OPENS a quotation: it stands at the start of the text, or after a space, a newline, an opening bracket or a dash (not after a word or a closing mark). */
+        fun quoteOpensAt(text: String): Boolean {
+            val n = text.length
+            if (n == 0 || text[n - 1] != '"') return false
+            if (n == 1) return true
+            val prev = text[n - 2]
+            return prev.isWhitespace() || prev in "([{\u2014\u2013"
+        }
+
+        /**
+         * [text] ends inside a pair of quotes that was opened within it: its last quote mark is an opening one ([curly]: an opening \u201C that no closing \u201D follows). A straight quote opens when it stands at the start of the text
+         * (known only when the text is not [cut] off at its start) or after a space, a newline, an opening bracket or a dash. Unknown counts as "not inside".
+         */
+        fun insideQuotesAt(text: String, curly: Boolean, cut: Boolean): Boolean {
+            if (curly) return text.lastIndexOf('\u201C') > text.lastIndexOf('\u201D')
+            val i = text.lastIndexOf('"')
+            if (i < 0) return false
+            if (i == 0) return !cut
+            val prev = text[i - 1]
+            return prev.isWhitespace() || prev in "([{\u2014\u2013"
         }
 
         /** Marks that open a quotation or a bracket: a word right after one is still a word for the language's context. */
