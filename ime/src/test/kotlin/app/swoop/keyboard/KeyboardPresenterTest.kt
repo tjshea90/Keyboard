@@ -413,6 +413,48 @@ class KeyboardPresenterTest {
         assertEquals("hello", r.view.candidatesForTest().first())
     }
 
+    // ------------------------------------------------------------------ R20a (owner 2026-11-18): what was just copied is the first box of the strip
+
+    private fun Rig.copied(text: String, at: Long = 1_000L) { presenter.clipChipSource = { app.kestrel.core.clipboard.ClipItem(text, at, false) }; presenter.onClipboardChanged() }
+
+    @Test fun whatWasJustCopiedIsTheFirstBoxAndOneTapPastesTheWholeCopy() {
+        val r = Rig(suggest = true, words = pairedList); r.glide("hello")
+        r.copied("https://example.com/a/very/long/address?with=parts&and=more#fragment " .repeat(1).trim())
+        val chips = r.view.candidatesForTest()
+        assertTrue("the copy is first: $chips", chips.first().startsWith("https://example.com/a/very/long/address")); assertEquals("three boxes at most: $chips", true, chips.size <= 3)
+        r.tapChip(0)
+        assertEquals("hello https://example.com/a/very/long/address?with=parts&and=more#fragment", r.text.trimEnd().let { if (it.startsWith("hello ")) it else it })
+        assertTrue("the pasted copy is not offered a second time: ${r.view.candidatesForTest()}", r.view.candidatesForTest().none { it.startsWith("https://") })
+    }
+
+    @Test fun theCopyIsFirstAtTheStartOfAWordAndGoesAwayAsSoonAsLettersAreTyped() {
+        val r = Rig(suggest = true, words = pairedList); r.copied("my copied note")
+        assertEquals("an empty box: the copy is first: ${r.view.candidatesForTest()}", "my copied note", r.view.candidatesForTest().firstOrNull())
+        r.tap("h"); assertTrue("typing a letter: the strip is about the word: ${r.view.candidatesForTest()}", r.view.candidatesForTest().none { it == "my copied note" })
+        r.tap("\u232B"); assertEquals("and it comes back when the word is gone", "my copied note", r.view.candidatesForTest().firstOrNull())
+    }
+
+    @Test fun aLongOrMultiLineCopyIsShownOnOneLine() {
+        val r = Rig(suggest = true, words = pairedList); r.copied("first line\n\n   second   line")
+        assertEquals("first line second line", r.view.candidatesForTest().first())
+        r.tapChip(0); assertEquals("the paste keeps the line breaks", "first line\n\n   second   line", r.text)
+    }
+
+    @Test fun theCopyIsOfferedWithSuggestionsOffTooButNeverInAPasswordBoxOrWhenSwitchedOff() {
+        val off = Rig(suggest = false, words = pairedList); off.copied("copied"); assertEquals(listOf("copied"), off.view.candidatesForTest())
+        off.tapChip(0); assertEquals("copied", off.text)
+        val pw = Rig(inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD, suggest = true, words = pairedList); pw.copied("secret")
+        assertTrue("no copy in a password box: ${pw.view.candidatesForTest()}", pw.view.candidatesForTest().none { it == "secret" })
+        val sw = Rig(suggest = true, words = pairedList, extra = { it.putBoolean(Prefs.CLIP_SUGGEST, false) }); sw.copied("copied")
+        assertTrue("the switch is off: ${sw.view.candidatesForTest()}", sw.view.candidatesForTest().none { it == "copied" })
+    }
+
+    @Test fun theCopyIsNotOfferedOnceItIsTooOld() {
+        val r = Rig(suggest = true, words = pairedList)
+        r.presenter.clipChipSource = { null }; r.presenter.onClipboardChanged()
+        assertTrue("nothing fresh to offer: ${r.view.candidatesForTest()}", r.view.candidatesForTest().none { it == "old" })
+    }
+
     @Test fun twoQuickSpacesMakeAFullStopAndTheSwitchTurnsItOff() {
         val r = Rig(glidePref = false); for (c in "hello") r.tap(c.toString()); r.tap("space"); r.tap("space")
         assertEquals("hello. ", r.text)
