@@ -1,21 +1,22 @@
-# CHECKPOINT 511 — read me first, then TASKS.md
+# CHECKPOINT 514 — read me first, then TASKS.md
 
-**Written:** 2026-11-18T03:50:07Z · **tests:** all 1 fast checks green (gradle suite: see ship.sh)
-**Branch:** `claude/keyboard-caps-space-resize-glide-r72nmp` · **builds on:** `c5f9d32` (this checkpoint is the commit after it)
+**Written:** 2026-11-18T04:03:16Z · **tests:** all 1 fast checks green (gradle suite: see ship.sh)
+**Branch:** `claude/keyboard-caps-space-resize-glide-r72nmp` · **builds on:** `c73f799` (this checkpoint is the commit after it)
 
 ## Just done
-swoop-v0.6.0-alpha2 RELEASED AND RECORDED: run 44232237543 green (check, test-jvm incl lint, build+verify+publish); Release has swoop-0.6.0-alpha2.apk (SHA-256 5b440dee...). R19a-d done. NOT run on tablet/phone/emulator
+wrote owner's second 2026-11-18 batch R20a-d into TASKS.md (his words); 0.6.0-alpha2 is released and recorded
 
 ## Do this next
-Nothing running. Owner installs https://github.com/tjshea90/Keyboard/releases/tag/swoop-v0.6.0-alpha2 on tablet+phone and tests: glide after a full stop (capital), deleting the space after a full stop then typing com, docked arrow drag up/down/sideways + Full size, gibberish glide types a word. Then fix what they report (next release 0.6.0-alpha3 code 12 via bash ship.sh). Optional: emu-smoke.yml (api 29+36) for the docked height drag window; Kestrel pinned-copy sync when a Browser checkout exists
+start: (1) spawn 2 research agents (clipboard chip + next-word strip layout in Gboard/SwiftKey/iOS; glide-decoder personalisation techniques) writing to research/R20-*.md, (2) meanwhile R20c: grep capitalizeI in KeyboardPresenter, write a failing presenter test for 'i' and 'i\'m' typed in the middle of text/after '3) ', find root cause, (3) read ime/.../ClipboardHost.kt + KeysView chips for R20a
 
 *(resuming? CLAUDE.md's "FIRST ACTION OF EVERY SESSION" says how; the briefing is tools/resume.sh. Do that first, or autosave may stay off all session.)*
 
 ## Uncommitted right now
-    (nothing — the tree is clean as of this checkpoint)
+     M TASKS.md
 
 ## Last ten checkpoints
 ```
+  b4f6a50 ckpt 511: swoop-v0.6.0-alpha2 RELEASED AND RECORDED: run 44232237543 green (check, test-
   cffd8a8 ckpt 506: DISPATCHED android.yml ONCE for swoop-v0.6.0-alpha2 (code 11) on ref claude/ke
   ae7bda6 ckpt 505: gated swoop-v0.6.0-alpha2 (ime code 11) and pushed it: handoff self-test, unit
   01a8630 ckpt 504: pre-ship: 0.6.0-alpha2: a glide always types the closest word (never 'no word 
@@ -25,8 +26,7 @@ Nothing running. Owner installs https://github.com/tjshea90/Keyboard/releases/ta
   3839c16 ckpt 466: handoff saved (.handoff/handoff.md + archive; CLAUDE.md/AGENTS.md learnings bl
   c028463 ckpt 464: 0.6.0-alpha1 RELEASED AND RECORDED: run 44220063374 green (check, test-jvm inc
   37209dd ckpt 462: 0.6.0-alpha1 shipped to GitHub: ship.sh gates green, android.yml DISPATCHED ON
-  6e52915 ckpt 461: gated swoop-v0.6.0-alpha1 (ime code 10) and pushed it: handoff self-test, unit
 ```
 
-(3 automatic checkpoint(s) since the last deliberate one — the
+(2 automatic checkpoint(s) since the last deliberate one — the
 session was still mid-step. `git diff` against it shows what changed.)
