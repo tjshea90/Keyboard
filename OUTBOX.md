@@ -584,3 +584,16 @@
 >
 > I haven't opened a PR; all work is on `claude/keyboard-typing-improvements-jetik4`.
 <!-- sha:375287bdc744 -->
+
+## 2026-11-18T02:13:55Z
+> The handoff is saved and pushed (checkpoint 466), so the next session can resume with no loss.
+>
+> Swoop 0.6.0-alpha1 is out with all five changes, but I haven't run it on your tablet, phone or an emulator. I only ran the unit tests and GitHub's build and checks.
+>
+> https://github.com/tjshea90/Keyboard/releases/tag/swoop-v0.6.0-alpha1
+>
+> **Still open:**
+> - **Your testing:** try tapping an old word, the "Full size" button and resize smoothness, the first capital in a plain text box, hide letters, and learning on the tablet and phone. Tell me what feels wrong and I'll fix it in 0.6.0-alpha2.
+> - **Kestrel:** its pinned copy of the keyboard engine isn't re-synced, because its checkout isn't in this session. Kestrel types through Swoop, so it gets the changes anyway.
+> - **Emulator check:** I can dispatch the Android 10 and 16 emulator tests for the new strip, button and blank panel if you want a real-Android check before you test.
+<!-- sha:6d800bcd6f81 -->
