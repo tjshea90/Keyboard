@@ -26,7 +26,9 @@ object RealSwipe {
         c.setRequestProperty("User-Agent", "swoop-eval")
         val code = c.responseCode
         check(code == 200 || code == 206) { "HTTP $code" }
-        val all = c.inputStream.use { it.readNBytes(bytes.toInt()) }
+        val buf = java.io.ByteArrayOutputStream()
+        c.inputStream.use { i -> val b = ByteArray(65536); while (buf.size() < bytes) { val n = i.read(b); if (n < 0) break; buf.write(b, 0, n) } }
+        val all = buf.toByteArray()
         c.disconnect()
         val cut = all.lastIndexOf('\n'.code.toByte())
         check(cut > 0) { "no complete line in $bytes bytes" }
