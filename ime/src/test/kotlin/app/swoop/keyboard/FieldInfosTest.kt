@@ -5,6 +5,7 @@ import android.view.inputmethod.EditorInfo
 import app.kestrel.core.input.editor.CapFlags
 import app.kestrel.core.input.editor.FieldKind
 import app.kestrel.core.input.editor.ImeActions
+import app.kestrel.core.input.editor.Pad
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -44,6 +45,20 @@ class FieldInfosTest {
             assertEquals("${r.name}: action", r.action, f.imeAction)
             assertEquals("${r.name}: Enter is a newline", r.noEnter, f.noEnterAction)
         }
+    }
+
+    @Test fun numberAndPhoneAndDateFieldsAskForTheirPad() {   // owner R23d: a field that takes only digits gets the big number pad
+        fun pad(type: Int) = FieldInfos.from(EditorInfo().apply { inputType = type }).pad
+        assertEquals(Pad.NUMBER, pad(InputType.TYPE_CLASS_NUMBER))
+        assertEquals(Pad.NUMBER, pad(InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_FLAG_DECIMAL or InputType.TYPE_NUMBER_FLAG_SIGNED))
+        assertEquals("a PIN is a number field too, still without learning", Pad.NUMBER, pad(InputType.TYPE_CLASS_NUMBER or InputType.TYPE_NUMBER_VARIATION_PASSWORD))
+        assertEquals(Pad.PHONE, pad(InputType.TYPE_CLASS_PHONE))
+        assertEquals(Pad.DATETIME, pad(InputType.TYPE_CLASS_DATETIME or InputType.TYPE_DATETIME_VARIATION_DATE))
+        assertEquals(Pad.DATETIME, pad(InputType.TYPE_CLASS_DATETIME or InputType.TYPE_DATETIME_VARIATION_TIME))
+        assertEquals(Pad.NONE, pad(InputType.TYPE_CLASS_TEXT))
+        assertEquals("text with the number-password look is still text", Pad.NONE, pad(InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD))
+        val date = FieldInfos.from(EditorInfo().apply { inputType = InputType.TYPE_CLASS_DATETIME })
+        assertEquals("a date field learns nothing", false, date.learningAllowed || date.composingAllowed)
     }
 
     @Test fun theInitialSelectionIsCarriedOver() {
