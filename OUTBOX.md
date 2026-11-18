@@ -626,3 +626,7 @@
 ## 2026-11-18T03:37:04Z
 > The gates are still running; the monitor will report as soon as `ship.sh` finishes. After the gates pass I dispatch the build, wait for it to go green, then record the release and give you the link.
 <!-- sha:01061b779363 -->
+
+## 2026-11-18T03:39:16Z
+> The gates are re-running (the earlier red was my own wrong test expectation, now fixed). I'll continue once the monitor reports the result.
+<!-- sha:6f2178062848 -->
