@@ -28,6 +28,7 @@ class GlideSession(
     private var pendingGuessed: String? = null
     private var pendingPrev: String? = null
     private var pendingPrev2: String? = null
+    private var pendingStart = false              // the glided word began a sentence (R18d)
     private var pendingShown: String? = null      // how the glided word stands in the text (R18b), when the person chose its capitals themselves (Shift) inside a sentence
     private var afterUndo = false
     private var lastDeleted: String? = null
@@ -59,7 +60,12 @@ class GlideSession(
         val g = engine()
         if (g != null && liftAt != 0L) { g.stats.onShown(now() - liftAt); liftAt = 0L }
         var cands = res.candidates
-        if (cands.isEmpty()) { ui?.showNoWord(); return }
+        if (cands.isEmpty()) {
+            ui?.showNoWord()
+            // R18d: nothing fits this glide. If the person now types the word they meant, letter by letter, the shape of the glide is remembered for it (the same path as after a deleted glide)
+            if (learnAllowed()) { engine()?.glideDeleted(null); retypeWatch = true; retypeLetters = 0; retypeAt = now() }
+            return
+        }
         // a retry: the word they just deleted comes up first again, so it is wrong again for them: the next one goes first and the deleted one stays in the strip, second
         val rejected = lastDeleted
         if (afterUndo && rejected != null && cands.size >= 2 && cands[0].text == rejected && now() - deletedAt <= RETRY_MS && cands[1].perLetter - cands[0].perLetter <= RETRY_GAP) {
@@ -69,9 +75,11 @@ class GlideSession(
         val best = cands[0]
         retypeWatch = false                       // a new glide: its own confirmation handles the deleted one
         confirmPrevious()                         // the glide before this one stays: learn from it first (one thread, in order)
-        val inSentence = !InputController.startsSentence(controller.before, controller.selStart)
+        val startsHere = InputController.startsSentence(controller.before, controller.selStart)
+        val inSentence = !startsHere
         val keyboardsForm = controller.caseForm(best.text.lowercase(), controller.previousWord()) != null
         controller.commitGlide(best.text)
+        pendingStart = startsHere
         pendingShown = if (inSentence && !keyboardsForm) controller.lastGlide?.word else null
         pendingWord = best.text; pendingWeight = 1f; pendingGuessed = null
         topGuess = best.text
@@ -130,11 +138,12 @@ class GlideSession(
         g.accepted(w) { h -> habitChanged(h) }
         if (learnAllowed()) {
             pendingShown?.let { g.learnCase(it) }
+            if (pendingStart) g.learnStart(w)
             // kept: the keyboard hears it (a word the person chose, or one that replaced a deleted one, counts more); a correction remembers what it was picked over (a pick) or put in the place of (a deletion)
             val guessed = pendingGuessed ?: if (afterUndo) lastDeleted else null
             g.learn(pendingPrev, w, maxOf(pendingWeight, if (afterUndo) 3f else 1f), pendingPrev2, guessed?.takeIf { it != w }, if (pendingGuessed != null) 1f else 0.5f, fromGlide = true, afterUndo = afterUndo)
         }
-        pendingWeight = 1f; pendingGuessed = null; pendingShown = null
+        pendingWeight = 1f; pendingGuessed = null; pendingShown = null; pendingStart = false
         afterUndo = false
     }
 

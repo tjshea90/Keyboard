@@ -374,6 +374,7 @@ class KeyboardPresenter(
             literalShown = lit
         }
         for (w in res.words) if (strip.size < 3 && strip.none { it.equals(w, ignoreCase = true) }) strip.add(w)
+        if (res.typed.isEmpty() && controller.shift == app.kestrel.core.input.editor.ShiftState.ONCE) for (i in strip.indices) strip[i] = strip[i].replaceFirstChar { it.uppercase() }       // the next word starts a sentence: it will be written with its capital
         val shown = withEmoji(strip, res.typed.ifEmpty { null })
         if (shown.isEmpty()) view?.clearCandidates() else view?.showCandidates(shown)
     }

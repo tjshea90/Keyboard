@@ -56,6 +56,7 @@ class TypingLearner(
         if (fix.typed.equals(fix.word, ignoreCase = true)) {                                                    // only a capital was put in (a name, a day): the person writes it small
             g.learnCase(fix.typed.lowercase(), 2f); g.stats.onAutoCorrectUndone(); last = null; erased = null; return
         }
+        g.learnFix(true)                                                                                        // (R18d: this person takes fixes back: the keyboard gets stricter)
         val l = last
         if (l != null && l.word == fix.word.lowercase()) g.unlearnWord(l.prev, l.word, l.weight + 1f, l.prev2)   // the fix and what it earned go
         g.learnWord(l?.prev, fix.typed, 2f, l?.prev2)                                                           // what was typed is the person's word: twice, so it is never "fixed" again
@@ -68,8 +69,10 @@ class TypingLearner(
         val g = engine()
         val typed = controller.wordBeforeCursor()
         val (p2, p1) = if (typed != null) controller.contextBefore(typed) else controller.previousTwo()
+        val atStart = typed == null && InputController.startsSentence(controller.before, controller.selStart)
         if (!controller.pickWord(word)) return false
         if (g == null || !active()) return true
+        if (atStart) g.learnStart(word)
         g.stats.onSuggestionPicked()
         val w = word.lowercase()
         val fixed = typed != null && !w.startsWith(typed.lowercase())                                              // it replaced a typo, it did not finish the word
@@ -109,10 +112,12 @@ class TypingLearner(
         if (e != null && now() - erasedAt <= RETYPE_MS && retypeLetters >= 1 && word.length >= 2 && word != e.word) {
             if (similar(e.word, word)) { weight = 3f; guessed = e.word; g.stats.onRetyped() }   // erased, retyped: the new word is what was meant
         }
-        if (realFix != null) { guessed = typed.lowercase(); g.stats.onAutoCorrected() }              // the keyboard fixed a typo and it was not taken back (yet)
+        if (realFix != null) { guessed = typed.lowercase(); g.stats.onAutoCorrected(); g.learnFix(false) }   // the keyboard fixed a typo and it was not taken back (yet)
         erased = null
         g.learnWord(p1, word, weight, p2, guessed, if (weight > 1f) 2f else 1f)
         last = Done(word, p1, p2, weight)
+        val head = controller.before.takeIf { it.endsWith(typed) }?.dropLast(typed.length)
+        if (head != null && InputController.startsSentence(head, controller.selStart - typed.length)) g.learnStart(word)      // (R18d: what this person begins sentences with)
         learnCaseOf(g, typed, fix)
     }
 

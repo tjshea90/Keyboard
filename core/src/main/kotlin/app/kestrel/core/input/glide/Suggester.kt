@@ -114,7 +114,7 @@ object Suggester {
         if (auto == null && !typedKnown && t.length >= 3 && ranked.isNotEmpty()) {
             val best = ranked[0]
             val margin = best.score - (ranked.getOrNull(1)?.score ?: -1e9f)
-            if (best.fix && (margin >= AUTO_MARGIN || best.bonus >= 1.5f)) auto = best.text
+            if (best.fix && (margin >= AUTO_MARGIN + (pm?.autoMarginShift() ?: 0f) || best.bonus >= 1.5f)) auto = best.text
         }
         return Suggestions(ranked.take(limit).map { dress(it.text, typed, pm, prev) }, typedKnown, auto?.let { dress(it, typed, pm, prev) }, typed)
     }
@@ -126,8 +126,13 @@ object Suggester {
         val out = HashMap<String, Float>()
         val shown = HashMap<String, String>()
         if (prev == null) {
-            // the start of a sentence: the words the person starts with most, else the usual few
-            for (w in (pm?.topWords(6) ?: emptyList())) { val id = main.idOf(w); out[w] = logP(main, pm, id.takeIf { it >= 0 && main.text(it).lowercase() == w } ?: -1, w, -1, null, null, total); shown[w] = w }
+            // the start of a sentence: what THIS person begins sentences with (R18d), then the words they use most, else the usual few
+            if (pm != null) for ((w, share) in pm.startWords(6)) {
+                val id = main.idOf(w).takeIf { it >= 0 && main.text(it).lowercase() == w } ?: -1
+                if (id < 0 && pm.weightOf(w) < OWN_WORD_USES && w.length > 1) continue
+                out[w] = Math.log(share.toDouble()).toFloat() + START_BONUS; shown[w] = if (id >= 0) main.text(id) else w
+            }
+            for (w in (pm?.topWords(6) ?: emptyList())) { if (w in out) continue val id = main.idOf(w); out[w] = logP(main, pm, id.takeIf { it >= 0 && main.text(it).lowercase() == w } ?: -1, w, -1, null, null, total); shown[w] = w }
             for (w in STARTERS) if (w.lowercase() !in out) { val id = main.idOf(w); if (id >= 0) { out[w.lowercase()] = main.logProb(id) - 1f; shown[w.lowercase()] = main.text(id) } }
         } else {
             val prevId = main.idOf(prev)
@@ -147,6 +152,8 @@ object Suggester {
     }
 
     private val STARTERS = listOf("I", "The", "I'm", "It", "We")
+    /** A start the person made often (a share of 5 % of their sentences) scores about -2.5: ahead of the usual few ([STARTERS], about -4) and the words they merely use a lot. */
+    private const val START_BONUS = 0.5f
 
     /**
      * The vulgar words and slurs the strip never OFFERS on its own as the next word ("pink" -> "pussy" came from the book pairs). The person can still type them, glide them and pick them out of the letters
