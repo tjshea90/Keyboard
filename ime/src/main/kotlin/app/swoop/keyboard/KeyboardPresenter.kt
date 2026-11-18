@@ -226,7 +226,7 @@ class KeyboardPresenter(
             it.reset()
             it.applyOptions(st)
             if (safeMode) it.showGlobe = true                // (the crash-loop safe layout always has the key that leaves this keyboard)
-            it.setField(field.kind, ImeLayout.actionLabel(field.imeAction, field.noEnterAction))
+            it.setField(field.kind, ImeLayout.actionLabel(field.imeAction, field.noEnterAction), field.pad)
             it.setGlideEnabled(glideOn)
             it.setSuggestionsEnabled(suggestOn)
             it.setShift(controller.shift)

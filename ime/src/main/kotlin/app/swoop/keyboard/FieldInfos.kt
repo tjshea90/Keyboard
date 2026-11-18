@@ -5,6 +5,7 @@ import android.view.inputmethod.EditorInfo
 import app.kestrel.core.input.editor.CapFlags
 import app.kestrel.core.input.editor.FieldInfo
 import app.kestrel.core.input.editor.FieldKind
+import app.kestrel.core.input.editor.Pad
 
 /** EditorInfo -> the plain facts the controller needs (KB-104 extends the table with the Enter/caps rules and its tests). */
 object FieldInfos {
@@ -23,8 +24,11 @@ object FieldInfos {
                 InputType.TYPE_TEXT_VARIATION_FILTER -> { noSuggestions = true; FieldKind.TEXT }
                 else -> if (action == EditorInfo.IME_ACTION_SEARCH) FieldKind.SEARCH else FieldKind.TEXT
             }
+            InputType.TYPE_CLASS_DATETIME -> FieldKind.NUMBER           // dates and times are digits and a few marks: no words to guess, no learning, the number pad (R23d)
             else -> FieldKind.TEXT
         }
+        // R23d: a field for numbers only gets a number pad, a PIN or number password too (it stays a password for everything else: nothing learned, the copy shown as dots)
+        val pad = when (cls) { InputType.TYPE_CLASS_NUMBER -> Pad.NUMBER; InputType.TYPE_CLASS_PHONE -> Pad.PHONE; InputType.TYPE_CLASS_DATETIME -> Pad.DATETIME; else -> Pad.NONE }
         // The Kestrel browser marks its address-and-search box in privateImeOptions (any app may send such options; the only effect here is a layout and typing style, nothing is shared).
         val omnibox = cls == InputType.TYPE_CLASS_TEXT && kind != FieldKind.PASSWORD && hasOmniboxOption(e.privateImeOptions)
         val fieldKind = if (omnibox) FieldKind.OMNIBOX else kind
@@ -36,6 +40,7 @@ object FieldInfos {
             noSuggestions = noSuggestions,
             capsFlags = if (cls == InputType.TYPE_CLASS_TEXT && fieldKind != FieldKind.PASSWORD && fieldKind != FieldKind.EMAIL && fieldKind != FieldKind.URL && fieldKind != FieldKind.OMNIBOX) e.inputType and CapFlags.ALL else 0,
             initialSelStart = e.initialSelStart, initialSelEnd = e.initialSelEnd,
+            pad = pad,
         )
     }
 
