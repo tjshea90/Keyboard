@@ -701,3 +701,31 @@
 ## 2026-11-18T05:17:59Z
 > New request (R21). I'm writing it into TASKS.md first, and recording that the 0.7.0-alpha1 build is still in flight so a cut-off session doesn't lose that step. Then I'll look at where the quote spaces come from.
 <!-- sha:5bc59ef796c2 -->
+
+## 2026-11-18T05:21:46Z
+> While the gates run (about 8 minutes), here is where things stand.
+>
+> **Already released: 0.7.0-alpha1** (GitHub built and signed it; the certificate was verified)
+> https://github.com/tjshea90/Keyboard/releases/tag/swoop-v0.7.0-alpha1
+>
+> - **Copied text first (R20a):** what you just copied is the first suggestion box, with a small clipboard icon. One tap pastes the whole copy. It lasts 5 minutes and goes away when you type, delete or glide. A password manager's copy, and any copy in a password box, shows as dots but still pastes. Settings has a "Suggest copied text" switch.
+> - **Next word after a glide (R20b):** the middle box is the predicted next word, and the side boxes are other guesses for the glide. No other keyboard I found does this, so it's our own design. A "Next word after a glide" setting switches it off.
+> - **Capital I (R20c):** the fix only ran on typed letters, and only in boxes that show composing text. A glided `i'm` came out lowercase because the word list stores it lowercase. A lone `i` and `i'm`, `i'll`, `i've`, `i'd` are now always capitalised, including glided and strip words.
+> - **Learning where your thumb lands (R20d):** research is in `research/R20-glide-personalization.md`. The keyboard used to learn one shift of the whole path. It now also learns how the landing point changes across the keyboard, from the first and last letter of glides you keep.
+>   - In a simulated hand, accuracy rose by up to 3.5 points where left and right landed differently, and nothing was lost where they didn't.
+>   - **No real thumb data exists yet, so that gain is unproven on you.**
+>
+> **Your new request (R21): no spaces inside quotation marks.** It is coded and tested and is in the 0.7.0-alpha2 gates now.
+> - A glided or picked word right after an opening quote used to get a space (`" this`).
+> - The closing quote now takes away the space the glide left behind.
+> - A space you type yourself is never removed.
+> - I also made words inside quotes and brackets count as context for the next-word guess.
+>
+> **Not run on a tablet, phone or emulator:** all of the above.
+>
+> **Open items:**
+> - [ ] 0.7.0-alpha2 gates running, then build, publish, and I send you the link
+> - [ ] You test on the tablet and phone: copied-text box, the three-box strip after a glide, `I` and `i'm`, quotes, resizing
+> - [ ] Not built, ranked lower in the research: correcting the previous glided word using the next word, learning from tap positions, and A/B measurement on your real thumb
+> - [ ] Optional: emulator smoke run, and syncing the Kestrel browser copy
+<!-- sha:7abed7e1c1ba -->
