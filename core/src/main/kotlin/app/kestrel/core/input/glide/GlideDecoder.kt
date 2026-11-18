@@ -94,6 +94,12 @@ class GlideParams(
      */
     val rareMaxPerLetter: Float = 1.1f,
     val rareFitSpan: Float = 2f,
+    /**
+     * Owner R19d (2026-11-18): "it should always input a word, the closest word to the pattern i glided, even if it picks an incorrect word". When the strict pass above finds no word at all (the ends are not near a
+     * word's first / last letter, a letter was never visited, the fit is worse than [maxPerLetter]), a second, relaxed pass drops those limits and answers with the closest word anyway (the language still breaks ties, and the
+     * strip still offers the next two). It reverses the earlier "a glide that fits nothing says so" rule on purpose. False = the old behaviour (the tests and the evaluation tools that measure the refusal).
+     */
+    val alwaysAnswer: Boolean = true,
 )
 
 /** What counts as a rare word (shared by the glide decoder and the tap suggester). ln-probabilities are on the scale of the shipped list: -12.5 is about rank 13 000 of 140 000. */
@@ -154,7 +160,20 @@ class GlideDecoder(private val keys: GlideKeys, private val p: GlideParams = Gli
      * nothing fits.
      */
     fun decode(xs: FloatArray, ys: FloatArray, count: Int, lexicons: List<GlideLexicon>, prev: String?, max: Int = 3, prev2: String? = null): List<GlideCandidate> {
-        lastCandidates = 0; lastPatternLifted = false; lastPatternFlipped = false; injected.clear()
+        val strict = decodePass(xs, ys, count, lexicons, prev, max, prev2, relaxed = false)
+        if (strict.isNotEmpty() || !p.alwaysAnswer) return strict
+        return decodePass(xs, ys, count, lexicons, prev, max, prev2, relaxed = true)       // R19d: nothing fits by the strict rules: the closest word anyway
+    }
+
+    /** True when the last [decode] had to relax its limits to find any word (Diagnostics / tests). */
+    var lastRelaxed = false; private set
+    /** The squared distance (pitches) a letter may be from the whole path before the word is dropped: [GlideParams.missLimit2], or no limit in the relaxed pass. */
+    private var missLimit2 = 0f
+
+    private fun decodePass(xs: FloatArray, ys: FloatArray, count: Int, lexicons: List<GlideLexicon>, prev: String?, max: Int, prev2: String?, relaxed: Boolean): List<GlideCandidate> {
+        lastCandidates = 0; lastPatternLifted = false; lastPatternFlipped = false; injected.clear(); lastRelaxed = relaxed
+        missLimit2 = if (relaxed) Float.MAX_VALUE else p.missLimit2
+        val reach2 = if (relaxed) Float.MAX_VALUE else p.endReach2
         lastPrint = if (p.patGain > 0f) Fingerprint.of(xs, ys, count, keys) else null
         if (count < 2 || !resample(xs, ys, count)) return emptyList()
         // the path moved by the learned habit; everything after judges this one
@@ -173,9 +192,9 @@ class GlideDecoder(private val keys: GlideKeys, private val p: GlideParams = Gli
         heapN = 0
         for ((li, lex) in lexicons.withIndex()) {
             for (f in 0 until 26) {
-                if (startD[f] > p.endReach2) continue
+                if (startD[f] > reach2) continue
                 for (l in 0 until 26) {
-                    if (endD[l] > p.endReach2) continue
+                    if (endD[l] > reach2) continue
                     val ids = lex.bucket(f, l)
                     for (id in ids) quick(lex, li, id, startD[f] + endD[l])
                 }
@@ -216,8 +235,9 @@ class GlideDecoder(private val keys: GlideKeys, private val p: GlideParams = Gli
             val lex = lexicons[heapLex[h]]; val id = heapId[h]
             val letters = distinctLetters(lex, id)
             val per = costs[h] / letters
-            if (per > p.maxPerLetter) continue
-            if (rare[h] > 0f && p.rareW > 0f) { // a rare word needs a path that really fits it
+            if (costs[h] >= Float.MAX_VALUE / 8) continue                                    // the word cannot be laid on the path at all
+            if (!relaxed && per > p.maxPerLetter) continue
+            if (!relaxed && rare[h] > 0f && p.rareW > 0f) { // a rare word needs a path that really fits it
                 val d = Math.min(1f, Rarity.below(priors[h], p.rareFloor, p.rareCap) / p.rareFitSpan)
                 if (per > p.maxPerLetter - (p.maxPerLetter - p.rareMaxPerLetter) * d) continue
             }
@@ -321,7 +341,7 @@ class GlideDecoder(private val keys: GlideKeys, private val p: GlideParams = Gli
             if (l == prevL) continue
             prevL = l
             val d = dKey[l]
-            if (d > p.missLimit2) return Float.NaN
+            if (d > missLimit2) return Float.NaN
             cov += if (d < p.visitCap) d else p.visitCap
             m++
         }
