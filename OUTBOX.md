@@ -1057,3 +1057,7 @@
 ## 2026-11-18T23:00:15Z
 > Still running the six limit scenarios. I'll read the results shortly.
 <!-- sha:40deb05d0dcf -->
+
+## 2026-11-18T23:02:53Z
+> The blocked-network scenarios each take a couple of minutes, so I'm giving them four more.
+<!-- sha:79194028aff6 -->
