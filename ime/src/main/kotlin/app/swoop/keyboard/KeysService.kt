@@ -33,7 +33,7 @@ class KeysService : InputMethodService() {
         presenter.onOpenSettings = { openSettings() }
         presenter.onTranslateMessage = { m -> root?.keys?.showNotice(m) }
         presenter.onToggleClipboard = { toggleClipboard() }
-        presenter.clipChipSource = { clips.latestFresh(KeyboardPresenter.CLIP_CHIP_TTL_MS) }
+        presenter.clipChipSource = { clips.latestFresh(CLIP_CHIP_TTL_MS) }
         try { (getSystemService(CLIPBOARD_SERVICE) as android.content.ClipboardManager).addPrimaryClipChangedListener(clipListener) } catch (_: Exception) { }
     }
 
