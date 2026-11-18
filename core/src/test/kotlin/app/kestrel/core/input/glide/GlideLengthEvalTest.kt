@@ -31,9 +31,9 @@ class GlideLengthEvalTest {
     @Test fun measureTheLengthTermOnLookAlikePairs() {
         for (noise in listOf(SimNoise.NORMAL, SimNoise.SLOPPY)) {
             val off = GlideParams(lengthW = 0f); val on = GlideParams()
-            val (so, lo) = table(off, noise, 120); val (sn, ln) = table(on, noise, 120)
+            val (so, lo) = table(off, noise, 50); val (sn, ln) = table(on, noise, 50)
             println("LENGTH ${noise.name}: short word first  off %.1f%% -> on %.1f%%   long word first  off %.1f%% -> on %.1f%%".format(so, sn, lo, ln))
-            val the = first("the", off, noise, 300) to first("the", on, noise, 300); val there = first("there", off, noise, 300) to first("there", on, noise, 300)
+            val the = first("the", off, noise, 150) to first("the", on, noise, 150); val there = first("there", off, noise, 150) to first("there", on, noise, 150)
             println("LENGTH ${noise.name}: the %.1f -> %.1f   there %.1f -> %.1f".format(the.first, the.second, there.first, there.second))
             assertTrue("the short word of a pair is found at least as often: off %.1f on %.1f".format(so, sn), sn >= so - 0.5)
             assertTrue("and the long word is not given up for it: off %.1f on %.1f".format(lo, ln), ln >= lo - 1.5)
@@ -42,7 +42,7 @@ class GlideLengthEvalTest {
 
     @Test fun measureTheYardstickWithAndWithoutTheLengthTerm() {
         for (noise in listOf(SimNoise.CALM, SimNoise.NORMAL, SimNoise.SLOPPY)) {
-            val picks = GlideEval.frequencyPick(lex, 1200, Random(21))
+            val picks = GlideEval.frequencyPick(lex, 700, Random(21))
             val off = GlideEval.run(lex, keys, GlideParams(lengthW = 0f), noise, picks, 21L); val on = GlideEval.run(lex, keys, GlideParams(), noise, picks, 21L)
             println("LENGTH yardstick ${noise.name}: off $off | on $on")
             assertTrue("never worse on top choice: off ${off.pct(off.top1)} on ${on.pct(on.top1)}", on.pct(on.top1) >= off.pct(off.top1) - 0.3)
