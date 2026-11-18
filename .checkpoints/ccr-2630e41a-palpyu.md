@@ -1,21 +1,22 @@
-# CHECKPOINT 731 — read me first, then TASKS.md
+# CHECKPOINT 734 — read me first, then TASKS.md
 
-**Written:** 2026-11-18T21:11:51Z · **tests:** all 1 fast checks green (gradle suite: see ship.sh)
-**Branch:** `ccr-2630e41a-palpyu` · **builds on:** `de648cc` (this checkpoint is the commit after it)
+**Written:** 2026-11-18T22:34:52Z · **tests:** all 1 fast checks green (gradle suite: see ship.sh)
+**Branch:** `ccr-2630e41a-palpyu` · **builds on:** `2716d92` (this checkpoint is the commit after it)
 
 ## Just done
-swoop-v0.7.0-alpha4 RELEASED AND RECORDED (run 44396244888 green: check, test-jvm, build; Release swoop-v0.7.0-alpha4 has swoop-0.7.0-alpha4.apk, cert verified; BUILDLOG line written). R24a/b/c ticked.
+wrote owner's R25 (probe says Android refuses the keyboard a socket = EPERM/EACCES) into TASKS.md; hypothesis: Data Saver (on by default on Android Go) + metered phone hotspot + background IME process
 
 ## Do this next
-nothing is running. Owner installs swoop-v0.7.0-alpha4 on tablet + phone, tries translating OFF, presses Diagnostics > Test translation connection on the tablet and reports the Result line. Next session: fix what the owner reports; if the tablet glide got worse set GlideParams.SMALL_PITCH_DP = LARGE_PITCH_DP (one setting); Kestrel browser sync of core/input (/home/user/Browser absent) is the owner's/other session's call; optional research not done: next-word post-correction and dwell/speed cue (both now measurable on the real-swipe harness, research/R24-glide-next.md section 5)
+1) add debug-only probe_delay extra (SetupActivity->DiagnosticsActivity) + tools/emu/net_probe.sh phase B: cmd netpolicy set restrict-background true + set metered-network AndroidWifi true, probe in background (HOME), expect EPERM; phase C: add restrict-background-whitelist <uid>, expect OK; dispatch emu-smoke.yml mode=net-probe api 29 and 36; 2) NetworkLimits step in ConnectionProbe (getRestrictBackgroundStatus, isPowerSaveMode, isDeviceIdleMode, isBackgroundRestricted, standby bucket; no new permission) + verdict + Diagnostics buttons ACTION_IGNORE_BACKGROUND_DATA_RESTRICTIONS_SETTINGS; 3) ship 0.7.0-alpha5 code 16
 
 *(resuming? CLAUDE.md's "FIRST ACTION OF EVERY SESSION" says how; the briefing is tools/resume.sh. Do that first, or autosave may stay off all session.)*
 
 ## Uncommitted right now
-     M OUTBOX.md
+     M TASKS.md
 
 ## Last ten checkpoints
 ```
+  b445988 ckpt 731: swoop-v0.7.0-alpha4 RELEASED AND RECORDED (run 44396244888 green: check, test-
   9892412 ckpt 726: swoop-v0.7.0-alpha4 (code 15) DISPATCHED ONCE: android.yml run 44396244888 on 
   bfef0d3 ckpt 725: gated swoop-v0.7.0-alpha4 (ime code 15) and pushed it: handoff self-test, unit
   defb85a ckpt 716: R24c presenter tests 75/75 green; R24a emulator probe on Android 10 AND 16 emu
@@ -25,8 +26,7 @@ nothing is running. Owner installs swoop-v0.7.0-alpha4 on tablet + phone, tries 
   9020608 ckpt 667: Swoop 0.7.0-alpha3 RELEASED (run 44254953577 green, APK on Release swoop-v0.7.
   4c4d8bf ckpt 663: R22 Kestrel port in progress on Browser branch claude/keyboard-caps-space-resi
   3d8c0e4 ckpt 658: 0.7.0-alpha3 (code 14) shipped to GitHub, android.yml dispatched ONCE at ~06:5
-  06f1fac ckpt 657: gated swoop-v0.7.0-alpha3 (ime code 14) and pushed it: handoff self-test, unit
 ```
 
-(3 automatic checkpoint(s) since the last deliberate one — the
+(2 automatic checkpoint(s) since the last deliberate one — the
 session was still mid-step. `git diff` against it shows what changed.)
