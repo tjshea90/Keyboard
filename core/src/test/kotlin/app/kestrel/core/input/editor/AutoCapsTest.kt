@@ -29,7 +29,7 @@ class AutoCapsTest {
         assertEquals("an empty text box starts with a capital too (owner R18b)", ShiftState.ONCE, Rig("", sentenceCaps = true).c.shift)
     }
     @Test fun aTextBoxThatAskedForNothingStartsAndEndsSentencesWithCapitals() {            // owner 2026-11-18: "auto capitalize words at the beginning of sentences"
-        assertEquals(ShiftState.ONCE, Rig("", sentenceCaps = true, sentenceCaps = true).c.shift); assertEquals(ShiftState.ONCE, Rig("hello\n", sentenceCaps = true).c.shift); assertEquals(ShiftState.OFF, Rig("hello", sentenceCaps = true).c.shift)
+        assertEquals(ShiftState.ONCE, Rig("", sentenceCaps = true).c.shift); assertEquals(ShiftState.ONCE, Rig("hello\n", sentenceCaps = true).c.shift); assertEquals(ShiftState.OFF, Rig("hello", sentenceCaps = true).c.shift)
         assertEquals("through a closing quote", ShiftState.ONCE, Rig("He said \"stop.\" ", sentenceCaps = true).c.shift); assertEquals("through a bracket", ShiftState.ONCE, Rig("I left (it was late.) ", sentenceCaps = true).c.shift)
         assertEquals(ShiftState.ONCE, Rig("What… ", sentenceCaps = true).c.shift); assertEquals(ShiftState.ONCE, Rig("Why?! ", sentenceCaps = true).c.shift); assertEquals(ShiftState.ONCE, Rig("I said no. ", sentenceCaps = true).c.shift); assertEquals(ShiftState.ONCE, Rig("It costs 5. ", sentenceCaps = true).c.shift)
         for (t in listOf("see e.g. ", "that is, i.e. ", "Mr. ", "dr. ", "J. ", "the u.s. ", "vs. ", "approx. ")) assertEquals("not after '$t'", ShiftState.OFF, Rig(t, sentenceCaps = true).c.shift)
