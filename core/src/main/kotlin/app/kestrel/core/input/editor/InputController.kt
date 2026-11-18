@@ -55,6 +55,11 @@ class InputController(editor: EditorBridge, val stats: InputStats = InputStats()
     var sentenceCaps = true
     /** A letter typed right after punctuation that touches the word before it ("hello.world") gets a space first ("hello. world"). */
     var autoSpace = false
+    /**
+     * The way a glided or picked word is written inside a sentence when it is not the start of one (R18b: "Monday", "Sarah", "iPhone"): given the lowercase word, the form or null. Set by the keyboard from its case book
+     * (built-in names plus what this person writes with capitals); the default writes every word as the decoder gave it.
+     */
+    var caseForm: (String) -> String? = { null }
 
     private val pending = Pending()
     /** The editor may still hold a composing region this keyboard lost track of (a failed call, a new session): it is closed before the next edit. */
@@ -90,16 +95,20 @@ class InputController(editor: EditorBridge, val stats: InputStats = InputStats()
         autoCaps()
     }
 
-    /** The field wants capitals at the cursor (the start of a sentence, a word, or always, as its flags say): Shift goes on for the next letter. Never switches caps lock off. */
+    /**
+     * The field wants capitals at the cursor (the start of a sentence, a word, or always, as its flags say): Shift goes on for the next letter. Never switches caps lock off.
+     * A text box that asked for nothing gets the keyboard's own rule (owner R18b, after 2026-11-17): a capital at the start of the box, after a newline and after . ! ? followed by a space ([startsSentence]);
+     * e-mail, URL, password, number, search and address boxes never.
+     */
     fun autoCaps() {
         if (!autoCapsOn || shift == ShiftState.LOCK) return
-        var flags = field.capsFlags
-        // Owner, 2026-11-17: capitalise the first letter after . ! ? BY DEFAULT, also in a text box that did not ask for it. Such a box gets the SENTENCE rule only once there is text
-        // before the cursor (an empty box stays lowercase, the app did not ask); e-mail, URL, password and number fields never.
-        var extra = false
-        if (flags == 0 && field.kind == FieldKind.TEXT && sentenceCaps && before.isNotBlank()) { flags = CapFlags.SENTENCES; extra = true }
-        if (flags == 0) return
-        if (extra && !before.trimEnd().let { it.endsWith(".") || it.endsWith("!") || it.endsWith("?") || it.endsWith("\u2026") || it.endsWith("\n") } ) { if (shift == ShiftState.ONCE && autoShift) shift = ShiftState.OFF; autoShift = shift == ShiftState.ONCE; return }
+        val flags = field.capsFlags
+        if (flags == 0) {
+            if (field.kind != FieldKind.TEXT || !sentenceCaps) return
+            if (startsSentence(before, selStart)) { if (shift == ShiftState.OFF) shift = ShiftState.ONCE } else if (shift == ShiftState.ONCE && autoShift) shift = ShiftState.OFF
+            autoShift = shift == ShiftState.ONCE
+            return
+        }
         if (ed.cursorCapsMode(flags) != 0) { if (shift == ShiftState.OFF) shift = ShiftState.ONCE } else if (shift == ShiftState.ONCE && autoShift) shift = ShiftState.OFF
         autoShift = shift == ShiftState.ONCE
     }
@@ -144,6 +153,7 @@ class InputController(editor: EditorBridge, val stats: InputStats = InputStats()
         // An address bar (Chrome, Brave, ...) completes what was typed INLINE: it appends the rest of a likely address after the cursor and selects it, which is a report we did not predict. The glided word is still
         // right before where the selection starts, so it stays the last glide (a tap in the strip can still replace it); only a selection or a move that starts somewhere else forgets it.
         if (glide != null && wasAt >= 0 && newSelStart == wasAt && before.endsWith(glide.text)) lastGlide = glide
+        autoCaps()                                                  // the cursor stands somewhere else now: a sentence start asks for a capital, the middle of a sentence does not
         return false
     }
 
@@ -315,7 +325,8 @@ class InputController(editor: EditorBridge, val stats: InputStats = InputStats()
         if (word.isEmpty()) return
         settle()
         endComposing()
-        val w = when (shift) { ShiftState.LOCK -> word.uppercase(); ShiftState.ONCE -> word.replaceFirstChar { it.uppercase() }; ShiftState.OFF -> word }
+        val form = caseForm(word)
+        val w = when (shift) { ShiftState.LOCK -> word.uppercase(); ShiftState.ONCE -> if (form != null && form.first().isUpperCase()) form else (form ?: word).replaceFirstChar { it.uppercase() }; ShiftState.OFF -> form ?: word }
         val needsLead = before.isNotEmpty() && !before.last().isWhitespace() && before.last() !in NO_SPACE_AFTER
         val tail = (if (needsLead) " " else "") + w + " "
         if (!commit(tail)) return
@@ -331,7 +342,8 @@ class InputController(editor: EditorBridge, val stats: InputStats = InputStats()
         if (!verifyBefore(g.text)) { lastGlide = null; return false }          // (a selection that starts right after the word is an address bar's inline completion: the new word replaces it)
         val lead = if (g.text.startsWith(" ")) " " else ""
         val shown = g.word
-        val w = if (shown.length > 1 && shown.all { it.isUpperCase() }) word.uppercase() else if (shown.firstOrNull()?.isUpperCase() == true) word.replaceFirstChar { it.uppercase() } else word
+        val form = caseForm(word.lowercase())
+        val w = if (shown.length > 1 && shown.all { it.isUpperCase() }) word.uppercase() else if (shown.firstOrNull()?.isUpperCase() == true) (if (form != null && form.first().isUpperCase()) form else word.replaceFirstChar { it.uppercase() }) else form ?: word
         val newTail = lead + w + " "
         val s0 = selStart; val e0 = selEnd
         beginBatch()
@@ -633,6 +645,33 @@ class InputController(editor: EditorBridge, val stats: InputStats = InputStats()
     }
 
     companion object {
+        /** Closing quotes and brackets: a sentence can end inside them ("Stop." He said). */
+        private const val CLOSERS = "\"'\u201D\u2019)]}\u00BB"
+        /** Words that end in a full stop without ending the sentence (compared in lowercase). */
+        private val ABBREVIATIONS = setOf("e.g.", "i.e.", "mr.", "mrs.", "ms.", "dr.", "vs.", "prof.", "st.", "jr.", "sr.", "inc.", "ltd.", "approx.", "cf.", "fig.", "dept.", "no.", "ex.")
+
+        /**
+         * True when the next letter typed after [text] (the text before the cursor, [selStart] the cursor's offset or -1) starts a sentence: the box is empty, the text ends with a newline, or it ends with . ! ? or an
+         * ellipsis (inside closing quotes or brackets too) followed by a space. Not after an abbreviation (e.g. i.e. Mr. Dr. vs.) or an initial (J.), and not when the full stop is not followed by a space yet (3.5, www.x).
+         */
+        fun startsSentence(text: String, selStart: Int = -1): Boolean {
+            if (text.isBlank()) return (text.isEmpty() && selStart <= 0) || (text.isNotEmpty() && text.length < WINDOW_BEFORE)
+            val trimmed = text.trimEnd(' ', '\t')
+            if (trimmed.length == text.length) return false                    // nothing after the punctuation yet
+            if (trimmed.endsWith("\n")) return true
+            val t = trimmed.trimEnd { it in CLOSERS }
+            if (t.isEmpty()) return false
+            val last = t.last()
+            if (last != '.' && last != '!' && last != '?' && last != '\u2026') return false
+            if (last == '.') {
+                val tok = t.substringAfterLast(' ').substringAfterLast('\n').substringAfterLast('\t').trimStart { it in "\"'\u201C\u2018([{" }.lowercase()
+                if (tok in ABBREVIATIONS) return false
+                val parts = tok.split('.').filter { it.isNotEmpty() }
+                if (parts.isNotEmpty() && parts.all { it.length == 1 && it[0].isLetter() }) return false          // an initial (j.) or dotted letters (u.s., a.m.)
+            }
+            return true
+        }
+
         const val WINDOW_BEFORE = 64
         const val WINDOW_AFTER = 16
         const val MIN_BEFORE = 16
