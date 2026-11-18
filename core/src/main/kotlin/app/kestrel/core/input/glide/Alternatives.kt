@@ -48,7 +48,7 @@ object Alternatives {
                 val lexicons = ArrayList<GlideLexicon>(2); lexicons.add(main); extra?.let { lexicons.add(it) }
                 val bx = decoder.biasX; val by = decoder.biasY
                 decoder.biasX = 0f; decoder.biasY = 0f                      // (a path drawn exactly is not moved by where this thumb usually lands)
-                try { for (c in decoder.decode(path.first, path.second, path.first.size, lexicons, prev, POOL, prev2)) pool.getOrPut(c.text.lowercase()) { Cand(c.text.lowercase(), false) } }
+                try { for (c in decoder.decode(path.first, path.second, path.first.size, lexicons, prev, POOL, prev2, relax = false)) pool.getOrPut(c.text.lowercase()) { Cand(c.text.lowercase(), false) } }
                 finally { decoder.biasX = bx; decoder.biasY = by }
             }
         }

@@ -159,9 +159,9 @@ class GlideDecoder(private val keys: GlideKeys, private val p: GlideParams = Gli
      * [xs]/[ys] are the first [count] touch points in view pixels. [prev] is the word before (lowercase letters) or null. Returns up to [max] words, best first; empty when the path is a tap or
      * nothing fits.
      */
-    fun decode(xs: FloatArray, ys: FloatArray, count: Int, lexicons: List<GlideLexicon>, prev: String?, max: Int = 3, prev2: String? = null): List<GlideCandidate> {
+    fun decode(xs: FloatArray, ys: FloatArray, count: Int, lexicons: List<GlideLexicon>, prev: String?, max: Int = 3, prev2: String? = null, relax: Boolean = true): List<GlideCandidate> {
         val strict = decodePass(xs, ys, count, lexicons, prev, max, prev2, relaxed = false)
-        if (strict.isNotEmpty() || !p.alwaysAnswer) return strict
+        if (strict.isNotEmpty() || !relax || !p.alwaysAnswer) return strict
         return decodePass(xs, ys, count, lexicons, prev, max, prev2, relaxed = true)       // R19d: nothing fits by the strict rules: the closest word anyway
     }
 
