@@ -354,7 +354,7 @@ class KeyboardPresenterTest {
 
     @Test fun aLoneITypedInABoxThatAsksForNoSuggestionsBecomesACapitalI() {
         val r = Rig(inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS or InputType.TYPE_TEXT_FLAG_MULTI_LINE, glidePref = false)
-        for (c in "so") r.tap(c.toString()); r.tap("space"); r.tap("i"); r.tap("space"); r.tap("i"); r.tap("'"); r.tap("m"); r.tap("space")
+        for (c in "so") r.tap(c.toString()); r.tap("space"); r.tap("i"); r.tap("space"); r.tap("i"); r.presenter.onKey(app.kestrel.core.input.Key.Ch("'")); r.report(); r.tap("m"); r.tap("space")
         assertEquals("so I I'm ", r.text)
     }
 
