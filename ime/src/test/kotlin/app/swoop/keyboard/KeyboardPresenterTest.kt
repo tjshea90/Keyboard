@@ -9,6 +9,7 @@ import android.view.View
 import android.view.inputmethod.BaseInputConnection
 import android.view.inputmethod.EditorInfo
 import android.widget.EditText
+import app.kestrel.core.input.Key
 import app.kestrel.core.input.glide.EmojiMap
 import app.kestrel.core.input.glide.LexiconFile
 import org.junit.Assert.assertEquals
