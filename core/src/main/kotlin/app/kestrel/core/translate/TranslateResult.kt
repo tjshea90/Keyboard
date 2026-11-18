@@ -13,8 +13,14 @@ enum class ErrorCode {
     TIMEOUT,
     /** Used up for today, or asks this connection to wait (HTTP 429/503, MyMemory warning, Google's picture puzzle). */
     BUSY,
-    /** A service answered with an error or a refusal. */
+    /** A service answered with an error or a refusal, or could not be reached for a reason that fits no other code. */
     SERVICE_ERROR,
+    /** The connection was made and then dropped (reset, aborted, closed): a flaky hotspot or a middlebox. */
+    DROPPED,
+    /** Android refused the socket (EPERM / EACCES): permission, data saver or a firewall app. */
+    BLOCKED,
+    /** The secure handshake failed: certificate, wrong date on the device, or a middlebox. */
+    SECURE,
     /** An answer that could not be read, was empty or was too big. */
     BAD_ANSWER,
     /** The field changed while the text was being translated (set by [TranslateFlow]). */

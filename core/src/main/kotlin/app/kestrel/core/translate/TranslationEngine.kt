@@ -97,32 +97,46 @@ class TranslationEngine(
 
     private fun ask(service: String, by: String, t0: Long, call: () -> Pair<Int, TranslateResult>): TranslateResult {
         var code = -1
+        var detail = ""
         val a: TranslateResult = try {
             val (c, r) = call()
             code = c
             r
         } catch (e: TransportException) {
+            detail = e.kind.name + (if (e.message.isNullOrEmpty()) "" else ": " + e.message)
             failure(e, by)
         } catch (e: RuntimeException) { // an escape from the worker thread would end the app
+            detail = "UNEXPECTED: " + SafeReason.of(e.javaClass.simpleName, null)
             TranslateResult.failed("The text could not be translated (" + e.javaClass.simpleName + ").", false, by, ErrorCode.UNEXPECTED)
         }
-        val result = if (a.ok) "ok" else if (code >= 400) "answered $code" else if (a.busy) "busy or used up" else "failed"
+        val result = if (a.ok) "ok" else if (code >= 400) "answered $code" else if (a.busy) "busy or used up" else if (detail.isEmpty()) "failed" else "failed ($detail)"
         log?.add("translate ($service)", clock() - t0, result)
         return a
     }
 
-    /** A failure to reach a service, in words. */
-    private fun failure(e: TransportException, by: String): TranslateResult = when (e.kind) {
-        TransportException.Kind.NO_INTERNET -> TranslateResult.failed(
-            "The tablet is not on the internet, so nothing could be translated. It gets the internet from the phone's hotspot: is the phone's mobile data on?",
-            false, by, ErrorCode.NO_INTERNET
-        )
-        TransportException.Kind.TIMEOUT -> TranslateResult.failed("The translation service did not answer in time.", false, by, ErrorCode.TIMEOUT)
-        TransportException.Kind.TOO_BIG -> TranslateResult.failed("The translation service sent too much.", false, by, ErrorCode.BAD_ANSWER)
-        TransportException.Kind.OTHER -> {
-            val m = e.message
-            TranslateResult.failed(
-                "The translation service could not be reached" + (if (m == null || m.isEmpty()) "." else " ($m)."), false, by, ErrorCode.SERVICE_ERROR
+    /** A failure to reach a service, in words: WHICH step broke and what to try. The reason is [SafeReason]-clean already (class name, errno, known phrase). */
+    private fun failure(e: TransportException, by: String): TranslateResult {
+        val m = e.message
+        val why = if (m == null || m.isEmpty()) "" else " ($m)"
+        return when (e.kind) {
+            TransportException.Kind.NO_INTERNET -> TranslateResult.failed(
+                "The tablet is not on the internet, so nothing could be translated. It gets the internet from the phone's hotspot: is the phone's mobile data on?",
+                false, by, ErrorCode.NO_INTERNET
+            )
+            TransportException.Kind.TIMEOUT -> TranslateResult.failed("The translation service did not answer in time.", false, by, ErrorCode.TIMEOUT)
+            TransportException.Kind.TOO_BIG -> TranslateResult.failed("The translation service sent too much.", false, by, ErrorCode.BAD_ANSWER)
+            TransportException.Kind.DROPPED -> TranslateResult.failed(
+                "The connection broke while translating$why. The hotspot may be flaky: try again. Diagnostics has a connection test.", false, by, ErrorCode.DROPPED
+            )
+            TransportException.Kind.BLOCKED -> TranslateResult.failed(
+                "Android is not letting the keyboard use the network$why. Check Settings, Apps, Swoop, mobile data and data saver, then restart the device once.",
+                false, by, ErrorCode.BLOCKED
+            )
+            TransportException.Kind.SECURE -> TranslateResult.failed(
+                "A secure connection to the translation service could not be set up$why. Check the date and time on the device.", false, by, ErrorCode.SECURE
+            )
+            TransportException.Kind.OTHER -> TranslateResult.failed(
+                "The translation service could not be reached$why. Diagnostics has a connection test.", false, by, ErrorCode.SERVICE_ERROR
             )
         }
     }
