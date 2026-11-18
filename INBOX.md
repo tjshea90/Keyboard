@@ -294,3 +294,8 @@ The keyboard is working well. But sometimes it doesn't capitalize new sentences.
 3) i just began this sentence that you are reading and it didn't auto capitalize the word I. I also wrote i'm and it didn't capitalize the i in that word either.
 4) do more research and work on making the keyboard learning as good as possible. I want it to be very good at predicting my glide typing.
 ```
+
+## 2026-11-18T05:16:49Z
+```
+The keyboard is automatically putting spaces between a word inside quotation marks, like " this ". I don't like this. It shouldn't put spaces there 
+```
