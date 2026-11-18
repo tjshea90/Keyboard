@@ -306,4 +306,12 @@ class KeysViewTest {
         val (rx, ry) = v.chipCenterForTest(0)!!; tap(v, rx to ry); assertEquals(listOf("tui" to true), t.removes); assertNull(v.confirmWord)
         v.confirmWord = "tui"; val (kx, ky) = v.chipCenterForTest(1)!!; tap(v, kx to ky); assertEquals("tui" to false, t.removes.last())
     }
+
+    @Test fun mulForIsTheExactInverseOfHeightFor() {
+        val v = KeysView(RuntimeEnvironment.getApplication()); v.setField(app.kestrel.core.input.editor.FieldKind.TEXT, "Send")
+        for (w in listOf(500, 700, 940, 1100)) for (target in listOf(260, 330, 400, 520)) {
+            val m = v.mulFor(w, target); val h = v.heightFor(w, m)
+            assertTrue("w=$w wanted $target got $h (mul $m)", Math.abs(h - target) <= 1)
+        }
+    }
 }

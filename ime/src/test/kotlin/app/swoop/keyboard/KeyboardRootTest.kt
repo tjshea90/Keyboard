@@ -277,4 +277,62 @@ class KeyboardRootTest {
         assertEquals(listOf("q"), got)
         val reg = r.touchRegion(); assertTrue(reg.contains(r.panelRect().centerX(), r.panelRect().centerY())); assertFalse("the left side belongs to the app", reg.contains(10, r.panelRect().centerY()))
     }
+
+    // ------------------------------------------------------------------ R18c: snap back to full size, and a resize without jitter
+
+    @Test fun aSqueezedKeyboardShowsTheFullSizePillAndOneTapMakesItFullWidth() {
+        val (r, c) = root { it.putInt(Prefs.DOCK_FRAC, 700); it.putInt(Prefs.DOCK_X, 300) }
+        assertTrue(r.squeezed); assertTrue("the bar offers the way back", r.gripCanRestore())
+        val before = c.geometry; val (x, y) = gripCentre(r)
+        touch(r, MotionEvent.ACTION_DOWN, x, y); touch(r, MotionEvent.ACTION_UP, x, y)
+        assertFalse("one tap is enough", r.squeezed); assertEquals(sw, r.panelRect().width()); assertEquals(1000, Settings(app).dockFrac); assertTrue("the glide decoder is told", c.geometry > before)
+        assertFalse("nothing to restore any more", r.gripCanRestore())
+    }
+
+    @Test fun aFullWidthDockedKeyboardHasNoFullSizePill() { val (r, _) = root(); assertFalse(r.squeezed); assertFalse(r.gripCanRestore()) }
+
+    @Test fun aFloatingKeyboardIsSnappedBackToTheFullWidthDockedOneWithOneTap() {
+        val (r, c) = root { it.putInt(Prefs.DOCK_FRAC, 700) }
+        val (gx, gy) = gripCentre(r); detach(r, gx, gy); touch(r, MotionEvent.ACTION_UP, gx, gy); layout(r)
+        assertTrue(r.floating); assertTrue(r.gripCanRestore())
+        val (x, y) = gripCentre(r)
+        touch(r, MotionEvent.ACTION_DOWN, x, y); touch(r, MotionEvent.ACTION_UP, x, y); layout(r)
+        assertFalse("docked again", r.floating); assertFalse("and full width, not the old squeeze", r.squeezed); assertEquals(sw, r.panelRect().width())
+        assertEquals(listOf(true, false), c.modes); assertEquals(1000, Settings(app).dockFrac); assertFalse(Settings(app).floating)
+    }
+
+    @Test fun whileTheFingerDragsTheArrowOnlyAPictureChangesAndTheLayoutHappensOnceAtTheEnd() {
+        val (r, _) = root(); val p = r.panelRect(); val y = p.top + r.grip.top + r.grip.height / 2f
+        touch(r, MotionEvent.ACTION_DOWN, p.right - 20 * dp, y)
+        for (i in 1..30) touch(r, MotionEvent.ACTION_MOVE, p.right - 20 * dp - i * 6 * dp, y)
+        assertTrue("the picture follows the finger: ${r.panelRect()}", r.panelRect().width() < sw - 100 * dp)
+        assertEquals("nothing was measured or laid out again meanwhile", sw, r.keys.width); assertEquals(sw, r.keys.measuredWidth)
+        val shown = r.panelRect()
+        touch(r, MotionEvent.ACTION_UP, p.right - 20 * dp - 180 * dp, y)
+        assertTrue("laid out for real now: ${r.keys.width}", r.keys.width < sw - 100 * dp)
+        assertEquals("and exactly as the picture was", shown.width(), r.panelRect().width()); assertEquals(shown.left, r.panelRect().left)
+    }
+
+    @Test fun aCornerDragIsExactNeverMovesTheOppositeEdgeAndNeverGoesBackwards() {
+        for (n in 0..3) {
+            val (r, _) = root(); val (gx, gy) = gripCentre(r); detach(r, gx, gy); touch(r, MotionEvent.ACTION_MOVE, gx, gy - 300f); touch(r, MotionEvent.ACTION_UP, gx, gy - 300f); layout(r)
+            val start = r.panelRect(); val (cx, cy) = corner(r, n)
+            val sx = if (n == 0 || n == 2) -1f else 1f; val sy = if (n == 0 || n == 1) -1f else 1f        // outwards
+            touch(r, MotionEvent.ACTION_DOWN, cx, cy)
+            var lastW = start.width(); var lastH = start.height(); var last: Rect? = null
+            for (i in 1..50) {
+                val mx = cx - sx * i * 2.5f; val my = cy - sy * i * 2f                                      // inwards, a little each time
+                touch(r, MotionEvent.ACTION_MOVE, mx, my)
+                val q = r.panelRect()
+                assertTrue("corner $n step $i: width never grows while the finger goes in: $lastW -> ${q.width()}", q.width() <= lastW); assertTrue("height too: $lastH -> ${q.height()}", q.height() <= lastH)
+                if (n == 0 || n == 2) assertEquals("corner $n step $i: the right edge stays exactly", start.right, q.right) else assertEquals("corner $n step $i: the left edge stays exactly", start.left, q.left)
+                if (n == 0 || n == 1) assertEquals("corner $n step $i: the bottom edge stays exactly", start.bottom, q.bottom) else assertEquals("corner $n step $i: the top edge stays exactly", start.top, q.top)
+                touch(r, MotionEvent.ACTION_MOVE, mx, my); assertEquals("the same finger position is the same picture", q, r.panelRect())
+                lastW = q.width(); lastH = q.height(); last = q
+            }
+            touch(r, MotionEvent.ACTION_UP, cx - sx * 125f, cy - sy * 100f)
+            val fin = r.panelRect()
+            assertTrue("corner $n: laid out where the picture was (${last}) -> $fin", Math.abs(fin.width() - last!!.width()) <= 2 && Math.abs(fin.height() - last.height()) <= 3 && Math.abs(fin.left - last.left) <= 2 && Math.abs(fin.bottom - last.bottom) <= 3 && Math.abs(fin.top - last.top) <= 3)
+        }
+    }
 }
