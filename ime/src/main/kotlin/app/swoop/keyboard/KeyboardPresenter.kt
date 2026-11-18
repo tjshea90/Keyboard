@@ -36,6 +36,13 @@ class KeyboardPresenter(
     private var capitalizeI = false
     private var doubleSpaceOn = false
     private var emojiOn = false
+    /**
+     * R18a: the cursor was PUT in a word that is already in the text (a tap, a slide over the space bar): the strip offers words with a close glide pattern in its place. Cleared by the next key, pick or glide.
+     * [editWord] is the word the offers on the strip are for; [editRaw] maps what the strip shows to the word itself.
+     */
+    private var userMoved = false
+    private var editWord: String? = null
+    private var editRaw: Map<String, String> = emptyMap()
     /** R18b: names, days and months typed or glided in small letters are written with their capital (the auto-capitals setting). */
     private var properOn = false
     private var lastSpaceAt = Long.MIN_VALUE / 2
@@ -196,6 +203,7 @@ class KeyboardPresenter(
         controller.autoSpace = !safeMode && st.autoSpace
         controller.caseForm = { w, prev -> if (properOn) glide.engine.caseFormOf(w, prev) else null }
         latest = null; literalShown = null; noFixFor = null; suggestSeq++
+        userMoved = false; editWord = null; editRaw = emptyMap()
         flow.leaveField(); translator?.cancel(); translateAllowed = !safeMode && field.kind != FieldKind.PASSWORD && field.kind != FieldKind.OMNIBOX && st.translateEnabled
         view?.let {
             it.reset()
@@ -219,7 +227,7 @@ class KeyboardPresenter(
         val ours = controller.onSelectionUpdate(newSelStart, newSelEnd, candStart, candEnd)
         if (Diag.enabled) Diag.d("sel report new=$newSelStart/$newSelEnd cand=$candStart/$candEnd ours=$ours believed=${controller.selStart}/${controller.selEnd} composing=${controller.composing != null}")
         view?.setShift(controller.shift)
-        if (!ours) { learner.settle(); refreshSuggestions(); if (flow.isOn()) { val t = fieldText(); if (t != null && flow.fieldChanged(t, clock())) translator?.cancel() } }       // the person or the app moved the cursor or changed the text: new word, new guesses
+        if (!ours) { userMoved = true; if (controller.lastGlide == null) session.settle(); learner.settle(); refreshSuggestions(); if (flow.isOn()) { val t = fieldText(); if (t != null && flow.fieldChanged(t, clock())) translator?.cancel() } }       // the person or the app moved the cursor or changed the text: new word, new guesses
     }
 
     /** The decoder needs the real key positions: known once the keys view has a size (and again when it changes). Cheap when nothing changed. */
@@ -238,6 +246,7 @@ class KeyboardPresenter(
     }
 
     override fun onKey(key: Key) {
+        userMoved = false
         session.beforeKey(key)
         val fix = autoFixFor(key)
         if (Diag.enabled && key is Key.Ch) traceKey(key, fix != null, "before")
@@ -263,7 +272,7 @@ class KeyboardPresenter(
         refreshSuggestions()
     }
 
-    override fun onCursor(steps: Int) { session.settle(); learner.settle(); controller.moveCursor(steps); view?.setShift(controller.shift); refreshSuggestions() }
+    override fun onCursor(steps: Int) { session.settle(); learner.settle(); controller.moveCursor(steps); userMoved = true; view?.setShift(controller.shift); refreshSuggestions() }
 
     // ------------------------------------------------------------------ word suggestions while tapping (N4) and the automatic fix
 
@@ -293,6 +302,8 @@ class KeyboardPresenter(
     private fun refreshSuggestions() {
         if (!suggestOn || safeMode) return
         if (controller.lastGlide != null || view?.isGliding == true) return          // the strip shows a glide's other guesses
+        if (offerOtherWords()) return
+        editWord = null
         val typed = controller.wordBeforeCursor()
         val b = controller.before
         val startsWord = typed == null && controller.selStart == controller.selEnd && (b.isEmpty() || b.last().isWhitespace())
@@ -300,6 +311,54 @@ class KeyboardPresenter(
         val (p2, p1) = if (typed != null) controller.contextBefore(typed) else controller.previousTwo()
         val my = ++suggestSeq
         glide.engine.suggest(typed ?: "", p1, p2, 3) { res -> post(Runnable { if (my == suggestSeq) applySuggestions(res) }) }
+    }
+
+    // ------------------------------------------------------------------ R18a: tap a word that is already there, get other words for it
+
+    /**
+     * The cursor stands in (or was put at the edge of) a word that is already in the text, so the strip offers words in its place, the ones whose glide pattern is closest to it ([app.kestrel.core.input.glide.Alternatives]).
+     * Typing the end of a word, or starting a new word in front of an old one, is not this: the strip then completes the word and guesses the next. True when this took the strip.
+     */
+    private fun offerOtherWords(): Boolean {
+        val f = controller.field
+        if (f.kind != FieldKind.TEXT && f.kind != FieldKind.SEARCH) return false
+        val span = controller.wordAround() ?: return false
+        val inside = span.left > 0 && span.right > 0
+        if (!inside && !userMoved) return false
+        val (p2, p1, next) = controller.contextAround(span)
+        val my = ++suggestSeq
+        glide.engine.alternatives(span.text, p2, p1, next, 3) { res -> post(Runnable { if (my == suggestSeq) applyOtherWords(span.text, res, p1) }) }
+        return true
+    }
+
+    private fun applyOtherWords(word: String, words: List<String>, prev: String?) {
+        if (!suggestOn || controller.lastGlide != null || view?.isGliding == true) return
+        if (controller.wordAround()?.text != word) return                                // the text moved on while the engine worked
+        latest = null; literalShown = null
+        val shown = words.map { shapeLike(word, it, prev) }
+        editWord = word; editRaw = shown.zip(words).toMap()
+        if (shown.isEmpty()) view?.clearCandidates() else view?.showCandidates(shown)
+    }
+
+    /** [w] written like [old] was: ALL CAPITALS after capitals, a capital first letter after one, the way a name is written otherwise. */
+    private fun shapeLike(old: String, w: String, prev: String?): String {
+        if (old.length > 1 && old.any { it.isUpperCase() } && old.all { !it.isLetter() || it.isUpperCase() }) return w.uppercase()
+        if (old.firstOrNull()?.isUpperCase() == true) return if (w == "i" || w.startsWith("i'")) "I" + w.substring(1) else w.replaceFirstChar { it.uppercase() }
+        if (w == "i" || w.startsWith("i'")) return "I" + w.substring(1)
+        return (if (properOn) glide.engine.caseFormOf(w, prev)?.takeIf { it.lowercase() == w } else null) ?: w
+    }
+
+    /** A word of the strip was tapped while it offered other words for the one under the cursor: it replaces that word where it stands (no space), is learned, and its own offers (the old word among them) stay on the strip. */
+    private fun replaceTappedWord(shown: String) {
+        val span = controller.wordAround()
+        if (span == null || span.text != editWord) { editWord = null; refreshSuggestions(); return }
+        val (p2, p1, _) = controller.contextAround(span)
+        session.settle(); learner.settle()
+        if (!controller.replaceWordAround(shown)) { refreshSuggestions(); return }
+        learner.replaced(span.text, shown, p2, p1)
+        editWord = null; userMoved = true; suggestSeq++
+        view?.setShift(controller.shift)
+        refreshSuggestions()
     }
 
     private fun applySuggestions(res: Suggestions) {
@@ -321,6 +380,7 @@ class KeyboardPresenter(
 
     override fun onGlideMove(xs: FloatArray, ys: FloatArray, count: Int) {
         if (!glideOn) return
+        userMoved = false; editWord = null
         suggestSeq++; latest = null                                                        // a glide began: no tap suggestion may land on the strip now
         val (p2, p1) = session.context()
         glide.engine.preview(xs, ys, count, p1, p2) { res -> post(Runnable { if (view?.isGliding == true) session.onPreview(res) }) }
@@ -334,6 +394,8 @@ class KeyboardPresenter(
     }
 
     override fun onCandidate(word: String) {
+        if (editWord != null && controller.lastGlide == null && editRaw.containsKey(word)) { replaceTappedWord(word); return }
+        userMoved = false
         if (EmojiMap.isEmoji(word)) { chooseEmoji(word); return }
         if (controller.lastGlide != null || session.hasCandidates()) session.pick(glideRaw[word] ?: word)        // (the strip still shows a glide's guesses even when an app rewrote the field)
         else if (suggestOn) {

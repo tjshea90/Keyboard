@@ -78,6 +78,23 @@ class TypingLearner(
         return true
     }
 
+    /**
+     * R18a: a word that was already in the text ([old]) was replaced by [new] from the strip, after the person tapped it. [old] was learned when it was typed: if it is a slip of [new] (a few letters differ) it is taken
+     * back and remembered as a correction (the next time it is typed, [new] comes first); a different word the person simply preferred leaves [old] alone. [new] counts double: the person chose it. [prev2] / [prev] are the
+     * words before the replaced word.
+     */
+    fun replaced(old: String, new: String, prev2: String?, prev: String?) {
+        val g = engine() ?: return
+        if (!active()) return
+        val o = old.lowercase(); val n = new.lowercase()
+        if (o == n) return
+        g.stats.onSuggestionPicked()
+        val slip = similar(o, n)
+        if (slip) g.unlearnWord(prev, o, 1f, prev2)
+        g.learnWord(prev, n, 2f, prev2, if (slip) o else null, 2f)
+        last = null; erased = null
+    }
+
     /** The cursor moved, the field changed or the keyboard closed: nothing here may still refer to the old text. */
     fun settle() { last = null; erased = null }
 
