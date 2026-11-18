@@ -821,3 +821,13 @@
 ## 2026-11-18T06:13:41Z
 > Waiting for the full core suite; then I run the new model tests, commit, push, and pin the Browser to that commit.
 <!-- sha:fb4ea3e17831 -->
+
+## 2026-11-18T07:04:31Z
+> The Swoop release build and the full Kestrel test run are both still going. I'm waiting on them in the background and will commit and push the Kestrel Backspace changes once the tests come back.
+>
+> **Open items (both still in progress):**
+> - Swoop 0.7.0-alpha3 build (run 44254953577), dispatched once. After it goes green I still have to check the Release has the APK, record it, and give you the link.
+> - Kestrel (`tjshea90/Browser`, my own branch): the engine sync, thumb-habit saving and next-word strip are pushed. Held-Backspace for Kestrel is written and passes its tests but isn't committed yet. It waits on the full Kestrel test run.
+>
+> Nothing here has been run on the tablet, the phone, or an emulator; every check so far is unit tests.
+<!-- sha:d856fd44adcd -->
