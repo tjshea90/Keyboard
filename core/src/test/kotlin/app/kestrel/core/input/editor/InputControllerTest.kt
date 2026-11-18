@@ -247,7 +247,7 @@ class WordAroundTest {
     @Test fun replacingTheWordPutsTheNewOneWhereItStoodAndTheCursorAfterIt() {
         val r = at("i went to teh store today", 15).also { it.act { } }
         assertTrue(r.c.replaceWordAround("the")); r.sync(); r.check()
-        assertEquals("i went to the store today", r.text); assertEquals(13, r.c.selStart); assertEquals(13, r.ed.selStart)
+        assertEquals("i went to the store today", r.text); assertEquals(13, r.c.selStart); assertEquals(13, r.ed.selS)
         assertEquals("a second replacement of the new word works too", true, r.c.replaceWordAround("this").also { r.sync() }); assertEquals("i went to this store today", r.text); r.check()
     }
 
