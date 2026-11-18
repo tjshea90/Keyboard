@@ -299,3 +299,8 @@ The keyboard is working well. But sometimes it doesn't capitalize new sentences.
 ```
 The keyboard is automatically putting spaces between a word inside quotation marks, like " this ". I don't like this. It shouldn't put spaces there 
 ```
+
+## 2026-11-18T05:51:24Z
+```
+Put all the updates  into kestrel keyboard 
+```
