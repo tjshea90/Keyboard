@@ -1,21 +1,22 @@
-# CHECKPOINT 623 — read me first, then TASKS.md
+# CHECKPOINT 639 — read me first, then TASKS.md
 
-**Written:** 2026-11-18T06:15:55Z · **tests:** all 1 fast checks green (gradle suite: see ship.sh)
-**Branch:** `claude/keyboard-caps-space-resize-glide-r72nmp` · **builds on:** `9367619` (this checkpoint is the commit after it)
+**Written:** 2026-11-18T06:26:54Z · **tests:** all 1 fast checks green (gradle suite: see ship.sh)
+**Branch:** `claude/keyboard-caps-space-resize-glide-r72nmp` · **builds on:** `a29cd19` (this checkpoint is the commit after it)
 
 ## Just done
-wrote owner's third batch R23a-e into TASKS.md (backspace hold accelerates to whole words; never learn from clipboard; the/there gesture-length; number pad for number fields; smaller minimum keyboard height). R22 (Kestrel port) is IN PROGRESS: MiniKeyboardModel.smartText + insertWord + shared InputController companion rules written in core, MiniKeyboardSmartTest written; full :core:test was running
+R23a-e core+views done: held Backspace speeds up then deletes words (KeysView+BackspaceRepeat+deleteWord), clipboard/pasted text never learned (typedTail provenance), number/phone/datetime pad (Pad enum, ImeLayout.keypad, KeysView.numberPad), docked min height 0.45; core+ime tests green (249 ime)
 
 ## Do this next
-ORDER: (1) read the full-core result in scratchpad core_full.log (started before insertWord was added; rerun MiniKeyboardSmartTest), commit; (2) R23 core work: R23c decoder gesture-length term (GlideDecoder.careful + GlideParams + eval on prefix pairs), R23b paste barrier (InputController.paste + TypingLearner/context), R23a InputController.deleteWord + KeysView hold acceleration + Listener.onDeleteWord, R23d ImeLayout number pad + FieldInfos, R23e FloatingMath/Settings min height; tests; ship 0.7.0-alpha3 code 14; (3) THEN Kestrel R22: bash /home/user/browser/tools/sync-keyboard-core.sh /home/user/Keyboard (after commit+push), Prefs.glideHabit 24 floats, MiniNav smartText + strip + backspace/number pad parity, tests, push my Browser branch (never release Kestrel while ccr-587430ac-royssd ships alpha70)
+1) add FieldInfosTest PIN/DATETIME pad cases + presenter test number-password shows pad; 2) R23c: evaluate GlideDecoder.lengthCost with GestureSim on the/there, he/her, we/were, calibrate lengthW/sigmas, add test; 3) full :core:test online, :ime:lintDebug; 4) bump ime/build.gradle.kts to code 14 / 0.7.0-alpha3, bash ship.sh, dispatch android.yml once, record-release; 5) R22 sync into Browser own branch per docs/KESTREL-PORT-R22.md
 
 *(resuming? CLAUDE.md's "FIRST ACTION OF EVERY SESSION" says how; the briefing is tools/resume.sh. Do that first, or autosave may stay off all session.)*
 
 ## Uncommitted right now
-     M TASKS.md
+    (nothing — the tree is clean as of this checkpoint)
 
 ## Last ten checkpoints
 ```
+  649cee3 ckpt 623: wrote owner's third batch R23a-e into TASKS.md (backspace hold accelerates to 
   4d9bb2b ckpt 615: R22 plan written: docs/KESTREL-PORT-R22.md. Browser repo cloned shallow at /ho
   ca9737d ckpt 613: wrote owner's R22 'put all the updates into kestrel keyboard' into TASKS.md. s
   9844fd5 ckpt 610: swoop-v0.7.0-alpha2 RELEASED AND RECORDED: run 44244608905 green (check, test-
@@ -25,8 +26,7 @@ ORDER: (1) read the full-core result in scratchpad core_full.log (started before
   4b94676 ckpt 593: wrote owner's quotation-marks request R21 into TASKS.md. 0.7.0-alpha1 build ru
   b6f75e4 ckpt 588: DISPATCHED android.yml ONCE for swoop-v0.7.0-alpha1 (code 12) on ref claude/ke
   db7f5d7 ckpt 587: gated swoop-v0.7.0-alpha1 (ime code 12) and pushed it: handoff self-test, unit
-  9ff3807 ckpt 586: pre-ship: 0.7.0-alpha1: what you copied is the first box of the suggestion str
 ```
 
-(7 automatic checkpoint(s) since the last deliberate one — the
+(15 automatic checkpoint(s) since the last deliberate one — the
 session was still mid-step. `git diff` against it shows what changed.)
