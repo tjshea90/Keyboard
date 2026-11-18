@@ -26,7 +26,24 @@ class AutoCapsTest {
         assertEquals(ShiftState.ONCE, Rig("Stop! ").c.shift)
         assertEquals(ShiftState.OFF, Rig("Hello there ").c.shift)
         assertEquals(ShiftState.OFF, Rig("Hello there.").c.shift)           // no space yet: "3.5", "e.g." and "www.x" stay lowercase
-        assertEquals(ShiftState.OFF, Rig("").c.shift)                      // an empty box did not ask
+        assertEquals("an empty text box starts with a capital too (owner R18b)", ShiftState.ONCE, Rig("").c.shift)
+    }
+    @Test fun aTextBoxThatAskedForNothingStartsAndEndsSentencesWithCapitals() {            // owner 2026-11-18: "auto capitalize words at the beginning of sentences"
+        assertEquals(ShiftState.ONCE, Rig("").c.shift); assertEquals(ShiftState.ONCE, Rig("hello\n").c.shift); assertEquals(ShiftState.OFF, Rig("hello").c.shift)
+        assertEquals("through a closing quote", ShiftState.ONCE, Rig("He said \"stop.\" ").c.shift); assertEquals("through a bracket", ShiftState.ONCE, Rig("I left (it was late.) ").c.shift)
+        assertEquals(ShiftState.ONCE, Rig("What… ").c.shift); assertEquals(ShiftState.ONCE, Rig("Why?! ").c.shift); assertEquals(ShiftState.ONCE, Rig("I said no. ").c.shift); assertEquals(ShiftState.ONCE, Rig("It costs 5. ").c.shift)
+        for (t in listOf("see e.g. ", "that is, i.e. ", "Mr. ", "dr. ", "J. ", "the u.s. ", "vs. ", "approx. ")) assertEquals("not after '$t'", ShiftState.OFF, Rig(t).c.shift)
+        for (k in listOf(FieldKind.SEARCH, FieldKind.OMNIBOX, FieldKind.EMAIL, FieldKind.URL, FieldKind.PASSWORD, FieldKind.NUMBER, FieldKind.PHONE)) assertEquals("never in $k", ShiftState.OFF, Rig("", kind = k).c.shift)
+    }
+    @Test fun startsSentenceIsTheOneRule() {
+        for (t in listOf("", "   ", "Hello. ", "Hello.  ", "Hello!\t", "Hello?\n", "a\nb\n", "\"Hi.\" ", "Done.) ")) assertEquals("'$t'", true, InputController.startsSentence(t, if (t.isEmpty()) 0 else -1))
+        for (t in listOf("Hello", "Hello.", "Hello, ", "3.5", "www.x", "Hello:\u00A0".trimEnd(), "e.g. ", "x".repeat(70) + " ")) assertEquals("'$t'", false, InputController.startsSentence(t, 99))
+        assertEquals("text exists before the window: unknown", false, InputController.startsSentence("", 40))
+    }
+    @Test fun movingTheCursorToTheStartOfASentenceTurnsShiftOnAndAwayTurnsItOff() {
+        val r = Rig("Hello there. how are you"); assertEquals(ShiftState.OFF, r.c.shift)
+        r.ed.userMove(13); r.sync(); assertEquals("the cursor stands where a sentence starts (after the full stop and the space)", ShiftState.ONCE, r.c.shift)
+        r.ed.userMove(18); r.sync(); assertEquals("and in the middle of the sentence it does not", ShiftState.OFF, r.c.shift)
     }
     @Test fun typingAFullStopAndASpaceTurnsShiftOnAndALetterSpendsIt() {
         val r = Rig("").typeAll("hi.")
