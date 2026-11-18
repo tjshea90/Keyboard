@@ -25,6 +25,7 @@ every line it does not know (a later version may add kinds of line) and refuses 
 | `t <before2> <before> <word> <weight>` | ... and followed those two words |
 | `c <guessed> <meant> <weight>` | the keyboard guessed `<guessed>` and the person meant `<meant>` (a correction) |
 | `r <word> <recency>` | how lately the word was used; fades with every new word, a reader may ignore it |
+| `k <word> <Form> <weight>` | (R18b) the way the word is written INSIDE a sentence: a name with its capital (`k sarah Sarah 3.00`, `k iphone iPhone 2.00`), or the lowercase word itself when the person took the keyboard's capital back (`k monday monday 2.00`). `Form` must be the word in some capitalisation; a reader skips a line where it is not. A form counts once its weight is 2 and it is not outweighed 1.5 to 1 by the other way of writing it |
 | `s <word> <n> u0 v0 u1 v1 ... u15 v15` | the SHAPE of a glide the person drew for the word: 16 points, `n` = how often it was confirmed; see below |
 | `end <entries>` | how many `habit`, `own`, `w`, `p`, `t`, `c`, `r` and `s` lines there are; a file without it, or with another number, was cut off or edited (a reader may still use it and says so) |
 
