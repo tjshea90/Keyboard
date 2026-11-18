@@ -71,3 +71,54 @@ that are noise; only changes that move all four numbers the same way and survive
 | rare-word price off | 87.2 / 93.2 | 90.3 / 95.2 |
 
 (`lmW` had no effect because `lmA` > 0 makes the language weight adaptive.)
+
+### 3.1 Finer sweep and the held-out check (what survived)
+
+Slice A, first 3 000 swipes, word before as context (first / top-3):
+
+| variant | all words | everyday words |
+| :- | :- | :- |
+| shipped (shapeW 2.0) | 86.6 / 92.8 | 90.5 / 95.4 |
+| shapeW 0 (no straight-line price) | 77.6 / 87.0 | 86.7 / 94.1 |
+| shapeW .5 / .75 / 1.0 / 1.25 / 1.5 | 87.2 / 93.8 ; 87.7 / 94.0 ; 87.7 / 94.0 ; 87.7 / 93.8 ; 87.2 / 93.4 | 91.8 / 96.6 ; 91.9 / 96.6 ; 91.8 / 96.6 ; 91.6 / 96.5 ; 91.1 / 96.1 |
+| shapeW 1 + visitCap 4 / 5 / 6 | 87.8 / 94.2 ; 87.9 / 94.3 ; 87.9 / 94.3 | 91.8 / 96.7 ; 91.8 / 96.7 ; 91.8 / 96.6 |
+| shapeW 1 + endW 2 / 4 | 87.5 / 94.1 ; 87.5 / 93.9 | 91.9 / 96.9 ; 91.5 / 96.4 |
+| shapeW 1 + biasW 1.5 / 6 | 88.1 / 94.1 ; 86.8 / 93.2 | 92.0 / 96.7 ; 90.9 / 95.8 |
+| shapeW 1 + length centred on 1.09 | 87.5 / 94.0 | 91.5 / 96.6 |
+| shapeW 1 + visitCap 5 + length 1.09 + endW 2 | 87.8 / 94.6 | 91.9 / 97.1 |
+
+Held-out slice B (other donors, first 3 000 swipes):
+
+| variant | all words | everyday words |
+| :- | :- | :- |
+| shipped | 90.1 / 95.6 | 92.7 / 97.0 |
+| shapeW 1.0 | 90.2 / 96.0 | 93.3 / 97.5 |
+| shapeW 1.5 | 90.2 / 95.7 | 92.9 / 97.2 |
+| shapeW 1 + visitCap 5 | 90.4 / 96.2 | 93.5 / 97.7 |
+| shapeW 1 + visitCap 5 + biasW 1.5 | 90.3 / 96.2 | 93.6 / 97.9 |
+| shapeW 1 + endW 2 | 90.0 / 95.8 | 93.0 / 97.5 |
+| shapeW 1 + visitCap 5 + length 1.09 + endW 2 | 89.7 / 95.8 | 92.8 / 97.5 |
+
+Reading (honest): slice A suggested +1.1 points; the held-out donors give about +0.1 first / +0.4 top-3 (all words) and +0.6 / +0.5 (everyday words) for shapeW 1.0, and about +0.3 / +0.6 and +0.8 / +0.7
+with visitCap 5 as well. Averaged over both slices the change is worth about +0.8 points first choice and +1 point top-3. Slice A alone overstated it (a different set of people, a different mix of rare words).
+The length-centring (1.09), endW and biasW moves are NOT consistent across the slices and were NOT adopted; with the straight-line price lowered, centring the length term on the real 1.09 gave nothing (87.5 against 87.7 on
+A, 89.7 against 90.2 on B), so the R23c term stays as it is.
+
+## 4. What was changed in the app (R24b)
+`GlideParams.forPitchDp(pitchDp)` (core, used by `GlideSupport` for both decoders): `shapeW` 1.0 and `visitCap` 5.0 for key pitches up to 45 dp (every phone, and the donors' keyboards were 32-45 dp), sliding linearly to the earlier
+`shapeW` 2.0 and `visitCap` 3.0 at 70 dp and above (tablets). `GlideKeys.pitchDp` carries the pitch in dp (`KeysView.glideKeys` divides by the screen density; tools and tests lay keys out in dp already, so they get the old
+defaults: `GlideParams()` is unchanged and every simulator yardstick keeps its numbers). Tests: `GlideParamsPitchTest`.
+
+Why the slide: a thumb's scatter is about the same size in dp on any keyboard, so on big keys it is a smaller share of a key and the stricter straight-line price (tuned on the simulator, whose scatter in key units was
+smaller) is the better guess. THE TABLET SIDE HAS NO REAL-SWIPE EVIDENCE. If the tablet turns out worse than before, set `SMALL_PITCH_DP` and `LARGE_PITCH_DP` to the same value to get one setting everywhere.
+
+## 5. Not built, and why
+* Next-word post-correction (R20 rank 3, +0.5 to +1.5 on the simulator): not built this time; it edits text the person already sees and needs its own care. The real-swipe harness can now measure it (the corpus has the whole sentence).
+* Dwell / speed cue: the corpus has timestamps (`t`), so this is now measurable on real data too. Next step if wanted: per-point speed at each letter, tested on to/too, of/off. Not done.
+* The 4.7 % of swipes whose word is not in the list are names and places (encyclopaedia text), not a texting problem; the learned-words path (own dictionary) already covers the owner's names.
+* Replay file in the repository: NOT done on purpose (rule: no replay logs / no real swipes in the repository).
+
+## 6. How to repeat it
+`REAL_SWIPES=1 REAL_SWIPES_FILE=build/real-swipes-A.jsonl REAL_SWIPES_MB=40 REAL_VARIANTS=all ./gradlew --no-build-cache :core:cleanTest :core:test --tests '*RealSwipeEval*' -i` (add
+`REAL_SWIPES_OFFSET_MB=150` and another file name for held-out donors; `REAL_DIAG=1` prints the miss analysis; `--no-build-cache` and `cleanTest` because Gradle ignores environment variables as inputs). A run of 3 000
+swipes x 20 variants takes about 5 minutes on 4 cores.
