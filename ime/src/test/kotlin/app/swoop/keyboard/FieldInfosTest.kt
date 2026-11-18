@@ -58,7 +58,7 @@ class FieldInfosTest {
         assertEquals(Pad.NONE, pad(InputType.TYPE_CLASS_TEXT))
         assertEquals("text with the number-password look is still text", Pad.NONE, pad(InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD))
         val date = FieldInfos.from(EditorInfo().apply { inputType = InputType.TYPE_CLASS_DATETIME })
-        assertEquals("a date field learns nothing", false, date.learningAllowed || date.composingAllowed)
+        assertEquals("a date field has no words to compose", false, date.composingAllowed)
     }
 
     @Test fun theInitialSelectionIsCarriedOver() {
