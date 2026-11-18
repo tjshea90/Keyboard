@@ -1,7 +1,7 @@
-# CHECKPOINT 581 — read me first, then TASKS.md
+# CHECKPOINT 586 — read me first, then TASKS.md
 
-**Written:** 2026-11-18T04:53:33Z · **tests:** all 1 fast checks green (gradle suite: see ship.sh)
-**Branch:** `claude/keyboard-caps-space-resize-glide-r72nmp` · **builds on:** `e40da53` (this checkpoint is the commit after it)
+**Written:** 2026-11-18T05:01:12Z · **tests:** all 1 fast checks green (gradle suite: see ship.sh)
+**Branch:** `claude/keyboard-caps-space-resize-glide-r72nmp` · **builds on:** `8ef40f2` (this checkpoint is the commit after it)
 
 ## Just done
 pre-ship: 0.7.0-alpha1: what you copied is the first box of the suggestion strip (tap to paste); after a glide the middle box predicts the next word and the side boxes are other guesses of the glide; a lone i and i'm, i'll, i've, i'd are always a capital I (also glided); the keyboard learns where your thumb lands on each part of the keyboard, not just one shift
@@ -16,6 +16,7 @@ ship.sh gates and releases this (ime)
 
 ## Last ten checkpoints
 ```
+  1acd5e8 ckpt 581: pre-ship: 0.7.0-alpha1: what you copied is the first box of the suggestion str
   495b39a ckpt 579: R20d rank 1 done+tested (TouchField plane, persistence, export, docs). All fou
   c1cdf29 ckpt 546: R20a+R20b done+tested (clipboard chip with masking/dismissal/TTL 5 min, glide 
   2657834 ckpt 528: R20b built: after a glide the strip is [other guess][NEXT word][other guess] (
@@ -25,8 +26,7 @@ ship.sh gates and releases this (ime)
   cffd8a8 ckpt 506: DISPATCHED android.yml ONCE for swoop-v0.6.0-alpha2 (code 11) on ref claude/ke
   ae7bda6 ckpt 505: gated swoop-v0.6.0-alpha2 (ime code 11) and pushed it: handoff self-test, unit
   01a8630 ckpt 504: pre-ship: 0.6.0-alpha2: a glide always types the closest word (never 'no word 
-  2ddf8c6 ckpt 490: R19c done+tested (docked two-axis resize via bar arrows, window-tall during dr
 ```
 
-(1 automatic checkpoint(s) since the last deliberate one — the
+(4 automatic checkpoint(s) since the last deliberate one — the
 session was still mid-step. `git diff` against it shows what changed.)
