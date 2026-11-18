@@ -6,6 +6,9 @@ import app.kestrel.core.input.KeySpec
 
 /** Where the 26 letter keys are, in the pixels of the keyboard view; [pitch] is the distance between two neighbouring keys of a row (the unit the decoder measures in). */
 class GlideKeys(val cx: FloatArray, val cy: FloatArray, val pitch: Float, val keyW: Float, val keyH: Float) {
+    /** R24b: the same key pitch in dp (density independent pixels), set by whoever knows the screen density; defaults to [pitch] (the tests and tools lay the keys out in dp already). Decides [GlideParams.forPitchDp]. */
+    var pitchDp: Float = pitch
+
     companion object {
         /** From the letter page's [rows] and their [boxes] (see MiniKeyboardGeometry). */
         fun from(rows: List<List<KeySpec>>, boxes: List<List<KeyBox>>): GlideKeys {
@@ -116,7 +119,24 @@ class GlideParams(
     val lengthSigmaLow: Float = 0.16f,
     val lengthSigmaHigh: Float = 0.30f,
     val lengthCap: Float = 4.0f,
-)
+) {
+    companion object {
+        /** Key pitch (dp) up to which the decoder is tuned on REAL swipes; from [LARGE_PITCH_DP] up it keeps its earlier, simulator-tuned values. */
+        const val SMALL_PITCH_DP = 45f
+        const val LARGE_PITCH_DP = 70f
+
+        /**
+         * R24b (2026-11-18): the numbers the keyboard really decodes with. On 6 000+ REAL swipes (FUTO Swipe corpus, research/R24-glide-next.md) the straight-line price [shapeW] of 2.0 was too strict: real thumbs stray
+         * from the straight lines between letters more than the simulated finger did, and 1.0 raised first-choice accuracy by about 1.1 points and top-3 by about 1.2 (held-out donors confirmed it). That evidence is for a PHONE-sized keyboard
+         * (the donors' keys were 32-45 dp apart). A finger's scatter is roughly the same size in dp whatever the keyboard, so on big keys (a tablet: 60+ dp apart) it is a SMALLER share of a key and the straighter-line price fits better:
+         * the price therefore slides from 1.0 at [SMALL_PITCH_DP] or less to the earlier 2.0 at [LARGE_PITCH_DP] or more. The tablet side is NOT validated on real swipes (there are none); it keeps the values the tests were tuned on.
+         */
+        fun forPitchDp(pitchDp: Float): GlideParams {
+            val t = ((pitchDp - SMALL_PITCH_DP) / (LARGE_PITCH_DP - SMALL_PITCH_DP)).coerceIn(0f, 1f)
+            return GlideParams(shapeW = 1.0f + t)
+        }
+    }
+}
 
 /** What counts as a rare word (shared by the glide decoder and the tap suggester). ln-probabilities are on the scale of the shipped list: -12.5 is about rank 13 000 of 140 000. */
 object Rarity {

@@ -262,8 +262,8 @@ class GlideTyping(
                 }
                 ensurePersonal()
                 keys = k
-                decoder = GlideDecoder(k).also { it.biasX = bx; it.biasY = by; it.personal = personal; touchSaved?.let { a -> it.field.fromArray(a) } }
-                previewDecoder = GlideDecoder(k).also { it.biasX = bx; it.biasY = by; it.personal = personal; touchSaved?.let { a -> it.field.fromArray(a) } }
+                decoder = GlideDecoder(k, GlideParams.forPitchDp(k.pitchDp)).also { it.biasX = bx; it.biasY = by; it.personal = personal; touchSaved?.let { a -> it.field.fromArray(a) } }
+                previewDecoder = GlideDecoder(k, GlideParams.forPitchDp(k.pitchDp)).also { it.biasX = bx; it.biasY = by; it.personal = personal; touchSaved?.let { a -> it.field.fromArray(a) } }
                 ensureDictionary()
                 if (own != null) { ownRef = own; setOwn(own) } else rebuildUserLexicon()
                 ready = main != null
