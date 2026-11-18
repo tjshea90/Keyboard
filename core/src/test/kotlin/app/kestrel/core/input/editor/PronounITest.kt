@@ -11,7 +11,7 @@ import org.junit.Test
  */
 class PronounITest {
     private fun rig(text: String = "", noSuggestions: Boolean = false, kind: FieldKind = FieldKind.TEXT, on: Boolean = true): Rig {
-        val r = Rig(text, kind = kind, noSuggestions = noSuggestions, sentenceCaps = true); r.c.capitalizeI = on; return r
+        val r = Rig(text, kind = kind, noSuggestions = noSuggestions); r.c.capitalizeI = on; return r
     }
 
     @Test fun aLoneIBecomesACapitalInABoxThatAsksForNoSuggestions() {

@@ -56,6 +56,13 @@ class InputController(editor: EditorBridge, val stats: InputStats = InputStats()
     /** A letter typed right after punctuation that touches the word before it ("hello.world") gets a space first ("hello. world"). */
     var autoSpace = false
     /**
+     * Owner R20c (2026-11-18): the pronoun is always a capital I: i, i'm, i'll, i've, i'd. Applied to every word this controller writes (a glide, a strip word, a replacement) and to a lone i that a space, punctuation or Enter
+     * ends in a box that shows no composing text; the tapped-letters path of the other boxes is fixed by the keyboard before the boundary key ([typeCorrected]). Plain text and search boxes only.
+     */
+    var capitalizeI = false
+    private fun pronounKind() = capitalizeI && (field.kind == FieldKind.TEXT || field.kind == FieldKind.SEARCH)
+    private fun written(w: String): String = if (pronounKind()) pronounI(w) else w
+    /**
      * The way a glided or picked word is written inside a sentence when it is not the start of one (R18b: "Monday", "Sarah", "iPhone"): given the lowercase word and the lowercase word before it (or null), the form or null. Set by the keyboard from its case book
      * (built-in names plus what this person writes with capitals); the default writes every word as the decoder gave it.
      */
@@ -179,6 +186,7 @@ class InputController(editor: EditorBridge, val stats: InputStats = InputStats()
         stats.keys++
         settle()
         if (autoSpace && composing == null && isLetter(key) && needsAutoSpace() && commit(" ")) { lastGlide = null; autoCaps() }   // "hello." "w" -> "hello. w", and the new sentence starts with a capital
+        if (composing == null && key.length == 1 && (key[0] == ' ' || key[0] in PRONOUN_BOUNDARY)) fixLoneI()
         val t = if (shift != ShiftState.OFF && isSingleCodePoint(key)) key.uppercase() else key
         if (isLetter(t) || (composing != null && isWordConnector(t))) {
             if (field.composingAllowed) { typeComposing(t); return }
@@ -324,6 +332,7 @@ class InputController(editor: EditorBridge, val stats: InputStats = InputStats()
         settle()
         stats.enters++
         endComposing(); lastGlide = null; keepTight = -1
+        fixLoneI()
         val a = field.imeAction
         val useAction = !field.noEnterAction && a != ImeActions.UNSPECIFIED && a != ImeActions.NONE
         val ok = if (useAction) ed.performAction(a) else ed.sendKey(KeyCodes.ENTER)
@@ -340,7 +349,7 @@ class InputController(editor: EditorBridge, val stats: InputStats = InputStats()
         endComposing()
         val form = caseForm(word, previousWord())
         val lead = leadForNewWord()
-        val w = when (shiftWithLead(lead)) { ShiftState.LOCK -> word.uppercase(); ShiftState.ONCE -> if (form != null && form.first().isUpperCase()) form else (form ?: word).replaceFirstChar { it.uppercase() }; ShiftState.OFF -> form ?: word }
+        val w = written(when (shiftWithLead(lead)) { ShiftState.LOCK -> word.uppercase(); ShiftState.ONCE -> if (form != null && form.first().isUpperCase()) form else (form ?: word).replaceFirstChar { it.uppercase() }; ShiftState.OFF -> form ?: word })
         val tail = lead + w + " "
         if (!commit(tail)) return
         stats.glides++
@@ -356,7 +365,7 @@ class InputController(editor: EditorBridge, val stats: InputStats = InputStats()
         val lead = if (g.text.startsWith(" ")) " " else ""
         val shown = g.word
         val form = caseForm(word.lowercase(), wordEndingAt(before.dropLast(g.text.length)))
-        val w = if (shown.length > 1 && shown.all { it.isUpperCase() }) word.uppercase() else if (shown.firstOrNull()?.isUpperCase() == true) (if (form != null && form.first().isUpperCase()) form else word.replaceFirstChar { it.uppercase() }) else form ?: word
+        val w = written(if (shown.length > 1 && shown.all { it.isUpperCase() }) word.uppercase() else if (shown.firstOrNull()?.isUpperCase() == true) (if (form != null && form.first().isUpperCase()) form else word.replaceFirstChar { it.uppercase() }) else form ?: word)
         val newTail = lead + w + " "
         val s0 = selStart; val e0 = selEnd
         beginBatch()
@@ -386,6 +395,7 @@ class InputController(editor: EditorBridge, val stats: InputStats = InputStats()
         var w = word
         val lead = if (c == null && stem.isEmpty()) leadForNewWord() else ""
         if (stem.isEmpty()) w = when (shiftWithLead(lead)) { ShiftState.LOCK -> w.uppercase(); ShiftState.ONCE -> w.replaceFirstChar { it.uppercase() }; ShiftState.OFF -> w }
+        w = written(w)
         val s0 = selStart; val e0 = selEnd
         beginBatch()
         var ok = true
@@ -439,7 +449,7 @@ class InputController(editor: EditorBridge, val stats: InputStats = InputStats()
         val shown = core.takeLast(old.length)
         val n = old.length + k
         if (!verifyBefore(before.takeLast(n))) return false
-        val w = if (shown.length > 1 && shown.all { it.isUpperCase() }) word.uppercase() else if (shown.first().isUpperCase()) word.replaceFirstChar { it.uppercase() } else word
+        val w = written(if (shown.length > 1 && shown.all { it.isUpperCase() }) word.uppercase() else if (shown.first().isUpperCase()) word.replaceFirstChar { it.uppercase() } else word)
         val tail = w + " ".repeat(k)
         val s0 = selStart; val e0 = selEnd
         beginBatch()
@@ -604,6 +614,27 @@ class InputController(editor: EditorBridge, val stats: InputStats = InputStats()
         if (selStart >= 0 && selStart != selEnd) return false
         val lead = leadForNewWord()
         return startsSentence(before + lead, if (selStart >= 0) selStart + lead.length else -1)
+    }
+
+    /**
+     * A lone i (or i'm, i'll, i've, i'd) stands before the cursor as plain text and the key about to be typed ends the word: it becomes a capital. Only a whole word counts: it must begin the text, a line, or stand after a space or
+     * an opening mark, never after a dot, a hyphen or a letter ("a.i.", "x-i", "wi-fi"). Verified against the editor first, like every replacement. True when it changed the text.
+     */
+    private fun fixLoneI(): Boolean {
+        if (!pronounKind() || (selStart >= 0 && selStart != selEnd) || composing != null) return false
+        val w = wordBeforeCursor() ?: return false
+        if (!isPronounI(w) || w[0] != 'i') return false
+        val at = before.length - w.length
+        val prev = if (at > 0) before[at - 1] else null
+        if (prev != null && !prev.isWhitespace() && prev !in PRONOUN_OPENERS) return false
+        if (prev == null && before.length >= WINDOW_BEFORE) return false
+        val fixed = pronounI(w); val s0 = selStart; val e0 = selEnd
+        beginBatch()
+        var ok = verifyBefore(w) && ed.deleteSurrounding(w.length, 0)
+        if (ok) { before = before.dropLast(w.length); moveSel(-w.length); ok = commit(fixed) }
+        endBatch(s0, e0)
+        if (!ok) { resync(); return false }
+        return true
     }
 
     // ------------------------------------------------------------------------------------------------------------ internals
@@ -776,6 +807,15 @@ class InputController(editor: EditorBridge, val stats: InputStats = InputStats()
             }
             return true
         }
+
+        private val PRONOUN_ENDINGS = setOf("m", "ll", "ve", "d")
+        /** The marks that may stand right before a pronoun i ("(i think", "\"i said"). */
+        private const val PRONOUN_OPENERS = "([{\"\u201C\u2018\u00AB\u00A1"
+        /** The punctuation that ends a word the way a space does (R20c). */
+        const val PRONOUN_BOUNDARY = ".,!?;:"
+        /** i, i'm, i'll, i've, i'd: the words that are always written with a capital I (R20c). */
+        fun isPronounI(w: String): Boolean = w == "i" || (w.length in 3..4 && w[0] == 'i' && (w[1] == '\'' || w[1] == '\u2019') && w.substring(2) in PRONOUN_ENDINGS)
+        fun pronounI(w: String): String = if (isPronounI(w)) "I" + w.substring(1) else w
 
         const val WINDOW_BEFORE = 64
         const val WINDOW_AFTER = 16
