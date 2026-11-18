@@ -783,3 +783,33 @@
 ## 2026-11-18T05:38:37Z
 > Waiting for the APK build to finish.
 <!-- sha:41dfb5ae61c0 -->
+
+## 2026-11-18T05:41:45Z
+> Swoop 0.7.0-alpha2 is out, with all five fixes in it. GitHub built and signed it, and the certificate was verified on that exact APK. I haven't run it on a tablet, phone or emulator, because this sandbox has none; only the unit tests, lint and GitHub's checks ran.
+>
+> Install it from the Release page; it installs over your current Swoop:
+> https://github.com/tjshea90/Keyboard/releases/tag/swoop-v0.7.0-alpha2
+>
+> **Your four requests:**
+> - **Copied text first:** what you just copied is the first suggestion box, with a small clipboard icon.
+>   - One tap pastes all of it.
+>   - It lasts 5 minutes and goes away when you type, delete or glide. That window is my pick: HeliBoard uses 3 minutes and Gboard's isn't documented.
+>   - In a password box, or for a copy a password manager marked secret, it shows dots but still pastes.
+>   - Settings has a "Suggest copied text" switch.
+> - **Next-word prediction:** after a glide the middle box is the predicted next word, and the side boxes are other guesses for the glide. Tapping a side box replaces the glided word, and tapping the middle one adds the next word. I found no other keyboard that does this, so it's our own design. A "Next word after a glide" setting turns it off.
+> - **Capital I:** a lone `i`, `i'm`, `i'll`, `i've` and `i'd` are now always capitalised.
+>   - The old fix only worked on typed letters in boxes that show composing text.
+>   - A glided `i'm` came out lowercase because the word list stores it lowercase.
+>   - Boxes that ask for no suggestions got nothing. All three cases are covered now.
+> - **Learning your glide typing:** research is in `research/R20-glide-personalization.md`. The keyboard used to learn one shift of the whole path. It now also learns how your thumb lands differently across the keyboard, from the first and last letter of glides you keep.
+>   - In a simulated hand it gained up to 3.5 points where left and right landed differently, and lost nothing where they didn't.
+>   - **No real thumb data exists, so that gain is unproven on you.**
+>
+> **Quotation marks:** a word glided or picked right after an opening quote used to get a space (`" this`). A closing quote now takes away the space the glide left (`"this"`). A space you type yourself is never removed. I also made words inside quotes and brackets count as context for the next-word guess.
+>
+> **Open items:**
+> - [ ] You test on the tablet and phone. Please check the copied-text box, the three-box strip after a glide, `I`/`i'm` in several apps, quotes, and docked resizing.
+> - [ ] Optional: an emulator smoke run, and copying these changes into the Kestrel browser's keyboard.
+> - [ ] Not built, ranked lower in the research: correcting the previous glided word using the next word, learning from tap positions, and A/B measurement on your real thumb.
+> - [ ] Anything you find goes into 0.7.0-alpha3. Everything is saved to GitHub, and the next session resumes from `CHECKPOINT.md`.
+<!-- sha:4c17c3d8c9a6 -->
