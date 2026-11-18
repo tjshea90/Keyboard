@@ -358,7 +358,14 @@ Both come from DP alignments of accepted glides (the letters' assigned steps, `a
 
 ### 4.9 Rank 9 - Cold-start kit
 
-See section 5 for the full list. **What / Evidence / Today / Gain / Cost / Sketch / Measure** are given there.
+Section 5 has the full list; the seven fields in short:
+**What.** Shrinkage priors on every learner, import of the browser's learning file, "Teach from text" priming, learning touch offsets from taps from day one, an optional 12-word calibration, a weak prior from the owner's other device.
+**Evidence.** Fowler (priming the cache with 30 days of text, 19.3 % fewer word errors), Yin / Buschek / Weir / Touchtype (about 55 to 60 points before a personal spatial model, calibration touches, capped priors) [V].
+**Today.** `LearnedExport.read` parses the browser file (KB-205 wires the import and "Teach from text"); the personal tables start empty; `TypingLearner` learns words from taps but no touch coordinates.
+**Gain.** About +5 to +10 points of first guess during the first few hundred glides in the simulator, nothing afterwards [M].
+**Cost.** None at run time.
+**Sketch.** `PersonalModel.mergeFrom` for imports (exists); a "teach" entry point `GlideTyping.teachText(text)` that calls `personal.add(prev, word, w, prev2)` with a bounded weight and the existing `norm` / `stretched` filters; shrinkage in `TouchField.trust()` (4.1).
+**Measure.** `GlideEval curve=1` first stretch with N primed words; `GlideHabitEval` first stretch with the habit imported.
 
 ### 4.10 Rank 10 - Per-user adaptive language weight and a length term
 
