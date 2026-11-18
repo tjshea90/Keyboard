@@ -313,3 +313,10 @@ Put all the updates  into kestrel keyboard
 4) if possible, have the keyboard "see" if the field I'm typing in is for numbers only. If so, automatically bring up a full size number pad comparable to other popular keyboards .
 5) can the keyboard be made to be even shorter than its current minimum vertical size? If so, allow me to resize it smaller 
 ```
+
+## 2026-11-18T19:36:36Z
+```
+I tried the translation feature but it says the translation service could not be reached (socketexception). 
+
+Do more research to improve the word glide prediction if possible, but it is pretty good right now 
+```
