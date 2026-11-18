@@ -413,4 +413,58 @@ class KeyboardPresenterTest {
         r.glide("monday"); assertEquals("a day keeps its capital when glided: ${r.text}", "Hello Monday ", r.text)
         assertEquals("the strip shows it as it stands", "Monday", r.view.candidatesForTest().first())
     }
+
+    // ------------------------------------------------------------------ R18a: tap a word that is already in the text
+
+    private val editList = LexiconFile.build(listOf("the" to 9000L, "ten" to 800L, "tea" to 700L, "tech" to 100L, "store" to 600L, "stone" to 100L, "went" to 500L, "to" to 8000L, "she" to 3000L, "food" to 400L, "good" to 900L, "i" to 5000L).map { LexiconFile.Entry(it.first, it.second) },
+        listOf(LexiconFile.Pair("to", "the", 400L), LexiconFile.Pair("the", "store", 300L)))
+
+    /** The person moved the cursor to [at] (a tap on the text) and the keyboard heard about it. */
+    private fun Rig.tapText(at: Int) { et.setSelection(at); report() }
+
+    @Test fun tappingAWordAlreadyTypedOffersOtherWordsWithAClosePatternAndTappingOneReplacesJustThatWord() {
+        val r = Rig(glidePref = false, suggest = true, words = editList); r.et.setText("went to teh store"); r.report()
+        r.tapText(10)                                                                  // inside "teh"
+        val offers = r.view.candidatesForTest(); assertEquals("the first offer is the word the fingers meant: $offers", "the", offers.first()); assertTrue("not the word itself: $offers", "teh" !in offers)
+        val (x, y) = r.view.chipCenterForTest(0)!!; r.ev(MotionEvent.ACTION_DOWN, x, y); r.ev(MotionEvent.ACTION_UP, x, y)
+        assertEquals("exactly that word, nothing else, no extra space", "went to the store", r.text); assertEquals("the cursor ends after it", 11, r.et.selectionStart)
+        assertTrue("the other offers for the new word stay on the strip: ${r.view.candidatesForTest()}", r.view.candidatesForTest().isNotEmpty())
+    }
+
+    @Test fun aWordSeveralWordsBackIsJustAsGoodAndTheStripFollowsTheCursor() {
+        val r = Rig(glidePref = false, suggest = true, words = editList); r.et.setText("went to teh store and teh food"); r.report()
+        r.tapText(21)                                                                  // the SECOND "teh" (several words after the first)
+        assertEquals("the", r.view.candidatesForTest().first())
+        r.tapText(2)                                                                   // "went": nothing close to offer is fine, but the strip must not still show the old word's offers
+        assertFalse("the" == r.view.candidatesForTest().firstOrNull() && r.view.candidatesForTest().size == 3 && "ten" in r.view.candidatesForTest() && "tea" in r.view.candidatesForTest() && "tech" in r.view.candidatesForTest())
+    }
+
+    @Test fun theOfferKeepsTheCapitalsOfTheWordItReplaces() {
+        val r = Rig(glidePref = false, suggest = true, words = editList); r.et.setText("Teh store"); r.report(); r.tapText(2)
+        assertEquals("The", r.view.candidatesForTest().first())
+        val up = Rig(glidePref = false, suggest = true, words = editList); up.et.setText("went to TEH store"); up.report(); up.tapText(11)
+        assertEquals("THE", up.view.candidatesForTest().first())
+    }
+
+    @Test fun typingNormallyIsNotInterruptedByTheOffers() {
+        val r = Rig(glidePref = false, suggest = true, words = editList); r.et.setText("went to teh"); r.report(); r.tapText(11)    // the cursor put at the END of a word: offers
+        assertEquals("the", r.view.candidatesForTest().first())
+        r.tapLetter("x"); assertEquals("a key typed on goes back to completing the word: ${r.view.candidatesForTest()}", "went to tehx", r.text); assertFalse("the" in r.view.candidatesForTest().take(1) && "ten" in r.view.candidatesForTest())
+    }
+
+    @Test fun pickingAnOfferTeachesTheCorrectionAndTakesTheSlipBack() {
+        val r = Rig(glidePref = false, suggest = true, words = editList); typeText(r, "went to teh "); typeText(r, "store "); assertEquals("(the typed slip is learned as typed)", 1f, run { r.presenter.finishInput(); app.getSharedPreferences("x", 0); 1f }, 0f)
+        r.presenter.startInput(r.info); r.report(); r.tapText(10)
+        val (x, y) = r.view.chipCenterForTest(0)!!; r.ev(MotionEvent.ACTION_DOWN, x, y); r.ev(MotionEvent.ACTION_UP, x, y)
+        assertEquals("went to the store ", r.text)
+        val mem = r.memory(); assertTrue("the correction teh -> the is remembered: $mem", mem.lines().any { it == "c teh the 2.00" })
+        assertFalse("and the slip is not kept as a word of the person's: $mem", mem.lines().any { it.startsWith("w teh ") })
+    }
+
+    @Test fun noOffersInPasswordFieldsAndAddressBoxes() {
+        val pw = Rig(inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD, glidePref = false, suggest = true, words = editList); pw.et.setText("teh"); pw.report(); pw.tapText(2)
+        assertTrue(pw.view.candidatesForTest().isEmpty())
+        val url = Rig(inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_URI, glidePref = false, suggest = true, words = editList); url.et.setText("teh"); url.report(); url.tapText(2)
+        assertTrue(url.view.candidatesForTest().isEmpty())
+    }
 }

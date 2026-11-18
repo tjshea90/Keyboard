@@ -117,7 +117,7 @@ class KeyboardPresenter(
     var onToggleTranslate: () -> Unit = {}
 
     /** A clipboard card was tapped: its text goes in at the cursor. */
-    fun pasteText(text: String) { session.settle(); learner.settle(); controller.paste(text); view?.setShift(controller.shift); refreshSuggestions() }
+    fun pasteText(text: String) { userMoved = false; session.settle(); learner.settle(); controller.paste(text); view?.setShift(controller.shift); refreshSuggestions() }
 
     // ------------------------------------------------------------------ translate (M7): Enter translates the box to Mexican Spanish, Enter again sends
 
