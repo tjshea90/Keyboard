@@ -397,7 +397,7 @@ class KeyboardPresenter(
 
     override fun onCandidate(word: String) {
         if (word.isEmpty()) return
-        if (glideMiddle != null && word == glideMiddle && controller.lastGlide != null) { pickNextAfterGlide(word); return }
+        if (word in glideNextShown && controller.lastGlide != null) { pickNextAfterGlide(word); return }
         if (editWord != null && controller.lastGlide == null && editRaw.containsKey(word)) { replaceTappedWord(word); return }
         userMoved = false
         if (EmojiMap.isEmoji(word)) { chooseEmoji(word); return }
@@ -427,14 +427,14 @@ class KeyboardPresenter(
     private var glideAlts: List<String> = emptyList()
     private var glideNext: List<String> = emptyList()
     private var glideNextWaiting = false
-    /** The middle box while the glide layout is showing, else null: a tap on exactly this text is "the next word", not a replacement of the glided word. */
-    private var glideMiddle: String? = null
+    /** The next words the glide layout shows (the middle box, and a side box that has no other guess to hold): a tap on exactly one of them is "this word comes next", not a replacement of the glided word. */
+    private var glideNextShown: Set<String> = emptySet()
 
     override fun showCandidates(words: List<String>) {
         val cased = if (properOn) words.map { w -> glide.engine.caseFormOf(w.lowercase(), controller.previousWord())?.takeIf { it.lowercase() == w.lowercase() } ?: w } else words
         val shown = if (controller.capitalizeI) cased.map { InputController.pronounI(it) } else cased                  // (R20c: the strip shows I'm, as the text will)
         glideRaw = if (properOn || controller.capitalizeI) words.indices.filter { shown[it] != words[it] }.associate { shown[it] to words[it] } else emptyMap()
-        glideMiddle = null
+        glideNextShown = emptySet()
         if (view?.isGliding == true || controller.lastGlide == null || !suggestOn || shown.isEmpty()) { view?.showCandidates(withEmoji(shown, words.firstOrNull())); return }     // (the live guess while the finger is down, or no suggestions: the plain list)
         glideBest = shown[0]; glideAlts = shown.drop(1).take(2); glideNext = emptyList(); glideNextWaiting = true
         renderGlideStrip()
@@ -446,12 +446,12 @@ class KeyboardPresenter(
     private fun renderGlideStrip() {
         val taken = (listOf(glideBest) + glideAlts).map { it.lowercase() }
         val next = glideNext.filter { it.lowercase() !in taken }
-        if (next.isEmpty() && !glideNextWaiting) { glideMiddle = null; view?.showCandidates(listOf(glideBest) + glideAlts); return }          // no prediction: the plain guesses
+        if (next.isEmpty() && !glideNextWaiting) { glideNextShown = emptySet(); view?.showCandidates(listOf(glideBest) + glideAlts); return }          // no prediction: the plain guesses
         val fill = next.drop(1).iterator()
         val left = glideAlts.getOrNull(0) ?: (if (fill.hasNext()) fill.next() else "")
         val right = glideAlts.getOrNull(1) ?: (if (fill.hasNext()) fill.next() else "")
         val mid = next.firstOrNull() ?: ""
-        glideMiddle = mid.ifEmpty { null }
+        glideNextShown = next.take(3).toSet()
         view?.showCandidates(listOf(left, mid, right), accent = -1)
     }
 
@@ -459,7 +459,7 @@ class KeyboardPresenter(
     private fun pickNextAfterGlide(word: String) {
         userMoved = false
         session.settle()
-        latest = null; literalShown = null; suggestSeq++; glideMiddle = null
+        latest = null; literalShown = null; suggestSeq++; glideNextShown = emptySet()
         learner.pick(word)
         noFixFor = null
         view?.setShift(controller.shift)

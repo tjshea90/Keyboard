@@ -372,36 +372,40 @@ class KeyboardPresenterTest {
 
     private val pairedList = LexiconFile.build(
         listOf("for" to 900L, "fir" to 300L, "fur" to 100L, "hello" to 500L, "world" to 800L, "there" to 700L, "you" to 600L).map { LexiconFile.Entry(it.first, it.second) },
-        listOf(LexiconFile.Pair("hello", "world", 400L), LexiconFile.Pair("hello", "there", 300L), LexiconFile.Pair("hello", "you", 200L)),
+        listOf(LexiconFile.Pair("hello", "world", 400L), LexiconFile.Pair("hello", "there", 300L), LexiconFile.Pair("hello", "you", 200L), LexiconFile.Pair("for", "world", 300L), LexiconFile.Pair("for", "there", 200L)),
     )
+    private fun Rig.tapChip(i: Int) { val (x, y) = view.chipCenterForTest(i)!!; ev(MotionEvent.ACTION_DOWN, x, y); ev(MotionEvent.ACTION_UP, x, y) }
 
-    @Test fun afterAGlideTheMiddleBoxIsTheNextWordAndTheSidesAreOtherGuesses() {
-        val r = Rig(suggest = true, words = pairedList); r.glide("for")
-        assertEquals("for ", r.text)
-        val chips = r.view.candidatesForTest()
-        assertEquals("three boxes: $chips", 3, chips.size)
-        assertTrue("the middle is empty or already a prediction, never the glided word: $chips", chips[1] != "for")
+    @Test fun afterAGlideTheMiddleBoxIsTheNextWordAndTheGlidedWordIsNotOfferedAgain() {
         val g = Rig(suggest = true, words = pairedList); g.glide("hello")
         val c = g.view.candidatesForTest()
-        assertEquals("the predicted next word is in the middle: $c", "world", c[1]); assertTrue("the glided word is not offered again: $c", c.none { it == "hello" })
-        assertTrue("the sides are other guesses of the glide (or empty): $c", c[0] != "world" && c[2] != "world")
+        assertEquals("three boxes: $c", 3, c.size); assertEquals("the predicted next word is in the middle: $c", "world", c[1]); assertTrue("the glided word is not offered again: $c", c.none { it == "hello" })
+    }
+
+    @Test fun theSidesAreTheOtherGuessesOfTheGlideAndTappingOneReplacesTheGlidedWord() {
+        val r = Rig(suggest = true, words = pairedList); r.glide("for")
+        val c = r.view.candidatesForTest()
+        assertEquals("fir is the other guess of the glide, left of the next word: $c", listOf("fir", "world", "there"), c)
+        r.tapChip(0)
+        assertEquals("fir ", r.text)
+        assertTrue("and the strip follows the new word: ${r.view.candidatesForTest()}", r.view.candidatesForTest().contains("for"))
     }
 
     @Test fun tappingTheMiddleBoxPutsTheNextWordInAfterTheGlidedWord() {
-        val r = Rig(suggest = true, words = pairedList); r.glide("hello")
-        val (x, y) = r.view.chipCenterForTest(1)!!
-        r.ev(MotionEvent.ACTION_DOWN, x, y); r.ev(MotionEvent.ACTION_UP, x, y)
+        val r = Rig(suggest = true, words = pairedList); r.glide("hello"); r.tapChip(1)
         assertEquals("hello world ", r.text)
         assertNull("the glide is confirmed, nothing is left to replace", r.presenter.controller.lastGlide)
     }
 
-    @Test fun tappingASideBoxStillReplacesTheGlidedWordAndTheMiddleFollowsTheNewWord() {
+    @Test fun aSideBoxThatHoldsAnotherNextWordPutsItInInsteadOfReplacingTheGlidedWord() {
         val r = Rig(suggest = true, words = pairedList); r.glide("for")
-        val chips = r.view.candidatesForTest(); val side = chips.indices.filter { it != 1 && chips[it].isNotEmpty() }.firstOrNull() ?: return
-        val picked = chips[side]; val (x, y) = r.view.chipCenterForTest(side)!!
-        r.ev(MotionEvent.ACTION_DOWN, x, y); r.ev(MotionEvent.ACTION_UP, x, y)
-        assertEquals("$picked ", r.text)
-        assertTrue("the strip no longer offers what is in the text: ${r.view.candidatesForTest()}", r.view.candidatesForTest().none { it == picked })
+        assertEquals("there", r.view.candidatesForTest()[2]); r.tapChip(2)
+        assertEquals("for there ", r.text)
+    }
+
+    @Test fun withNoPredictionTheStripIsTheOldListOfGuesses() {
+        val r = Rig(suggest = true, words = pairedList); r.glide("fir")
+        assertEquals("fir", r.view.candidatesForTest().first())
     }
 
     @Test fun withSuggestionsOffTheStripAfterAGlideIsTheOldList() {
