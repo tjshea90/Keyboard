@@ -416,7 +416,7 @@ class KeyboardPresenterTest {
 
     // ------------------------------------------------------------------ R18a: tap a word that is already in the text
 
-    private val editList = LexiconFile.build(listOf("the" to 9000L, "ten" to 800L, "tea" to 700L, "tech" to 100L, "store" to 600L, "stone" to 100L, "went" to 500L, "to" to 8000L, "she" to 3000L, "food" to 400L, "good" to 900L, "i" to 5000L).map { LexiconFile.Entry(it.first, it.second) },
+    private val editList = LexiconFile.build(listOf("the" to 9000L, "ten" to 800L, "tea" to 700L, "tech" to 100L, "store" to 600L, "stone" to 100L, "went" to 500L, "to" to 8000L, "she" to 3000L, "food" to 400L, "good" to 900L, "i" to 5000L, "then" to 700L, "he" to 4000L).map { LexiconFile.Entry(it.first, it.second) },
         listOf(LexiconFile.Pair("to", "the", 400L), LexiconFile.Pair("the", "store", 300L)))
 
     /** The person moved the cursor to [at] (a tap on the text) and the keyboard heard about it. */
@@ -428,7 +428,6 @@ class KeyboardPresenterTest {
         val offers = r.view.candidatesForTest(); assertEquals("the first offer is the word the fingers meant: $offers", "the", offers.first()); assertTrue("not the word itself: $offers", "teh" !in offers)
         val (x, y) = r.view.chipCenterForTest(0)!!; r.ev(MotionEvent.ACTION_DOWN, x, y); r.ev(MotionEvent.ACTION_UP, x, y)
         assertEquals("exactly that word, nothing else, no extra space", "went to the store", r.text); assertEquals("the cursor ends after it", 11, r.et.selectionStart)
-        println("DEBUG after pick: strip=${r.view.candidatesForTest()} around=${r.presenter.controller.wordAround()?.text} before='${r.presenter.controller.before}' after='${r.presenter.controller.after}' sel=${r.presenter.controller.selStart}")
         assertTrue("the other offers for the new word stay on the strip: ${r.view.candidatesForTest()}", r.view.candidatesForTest().isNotEmpty())
     }
 
