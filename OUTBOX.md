@@ -967,3 +967,7 @@
 ## 2026-11-18T20:55:13Z
 > The release gates are running (they include the full test suite, about 11 minutes). I'll dispatch the signed GitHub build as soon as they pass.
 <!-- sha:724a8f4f07ea -->
+
+## 2026-11-18T20:56:52Z
+> The signed 0.7.0-alpha4 build is running on GitHub. I'll check it in a few minutes, confirm the Release has the APK, record it, and give you the link.
+<!-- sha:7d07f3211b19 -->
