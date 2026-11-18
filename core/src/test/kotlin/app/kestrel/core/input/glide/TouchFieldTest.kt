@@ -104,4 +104,16 @@ class TouchFieldTest {
         again.exportText(null, null) { t -> restored = LearnedExport.read(t)?.touch }; assertTrue("the restarted engine has the map", restored != null && restored!!.take(18).any { Math.abs(it) > 0.05f })
         again.forgetAll(); var gone = false; again.exportText(null, null) { t -> gone = LearnedExport.read(t)?.touch == null }; assertTrue("forgetting clears it", gone)
     }
+
+    @Test fun probe2() {
+        val out = StringBuilder()
+        fun avg(noise: SimNoise, p: GlideParams): Double = (21L..26L).map { lastThird(noise, p, 1200, it) }.average()
+        val sloppyHabit = SimNoise.SLOPPY.withUserBias(10f); val normalZone = SimNoise.NORMAL.withZone(12f, 6f, -12f, 6f); val sloppyZone = SimNoise.SLOPPY.withZone(10f, 5f, -10f, 5f)
+        for ((name, noise) in listOf("sloppy+habit10" to sloppyHabit, "normal+zone12" to normalZone, "sloppy+zone10" to sloppyZone, "normal" to SimNoise.NORMAL, "sloppy" to SimNoise.SLOPPY)) {
+            out.append("$name: off %.1f".format(avg(noise, GlideParams(touchField = false))))
+            for (rate in listOf(0.005f, 0.01f, 0.02f)) out.append("  rate $rate: %.1f".format(avg(noise, GlideParams(fieldRate = rate))))
+            out.append("\n")
+        }
+        println(out); org.junit.Assert.fail(out.toString())
+    }
 }
