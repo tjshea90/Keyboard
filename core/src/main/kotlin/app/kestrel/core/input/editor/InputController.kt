@@ -585,7 +585,7 @@ class InputController(editor: EditorBridge, val stats: InputStats = InputStats()
 
     /** The plain word that [text] ends with (a trailing space is skipped), lowercase; null when it ends in something else. */
     fun wordEndingAt(text: String): String? {
-        val tok = text.trimEnd().substringAfterLast(' ')
+        val tok = text.trimEnd().substringAfterLast(' ').trimStart { it in OPENING_MARKS }       // (R21: a word just inside a quote or a bracket is still a word: "hello and (hello)
         if (tok.isEmpty() || tok.length > 24 || !tok.all { it.isLetter() || it == '\'' }) return null
         return tok.lowercase()
     }
@@ -595,7 +595,7 @@ class InputController(editor: EditorBridge, val stats: InputStats = InputStats()
 
     private fun twoBefore(text: String): Pair<String?, String?> {
         val toks = text.trimEnd().split(' ')
-        fun plain(t: String): String? = if (t.isNotEmpty() && t.length <= 24 && t.all { it.isLetter() || it == '\'' }) t.lowercase() else null
+        fun plain(raw: String): String? { val t = raw.trimStart { it in OPENING_MARKS }; return if (t.isNotEmpty() && t.length <= 24 && t.all { it.isLetter() || it == '\'' }) t.lowercase() else null }       // (R21: skip an opening quote or bracket)
         val last = toks.lastOrNull()?.let { plain(it) } ?: return null to null
         val second = if (toks.size >= 2) plain(toks[toks.size - 2]) else null
         return second to last
@@ -840,6 +840,8 @@ class InputController(editor: EditorBridge, val stats: InputStats = InputStats()
             return true
         }
 
+        /** Marks that open a quotation or a bracket: a word right after one is still a word for the language's context. */
+        private const val OPENING_MARKS = "\"\u201C\u2018([{"
         private val PRONOUN_ENDINGS = setOf("m", "ll", "ve", "d")
         /** The marks that may stand right before a pronoun i ("(i think", "\"i said"). */
         private const val PRONOUN_OPENERS = "([{\"\u201C\u2018\u00AB\u00A1"

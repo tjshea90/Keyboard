@@ -57,4 +57,11 @@ class QuotesTest {
     @Test fun theUndoAfterTheClosingQuoteStillWorks() {
         val r = rig("he said "); r.typeAll("\""); r.act { commitGlide("this") }; r.typeAll("\""); r.act { backspace() }; assertEquals("he said \"this", r.text)
     }
+
+    @Test fun aWordJustInsideAQuoteOrABracketIsStillTheWordBefore() {
+        val r = rig("he said \"hello "); assertEquals("hello", r.c.previousTwo().second); assertEquals("said", r.c.previousTwo().first)
+        val b = rig("(see hello "); assertEquals("hello", b.c.previousTwo().second)
+        assertEquals("hello", rig("x").c.wordEndingAt("so \u201Chello"))
+        assertEquals("a closed quote ends in a mark, not a word", null, rig("x").c.previousTwo().second.let { rig("he said \"hello\" ").c.previousTwo().second })
+    }
 }
