@@ -16,6 +16,7 @@ import android.text.TextUtils
 import android.view.HapticFeedbackConstants
 import android.view.MotionEvent
 import android.view.View
+import app.kestrel.core.input.BackspaceRepeat
 import app.kestrel.core.input.ImeLayout
 import app.kestrel.core.input.Key
 import app.kestrel.core.input.KeyBox
