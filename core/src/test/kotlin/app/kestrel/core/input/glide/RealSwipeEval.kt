@@ -86,12 +86,12 @@ class RealSwipeEval {
         // the real finger: scatter of the first / last touch around that letter's key (in key pitches), and the share of the ideal path that was drawn
         val dx = ArrayList<Double>(); val dy = ArrayList<Double>(); val lr = ArrayList<Double>()
         for (it in its) {
-            val k0 = it.key.first().code - 'a'.code; val k1 = it.key.last().code - 'a'.code
+            val k0 = it.key.first().code; val k1 = it.key.last().code
             dx.add(((it.xs.first() - keys.cx[k0]) / keys.pitch).toDouble()); dy.add(((it.ys.first() - keys.cy[k0]) / keys.pitch).toDouble())
             dx.add(((it.xs.last() - keys.cx[k1]) / keys.pitch).toDouble()); dy.add(((it.ys.last() - keys.cy[k1]) / keys.pitch).toDouble())
             if (distinct(it.key) >= 3) {
                 var ideal = 0.0; var prevK = -1
-                for (c in it.key) { val k = c.code - 'a'.code; if (k != prevK) { if (prevK >= 0) ideal += Math.hypot((keys.cx[k] - keys.cx[prevK]).toDouble(), (keys.cy[k] - keys.cy[prevK]).toDouble()) / keys.pitch; prevK = k } }
+                for (c in it.key) { val k = c.code; if (k != prevK) { if (prevK >= 0) ideal += Math.hypot((keys.cx[k] - keys.cx[prevK]).toDouble(), (keys.cy[k] - keys.cy[prevK]).toDouble()) / keys.pitch; prevK = k } }
                 var drawn = 0.0; for (i in 1 until it.xs.size) drawn += Math.hypot((it.xs[i] - it.xs[i - 1]).toDouble(), (it.ys[i] - it.ys[i - 1]).toDouble()) / keys.pitch
                 if (ideal > 0.5 && drawn > 0.3) lr.add(Math.log(drawn / ideal))
             }
