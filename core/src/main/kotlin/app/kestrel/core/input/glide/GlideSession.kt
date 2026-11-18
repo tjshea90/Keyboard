@@ -20,6 +20,8 @@ class GlideSession(
         fun showCandidates(words: List<String>)
         fun clearCandidates()
         fun showNoWord()
+        /** The engine had no word list yet, so the glide could not be read at all. */
+        fun showNotReady() { showNoWord() }
     }
     var ui: Ui? = null
 
@@ -61,7 +63,8 @@ class GlideSession(
         if (g != null && liftAt != 0L) { g.stats.onShown(now() - liftAt); liftAt = 0L }
         var cands = res.candidates
         if (cands.isEmpty()) {
-            ui?.showNoWord()
+            // (R19d: the decoder now always answers with the closest word, so an empty answer is only an engine that was not ready yet, or a decoder error)
+            if (res.ready) ui?.showNoWord() else ui?.showNotReady()
             // R18d: nothing fits this glide. If the person now types the word they meant, letter by letter, the shape of the glide is remembered for it (the same path as after a deleted glide)
             if (learnAllowed()) { engine()?.glideDeleted(null); retypeWatch = true; retypeLetters = 0; retypeAt = now() }
             return

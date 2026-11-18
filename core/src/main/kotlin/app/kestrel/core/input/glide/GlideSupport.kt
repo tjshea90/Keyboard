@@ -143,7 +143,8 @@ class UserWords(private val cap: Int = 800) {
 }
 
 /** The result of one glide as the keyboard gets it. */
-class GlideResult(val candidates: List<GlideCandidate>, val millis: Long)
+/** [ready] is false when the engine had no word list / key positions yet (the glide could not be decoded at all: "still starting", not "no word fits"). */
+class GlideResult(val candidates: List<GlideCandidate>, val millis: Long, val ready: Boolean = true)
 
 /**
  * The glide engine the keyboard talks to (AT1): it loads the word list, owns the decoder and the person's own words, and does every bit of that on [executor] (ONE thread, so nothing needs a lock
@@ -310,7 +311,7 @@ class GlideTyping(
         val px = xs.copyOf(count); val py = ys.copyOf(count)
         executor.execute {
             val d = decoder; val m = main
-            if (d == null || m == null) { done(GlideResult(emptyList(), 0)); return@execute }
+            if (d == null || m == null) { done(GlideResult(emptyList(), 0, ready = false)); return@execute }
             val t0 = System.nanoTime()
             val lexicons = ArrayList<GlideLexicon>(2); lexicons.add(m); userLex?.let { lexicons.add(it) }
             val r = try { cleaned(d.decode(px, py, count, lexicons, prev, 3 + EXTRA_FOR_BLOCKED, prev2), 3) } catch (e: Exception) { emptyList() }

@@ -422,6 +422,7 @@ class KeyboardPresenter(
     }
     override fun clearCandidates() { if (!suggestOn) view?.clearCandidates() }   // (with suggestions on, the next answer replaces the strip: no flicker)
     override fun showNoWord() { view?.showNoWord() }
+    override fun showNotReady() { view?.showNotice(context.getString(R.string.strip_not_ready)) }
 
     private companion object {
         const val DOUBLE_TAP_MS = 350L

@@ -50,6 +50,7 @@
     <string name="grip_full_size">Full size</string>
     <string name="grip_full_size_desc">Full size. Tap to make the keyboard full width again.</string>
     <string name="strip_no_word">no word fits - try again</string>
+    <string name="strip_not_ready">keyboard is still starting - glide again</string>
 
     <string name="setup_glide_switch">Glide typing (slide over the letters to type a word)</string>
     <string name="setup_learning_title">What the keyboard learned</string>
