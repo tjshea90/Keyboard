@@ -1172,3 +1172,38 @@
 >
 > Writing it down first, then fixing the wording.
 <!-- sha:446312d03756 -->
+
+## 2026-11-18T23:53:18Z
+> Your pasted result is the clearest evidence so far. What it shows:
+>
+> - **Internet permission** is granted, the **internet access group** is fine, and **name lookups work** for both services.
+> - **The connection itself is refused straight away** (`EPERM`, 3 ms) for both services, with the test screen in front. So it isn't a "background app" rule.
+> - **The one odd fact is `battery saver ON`.** On Android's own builds battery saver only makes connections slow (I measured that). Your tablet's maker may have made it stricter. The Result line in alpha5 says "that is not battery saver", and that sentence is **wrong for your tablet**. Please ignore it.
+>
+> ## Please try this (10 seconds, no install needed)
+> 1. Settings → **Battery** → switch **Battery saver off**.
+> 2. Diagnostics → **Test translation connection** again.
+> 3. Tell me whether the `connect IPv4` lines still say `EPERM`.
+>
+> If battery saver off fixes it, that's the cause. Then I'd make the keyboard tell you so directly.
+>
+> If it still says `EPERM`, the remaining suspects are:
+> - a firewall, VPN or ad-blocking app
+> - a tablet setting that blocks an app's internet (Settings → Apps → Swoop → mobile data or network switches)
+> - a parental-control or school profile on the tablet
+>
+> If it comes to that, tell me which of those exist on it.
+>
+> ## What I changed in the code (committed, not released yet)
+> - **Result line:** when battery saver is on and the socket is refused, it now says "Battery saver is ON … switch it off and test again". It no longer rules battery saver out.
+> - **Limits check:** the test now counts battery saver and doze as limits.
+> - **Translate error:** it now says "Switch Battery saver off and restart the device once".
+> - **Tests:** a new test uses your exact pasted output.
+>
+> I'm holding the release until you've retested, so you only install once with whatever the retest shows.
+>
+> ## Still open
+> - **R25c** (your result): waiting on your retest with battery saver off.
+> - Kestrel browser sync of the changed input code is not done.
+> - Glide re-tune: the tablet's bigger keys keep the old settings, with no real-swipe data.
+<!-- sha:b73fc7d722f0 -->
