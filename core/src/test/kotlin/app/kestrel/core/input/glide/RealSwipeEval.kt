@@ -101,6 +101,7 @@ class RealSwipeEval {
         val sorted = lr.sorted()
         println("ln(drawn / ideal length), words of 3+ letters: n=%d mean %.3f (ratio %.2f) sd %.3f  p10 %.3f p50 %.3f p90 %.3f  (decoder: expect ln .92 = -0.083, sigma .16 low / .30 high)".format(lr.size, lr.average(), Math.exp(lr.average()), sd(lr), sorted[sorted.size / 10], sorted[sorted.size / 2], sorted[sorted.size * 9 / 10]))
         // the variants
+        if (System.getenv("REAL_DIAG") == "1") diagnose(sw, its)
         val want = (System.getenv("REAL_VARIANTS") ?: "none").split(',').map { it.trim() }
         val vit = its.take(System.getenv("REAL_VARIANT_N")?.toIntOrNull() ?: 2500)
         if (want != listOf("none")) {
@@ -127,4 +128,37 @@ class RealSwipeEval {
         "bias off" to GlideParams(biasGain = 0f), "bias 1.0" to GlideParams(biasGain = 1.0f),
         "bigramMix .6" to GlideParams(bigramMix = 0.6f), "rare off" to GlideParams(rareW = 0f)
     )
+
+    /** Where the real misses come from: words the list lacks, candidate recall, ranking misses (more / less common than the word meant), examples. */
+    private fun diagnose(sw: List<RealSwipe.Swipe>, its: List<Item>) {
+        val unknown = HashMap<String, Int>(); var unk = 0
+        for (s in sw) { val l = RealSwipe.letters(s.word) ?: continue; val w = clean(s.word); if (lex.idOf(w) < 0 && lex.idOf(l) < 0 && distinct(l) >= 2) { unknown.merge(w, 1, Int::plus); unk++ } }
+        println("DIAG words not in the list: $unk of ${sw.size} swipes; most common: " + unknown.entries.sortedByDescending { it.value }.take(40).joinToString(" ") { it.key + ":" + it.value })
+        val dec = GlideDecoder(keys, GlideParams())
+        var n = 0; var miss1 = 0; var notInTop3 = 0; var notSurvived = 0; var moreCommon = 0; var lessCommon = 0; var sameEnds = 0
+        val byLen = HashMap<Int, IntArray>(); val shown = ArrayList<String>()
+        for (it in its) {
+            val c = dec.decode(it.xs, it.ys, it.xs.size, listOf(lex), it.prev, 3)
+            n++
+            val l = distinct(it.key).coerceAtMost(8); val a = byLen.getOrPut(l) { IntArray(3) }; a[0]++
+            val first = c.firstOrNull()
+            val hit1 = first != null && String(GlideLetters.keyOf(first.text)) == it.key
+            val inTop3 = c.any { x -> String(GlideLetters.keyOf(x.text)) == it.key }
+            if (hit1) continue
+            miss1++; a[1]++
+            val surv = it.word in dec.survivorTexts(listOf(lex))
+            if (!inTop3) { notInTop3++; a[2]++ }
+            if (!surv) notSurvived++
+            if (first != null) {
+                val gid = lex.idOf(first.text)
+                if (gid >= 0) { val pm = lex.logProb(it.lexId); val pg = lex.logProb(gid); if (pg > pm) moreCommon++ else lessCommon++ }
+                if (first.text.first() == it.word.first() && first.text.last() == it.word.last()) sameEnds++
+            }
+            if (shown.size < 60) shown.add(it.word + " -> " + c.joinToString("/") { x -> x.text } + (if (surv) "" else " (never a candidate)") + (if (it.prev != null) "  after '${it.prev}'" else ""))
+        }
+        println("DIAG n=$n first-choice misses $miss1; right word NOT in top 3: $notInTop3; not even among the careful-pass candidates: $notSurvived")
+        println("DIAG of the first-choice misses: the word chosen is MORE common than the meant one: $moreCommon, LESS common: $lessCommon; same first and last letter as the meant word: $sameEnds")
+        println("DIAG by distinct letters (n / first-choice miss % / not in top 3 %): " + byLen.toSortedMap().entries.joinToString("  ") { (l, a) -> "len$l:${a[0]}/%.0f/%.0f".format(100.0 * a[1] / a[0], 100.0 * a[2] / a[0]) })
+        for (m in shown) println("DIAG miss: $m")
+    }
 }
