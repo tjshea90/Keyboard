@@ -673,3 +673,7 @@
 ## 2026-11-18T04:47:06Z
 > The measurement is running; I'll record the numbers in the docs as soon as it finishes.
 <!-- sha:d310468738a0 -->
+
+## 2026-11-18T04:53:35Z
+> The release gates for 0.7.0-alpha1 are running (full core and ime suites, about 8 minutes). Once they pass and the commit is pushed, I'll dispatch the build once, wait for it to go green, record it, and send you the link.
+<!-- sha:1dabf072d1b7 -->
