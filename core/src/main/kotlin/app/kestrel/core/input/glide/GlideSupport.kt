@@ -408,6 +408,21 @@ class GlideTyping(
         }
     }
 
+    /** R18d: [word] began a sentence (the first word of the box, or the first after . ! ? or a new line): the strip learns what this person starts with. */
+    fun learnStart(word: String, weight: Float = 1f) {
+        executor.execute {
+            ensurePersonal(); ensureDictionary()
+            if (dictionary.isBlocked(word.lowercase())) return@execute
+            personal.addStart(word, weight); personalDirty = true
+            if (System.nanoTime() / 1_000_000 - lastSaveAt > SAVE_EVERY_MS) saveNow()
+        }
+    }
+
+    /** R18d: an automatic fix was made ([undone] false) or taken back with Backspace ([undone] true): the keyboard gets stricter for a person who undoes many, bolder for one who undoes none ([PersonalModel.autoMarginShift]). */
+    fun learnFix(undone: Boolean) {
+        executor.execute { ensurePersonal(); personal.addFix(undone); personalDirty = true }
+    }
+
     /**
      * R18b: how [lower] is written inside a sentence (this person's own habit first, then the built-in names and date words after [prev]); null = as it was typed. Cheap and safe on any thread (the keyboard asks it on the UI thread).
      */

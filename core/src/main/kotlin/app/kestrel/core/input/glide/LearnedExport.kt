@@ -16,6 +16,8 @@ package app.kestrel.core.input.glide
  *   t <b2> <b1> <word> <weight> ... and the two words before it
  *   c <guessed> <meant> <weight>  the keyboard guessed the first and the person meant the second
  *   r <word> <recency>         how lately the word was used (fades)
+ *   b <word> <weight>          how often the person began a sentence with the word
+ *   f <made> <undone>          automatic fixes the keyboard made and how many the person took back with Backspace
  *   k <word> <Form> <weight>   the way the word is written inside a sentence (a name with its capital; or small when the keyboard's capital was taken back)
  *   s <word> <n> u0 v0 ... u15 v15  the SHAPE of a glide the person drew for the word, 16 points in tenths of a key (u: right of the centre of Q, v: rows below it), n = times confirmed
  *   end <number of entry lines>
@@ -84,7 +86,7 @@ object LearnedExport {
             when (f[0]) {
                 "habit" -> if (f.size == 3) { val x = f[1].toFloatOrNull(); val y = f[2].toFloatOrNull(); if (x != null && y != null && x.isFinite() && y.isFinite()) { habit = floatArrayOf(x.coerceIn(-MAX_BIAS, MAX_BIAS), y.coerceIn(-MAX_BIAS, MAX_BIAS)); entries++ } }
                 "own" -> if (f.size == 3 && own.size < MAX_OWN) { val n = f[2].toIntOrNull(); val word = f[1].lowercase(); if (n != null && n in 1..1000 && UserWords.glideable(word)) { own.add(word to n); entries++ } }
-                "w", "p", "t", "c", "r", "k" -> { body.append(line).append('\n'); entries++; when (f[0]) { "w" -> w++; "p" -> p++; "t" -> t++; "c" -> c++ } }
+                "w", "p", "t", "c", "r", "k", "b", "f" -> { body.append(line).append('\n'); entries++; when (f[0]) { "w" -> w++; "p" -> p++; "t" -> t++; "c" -> c++ } }
                 "s" -> { body.append(line).append('\n'); entries++; s++; if (f.size > 1) shapeWords.add(f[1]) }
                 "end" -> { declared = f.getOrNull(1)?.toIntOrNull() ?: -1 }
             }
