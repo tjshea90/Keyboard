@@ -1037,3 +1037,7 @@
 ## 2026-11-18T22:34:54Z
 > Understood. That wording is from the connection test's "Result" line, so the exact errno is `EPERM`/`EACCES`, meaning Android itself is refusing the network connection. Writing this into TASKS.md in your words first, then digging in.
 <!-- sha:0b36b45a0f77 -->
+
+## 2026-11-18T22:38:01Z
+> Waiting for the emulator run (about 5 minutes); I'll read the Data Saver reproduction as soon as it finishes.
+<!-- sha:152aa665cfda -->
