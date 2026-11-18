@@ -14,8 +14,11 @@ import app.kestrel.core.input.glide.GlideSession
 import app.kestrel.core.input.glide.Suggestions
 import app.kestrel.core.input.glide.TypingLearner
 
-/** How long a copy stays the first box of the strip (owner R20a; Gboard keeps what you copied for about an hour). */
-const val CLIP_CHIP_TTL_MS = 60L * 60L * 1000L
+/**
+ * How long a copy stays the first box of the strip (owner R20a). HeliBoard, the one keyboard whose rule is public, uses 3 minutes; Gboard's own chip time is not documented (its one hour is for the clipboard history). Five minutes is
+ * our pick between them, and typing, deleting, gliding, a long press or a tap dismisses the copy at once anyway. research/R20-clipboard-and-strip.md
+ */
+const val CLIP_CHIP_TTL_MS = 5L * 60L * 1000L
 
 /**
  * Everything the keyboard does, minus the Android service plumbing: the keys view reports taps and glides, this decides (InputController for the text,
@@ -39,10 +42,10 @@ class KeyboardPresenter(
     private var capitalizeI = false
     // ---- owner R20a: what was just copied is the first box of the strip
     /** The newest copy still fresh enough to offer (set by the service from its clipboard host). */
-    var clipChipSource: () -> app.kestrel.core.clipboard.ClipItem? = { null }
+    var clipChipSource: () -> ClipOffer? = { null }
     private var clipOn = false
     /** The copy that is on the strip now, and the time of the copy that was already pasted from it (not offered again). */
-    private var clipShown: app.kestrel.core.clipboard.ClipItem? = null
+    private var clipShown: ClipOffer? = null
     private var clipUsedAt = -1L
     private var doubleSpaceOn = false
     private var emojiOn = false
@@ -206,7 +209,7 @@ class KeyboardPresenter(
         suggestOn = !safeMode && st.suggest && field.composingAllowed
         autoFixOn = suggestOn && st.autoFix && field.kind != FieldKind.OMNIBOX            // (never rewrite what is typed into an address box)
         capitalizeI = !safeMode && st.capitalizeI && field.composingAllowed && field.kind != FieldKind.OMNIBOX
-        clipOn = !safeMode && st.suggestCopied && field.kind != FieldKind.PASSWORD; clipShown = null
+        clipOn = !safeMode && st.suggestCopied; clipShown = null
         controller.capitalizeI = !safeMode && st.capitalizeI && field.kind != FieldKind.OMNIBOX          // (R20c: also in boxes that show no composing text, for glided and strip words, and at Enter)
         properOn = !safeMode && st.autoCaps && field.composingAllowed && field.kind != FieldKind.OMNIBOX
         doubleSpaceOn = !safeMode && st.doubleSpace
@@ -259,6 +262,7 @@ class KeyboardPresenter(
 
     override fun onKey(key: Key) {
         userMoved = false
+        if (key is Key.Ch || key == Key.Backspace) dismissClip()
         session.beforeKey(key)
         val fix = autoFixFor(key)
         if (Diag.enabled && key is Key.Ch) traceKey(key, fix != null, "before")
@@ -398,13 +402,15 @@ class KeyboardPresenter(
     // ------------------------------------------------------------------ R20a: the copied text as the first box
 
     /** The copy to offer now (fresh, not already pasted from the strip, not a password box), or null. */
-    private fun clipChipNow(): app.kestrel.core.clipboard.ClipItem? {
+    private fun clipChipNow(): ClipOffer? {
         if (!clipOn) return null
         val c = clipChipSource() ?: return null
         return if (c.at == clipUsedAt) null else c
     }
     /** One line for the box: the copy with its line breaks and runs of spaces squeezed (the view shortens it to fit). */
-    private fun clipLabel(c: app.kestrel.core.clipboard.ClipItem): String = c.text.trim().replace(Regex("\\s+"), " ").take(160)
+    private fun clipLabel(c: ClipOffer): String =
+        if (c.sensitive || controller.field.kind == FieldKind.PASSWORD) "\u2022".repeat(minOf(c.text.length, 16))           // a secret (a password manager's copy, or a password box) is shown as dots, and still pastes
+        else c.text.trim().replace(Regex("\\s+"), " ").take(200)
 
     /** Suggestions are off: the strip still offers the copy (and nothing else) where a word starts. */
     private fun showClipOnly() {
@@ -424,8 +430,14 @@ class KeyboardPresenter(
         pasteText(c.text)
     }
 
+    override fun onClipChipLong() { dismissClip(); refreshSuggestions() }
+
+    /** The copy that is on the strip is not offered again (typing, deleting, gliding, a long press): a NEW copy, even of the same text, brings it back. */
+    private fun dismissClip() { clipShown?.let { clipUsedAt = it.at; clipShown = null } }
+
     override fun onGlideMove(xs: FloatArray, ys: FloatArray, count: Int) {
         if (!glideOn) return
+        dismissClip()
         userMoved = false; editWord = null
         suggestSeq++; latest = null                                                        // a glide began: no tap suggestion may land on the strip now
         val (p2, p1) = session.context()
@@ -496,7 +508,7 @@ class KeyboardPresenter(
         val right = glideAlts.getOrNull(1) ?: (if (fill.hasNext()) fill.next() else "")
         val mid = next.firstOrNull() ?: ""
         glideNextShown = next.take(3).toSet()
-        view?.showCandidates(listOf(left, mid, right), accent = -1)
+        view?.showCandidates(listOf(left, mid, right), accent = 1)                                   // the middle box carries the accent outline: it is the one that adds a word
     }
 
     /** The middle box was tapped: the glided word stays (and is learned), the predicted word goes in after it, with its space, and counts double like any word taken from the strip. */

@@ -48,6 +48,8 @@ class KeysView(context: Context) : View(context) {
         fun onCandidate(word: String) {}
         /** The first box of the strip holds what the person copied, and it was tapped: paste it (owner R20a). */
         fun onClipChip() {}
+        /** The first box holds the copy and it was PRESSED AND HELD: it goes away (it is not offered again). */
+        fun onClipChipLong() {}
         /** A guess in the strip was PRESSED AND HELD (owner: long press a recommended word to delete it for good). */
         fun onCandidateLong(word: String) {}
         /** The person answered "remove this word for good?" ([yes]) for a word they had held in the strip. */
@@ -171,7 +173,7 @@ class KeysView(context: Context) : View(context) {
     /** A guess in the strip was held: ask to remove it for good (the person confirms with a tap). */
     private val stripHold = Runnable {
         val i = stripDown
-        if (i >= 0 && confirmWord == null && i in cands.indices && !(clipChip && i == 0)) { stripLong = true; haptic(); listener?.onCandidateLong(cands[i]) }
+        if (i >= 0 && confirmWord == null && i in cands.indices) { stripLong = true; haptic(); if (clipChip && i == 0) listener?.onClipChipLong() else listener?.onCandidateLong(cands[i]) }
     }
 
     private val unlight = Runnable { litKey = null; dyn() }
@@ -518,7 +520,7 @@ class KeysView(context: Context) : View(context) {
                 val iw = dp(18f); val ib = RectF(rect.left + dp(4f), rect.centerY() - iw / 2f, rect.left + dp(4f) + iw, rect.centerY() + iw / 2f)
                 drawClipboard(c, ib, cAccent)
                 val tx = rect.left + dp(4f) + iw + dp(2f)
-                c.drawText(TextUtils.ellipsize(w, text, rect.right - tx - dp(6f), TextUtils.TruncateAt.END).toString(), (tx + rect.right - dp(4f)) / 2f, rect.centerY() - (fm.ascent + fm.descent) / 2f, text)
+                c.drawText(TextUtils.ellipsize(w, text, rect.right - tx - dp(6f), TextUtils.TruncateAt.MIDDLE).toString(), (tx + rect.right - dp(4f)) / 2f, rect.centerY() - (fm.ascent + fm.descent) / 2f, text)
                 continue
             }
             c.drawText(TextUtils.ellipsize(w, text, rect.width() - dp(8f), TextUtils.TruncateAt.END).toString(), rect.centerX(), rect.centerY() - (fm.ascent + fm.descent) / 2f, text)

@@ -146,7 +146,7 @@ class KeysService : InputMethodService() {
         super.onStartInputView(editorInfo, restarting)
         root?.clipboard?.close()                                   // a new text box starts on the keys
         root?.applySettings(Settings(this), safeMode)
-        Settings(this).let { st -> if (!safeMode && (st.clipboardHistory || st.suggestCopied)) clips.capture(history = st.clipboardHistory, fromCopy = false) }       // a copy made while the keyboard was not on screen
+        Settings(this).let { st -> if (!safeMode && (st.clipboardHistory || st.suggestCopied)) clips.capture(history = st.clipboardHistory) }       // a copy made while the keyboard was not on screen (it keeps its own time)
         Diag.d("onStartInputView safe=$safeMode floating=${root?.floating}")
         presenter.startInput(editorInfo)
     }

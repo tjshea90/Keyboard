@@ -34,27 +34,28 @@ class ClipboardHost(private val context: Context, private val now: () -> Long = 
      * the keyboard noticed the copy (a copy of the same text again is a new copy only when [fromCopy] says it was a real copy event).
      */
     var latest: ClipItem? = null; private set
+    /** The newest copy was marked sensitive (a password manager sets that): it may be offered masked and pasted, but it is never put in the history. */
+    var latestSensitive = false; private set
 
-    /** The newest copy if it is no older than [ttlMs]. */
-    fun latestFresh(ttlMs: Long): ClipItem? = latest?.takeIf { now() - it.at <= ttlMs }
+    /** The newest copy if it is no older than [ttlMs], with whether it is sensitive; null when there is none or it is too old. */
+    fun latestFresh(ttlMs: Long): ClipOffer? { val c = latest ?: return null; return if (now() - c.at <= ttlMs) ClipOffer(c.text, c.at, latestSensitive) else null }
 
     /**
-     * Takes what the Android clipboard holds now: the newest copy ([latest]) always, the history only when [history] is on. [fromCopy] is true when Android just said the clipboard changed (so the same text copied again is a
-     * new copy), false when the keyboard only looks (it opened: a copy made while it was not running). True when the history list changed.
+     * Takes what the Android clipboard holds now: the newest copy ([latest]) always, the history only when [history] is on and the copy is not sensitive. The copy's time is the clip's own timestamp (API 26), so a copy made
+     * while the keyboard was not running keeps its real age and the same text copied again is a new copy. True when the history list changed.
      */
-    fun capture(history: Boolean = true, fromCopy: Boolean = true): Boolean {
+    fun capture(history: Boolean = true): Boolean {
         ensureLoaded()
         return try {
             val cm = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
             val clip = cm.primaryClip ?: return false
             if (clip.itemCount == 0) return false
             val sensitive = try { clip.description.extras?.getBoolean(SENSITIVE_EXTRA, false) == true } catch (_: Exception) { false }
-            if (sensitive) { latest = null; return false }                                  // a password manager's copy is never offered and never kept
             val text = clip.getItemAt(0).coerceToText(context)?.toString() ?: return false
             if (text.isBlank()) return false
-            val prev = latest
-            if (fromCopy || prev == null || prev.text != text) latest = ClipItem(text, now(), false)
-            if (!history) return false
+            val stamp = try { clip.description.timestamp } catch (_: Exception) { 0L }
+            latest = ClipItem(text, if (stamp > 0L) minOf(stamp, now()) else now(), false); latestSensitive = sensitive
+            if (sensitive || !history) return false                                          // a password manager's copy is never kept in the history
             val changed = store.add(text)
             if (changed) save()
             changed
@@ -63,3 +64,6 @@ class ClipboardHost(private val context: Context, private val now: () -> Long = 
 
     companion object { const val SENSITIVE_EXTRA = "android.content.extra.IS_SENSITIVE" }
 }
+
+/** What the strip may offer as its first box (owner R20a): the copy, when it was made (the clip's own timestamp), and whether it is sensitive (shown as dots, still pasteable). */
+class ClipOffer(val text: String, val at: Long, val sensitive: Boolean)
