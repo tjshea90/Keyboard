@@ -255,7 +255,7 @@ class TouchField(private val keep: Double = 0.998, private val lamConst: Double 
 
 **Evidence.** Ouyang et al. [V S9]: gesture word error 11.51 % -> 9.20 % (about 20 % relative) with post-correction, with the explicit warning about false post-corrections and the advice to restrict by time window and confidence. My simulation (2.5): +0.28 point (normal) and +1.09 (sloppy) at margin 1.0 nat with 0 and 2 spoiled words out of 39 and 155 mended; +0.54 / +1.53 at 0.5 nat with 2 and 7 spoiled.
 
-**Today.** Not built; `research/kestrel-ref/GLIDE_RESEARCH.md` item 7 lists it as NOT built because of surprising edits. R18a (tap a word, see look-alike words) is the manual version and `InputController.replaceWordAround`, `TypingLearner.replaced`, `Alternatives.find` exist.
+**Today.** Not built; `research/kestrel-ref/GLIDE_RESEARCH.md` item 7 lists it as NOT built because of surprising edits. R18a (tap a word, see look-alike words) is the manual version and `InputController.replaceWordAround`, `TypingLearner.replaced`, `Alternatives.find` exist. Since R20b (`docs/STRIP.md`) the strip after a glide is [other guess][predicted next word][other guess]: the next-word box and this technique use the same bigram / trigram tables, but post-correction needs no strip space (it is automatic and one Backspace undoes it).
 
 **Gain.** +0.3 to +1.5 points of words right in running text depending on the finger (cold start; with the personal trigram table in use the rescue set may be smaller, [I]).
 
