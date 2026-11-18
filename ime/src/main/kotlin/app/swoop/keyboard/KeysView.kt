@@ -296,9 +296,15 @@ class KeysView(context: Context) : View(context) {
         layoutKeys()
         c.drawColor(cBg)
         if (!drewOnce) { drewOnce = true; handler.post { onFirstDraw?.invoke() } }
-        for ((i, row) in rows.withIndex()) for ((j, k) in row.withIndex()) { if (k.key != null) drawKey(c, k, rects[i][j], false, i == 0) }
+        if (!blankSlate()) for ((i, row) in rows.withIndex()) for ((j, k) in row.withIndex()) { if (k.key != null) drawKey(c, k, rects[i][j], false, i == 0) }
         if (overlay == null) drawOverlay(c)
     }
+
+    /**
+     * Owner R18e: "for the setting to hide letters on the keyboard, don't even show the blank keys. just make it one solid blank slate". With the setting on, a page that has letter keys draws NO key at all (no shape,
+     * no icon, no lit key): the key area is one solid colour. The keys are still where they were and still type and glide. The symbols and number pages have no letters to hide and show their keys as usual.
+     */
+    private fun blankSlate(): Boolean = hideLetters && rows.any { row -> row.any { isLetter(it) } }
 
     /** The dynamic layer: the lit key, the strip of guesses, the key bubble and the glide trail. Called by the overlay view (or by [onDraw] when there is none). */
     fun drawOverlay(c: Canvas) {
