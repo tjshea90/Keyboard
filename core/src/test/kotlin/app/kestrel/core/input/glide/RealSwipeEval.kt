@@ -102,11 +102,20 @@ class RealSwipeEval {
         println("ln(drawn / ideal length), words of 3+ letters: n=%d mean %.3f (ratio %.2f) sd %.3f  p10 %.3f p50 %.3f p90 %.3f  (decoder: expect ln .92 = -0.083, sigma .16 low / .30 high)".format(lr.size, lr.average(), Math.exp(lr.average()), sd(lr), sorted[sorted.size / 10], sorted[sorted.size / 2], sorted[sorted.size * 9 / 10]))
         // the variants
         if (System.getenv("REAL_DIAG") == "1") diagnose(sw, its)
+        // the same swipes, only the words people use every day (the 5000 commonest of the list): what texting looks like (the corpus itself is encyclopaedia text full of names)
+        val ranked = (0 until lex.size).sortedByDescending { lex.logProb(it) }.take(5000).toHashSet()
+        val common = its.filter { it.lexId in ranked }
+        println("everyday words only (top 5000): n=${common.size}  no ctx ${score(common, base, false)} | ctx ${score(common, base, true)}")
         val want = (System.getenv("REAL_VARIANTS") ?: "none").split(',').map { it.trim() }
         val vit = its.take(System.getenv("REAL_VARIANT_N")?.toIntOrNull() ?: 2500)
+        val cit = common.take(System.getenv("REAL_VARIANT_N")?.toIntOrNull() ?: 2500)
         if (want != listOf("none")) {
-            println("variants on the first ${vit.size} swipes (shipped on the same swipes: no ctx ${score(vit, base, false)} | ctx ${score(vit, base, true)})")
-            for ((name, p) in variants()) if (want == listOf("all") || name in want) println("%-34s no ctx %s | ctx %s".format(name, score(vit, p, false), score(vit, p, true)))
+            val chosen = variants().filter { want == listOf("all") || it.first in want }
+            val pool = java.util.concurrent.Executors.newFixedThreadPool((System.getenv("REAL_THREADS")?.toIntOrNull() ?: Runtime.getRuntime().availableProcessors()).coerceAtLeast(1))
+            val jobs = (listOf("SHIPPED" to base) + chosen).map { (name, p) -> pool.submit<String> { "%-34s all(ctx) %s | everyday(ctx) %s".format(name, score(vit, p, true), score(cit, p, true)) } }
+            println("variants on the first ${vit.size} swipes / ${cit.size} everyday-word swipes, with the word before as context:")
+            for (j in jobs) println(j.get())
+            pool.shutdown()
         }
     }
 
