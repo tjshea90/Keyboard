@@ -114,7 +114,7 @@ Reading: touch noise explains the "further than 0.8" group (a touch model helps 
 ### 2.3 Headroom inside the word list (`twins.py`, `collide.py`, scratch)
 
 * 22.3 % of the 140 494 words contain a doubled letter; in the 20 000 commonest words they carry 9.6 % of the usage.
-* 2 061 groups of words differ only in doubled letters (to / too / thee-like, of / off, good / god, feel / fell, been / ben, soon / son, as / ass, all / al, but / butt, in / inn). Taking the commonest member every time would be wrong for 0.48 % of usage in the top 20 000 words. That is the ceiling for a doubled-letter cue on a cold, context-free decoder.
+* 2 061 groups of words differ only in doubled letters (the / thee, to / too, of / off, in / inn, good / god, feel / fell, been / ben, soon / son, as / ass, all / al, but / butt). Taking the commonest member every time would be wrong for 0.48 % of usage in the top 20 000 words. That is the ceiling for a doubled-letter cue on a cold, context-free decoder.
 * Words whose ideal shape lies within 0.25 / 0.4 / 0.6 key of a MORE COMMON word with the same first and last letter: 1.9 % / 2.9 % / 6.4 % of the usage in the top 20 000. Examples at 0.4: four > for (0.00, the u lies on the o-r line), our > or (0.00), too > to, off > of, god > good, three > the (0.13), whole > while (0.13), live > love (0.26), lost > list (0.20), sorry > story (0.24), past > part (0.16), bank > back (0.30), soon > son. These are the words for which a path alone cannot decide and a personal prior, a pause at the right letter, or the next word must.
 
 ### 2.4 Position-dependent touch offset (`PosBias.java`, scratch; details in section 8)
