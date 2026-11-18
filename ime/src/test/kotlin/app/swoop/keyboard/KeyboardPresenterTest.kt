@@ -385,4 +385,31 @@ class KeyboardPresenterTest {
         val r = Rig(glidePref = false, extra = { it.putBoolean(Prefs.AUTOCAPS, true) }); for (c in "hi") r.tapLetter(c.toString()); r.tap("."); r.tap("space"); r.tap("A")
         assertEquals("Hi. A", r.text)
     }
+
+    // ------------------------------------------------------------------ R18b: capitals where they make sense
+
+    private fun typeText(r: Rig, text: String) { for (c in text) if (c == ' ') r.tap("space") else r.tapLetter(c.toString()) }
+    private val caps: (android.content.SharedPreferences.Editor) -> Unit = { it.putBoolean(Prefs.AUTOCAPS, true) }
+
+    @Test fun aDayTypedInSmallLettersGetsItsCapitalAndOneBackspaceTakesItBackAndTeachesIt() {
+        val r = Rig(glidePref = false, extra = caps)
+        typeText(r, "see you on monday "); assertEquals("the first word of the box and the day get capitals", "See you on Monday ", r.text)
+        r.tap("\u232B"); assertEquals("one Backspace puts what was typed back", "See you on monday", r.text)
+        r.tap("space"); assertEquals("and it is not capitalised again", "See you on monday ", r.text)
+        assertEquals("the person writes it small now", "", r.host.engine.caseFormOf("monday", "on"))
+        assertEquals("and the same for the next time", "monday", run { typeText(r, "monday "); r.text.removeSuffix(" ").substringAfterLast(' ') })
+    }
+
+    @Test fun capitalsForNamesAreOffWithTheAutoCapitalsSwitchAndInFieldsThatAreNotText() {
+        val off = Rig(glidePref = false, extra = { it.putBoolean(Prefs.AUTOCAPS, false) }); typeText(off, "see you on monday "); assertEquals("see you on monday ", off.text)
+        val url = Rig(glidePref = false, inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_URI, extra = caps); typeText(url, "see monday "); assertEquals("see monday ", url.text)
+    }
+
+    @Test fun aGlidedNameInsideASentenceIsWrittenWithItsCapitalAndTheStripShowsIt() {
+        val words = LexiconFile.build(listOf("hello" to 500L, "monday" to 400L, "sunday" to 300L, "money" to 200L).map { LexiconFile.Entry(it.first, it.second) }, emptyList())
+        val r = Rig(glidePref = true, words = words, extra = caps)
+        r.glide("hello"); assertEquals("Hello ", r.text)
+        r.glide("monday"); assertEquals("a day keeps its capital when glided: ${r.text}", "Hello Monday ", r.text)
+        assertEquals("the strip shows it as it stands", "Monday", r.view.candidatesForTest().first())
+    }
 }
