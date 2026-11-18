@@ -78,7 +78,7 @@ class GlideSession(
         val best = cands[0]
         retypeWatch = false                       // a new glide: its own confirmation handles the deleted one
         confirmPrevious()                         // the glide before this one stays: learn from it first (one thread, in order)
-        val startsHere = InputController.startsSentence(controller.before, controller.selStart)
+        val startsHere = controller.nextWordStartsSentence()
         val inSentence = !startsHere
         val keyboardsForm = controller.caseForm(best.text.lowercase(), controller.previousWord()) != null
         controller.commitGlide(best.text)

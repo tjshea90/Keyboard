@@ -61,6 +61,13 @@ class InputController(editor: EditorBridge, val stats: InputStats = InputStats()
      */
     var caseForm: (String, String?) -> String? = { _, _ -> null }
 
+    /**
+     * Owner R19b (2026-11-18): "if i put a period then deliberately backspace ... do not let the keyboard automatically add a space if i deliberately delete the space". The cursor offset where the owner took away the
+     * space after punctuation with Backspace: no space is put in there again (not for a tapped letter, a glide or a strip word) until the cursor is somewhere else. -1 = none.
+     */
+    private var keepTight = -1
+    private fun tightHere() = keepTight >= 0 && selStart == keepTight && selStart == selEnd
+
     private val pending = Pending()
     /** The editor may still hold a composing region this keyboard lost track of (a failed call, a new session): it is closed before the next edit. */
     private var composingUnknown = false
@@ -88,7 +95,7 @@ class InputController(editor: EditorBridge, val stats: InputStats = InputStats()
     /** A new field got the focus (onStartInput / onStartInputView). Forgets everything about the previous one. */
     fun startInput(info: FieldInfo) {
         field = info
-        composing = null; lastGlide = null; shift = ShiftState.OFF; composingUnknown = true; adopt = 0
+        composing = null; lastGlide = null; shift = ShiftState.OFF; composingUnknown = true; adopt = 0; keepTight = -1
         clearPending("c1"); early.clear(); inlineEditor = false
         selStart = info.initialSelStart; selEnd = info.initialSelEnd
         refresh()
@@ -109,7 +116,9 @@ class InputController(editor: EditorBridge, val stats: InputStats = InputStats()
             autoShift = shift == ShiftState.ONCE
             return
         }
-        if (ed.cursorCapsMode(flags) != 0) { if (shift == ShiftState.OFF) shift = ShiftState.ONCE } else if (shift == ShiftState.ONCE && autoShift) shift = ShiftState.OFF
+        // owner R19a ("sometimes it doesn't capitalize new sentences"): the field's own answer is not trusted alone (web views and custom editors answer "no capitals" whatever the text is): the keyboard's rule counts too
+        val wanted = ed.cursorCapsMode(flags) != 0 || (sentenceCaps && field.kind == FieldKind.TEXT && startsSentence(before, selStart))
+        if (wanted) { if (shift == ShiftState.OFF) shift = ShiftState.ONCE } else if (shift == ShiftState.ONCE && autoShift) shift = ShiftState.OFF
         autoShift = shift == ShiftState.ONCE
     }
     private var autoShift = false
@@ -136,6 +145,7 @@ class InputController(editor: EditorBridge, val stats: InputStats = InputStats()
         // the same selection as believed: usually only the composing region changed; but an app that replaced the text and left the cursor where it was looks the same, so with no own edit outstanding the window is checked
         if (newSelStart == selStart && newSelEnd == selEnd && (!pending.isEmpty() || windowStillTrue())) return true
         if (selStart < 0) {                                           // the first reports after an unknown state are the truth (and the text may have changed with them)
+            keepTight = -1
             if (adopt > 0) adopt--
             selStart = newSelStart; selEnd = newSelEnd; refresh()
             if (composing != null && candStart < 0) composing = null                // the editor no longer shows the word being tapped
@@ -146,7 +156,7 @@ class InputController(editor: EditorBridge, val stats: InputStats = InputStats()
         if (composing != null) ed.finishComposing()
         stats.foreignReports++
         val glide = lastGlide; val wasAt = selStart
-        composing = null; lastGlide = null
+        composing = null; lastGlide = null; keepTight = -1
         clearPending("c3")
         selStart = newSelStart; selEnd = newSelEnd
         refresh()
@@ -208,6 +218,7 @@ class InputController(editor: EditorBridge, val stats: InputStats = InputStats()
     /** The previous character is sentence punctuation that touches a word or a number, and the word is not part of an address, an abbreviation or a number: a space belongs after it. */
     private fun needsAutoSpace(): Boolean {
         if (selStart >= 0 && selStart != selEnd) return false
+        if (tightHere()) return false                                 // the owner deleted this very space on purpose (R19b)
         if (field.kind != FieldKind.TEXT && field.kind != FieldKind.SEARCH) return false
         val n = before.length
         if (n < 2) return false
@@ -217,7 +228,7 @@ class InputController(editor: EditorBridge, val stats: InputStats = InputStats()
         if (!(q.isLetterOrDigit() || q in ")]\"”’'")) return false
         val tok = before.substringAfterLast(' ').substringAfterLast('\n')
         if (tok.any { it == '@' || it == '/' || it == '\\' }) return false
-        if (p == '.') { val core = tok.dropLast(1); if (core.length <= 1 || core.contains('.')) return false }   // e.g, U.S, example.com, a.m
+        if (p == '.') { val core = tok.dropLast(1); if ((core.length <= 1 && core != "I" && core != "i") || core.contains('.')) return false }   // e.g, U.S, example.com, a.m (but "so did I." ends a sentence)
         if (p == ':' && tok.length > 1 && tok.dropLast(1).all { it.isDigit() }) return false           // 10:30
         return true
     }
@@ -299,9 +310,11 @@ class InputController(editor: EditorBridge, val stats: InputStats = InputStats()
             selEnd = selStart; expect(selStart, selEnd)
         } else {
             val n = lastCodePointLength(before)
+            val spaceAfterPunct = n == 1 && before.length >= 2 && before.last() == ' ' && before[before.length - 2] in AUTO_SPACE_AFTER
             if (!ed.sendKey(KeyCodes.DEL)) { resync(); return }
             before = before.dropLast(n)
-            if (n > 0) moveSel(-n)                          // (Backspace at the very start of the text changes nothing and the editor reports nothing: no report to wait for, or the entry would stay and make a later move to the same offset look like ours)
+            if (n > 0) moveSel(-n)
+            if (spaceAfterPunct && selStart >= 0) keepTight = selStart          // R19b: taken away on purpose, so it is not put back where it was                          // (Backspace at the very start of the text changes nothing and the editor reports nothing: no report to wait for, or the entry would stay and make a later move to the same offset look like ours)
         }
         ensureWindow()
     }
@@ -326,9 +339,9 @@ class InputController(editor: EditorBridge, val stats: InputStats = InputStats()
         settle()
         endComposing()
         val form = caseForm(word, previousWord())
-        val w = when (shift) { ShiftState.LOCK -> word.uppercase(); ShiftState.ONCE -> if (form != null && form.first().isUpperCase()) form else (form ?: word).replaceFirstChar { it.uppercase() }; ShiftState.OFF -> form ?: word }
-        val needsLead = before.isNotEmpty() && !before.last().isWhitespace() && before.last() !in NO_SPACE_AFTER
-        val tail = (if (needsLead) " " else "") + w + " "
+        val lead = leadForNewWord()
+        val w = when (shiftWithLead(lead)) { ShiftState.LOCK -> word.uppercase(); ShiftState.ONCE -> if (form != null && form.first().isUpperCase()) form else (form ?: word).replaceFirstChar { it.uppercase() }; ShiftState.OFF -> form ?: word }
+        val tail = lead + w + " "
         if (!commit(tail)) return
         stats.glides++
         lastGlide = GlideTail(tail, w)
@@ -371,7 +384,8 @@ class InputController(editor: EditorBridge, val stats: InputStats = InputStats()
         val c = composing
         val stem = wordBeforeCursor() ?: ""
         var w = word
-        if (stem.isEmpty()) w = when (shift) { ShiftState.LOCK -> w.uppercase(); ShiftState.ONCE -> w.replaceFirstChar { it.uppercase() }; ShiftState.OFF -> w }
+        val lead = if (c == null && stem.isEmpty()) leadForNewWord() else ""
+        if (stem.isEmpty()) w = when (shiftWithLead(lead)) { ShiftState.LOCK -> w.uppercase(); ShiftState.ONCE -> w.replaceFirstChar { it.uppercase() }; ShiftState.OFF -> w }
         val s0 = selStart; val e0 = selEnd
         beginBatch()
         var ok = true
@@ -382,8 +396,7 @@ class InputController(editor: EditorBridge, val stats: InputStats = InputStats()
             ok = verifyBefore(stem) && ed.deleteSurrounding(stem.length, 0)
             if (ok) { before = before.dropLast(stem.length); moveSel(-stem.length); ok = commit(w) }
         } else {
-            val needsLead = before.isNotEmpty() && !before.last().isWhitespace() && before.last() !in NO_SPACE_AFTER
-            ok = commit((if (needsLead) " " else "") + w)
+            ok = commit(lead + w)
         }
         if (ok) ok = commit(" ")
         endBatch(s0, e0)
@@ -569,6 +582,30 @@ class InputController(editor: EditorBridge, val stats: InputStats = InputStats()
         return second to last
     }
 
+    // ------------------------------------------------------------------------------------------------------------ the space before a new word, and the capital after it (R19a, R19b)
+
+    /** The space a word put in at the cursor now (a glide, a strip word) brings along: one unless the text already ends in space or an opening mark, and unless the owner took this very space away on purpose (R19b). */
+    private fun leadForNewWord(): String {
+        val last = before.lastOrNull() ?: return ""
+        if (last.isWhitespace() || last in NO_SPACE_AFTER) return ""
+        if (last in AUTO_SPACE_AFTER && tightHere()) return ""
+        return " "
+    }
+
+    /** The keyboard's own capitals apply here: the setting is on and this is a plain text box (the field's own request is [autoCaps]'s business). */
+    private fun ownCapsApply() = autoCapsOn && field.kind == FieldKind.TEXT && (sentenceCaps || field.capsFlags != 0)
+
+    /** The shift state a word starting after [lead] is written in: a full stop and the space that comes with the word make Shift once (owner R19a: "once i put a period, it should add a space and capitalize the next letter"). */
+    private fun shiftWithLead(lead: String): ShiftState =
+        if (shift == ShiftState.OFF && lead.isNotEmpty() && ownCapsApply() && startsSentence(before + lead, if (selStart >= 0) selStart + lead.length else -1)) ShiftState.ONCE else shift
+
+    /** True when a word put in at the cursor now (typed, glided or picked) begins a sentence: the text before it ends a sentence, counting the space a glide or a strip word adds after a full stop that touches the word before. */
+    fun nextWordStartsSentence(): Boolean {
+        if (selStart >= 0 && selStart != selEnd) return false
+        val lead = leadForNewWord()
+        return startsSentence(before + lead, if (selStart >= 0) selStart + lead.length else -1)
+    }
+
     // ------------------------------------------------------------------------------------------------------------ internals
 
     private fun typeComposing(t: String) {
@@ -730,7 +767,9 @@ class InputController(editor: EditorBridge, val stats: InputStats = InputStats()
             val last = t.last()
             if (last != '.' && last != '!' && last != '?' && last != '\u2026') return false
             if (last == '.') {
-                val tok = t.substringAfterLast(' ').substringAfterLast('\n').substringAfterLast('\t').trimStart { it in "\"'\u201C\u2018([{" }.lowercase()
+                val raw = t.substringAfterLast(' ').substringAfterLast('\n').substringAfterLast('\t').trimStart { it in "\"'\u201C\u2018([{" }
+                val tok = raw.lowercase()
+                if (raw == "I." || raw == "i.") return true                   // the pronoun ends a sentence ("so did I."); any other single letter is an initial
                 if (tok in ABBREVIATIONS) return false
                 val parts = tok.split('.').filter { it.isNotEmpty() }
                 if (parts.isNotEmpty() && parts.all { it.length == 1 && it[0].isLetter() }) return false          // an initial (j.) or dotted letters (u.s., a.m.)
