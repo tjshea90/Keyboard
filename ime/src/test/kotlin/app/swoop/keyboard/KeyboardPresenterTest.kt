@@ -368,6 +368,47 @@ class KeyboardPresenterTest {
         val chips = r.view.candidatesForTest(); assertTrue("no lowercase pronoun on the strip: $chips", chips.none { it == "i'm" || it == "i" })
     }
 
+    // ------------------------------------------------------------------ R20b (owner 2026-11-18): after a glide the strip is [other guess] [NEXT word] [other guess]
+
+    private val pairedList = LexiconFile.build(
+        listOf("for" to 900L, "fir" to 300L, "fur" to 100L, "hello" to 500L, "world" to 800L, "there" to 700L, "you" to 600L).map { LexiconFile.Entry(it.first, it.second) },
+        listOf(LexiconFile.Pair("hello", "world", 400L), LexiconFile.Pair("hello", "there", 300L), LexiconFile.Pair("hello", "you", 200L)),
+    )
+
+    @Test fun afterAGlideTheMiddleBoxIsTheNextWordAndTheSidesAreOtherGuesses() {
+        val r = Rig(suggest = true, words = pairedList); r.glide("for")
+        assertEquals("for ", r.text)
+        val chips = r.view.candidatesForTest()
+        assertEquals("three boxes: $chips", 3, chips.size)
+        assertTrue("the middle is empty or already a prediction, never the glided word: $chips", chips[1] != "for")
+        val g = Rig(suggest = true, words = pairedList); g.glide("hello")
+        val c = g.view.candidatesForTest()
+        assertEquals("the predicted next word is in the middle: $c", "world", c[1]); assertTrue("the glided word is not offered again: $c", c.none { it == "hello" })
+        assertTrue("the sides are other guesses of the glide (or empty): $c", c[0] != "world" && c[2] != "world")
+    }
+
+    @Test fun tappingTheMiddleBoxPutsTheNextWordInAfterTheGlidedWord() {
+        val r = Rig(suggest = true, words = pairedList); r.glide("hello")
+        val (x, y) = r.view.chipCenterForTest(1)!!
+        r.ev(MotionEvent.ACTION_DOWN, x, y); r.ev(MotionEvent.ACTION_UP, x, y)
+        assertEquals("hello world ", r.text)
+        assertNull("the glide is confirmed, nothing is left to replace", r.presenter.controller.lastGlide)
+    }
+
+    @Test fun tappingASideBoxStillReplacesTheGlidedWordAndTheMiddleFollowsTheNewWord() {
+        val r = Rig(suggest = true, words = pairedList); r.glide("for")
+        val chips = r.view.candidatesForTest(); val side = chips.indices.filter { it != 1 && chips[it].isNotEmpty() }.firstOrNull() ?: return
+        val picked = chips[side]; val (x, y) = r.view.chipCenterForTest(side)!!
+        r.ev(MotionEvent.ACTION_DOWN, x, y); r.ev(MotionEvent.ACTION_UP, x, y)
+        assertEquals("$picked ", r.text)
+        assertTrue("the strip no longer offers what is in the text: ${r.view.candidatesForTest()}", r.view.candidatesForTest().none { it == picked })
+    }
+
+    @Test fun withSuggestionsOffTheStripAfterAGlideIsTheOldList() {
+        val r = Rig(suggest = false, words = pairedList); r.glide("hello")
+        assertEquals("hello", r.view.candidatesForTest().first())
+    }
+
     @Test fun twoQuickSpacesMakeAFullStopAndTheSwitchTurnsItOff() {
         val r = Rig(glidePref = false); for (c in "hello") r.tap(c.toString()); r.tap("space"); r.tap("space")
         assertEquals("hello. ", r.text)
