@@ -58,8 +58,10 @@ class FloatingMathTest {
         assertEquals(500, b.width); assertEquals("the right edge (1000) stays", 500, b.left); assertEquals(280, b.height)
         val c = FloatingMath.dockedResize(1, 300, 600, 400, 300, 0, 1000, 500, 280, 600)
         assertEquals(900, c.width); assertEquals("a keyboard that would run off the right edge is moved left, never cut", 100, c.left)
-        val d = FloatingMath.dockedResize(1, 0, 1000, 700, 0, 0, 1000, 500, 280, 600)
-        assertEquals("a keyboard already taller than the cap is not cut by a mere touch", 700, d.height)
+        // (a keyboard that already is taller than the cap, a phone held sideways, is not cut by a mere touch: KeyboardRoot passes maxOf(its height when the drag began, the cap) as maxH)
+        val d = FloatingMath.dockedResize(1, 0, 1000, 700, 0, 0, 1000, 500, 280, maxOf(700, 600))
+        assertEquals(700, d.height)
+        assertEquals("but it cannot grow any more", 700, FloatingMath.dockedResize(1, 0, 1000, 700, 0, -50, 1000, 500, 280, maxOf(700, 600)).height)
     }
 
     @Test fun aFingerHeldStillResizesNothing() {
