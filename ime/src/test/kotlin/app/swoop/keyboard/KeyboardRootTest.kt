@@ -32,8 +32,9 @@ class KeyboardRootTest {
     private val sh get() = app.resources.displayMetrics.heightPixels
 
     private class Calls : KeyboardRoot.Host {
-        val modes = ArrayList<Boolean>(); var geometry = 0
+        val modes = ArrayList<Boolean>(); var geometry = 0; val tall = ArrayList<Boolean>()
         override fun modeChanged(floating: Boolean) { modes.add(floating) }
+        override fun windowTall(tall: Boolean) { this.tall.add(tall) }
         override fun geometryChanged() { geometry++ }
     }
 
@@ -44,9 +45,9 @@ class KeyboardRootTest {
         layout(r)
         return r to c
     }
-    /** What the input method window does: the window is as tall as the screen while floating, as the keyboard while docked. */
+    /** What the input method window does: the window is as tall as the screen while floating (or while a docked height drag needs room to grow), as the keyboard while docked. */
     private fun layout(r: KeyboardRoot) {
-        val floating = r.floating
+        val floating = r.windowTall
         r.measure(View.MeasureSpec.makeMeasureSpec(sw, View.MeasureSpec.EXACTLY), View.MeasureSpec.makeMeasureSpec(sh, if (floating) View.MeasureSpec.EXACTLY else View.MeasureSpec.AT_MOST))
         r.layout(0, 0, r.measuredWidth, r.measuredHeight)
     }
@@ -334,5 +335,88 @@ class KeyboardRootTest {
             val fin = r.panelRect()
             assertTrue("corner $n: laid out where the picture was (${last}) -> $fin", Math.abs(fin.width() - last!!.width()) <= 2 && Math.abs(fin.height() - last.height()) <= 3 && Math.abs(fin.left - last.left) <= 2 && Math.abs(fin.bottom - last.bottom) <= 3 && Math.abs(fin.top - last.top) <= 3)
         }
+    }
+
+    // ------------------------------------------------------------------ R19c: resize the docked keyboard both ways (owner 2026-11-18)
+
+    private fun arrowY(r: KeyboardRoot): Float { val p = r.panelRect(); return p.top + r.grip.top + r.grip.height / 2f }
+    private val ph get() = ViewGroup.LayoutParams.WRAP_CONTENT
+
+    @Test fun draggingAnArrowUpAndInwardsMakesTheDockedKeyboardTallerAndNarrowerAndStaysOnTheBottom() {
+        val (r, c) = root(); val p = r.panelRect(); val y = arrowY(r); val h0 = p.height(); val keysH0 = r.keys.height
+        touch(r, MotionEvent.ACTION_DOWN, p.right - 20 * dp, y)
+        touch(r, MotionEvent.ACTION_MOVE, p.right - 60 * dp, y - 30 * dp); touch(r, MotionEvent.ACTION_MOVE, p.right - 120 * dp, y - 90 * dp)
+        assertTrue("the window is the whole screen so it can grow upwards", r.windowTall); assertEquals(listOf(true), c.tall)
+        val shown = r.panelRect()
+        assertTrue("taller while dragging: ${shown.height()} vs $h0", shown.height() > h0 + 40 * dp); assertTrue("narrower too: ${shown.width()}", shown.width() < sw - 80 * dp)
+        assertEquals("the bottom edge stays on the bottom of the screen", sh, shown.bottom); assertEquals("the left edge stays", 0, shown.left)
+        assertEquals("only a picture meanwhile: nothing was laid out again", keysH0, r.keys.height)
+        touch(r, MotionEvent.ACTION_UP, p.right - 120 * dp, y - 90 * dp)
+        assertFalse("the window is the keyboard's height again", r.windowTall); assertEquals(listOf(true, false), c.tall)
+        val q = r.panelRect()
+        assertEquals("laid out as the picture showed", shown.height().toFloat(), q.height().toFloat(), 2f); assertEquals(shown.width(), q.width()); assertEquals(0, q.left)
+        assertEquals("on the bottom edge of its window", r.height, q.bottom); assertTrue("the keys really are taller: ${r.keys.height} vs $keysH0", r.keys.height > keysH0 + 30 * dp)
+        assertTrue(r.squeezed); assertTrue(Settings(app).dockH > 1000); assertEquals(Math.round(q.width() * 1000f / sw), Settings(app).dockFrac); assertTrue("the glide decoder is told", c.geometry > 0)
+    }
+
+    @Test fun draggingAnArrowStraightUpMakesAFullWidthKeyboardTallerAndDownShorter() {
+        val (r, _) = root(); val p = r.panelRect(); val y = arrowY(r); val h0 = p.height()
+        touch(r, MotionEvent.ACTION_DOWN, p.left + 20 * dp, y)
+        touch(r, MotionEvent.ACTION_MOVE, p.left + 20 * dp, y - 40 * dp); touch(r, MotionEvent.ACTION_MOVE, p.left + 20 * dp, y - 100 * dp); touch(r, MotionEvent.ACTION_UP, p.left + 20 * dp, y - 100 * dp)
+        val tall = r.panelRect(); assertEquals("still full width", sw, tall.width()); assertTrue("taller: ${tall.height()} vs $h0", tall.height() > h0 + 50 * dp); assertFalse(r.squeezed)
+        // and down again (the arrow on the other side this time)
+        val y2 = arrowY(r)
+        touch(r, MotionEvent.ACTION_DOWN, tall.right - 20 * dp, y2)
+        touch(r, MotionEvent.ACTION_MOVE, tall.right - 20 * dp, y2 + 40 * dp); touch(r, MotionEvent.ACTION_MOVE, tall.right - 20 * dp, y2 + 150 * dp); touch(r, MotionEvent.ACTION_UP, tall.right - 20 * dp, y2 + 150 * dp)
+        val short = r.panelRect(); assertTrue("shorter than before: ${short.height()} vs ${tall.height()}", short.height() < tall.height() - 50 * dp); assertEquals(sw, short.width())
+        assertTrue("never below the lowest rows: ${Settings(app).dockH}", Settings(app).dockH >= 700)
+    }
+
+    @Test fun theHeightStopsAtItsLimitsAndNeverFillsTheScreen() {
+        val (r, _) = root(); val p = r.panelRect(); val y = arrowY(r)
+        touch(r, MotionEvent.ACTION_DOWN, p.right - 20 * dp, y); touch(r, MotionEvent.ACTION_MOVE, p.right - 20 * dp, y - 40 * dp); touch(r, MotionEvent.ACTION_MOVE, p.right - 20 * dp, y - 5000 * dp); touch(r, MotionEvent.ACTION_UP, p.right - 20 * dp, y - 5000 * dp)
+        val q = r.panelRect(); assertTrue("at most 60 % of the screen: ${q.height()} of $sh", q.height() <= 0.6f * sh + 2); assertTrue(Settings(app).dockH <= 1800)
+        val z = arrowY(r)
+        touch(r, MotionEvent.ACTION_DOWN, q.right - 20 * dp, z); touch(r, MotionEvent.ACTION_MOVE, q.right - 20 * dp, z + 40 * dp); touch(r, MotionEvent.ACTION_MOVE, q.right - 20 * dp, z + 5000 * dp); touch(r, MotionEvent.ACTION_UP, q.right - 20 * dp, z + 5000 * dp)
+        val s2 = r.panelRect(); assertTrue("some keyboard is left: ${s2.height()}", s2.height() > 100 * dp); assertEquals(700, Settings(app).dockH)
+    }
+
+    @Test fun aLittleDriftWhileSqueezingSidewaysChangesNeitherTheHeightNorTheWindow() {
+        val (r, c) = root(); val p = r.panelRect(); val y = arrowY(r); val h0 = p.height()
+        touch(r, MotionEvent.ACTION_DOWN, p.right - 20 * dp, y)
+        for (i in 1..20) touch(r, MotionEvent.ACTION_MOVE, p.right - 20 * dp - i * 8 * dp, y - minOf(i, 6) * 1.5f * dp)         // the finger wanders 9 dp up while it goes 160 dp inwards
+        assertFalse("the window stays the keyboard's own", r.windowTall); assertTrue(c.tall.isEmpty())
+        touch(r, MotionEvent.ACTION_UP, p.right - 180 * dp, y - 9 * dp)
+        assertEquals("the height is as it was", h0, r.panelRect().height()); assertTrue(r.squeezed); assertEquals(1000, Settings(app).dockH)
+    }
+
+    @Test fun theFullSizePillBringsBackTheHeightToo() {
+        val (r, c) = root { it.putInt(Prefs.DOCK_H, 1500) }
+        assertTrue("a taller keyboard offers the way back, though it is full width", r.gripCanRestore()); assertFalse(r.squeezed)
+        val tall = r.panelRect().height(); val (x, y) = gripCentre(r); val g0 = c.geometry
+        touch(r, MotionEvent.ACTION_DOWN, x, y); touch(r, MotionEvent.ACTION_UP, x, y)
+        assertTrue("shorter again: ${r.panelRect().height()} vs $tall", r.panelRect().height() < tall - 30 * dp); assertEquals(1000, Settings(app).dockH); assertFalse(r.gripCanRestore()); assertTrue(c.geometry > g0)
+    }
+
+    @Test fun aDoubleTapOnTheBarAlsoRestoresTheHeight() {
+        val (r, _) = root { it.putInt(Prefs.DOCK_H, 800); it.putInt(Prefs.DOCK_FRAC, 700) }
+        assertTrue(r.gripCanRestore()); val q = r.panelRect(); val cy = q.top + r.grip.top + r.grip.height / 2f; val cx = q.left + 30 * dp           // (beside the pill: a single tap on the pill restores at once)
+        touch(r, MotionEvent.ACTION_DOWN, cx, cy); touch(r, MotionEvent.ACTION_UP, cx, cy); touch(r, MotionEvent.ACTION_DOWN, cx, cy); touch(r, MotionEvent.ACTION_UP, cx, cy)
+        assertFalse(r.gripCanRestore()); assertEquals(1000, Settings(app).dockH); assertEquals(1000, Settings(app).dockFrac)
+    }
+
+    @Test fun theSavedHeightComesBackWhenTheKeyboardOpensAgainAndFloatingKeepsItsOwnHeight() {
+        val (r, _) = root { it.putInt(Prefs.DOCK_H, 1400) }
+        val h = r.panelRect().height(); val (p, _) = root { it.putInt(Prefs.DOCK_H, 1000) }
+        assertTrue("1.4 rows are taller than 1.0: $h vs ${p.panelRect().height()}", h > p.panelRect().height() + 40 * dp)
+        val (f, _) = root { it.putInt(Prefs.DOCK_H, 1400); it.putBoolean(Prefs.FLOATING, true); it.putInt(Prefs.FLOAT_H_MUL, 1000) }
+        assertTrue(f.floating); assertEquals("the floating keyboard has its own height setting", 1f, f.keys.floatMul, 0.001f)
+    }
+
+    @Test fun aPinchKeepsTheHeight() {
+        val (r, _) = root { it.putInt(Prefs.DOCK_H, 1300) }; val p = r.panelRect(); val y = arrowY(r); val h0 = p.height()
+        two(r, MotionEvent.ACTION_DOWN, 0, 40f * dp, y, 40f * dp, y); two(r, MotionEvent.ACTION_POINTER_DOWN, 1, 40f * dp, y, 372f * dp, y); two(r, MotionEvent.ACTION_MOVE, 0, 120f * dp, y, 290f * dp, y)
+        two(r, MotionEvent.ACTION_POINTER_UP, 1, 120f * dp, y, 290f * dp, y)
+        assertEquals("the pinch squeezed the width only", h0, r.panelRect().height()); assertTrue(r.squeezed); assertEquals(1300, Settings(app).dockH)
     }
 }
