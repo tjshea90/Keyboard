@@ -13,7 +13,8 @@ adb shell settings put global hide_error_dialogs 1
 echo "Android $(adb shell getprop ro.build.version.release | tr -d '\r') (API $(adb shell getprop ro.build.version.sdk | tr -d '\r')), $(adb shell getprop ro.product.model | tr -d '\r')"
 adb install -r -t "$APK" >/dev/null 2>&1 && echo "installed $PKG" || { echo "::error::install failed"; exit 1; }
 adb logcat -c
-adb shell am start -n "$PKG/app.swoop.keyboard.SetupActivity" --ez probe true       # (the exported screen; adb cannot start the non-exported Diagnostics one: "not exported from uid") >"$OUT/am-start.txt" 2>&1 || true
+# (the exported Setup screen; adb cannot start the non-exported Diagnostics one: "not exported from uid")
+adb shell am start -n "$PKG/app.swoop.keyboard.SetupActivity" --ez probe true >"$OUT/am-start.txt" 2>&1 || true
 cat "$OUT/am-start.txt"
 done=0
 for i in $(seq 1 90); do          # up to 3 minutes: the probe has per-step time limits
