@@ -216,8 +216,8 @@ class KeysView(context: Context) : View(context) {
 
     /** The field being edited: which bottom row / keypad, and what the action key says. */
     fun setField(newKind: FieldKind, newActionLabel: String, newPad: Pad = Pad.of(newKind)) {
-        if (kind == newKind && actionLabel == newActionLabel && pad == newPad) return
-        kind = newKind; actionLabel = newActionLabel; pad = newPad; page = Page.LETTERS; rebuildRows()
+        if (kind == newKind && actionLabel == newActionLabel && numberPad == newPad) return
+        kind = newKind; actionLabel = newActionLabel; numberPad = newPad; page = Page.LETTERS; rebuildRows()
     }
 
     /** Glide typing on or off (off in password fields: the guesses would show what is being typed). Switching it changes the height: the strip of guesses sits above the keys. */
