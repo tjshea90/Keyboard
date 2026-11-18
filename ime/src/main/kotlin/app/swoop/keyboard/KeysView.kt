@@ -212,7 +212,7 @@ class KeysView(context: Context) : View(context) {
     fun setSuggestionsEnabled(on: Boolean) { if (suggestionsEnabled != on) { suggestionsEnabled = on; if (!on && !glideEnabled) { cands = emptyList(); gn = 0 }; rectsW = -1; requestLayout(); invalidate() } }
 
     /**
-     * The guesses in the strip, left to right. [accent] is the box that gets the accent outline (the one a Space would take): the first by default, none (-1) after a glide, where the middle box is the NEXT word and the others
+     * The guesses in the strip, left to right. [accent] is the box that gets the accent outline (the one a Space would take): the first by default, the middle one after a glide, where that box is the NEXT word and the others
      * replace the glided one (owner R20b). An empty string is a box that is not filled yet: nothing is drawn there and it takes no touch.
      */
     fun showCandidates(words: List<String>, accent: Int = 0, clip: Boolean = false) { cands = words; accentChip = accent; clipChip = clip && words.isNotEmpty(); noWordUntil = 0L; dyn() }

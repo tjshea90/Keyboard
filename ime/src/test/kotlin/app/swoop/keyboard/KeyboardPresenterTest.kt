@@ -9,7 +9,6 @@ import android.view.View
 import android.view.inputmethod.BaseInputConnection
 import android.view.inputmethod.EditorInfo
 import android.widget.EditText
-import app.kestrel.core.clipboard.ClipItem
 import app.kestrel.core.input.Key
 import app.kestrel.core.input.glide.EmojiMap
 import app.kestrel.core.input.glide.LexiconFile
@@ -416,7 +415,7 @@ class KeyboardPresenterTest {
 
     // ------------------------------------------------------------------ R20a (owner 2026-11-18): what was just copied is the first box of the strip
 
-    private fun Rig.copied(text: String, at: Long = 1_000L) { presenter.clipChipSource = { ClipItem(text, at, false) }; presenter.onClipboardChanged() }
+    private fun Rig.copied(text: String, at: Long = 1_000L, sensitive: Boolean = false) { presenter.clipChipSource = { ClipOffer(text, at, sensitive) }; presenter.onClipboardChanged() }
 
     @Test fun whatWasJustCopiedIsTheFirstBoxAndOneTapPastesTheWholeCopy() {
         val r = Rig(suggest = true, words = pairedList)
@@ -436,11 +435,21 @@ class KeyboardPresenterTest {
         assertEquals("my copied note", r.view.candidatesForTest().firstOrNull())
     }
 
-    @Test fun theCopyIsFirstAtTheStartOfAWordAndGoesAwayAsSoonAsLettersAreTyped() {
+    @Test fun theCopyIsFirstAtTheStartOfAWordAndGoesAwayForGoodAsSoonAsLettersAreTyped() {
         val r = Rig(suggest = true, words = pairedList); r.copied("my copied note")
         assertEquals("an empty box: the copy is first: ${r.view.candidatesForTest()}", "my copied note", r.view.candidatesForTest().firstOrNull())
         r.tap("h"); assertTrue("typing a letter: the strip is about the word: ${r.view.candidatesForTest()}", r.view.candidatesForTest().none { it == "my copied note" })
-        r.tap("\u232B"); assertEquals("and it comes back when the word is gone", "my copied note", r.view.candidatesForTest().firstOrNull())
+        r.tap("\u232B"); assertTrue("deleting the letter does not bring it back: ${r.view.candidatesForTest()}", r.view.candidatesForTest().none { it == "my copied note" })
+        r.copied("my copied note", at = 2_000L)
+        assertEquals("a NEW copy (even of the same text) is offered again", "my copied note", r.view.candidatesForTest().firstOrNull())
+    }
+
+    @Test fun aLongPressOrAGlideDismissesTheCopy() {
+        val r = Rig(suggest = true, words = pairedList); r.copied("my copied note")
+        r.presenter.onClipChipLong(); assertTrue("held: gone: ${r.view.candidatesForTest()}", r.view.candidatesForTest().none { it == "my copied note" })
+        val g = Rig(suggest = true, words = pairedList); g.copied("another note"); g.glide("hello")
+        g.tap("space"); g.tap("\u232B"); g.tap("space")
+        assertTrue("a glide used the strip: the copy is not offered after it: ${g.view.candidatesForTest()}", g.view.candidatesForTest().none { it == "another note" })
     }
 
     @Test fun aLongOrMultiLineCopyIsShownOnOneLine() {
@@ -449,11 +458,14 @@ class KeyboardPresenterTest {
         r.tapChip(0); assertEquals("the paste keeps the line breaks", "first line\n\n   second   line", r.text)
     }
 
-    @Test fun theCopyIsOfferedWithSuggestionsOffTooButNeverInAPasswordBoxOrWhenSwitchedOff() {
+    @Test fun theCopyIsOfferedWithSuggestionsOffTooAndASecretOneIsDotsThatStillPaste() {
         val off = Rig(suggest = false, words = pairedList); off.copied("copied"); assertEquals(listOf("copied"), off.view.candidatesForTest())
         off.tapChip(0); assertEquals("copied", off.text)
-        val pw = Rig(inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD, suggest = true, words = pairedList); pw.copied("secret")
-        assertTrue("no copy in a password box: ${pw.view.candidatesForTest()}", pw.view.candidatesForTest().none { it == "secret" })
+        val pw = Rig(inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD, suggest = true, words = pairedList); pw.copied("s3cret!")
+        assertEquals("a password box shows dots, never the text: ${pw.view.candidatesForTest()}", listOf("\u2022".repeat(7)), pw.view.candidatesForTest())
+        pw.tapChip(0); assertEquals("and the tap pastes the real copy (the usual way to fill a password from a password manager)", "s3cret!", pw.text)
+        val sens = Rig(suggest = true, words = pairedList); sens.copied("hunter2hunter2", sensitive = true)
+        assertEquals("a copy marked sensitive is dots in any box: ${sens.view.candidatesForTest()}", "\u2022".repeat(14), sens.view.candidatesForTest().first())
         val sw = Rig(suggest = true, words = pairedList, extra = { it.putBoolean(Prefs.CLIP_SUGGEST, false) }); sw.copied("copied")
         assertTrue("the switch is off: ${sw.view.candidatesForTest()}", sw.view.candidatesForTest().none { it == "copied" })
     }
