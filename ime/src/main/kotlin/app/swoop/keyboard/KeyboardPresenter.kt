@@ -36,6 +36,8 @@ class KeyboardPresenter(
     private var capitalizeI = false
     private var doubleSpaceOn = false
     private var emojiOn = false
+    /** R18b: names, days and months typed or glided in small letters are written with their capital (the auto-capitals setting). */
+    private var properOn = false
     private var lastSpaceAt = Long.MIN_VALUE / 2
     private val learner = TypingLearner(controller, { if (learnOn && !safeMode) glide.engine else null }, now)
     /** Bumped for every request to the engine: an answer for an older one is dropped. */
@@ -186,11 +188,13 @@ class KeyboardPresenter(
         suggestOn = !safeMode && st.suggest && field.composingAllowed
         autoFixOn = suggestOn && st.autoFix && field.kind != FieldKind.OMNIBOX            // (never rewrite what is typed into an address box)
         capitalizeI = !safeMode && st.capitalizeI && field.composingAllowed && field.kind != FieldKind.OMNIBOX
+        properOn = !safeMode && st.autoCaps && field.composingAllowed && field.kind != FieldKind.OMNIBOX
         doubleSpaceOn = !safeMode && st.doubleSpace
         emojiOn = !safeMode && st.emojiSuggestions && field.composingAllowed && field.kind != FieldKind.OMNIBOX
         if (emojiOn) loadEmoji()
         controller.autoSpace = !safeMode && st.autoSpace
         controller.autoCapsOn = st.autoCaps; controller.sentenceCaps = st.autoCaps
+        controller.caseForm = { w, prev -> if (properOn) glide.engine.caseFormOf(w, prev) else null }
         latest = null; literalShown = null; noFixFor = null; suggestSeq++
         flow.leaveField(); translator?.cancel(); translateAllowed = !safeMode && field.kind != FieldKind.PASSWORD && field.kind != FieldKind.OMNIBOX && st.translateEnabled
         view?.let {
@@ -269,9 +273,17 @@ class KeyboardPresenter(
         val typed = controller.composing ?: return null
         if (typed == noFixFor) return null
         if (capitalizeI) { val i = capitalizedI(typed); if (i != null) return i }
+        if (properOn) { val p = properNoun(typed); if (p != null) return p }
         if (!autoFixOn) return null
         val l = latest ?: return null
         return if (l.typed == typed) l.autoCorrect else null
+    }
+
+    /** R18b: "monday" -> "Monday", "sarah" -> "Sarah", "iphone" -> "iPhone": a word typed all in small letters that is written with a capital wherever it stands (the case book: the names the person writes with capitals, then the built-in list). */
+    private fun properNoun(typed: String): String? {
+        if (typed.length < 2 || typed != typed.lowercase()) return null
+        val f = glide.engine.caseFormOf(typed, controller.contextBefore(typed).second) ?: return null
+        return f.takeIf { it != typed && it.lowercase() == typed }
     }
 
     /** "i" -> "I", "i'm" -> "I'm", "i'll", "i've", "i'd": the one fix that needs no word list. */
@@ -323,7 +335,7 @@ class KeyboardPresenter(
 
     override fun onCandidate(word: String) {
         if (EmojiMap.isEmoji(word)) { chooseEmoji(word); return }
-        if (controller.lastGlide != null || session.hasCandidates()) session.pick(word)        // (the strip still shows a glide's guesses even when an app rewrote the field)
+        if (controller.lastGlide != null || session.hasCandidates()) session.pick(glideRaw[word] ?: word)        // (the strip still shows a glide's guesses even when an app rewrote the field)
         else if (suggestOn) {
             val typed = controller.wordBeforeCursor()
             val w = if (word == literalShown && typed != null) typed else word      // the typed word in quotes: keep it as it is (and learn it)
@@ -338,7 +350,13 @@ class KeyboardPresenter(
 
     // ------------------------------------------------------------------ GlideSession.Ui -> the view
 
-    override fun showCandidates(words: List<String>) { view?.showCandidates(withEmoji(words, words.firstOrNull())) }
+    /** What the strip shows for a glide's guesses -> the word the decoder gave (a name shows with its capital; tapping it picks the decoder's word). */
+    private var glideRaw: Map<String, String> = emptyMap()
+    override fun showCandidates(words: List<String>) {
+        val shown = if (properOn) words.map { w -> glide.engine.caseFormOf(w.lowercase(), controller.previousWord())?.takeIf { it.lowercase() == w.lowercase() } ?: w } else words
+        glideRaw = if (properOn) words.indices.filter { shown[it] != words[it] }.associate { shown[it] to words[it] } else emptyMap()
+        view?.showCandidates(withEmoji(shown, words.firstOrNull()))
+    }
     override fun clearCandidates() { if (!suggestOn) view?.clearCandidates() }   // (with suggestions on, the next answer replaces the strip: no flicker)
     override fun showNoWord() { view?.showNoWord() }
 

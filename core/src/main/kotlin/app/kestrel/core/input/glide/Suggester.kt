@@ -115,7 +115,7 @@ object Suggester {
             val margin = best.score - (ranked.getOrNull(1)?.score ?: -1e9f)
             if (best.fix && (margin >= AUTO_MARGIN || best.bonus >= 1.5f)) auto = best.text
         }
-        return Suggestions(ranked.take(limit).map { shape(it.text, typed) }, typedKnown, auto?.let { shape(it, typed) }, typed)
+        return Suggestions(ranked.take(limit).map { dress(it.text, typed, pm, prev) }, typedKnown, auto?.let { dress(it, typed, pm, prev) }, typed)
     }
 
     /** What may come next when nothing is being typed: the words the person wrote after the last one or two words, then what the shipped list says follows the last word. */
@@ -141,7 +141,7 @@ object Suggester {
                 for (id in order) { val w = main.text(id).lowercase(); if (w !in out) { out[w] = logP(main, pm, id, null, prevId, prev, prev2, total); shown[w] = main.text(id) } }
             }
         }
-        val words = out.entries.sortedByDescending { it.value }.take(limit).map { shown[it.key] ?: it.key }
+        val words = out.entries.sortedByDescending { it.value }.take(limit).map { dress(shown[it.key] ?: it.key, "", pm, prev) }
         return Suggestions(words, true, null, "")
     }
 
@@ -197,6 +197,14 @@ object Suggester {
         if (keys == null || a !in 'a'..'z' || b !in 'a'..'z') return false
         val dx = keys.cx[a - 'a'] - keys.cx[b - 'a']; val dy = keys.cy[a - 'a'] - keys.cy[b - 'a']
         return dx * dx + dy * dy <= 2.25f * keys.pitch * keys.pitch
+    }
+
+    /** [shape], and a word that is written with a capital wherever it stands (Monday, Sarah: [CaseBook]) shows with it, unless what was typed already asked for its own capitals. */
+    private fun dress(word0: String, typed: String, pm: PersonalModel?, prev: String?): String {
+        val s = shape(word0, typed)
+        if (s != word0) return s
+        val f = CaseBook.form(word0.lowercase(), pm, prev) ?: return s
+        return if (f.lowercase() == word0.lowercase()) f else s
     }
 
     /** The word dressed like what was typed: Capital first letter after a capital, all capitals after capitals. */
