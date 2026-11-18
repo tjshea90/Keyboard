@@ -326,6 +326,34 @@ class InputController(editor: EditorBridge, val stats: InputStats = InputStats()
         ensureWindow()
     }
 
+    /**
+     * Owner R23a: Backspace held long enough deletes a WHOLE WORD per repeat ([app.kestrel.core.input.BackspaceRepeat]): the spaces before the cursor and the word (letters, digits, apostrophes) in front of them, or one mark and
+     * the spaces before it. A word still being tapped goes whole; a glide just made goes whole (as one Backspace does); a selection is deleted. Nothing before the cursor in the window: one plain Backspace.
+     */
+    fun deleteWord() {
+        settle()
+        if (composing != null || lastGlide != null || selStart != selEnd) { backspaceInner(); autoCaps(); return }
+        stats.backspaces++
+        revertedCorrection = null
+        val b = before; var i = b.length
+        while (i > 0 && b[i - 1].isWhitespace()) i--
+        if (i > 0) {
+            if (b[i - 1].isLetterOrDigit() || b[i - 1] == '\'') { while (i > 0 && (b[i - 1].isLetterOrDigit() || b[i - 1] == '\'')) i-- }
+            else i -= lastCodePointLength(b.substring(0, i))
+        }
+        val n = b.length - i
+        if (n <= 0) { backspaceInner(); autoCaps(); return }
+        val s0 = selStart; val e0 = selEnd
+        beginBatch()
+        var ok = verifyBefore(b.takeLast(n)) && ed.deleteSurrounding(n, 0)
+        if (ok) { before = before.dropLast(n); moveSel(-n) }
+        endBatch(s0, e0)
+        lastGlide = null; autoTrailAt = -1
+        if (!ok) { resync(); return }
+        ensureWindow()
+        autoCaps()
+    }
+
     /** Enter: the field's own action when it has one, else a real Enter key. The text after it is unknown, so the window is re-read. */
     fun enter() {
         settle()

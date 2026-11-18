@@ -47,6 +47,8 @@ class KeysView(context: Context) : View(context) {
         fun onGlideEnd(xs: FloatArray, ys: FloatArray, count: Int) {}
         /** A guess in the strip was tapped. */
         fun onCandidate(word: String) {}
+        /** Backspace has been held long enough that every repeat takes a whole word (owner R23a). */
+        fun onDeleteWord() {}
         /** The first box of the strip holds what the person copied, and it was tapped: paste it (owner R20a). */
         fun onClipChip() {}
         /** The first box holds the copy and it was PRESSED AND HELD: it goes away (it is not offered again). */
@@ -180,7 +182,16 @@ class KeysView(context: Context) : View(context) {
     }
 
     private val unlight = Runnable { litKey = null; dyn() }
-    private val repeat = object : Runnable { override fun run() { down?.key?.let { listener?.onKey(it) }; handler.postDelayed(this, REPEAT_MS) } }
+    /** When Backspace went down: how long it has been held decides how fast it repeats and when it starts deleting whole words ([BackspaceRepeat], owner R23a). */
+    private var repeatStartAt = 0L
+    private val repeat = object : Runnable {
+        override fun run() {
+            val held = SystemClock.uptimeMillis() - repeatStartAt
+            val k = down?.key
+            if (k != null) { if (k === Key.Backspace && BackspaceRepeat.wordMode(held)) listener?.onDeleteWord() else listener?.onKey(k) }
+            handler.postDelayed(this, BackspaceRepeat.delayAfter(held))
+        }
+    }
     private val hold = Runnable { holdFired() }
     /** The space bar was held (and not slid): the keyboard picker opens (the globe key is gone by default). */
     private val spaceHold = Runnable { if (spaceIsDown && !sliding) { spaceHeld = true; haptic(); dyn(); listener?.onKey(Key.NextKeyboard) } }
@@ -740,7 +751,7 @@ class KeysView(context: Context) : View(context) {
         spaceIsDown = (k?.key as? Key.Ch)?.text == " "; spaceHeld = false
         if (spaceIsDown) handler.postDelayed(spaceHold, SPACE_HOLD_MS)
         if (k != null) { haptic(); click(); if (altOf(k) != null || isSymbolKey(k)) handler.postDelayed(hold, HOLD_MS) }
-        if (k?.key === Key.Backspace) { listener?.onKey(Key.Backspace); handler.postDelayed(repeat, REPEAT_FIRST_MS) }
+        if (k?.key === Key.Backspace) { listener?.onKey(Key.Backspace); repeatStartAt = SystemClock.uptimeMillis(); handler.postDelayed(repeat, BackspaceRepeat.FIRST_MS) }
         downX = x; downY = y
         if (glideEnabled && page == Page.LETTERS && pressedLetter != null) { armed = true; glideDown = k; addPoint(x, y) }
     }
@@ -907,8 +918,7 @@ class KeysView(context: Context) : View(context) {
         const val SLIDE_STEP_DP = 11f
         /** How long a pressed key stays lit. */
         const val FLASH_MS = 130L
-        const val REPEAT_FIRST_MS = 380L
-        const val REPEAT_MS = 70L
+        const val REPEAT_FIRST_MS = BackspaceRepeat.FIRST_MS
         /** Holding a top-row letter this long types its digit. */
         const val HOLD_MS = 420L
         /** Holding the space bar this long (without sliding) opens the keyboard picker. */

@@ -262,6 +262,10 @@ class KeyboardPresenter(
         Diag.d("key $stage letter=${key.text.length == 1 && key.text[0].isLetter()} autoSpace=${controller.autoSpace} composing=${controller.composing != null} fix=$fixed sel=${controller.selStart}/${controller.selEnd} beforeLen=${b.length} lastPunct=${b.isNotEmpty() && b.last() in InputController.AUTO_SPACE_AFTER} lastSpace=${b.isNotEmpty() && b.last() == ' '} shift=${controller.shift} kind=${controller.field.kind} caps=${controller.field.capsFlags}")
     }
 
+    /** A held Backspace now deletes a word per repeat (owner R23a): the same handling as one Backspace, with the word-sized delete. */
+    private var deleteWordPending = false
+    override fun onDeleteWord() { deleteWordPending = true; try { onKey(Key.Backspace) } finally { deleteWordPending = false } }
+
     override fun onKey(key: Key) {
         userMoved = false
         if (key is Key.Ch || key == Key.Backspace) dismissClip()
@@ -271,7 +275,7 @@ class KeyboardPresenter(
         learner.beforeKey(key, fix)
         when (key) {
             is Key.Ch -> if (fix != null) controller.typeCorrected(fix, key.text) else if (key.text == " " && doubleSpaceOn && clock() - lastSpaceAt < DOUBLE_SPACE_MS && controller.doubleSpace()) { /* ". " is in */ } else controller.type(key.text)
-            Key.Backspace -> controller.backspace()
+            Key.Backspace -> if (deleteWordPending) controller.deleteWord() else controller.backspace()
             Key.Go -> if (!translateEnter()) controller.enter()
             Key.NextKeyboard -> onNextKeyboard()
             Key.Shift -> {
