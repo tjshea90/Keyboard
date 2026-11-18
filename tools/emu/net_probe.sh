@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# net_probe.sh - run by .github/workflows/net-probe.yml INSIDE a booted Android emulator. Starts the keyboard's Diagnostics screen of the DEBUG build with
+# net_probe.sh - run by .github/workflows/emu-smoke.yml (mode net-probe) INSIDE a booted Android emulator. Starts the keyboard's Diagnostics screen of the DEBUG build with
 # probe=true (the debug build only: a release build ignores it), which runs ConnectionProbe: permission, clock, name lookup, connect, secure handshake and a real
 # answer for the fixed word "hello" from MyMemory and Google, on Android's own network stack. The steps arrive in logcat (tag SwoopProbe: stage names and short safe
 # reasons, never typed text). Exit 0 = every step worked; 1 = a step failed or no result came. The log is printed in full and kept in $OUT.

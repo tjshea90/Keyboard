@@ -7,9 +7,14 @@ on:
   workflow_dispatch:
     inputs:
       api:
-        description: 'Android API level of the emulator (29 = the tablet, 36 = Android 16)'
+        description: 'Android API level of the emulator (29 = the tablet, 36 = Android 16); ignored by mode net-probe, which runs both'
         type: string
         default: '29'
+      mode:
+        description: 'smoke = the keyboard smoke test (default). net-probe = R24a: do the translation services answer, through the real engine on a JVM and through the keyboard Diagnostics connection test on Android 10 and 16 emulators (only the two translation hosts, fixed test words)'
+        type: choice
+        options: ['smoke', 'net-probe']
+        default: 'smoke'
 
 permissions:
   contents: read
@@ -20,6 +25,7 @@ concurrency:
 
 jobs:
   smoke:
+    if: ${{ inputs.mode != 'net-probe' }}
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
@@ -51,6 +57,78 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: emu-smoke-${{ inputs.api }}
+          path: emu-out
+          retention-days: 7
+          if-no-files-found: ignore
+
+  # ---- mode net-probe (R24a, 2026-11-18). Registered here because the Actions API dispatches only workflows that exist on the default branch.
+  probe-jvm:
+    if: ${{ inputs.mode == 'net-probe' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-build
+        with:
+          gradle-cache: 'false'
+      - name: Real services through the real engine (JVM; RealServicesCheck is skipped in every normal test run)
+        env:
+          SWOOP_REAL_SERVICES: '1'
+          SWOOP_REAL_OUT: ${{ github.workspace }}/service-check.txt
+        run: |
+          set +e
+          ./gradlew :ime:testDebugUnitTest --tests '*RealServicesCheck*' --console=plain
+          rc=$?
+          [ -f service-check.txt ] && cat service-check.txt >> "$GITHUB_STEP_SUMMARY"
+          [ -f service-check.txt ] && cat service-check.txt
+          exit $rc
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: service-check-jvm
+          path: service-check.txt
+          retention-days: 7
+          if-no-files-found: ignore
+
+  probe-emulator:
+    if: ${{ inputs.mode == 'net-probe' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        api: ['29', '36']
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-build
+        with:
+          gradle-cache: 'false'
+      - name: Build the debug APK
+        run: ./gradlew :ime:assembleDebug --console=plain
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Boot the emulator and run the connection probe (tools/emu/net_probe.sh)
+        uses: reactivecircus/android-emulator-runner@v2.33.0
+        with:
+          api-level: ${{ matrix.api }}
+          arch: x86_64
+          target: default
+          profile: Nexus 7
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -camera-front none
+          script: bash tools/emu/net_probe.sh
+      - name: Keep the probe log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: net-probe-api-${{ matrix.api }}
           path: emu-out
           retention-days: 7
           if-no-files-found: ignore
