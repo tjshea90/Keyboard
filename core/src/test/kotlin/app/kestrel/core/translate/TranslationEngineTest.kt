@@ -80,6 +80,29 @@ class TranslationEngineTest {
         assertFalse(r.why.contains("Hello"))
     }
 
+    @Test fun eachWayAConnectionCanBreakHasItsOwnWordsAndCode() {
+        fun r(k: TransportException.Kind, m: String?) = engine(Fake { _, _ -> throw TransportException(k, m) }).translate("Hello", Translation.Way.TO_MEXICAN)
+        val dropped = r(TransportException.Kind.DROPPED, "SocketException (ECONNRESET, connection reset)")
+        assertEquals(ErrorCode.DROPPED, dropped.code); assertTrue(dropped.why, dropped.why.startsWith("The connection broke while translating (SocketException (ECONNRESET, connection reset))"))
+        val blocked = r(TransportException.Kind.BLOCKED, "SocketException (EPERM, not permitted)")
+        assertEquals(ErrorCode.BLOCKED, blocked.code); assertTrue(blocked.why, blocked.why.startsWith("Android is not letting the keyboard use the network (SocketException (EPERM"))
+        val secure = r(TransportException.Kind.SECURE, "SSLHandshakeException (certificate not trusted)")
+        assertEquals(ErrorCode.SECURE, secure.code); assertTrue(secure.why, secure.why.contains("date and time"))
+        val other = r(TransportException.Kind.OTHER, "IOException")
+        assertEquals(ErrorCode.SERVICE_ERROR, other.code); assertEquals("The translation service could not be reached (IOException). Diagnostics has a connection test.", other.why)
+        assertEquals("no reason in brackets when there is none", "The translation service could not be reached. Diagnostics has a connection test.", r(TransportException.Kind.OTHER, null).why)
+        for (x in listOf(dropped, blocked, secure, other)) assertFalse("never the words", x.why.contains("Hello"))
+    }
+
+    @Test fun theConnectionLogGetsTheReasonButNeverTheWords() {
+        val lines = ArrayList<String>()
+        val e = TranslationEngine(Fake { _, _ -> throw TransportException(TransportException.Kind.DROPPED, "SocketException (connection reset)") }, TranslateLog { s, ms, res -> lines.add("$s|$res") })
+        e.translate("my secret hello", Translation.Way.TO_MEXICAN)
+        assertEquals(2, lines.size) // MyMemory, then Google
+        assertTrue(lines[0], lines[0].contains("failed (DROPPED: SocketException (connection reset))"))
+        for (l in lines) assertFalse(l, l.contains("secret") || l.contains("hello"))
+    }
+
     @Test fun mixedFailureKeepsBothReasons() {
         val f = Fake { u, _ -> if (isMm(u)) HttpReply(429, null, "") else HttpReply(404, null, "") }
         val r = engine(f).translate("Hello", Translation.Way.TO_MEXICAN)

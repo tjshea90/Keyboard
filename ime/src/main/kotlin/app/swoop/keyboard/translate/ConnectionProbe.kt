@@ -105,7 +105,7 @@ object ConnectionProbe {
     }
 
     /** The real road: one tiny translation of [WORD] through the same transport and parser a translation uses. ok = an answer arrived (even "used up"). */
-    private fun answerStep(who: String, host: String, http: Http): ProbeStep {
+    internal fun answerStep(who: String, host: String, http: Http): ProbeStep {
         val t = System.currentTimeMillis()
         val way = Translation.Way.TO_MEXICAN
         return try {
