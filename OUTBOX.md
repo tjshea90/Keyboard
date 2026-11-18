@@ -775,3 +775,7 @@
 >
 > Back to the release: waiting for the build job to finish.
 <!-- sha:0e9457fcd0d5 -->
+
+## 2026-11-18T05:35:13Z
+> Waiting on the 0.7.0-alpha2 build; I'll confirm the Release and record it as soon as it's green.
+<!-- sha:7185aaf0bb7b -->
