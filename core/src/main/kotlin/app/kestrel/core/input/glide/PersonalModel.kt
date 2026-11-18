@@ -8,7 +8,7 @@ package app.kestrel.core.input.glide
  * statistics: a word the person uses a lot gets the probability of a more common word (growing slowly: ten uses make an ordinary word, a hundred a very common one), and a pair the person
  * writes often makes the second word much more likely after the first. Nothing here can take over: the boost has a ceiling and old habits fade (all weights halve when the total gets large).
  */
-class PersonalModel(private val capWords: Int = 6000, private val capPairs: Int = 14000, private val capTriples: Int = 10000, private val capConfusions: Int = 3000, private val recency: Boolean = true) {
+class PersonalModel(private val capWords: Int = 6000, private val capPairs: Int = 14000, private val capTriples: Int = 10000, private val capConfusions: Int = 3000, private val recency: Boolean = true, private val capCases: Int = 2000) {
     private val words = HashMap<String, Float>()
     private val pairs = HashMap<String, Float>()      // "previous word" -> weight
     private val pairTotals = HashMap<String, Float>() // previous word -> weight of everything seen after it
@@ -16,6 +16,8 @@ class PersonalModel(private val capWords: Int = 6000, private val capPairs: Int 
     private val tripleTotals = HashMap<String, Float>() // "second-last last" -> weight of everything seen after that pair
     private val confusions = HashMap<String, Float>()   // "guessed meant" -> how often the keyboard guessed the first and the person meant the second (AV2: learning from corrections)
     private val recent = HashMap<String, Float>()       // word -> how often and how LATELY it was used (every use of any word fades all of them a little: a short memory next to the long one)
+    private val cases = HashMap<String, HashMap<String, Float>>()   // lowercase word -> (the way it was written -> how often): names, places, brands with their capitals, and words the person takes the keyboard's capital back from (R18b)
+    private var caseEntries = 0
     private var total = 0f
 
     /** What this person's glides LOOK like for the words they meant (AX1): kept, saved, faded and forgotten together with the rest of what was learned. */
@@ -113,6 +115,41 @@ class PersonalModel(private val capWords: Int = 6000, private val capPairs: Int 
     /** How often [meant] was meant when [guessed] was the first guess. */
     @Synchronized fun confusionWeight(guessed: String, meant: String): Float = confusions["$guessed $meant"] ?: 0f
     val confusionCount: Int @Synchronized get() = confusions.size
+    val caseCount: Int @Synchronized get() = caseEntries
+
+    /**
+     * [shown] is the way the person wrote a word INSIDE a sentence (not at its start, where a capital says nothing): "Sarah", "iPhone", or "monday" when they took the keyboard's capital back. After [CASE_MIN] such
+     * uses (and not mostly the other way) the word is written that way for them everywhere: [caseForm].
+     */
+    @Synchronized fun addCase(shown: String, weight: Float = 1f) {
+        val lower = shown.lowercase()
+        if (weight <= 0f || norm(lower) != lower) return
+        val m = cases.getOrPut(lower) { HashMap(2) }
+        if (!m.containsKey(shown)) caseEntries++
+        m[shown] = Math.min(MAX_WEIGHT, (m[shown] ?: 0f) + weight)
+        if (caseEntries > capCases) trimCases()
+    }
+
+    /** The way the person writes [lower] (a capital form such as "Sarah"), the empty string when they write it small although the keyboard's list would capitalise it, null when they have no habit yet. */
+    @Synchronized fun caseForm(lower: String): String? {
+        val m = cases[lower] ?: return null
+        val small = m[lower] ?: 0f
+        var best: String? = null; var bw = 0f
+        for ((f, w) in m) if (f != lower && w > bw) { best = f; bw = w }
+        if (best != null && bw >= CASE_MIN && bw >= 1.5f * small) return best
+        if (small >= CASE_MIN && small > 1.5f * bw) return ""
+        return null
+    }
+
+    /** True when the person has any habit recorded for [lower] (the learner then also counts the times they write it small). */
+    @Synchronized fun hasCase(lower: String): Boolean = cases.containsKey(lower)
+
+    private fun trimCases() {
+        val all = ArrayList<Float>(caseEntries); for (m in cases.values) all.addAll(m.values)
+        all.sort(); val cut = all[all.size / 10]
+        val it = cases.entries.iterator()
+        while (it.hasNext()) { val e = it.next(); val i2 = e.value.entries.iterator(); while (i2.hasNext()) { val x = i2.next(); if (x.value <= cut && caseEntries > capCases * 9 / 10) { i2.remove(); caseEntries-- } }; if (e.value.isEmpty()) it.remove() }
+    }
     val tripleCount: Int @Synchronized get() = triples.size
 
     /**
@@ -128,11 +165,13 @@ class PersonalModel(private val capWords: Int = 6000, private val capPairs: Int 
             for ((k, v) in other.triples) triples[k] = Math.max(triples[k] ?: 0f, v)
             for ((k, v) in other.confusions) confusions[k] = Math.max(confusions[k] ?: 0f, v)
             for ((k, v) in other.recent) recent[k] = Math.max(recent[k] ?: 0f, v)
+            for ((lower, m) in other.cases) { val mine = cases.getOrPut(lower) { HashMap(2) }; for ((f, w) in m) { if (!mine.containsKey(f)) caseEntries++; mine[f] = Math.max(mine[f] ?: 0f, w) } }
             patterns.mergeFrom(other.patterns)
         }
         total = 0f; for (v in words.values) total += v
         rebuildTotals()
         if (words.size > capWords || pairs.size > capPairs || triples.size > capTriples) trim()
+        if (caseEntries > capCases) trimCases()
         if (confusions.size > capConfusions) { val cut = confusions.values.sorted()[confusions.size - capConfusions]; val it = confusions.entries.iterator(); while (it.hasNext() && confusions.size > capConfusions) { val e = it.next(); if (e.value < cut) it.remove() } }
         if (total > DECAY_AT) decay()
     }
@@ -181,7 +220,7 @@ class PersonalModel(private val capWords: Int = 6000, private val capPairs: Int 
         return Math.min(MAX_PAIR_TRUST, n / (n + PAIR_HALF))
     }
 
-    @Synchronized fun clear() { words.clear(); pairs.clear(); pairTotals.clear(); triples.clear(); tripleTotals.clear(); confusions.clear(); recent.clear(); total = 0f; patterns.clear() }
+    @Synchronized fun clear() { words.clear(); pairs.clear(); pairTotals.clear(); triples.clear(); tripleTotals.clear(); confusions.clear(); recent.clear(); cases.clear(); caseEntries = 0; total = 0f; patterns.clear() }
 
     // ------------------------------------------------------------------ keeping it small
 
@@ -213,6 +252,8 @@ class PersonalModel(private val capWords: Int = 6000, private val capPairs: Int 
         while (t.hasNext()) { val e = t.next(); e.setValue(e.value * 0.5f); if (e.value < 0.2f) t.remove() }
         val c = confusions.entries.iterator()
         while (c.hasNext()) { val e = c.next(); e.setValue(e.value * 0.7f); if (e.value < 0.2f) c.remove() } // a correction is remembered a little longer than a word count
+        val ci = cases.entries.iterator()
+        while (ci.hasNext()) { val e = ci.next(); val i2 = e.value.entries.iterator(); while (i2.hasNext()) { val x = i2.next(); x.setValue(x.value * 0.5f); if (x.value < 0.2f) { i2.remove(); caseEntries-- } }; if (e.value.isEmpty()) ci.remove() }
         patterns.decay()
         rebuildTotals()
     }
@@ -226,7 +267,7 @@ class PersonalModel(private val capWords: Int = 6000, private val capPairs: Int 
 
     // ------------------------------------------------------------------ saving
 
-    /** One line per entry: `w word weight`, `p previous word weight`, `t second-last last word weight`, `c guessed meant weight`, `r word recency` and `s word confirmations u0 v0 ... u15 v15` (the shape of this person's glides for the word, AX1; a file written before AV2 has only the first two kinds, and an older keyboard skips the lines it does not know). */
+    /** One line per entry: `w word weight`, `p previous word weight`, `t second-last last word weight`, `c guessed meant weight`, `r word recency` and `k word Form weight` (the way a word is written inside a sentence: a name, a place, or small after the keyboard's capital was taken back, R18b), `s word confirmations u0 v0 ... u15 v15` (the shape of this person's glides for the word, AX1; a file written before AV2 has only the first two kinds, and an older keyboard skips the lines it does not know). */
     @Synchronized fun serialize(): String {
         val sb = StringBuilder(words.size * 16 + pairs.size * 24 + triples.size * 32 + confusions.size * 24 + recent.size * 16)
         for ((k, v) in words) sb.append("w ").append(k).append(' ').append(f2(v)).append('\n')
@@ -234,6 +275,7 @@ class PersonalModel(private val capWords: Int = 6000, private val capPairs: Int 
         for ((k, v) in triples) sb.append("t ").append(k).append(' ').append(f2(v)).append('\n')
         for ((k, v) in confusions) sb.append("c ").append(k).append(' ').append(f2(v)).append('\n')
         for ((k, v) in recent) sb.append("r ").append(k).append(' ').append(f3(v)).append('\n')
+        for ((lower, m) in cases) for ((f, w) in m) sb.append("k ").append(lower).append(' ').append(f).append(' ').append(f2(w)).append('\n')
         sb.append(patterns.serialize())
         return sb.toString()
     }
@@ -252,6 +294,8 @@ class PersonalModel(private val capWords: Int = 6000, private val capPairs: Int 
         const val MAX_RECENT = 6f
         const val MAX_TRIPLE_TRUST = 0.8f
         const val TRIPLE_HALF = 3f
+        /** A way of writing a word counts once it was seen this often inside sentences. */
+        const val CASE_MIN = 2f
 
         /** A word as CONTEXT for the next one: like [norm] but one letter is enough ("a", "i" come before many words). */
         fun ctx(word: String): String? {
@@ -288,7 +332,7 @@ class PersonalModel(private val capWords: Int = 6000, private val capPairs: Int 
         fun parse(text: String, capWords: Int = 6000, capPairs: Int = 14000): PersonalModel {
             val m = PersonalModel(capWords, capPairs)
             synchronized(m) {
-                var nw = 0; var np = 0; var nt = 0; var nc = 0; var nr = 0
+                var nw = 0; var np = 0; var nt = 0; var nc = 0; var nr = 0; var nk = 0
                 for (line in text.lineSequence()) {
                     val p = line.trim().split(' ')
                     if (p.size > 3 && p[0] == "s") { m.patterns.parseLine(p); continue } // a shape's last number may be zero or negative: it is not a weight
@@ -299,6 +343,7 @@ class PersonalModel(private val capWords: Int = 6000, private val capPairs: Int 
                         p.size == 4 && p[0] == "p" -> { if (np >= m.capPairs) continue; val a = ctx(p[1]) ?: continue; val b = norm(p[2]) ?: continue; m.pairs["$a $b"] = v; np++ }
                         p.size == 5 && p[0] == "t" -> { if (nt >= m.capTriples) continue; val a = ctx(p[1]) ?: continue; val b = ctx(p[2]) ?: continue; val c = norm(p[3]) ?: continue; m.triples["$a $b $c"] = v; nt++ }
                         p.size == 4 && p[0] == "c" -> { if (nc >= m.capConfusions) continue; val a = norm(p[1]) ?: continue; val b = norm(p[2]) ?: continue; if (a != b) { m.confusions["$a $b"] = v; nc++ } }
+                        p.size == 4 && p[0] == "k" -> { if (nk >= m.capCases) continue; val lower = norm(p[1]) ?: continue; val form = p[2]; if (form.lowercase() != lower || form.length > 24 || !form.all { it.isLetter() || it == '\'' }) continue; val mm = m.cases.getOrPut(lower) { HashMap(2) }; if (!mm.containsKey(form)) { m.caseEntries++; nk++ }; mm[form] = v }
                         p.size == 3 && p[0] == "r" -> { if (nr >= m.capWords) continue; val w = norm(p[1]) ?: continue; m.recent[w] = v; nr++ }
                     }
                 }
