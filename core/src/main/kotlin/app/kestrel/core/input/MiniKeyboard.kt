@@ -203,6 +203,28 @@ class MiniKeyboardModel {
         autoShift()
     }
 
+    /**
+     * A word from the strip that is not a replacement of the glided word (R22: the predicted NEXT word) goes in at the cursor with a space after it, and one before it when the text does not end in one (the same rules as a glide for
+     * the space and the capital). It is not a glide: one Backspace takes one character. False when it does not fit.
+     */
+    fun insertWord(word: String): Boolean {
+        if (word.isEmpty()) return false
+        val base = if (allSelected) "" else before()
+        val rest = if (allSelected) "" else after()
+        val lead = if (smartText) smartLead(base) else (if (base.isNotEmpty() && !base.endsWith(' ')) " " else "")
+        val capital = shift || (smartText && lead.isNotEmpty() && !allSelected && InputController.startsSentence(base + lead, base.length + lead.length))
+        val w0 = if (shiftLock) word.uppercase() else if (capital) word.replaceFirstChar { it.uppercase() } else word
+        val w = if (smartText) InputController.pronounI(w0) else w0
+        val tail = lead + w + " "
+        if (base.length + tail.length + rest.length > MAX_CHARS) return false
+        text = base + tail + rest
+        cursor = base.length + tail.length
+        glideTail = null; allSelected = false
+        shift = shiftLock; keepTight = -1
+        autoShift()
+        return true
+    }
+
     /** The candidate [word] from the strip replaces the word the last glide put in. False when the last thing was not a glide. */
     fun swapGlide(word: String): Boolean {
         val tail = glideTail ?: return false

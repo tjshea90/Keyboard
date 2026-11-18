@@ -77,4 +77,13 @@ class MiniKeyboardSmartTest {
         m.press(Key.ToLetters); assertTrue("and back on the letters the sentence start asks for its capital again", m.shift); m.type("a"); assertEquals("hi. A", m.text)
         val l = model(); l.lockShift(); l.type("ab. "); assertEquals("AB. ", l.text); assertTrue(l.shiftLock)
     }
+
+    @Test fun aPredictedNextWordGoesInAfterTheGlidedWordLikeAnyWord() {
+        val m = model(); m.type("he said "); m.commitGlide("this"); assertTrue(m.insertWord("works")); assertEquals("he said this works ", m.text)
+        m.press(Key.Backspace); assertEquals("it is not a glide: one Backspace takes one character", "he said this works", m.text)
+        val c = model(); c.type("we left."); assertTrue(c.insertWord("then")); assertEquals("we left. Then ", c.text)
+        val i = model(); i.type("well "); assertTrue(i.insertWord("i'm")); assertEquals("well I'm ", i.text)
+        val off = model(false); off.type("say"); assertTrue(off.insertWord("hello")); assertEquals("say hello ", off.text)
+        assertFalse(model().insertWord(""))
+    }
 }
