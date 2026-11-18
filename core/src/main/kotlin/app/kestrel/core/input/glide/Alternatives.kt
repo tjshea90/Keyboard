@@ -24,7 +24,9 @@ object Alternatives {
     const val FIX_STEP = 0.5f
     private const val POOL = 24
     private const val FAR_SHAPE = 3.5f
-    private const val UNKNOWN_NEXT = -9f
+    private const val UNKNOWN_NEXT = -12f
+    /** A tap-model fix is not held to the glide shape beyond this many keys: two swapped letters are a slip of the fingers even when their glide is a long way off. */
+    private const val FIX_SHAPE_CAP = 1.0f
 
     /** Tests: sees every candidate with the parts of its score (shape distance, ln P in context, next-word term, fix bonus). */
     internal var trace: ((String) -> Unit)? = null
@@ -61,7 +63,7 @@ object Alternatives {
             val d = if (shape != null && typedShape != null) Fingerprint.distance(typedShape, shape) else FAR_SHAPE
             val lp = Suggester.contextLogP(main, personal, w, prev, prev2)
             val nx = nextTerm(main, personal, w, next); val fb = if (c.fix) Math.max(0.4f, FIX_BONUS - FIX_STEP * c.rank) else 0f
-            val sc = -SHAPE_W * d + LM_W * lp + NEXT_W * nx + fb
+            val sc = -SHAPE_W * (if (c.fix) Math.min(d, FIX_SHAPE_CAP) else d) + LM_W * lp + NEXT_W * nx + fb
             trace?.invoke("%-10s total %6.2f  shape %.2f lp %6.2f next %6.2f fix %.1f".format(w, sc, d, lp, nx, fb))
             scored.add(w to sc)
         }
