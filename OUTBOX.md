@@ -1104,3 +1104,7 @@
 ## 2026-11-18T23:14:05Z
 > Waiting a little longer for the quick check to finish before I read it.
 <!-- sha:c2b047f9f109 -->
+
+## 2026-11-18T23:17:23Z
+> The release gates for 0.7.0-alpha5 are running (about 11 minutes). One finding to flag in the meantime: the new "Internet access group" check read "OK" on a healthy Android 10, so it will only complain if your tablet is genuinely missing its internet access.
+<!-- sha:437c268822f7 -->
