@@ -1,13 +1,15 @@
-# CHECKPOINT 757 — read me first, then TASKS.md
+# CHECKPOINT 759 — read me first, then TASKS.md
 
-**Written:** 2026-11-18T23:17:04Z · **tests:** all 1 fast checks green (gradle suite: see ship.sh)
-**Branch:** `ccr-2630e41a-palpyu` · **builds on:** `5ac4872` (this checkpoint is the commit after it)
+**Written:** 2026-11-18T23:28:31Z · **tests:** all 1 fast checks green (gradle suite: see ship.sh)
+**Branch:** `ccr-2630e41a-palpyu` · **builds on:** `428a632` (this checkpoint is the commit after it)
 
 ## Just done
-pre-ship: 0.7.0-alpha5: the translation connection test now tells apart a refused connection (Data Saver: button to the Unrestricted data page) from a blocked socket (firewall, VPN, missing internet access) and checks whether Android gave Swoop its internet access; error messages no longer guess
+gated swoop-v0.7.0-alpha5 (ime code 16) and pushed it: handoff self-test, unit suites and the versionCode check passed here. NOT yet built - GitHub has not been asked.
 
 ## Do this next
-ship.sh gates and releases this (ime)
+TRIGGER THE BUILD: mcp__github__actions_run_trigger, method run_workflow, workflow_id android.yml, ref ccr-2630e41a-palpyu, inputs {"full_build":"true","note":"0.7.0-alpha5: the translation connection test now tells apart a refused connection (Data Saver: button to the Unrestricted data page) from a blocked socket (firewall, VPN, missing internet access) and checks whether Android gave Swoop its internet access; error messages no longer guess"}.
+When the run is green, confirm the Release shows the APK (mcp__github__get_release_by_tag swoop-v0.7.0-alpha5), then:  bash tools/record-release.sh swoop-v0.7.0-alpha5 "0.7.0-alpha5: the translation connection test now tells apart a refused connection (Data Saver: button to the Unrestricted data page) from a blocked socket (firewall, VPN, missing internet access) and checks whether Android gave Swoop its internet access; error messages no longer guess"
+NEVER ship swoop-v0.7.0-alpha5 twice (check BUILDLOG.md and the Releases first).
 
 *(resuming? CLAUDE.md's "FIRST ACTION OF EVERY SESSION" says how; the briefing is tools/resume.sh. Do that first, or autosave may stay off all session.)*
 
@@ -16,6 +18,7 @@ ship.sh gates and releases this (ime)
 
 ## Last ten checkpoints
 ```
+  7c4dd02 ckpt 757: pre-ship: 0.7.0-alpha5: the translation connection test now tells apart a refu
   66682b9 ckpt 753: R25: measured table (Android 10 emulator, background app): Data Saver -> ECONN
   837228c ckpt 746: R25 EVIDENCE (run 44414888824, Android 10 emulator): Data Saver ON + metered W
   31d7b81 ckpt 742: R25: first emulator run was INVALID (phase B reused old log lines: am start on
@@ -25,8 +28,7 @@ ship.sh gates and releases this (ime)
   9892412 ckpt 726: swoop-v0.7.0-alpha4 (code 15) DISPATCHED ONCE: android.yml run 44396244888 on 
   bfef0d3 ckpt 725: gated swoop-v0.7.0-alpha4 (ime code 15) and pushed it: handoff self-test, unit
   defb85a ckpt 716: R24c presenter tests 75/75 green; R24a emulator probe on Android 10 AND 16 emu
-  a6cc912 ckpt 698: R24c translate toggle fixed in KeyboardPresenter (off always works; Enter neve
 ```
 
-(3 automatic checkpoint(s) since the last deliberate one — the
+(1 automatic checkpoint(s) since the last deliberate one — the
 session was still mid-step. `git diff` against it shows what changed.)
