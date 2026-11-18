@@ -515,7 +515,7 @@ class InputController(editor: EditorBridge, val stats: InputStats = InputStats()
         val t2 = tail.trimStart(' ')
         val gap = tail.length - t2.length
         val tok = t2.takeWhile { isWordChar(it) }
-        val next = if (gap in 1..3 && tok.length in 1..24 && tok.length < t2.length) tok.lowercase() else null
+        val next = if (gap in 1..3 && tok.length in 1..24 && !(tok.length == t2.length && after.length >= WINDOW_AFTER)) tok.lowercase() else null      // (not a word the window may have cut)
         return Triple(p2, p1, next)
     }
 
