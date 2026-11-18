@@ -54,7 +54,7 @@ class ClipboardHost(private val context: Context, private val now: () -> Long = 
             val text = clip.getItemAt(0).coerceToText(context)?.toString() ?: return false
             if (text.isBlank()) return false
             val stamp = try { clip.description.timestamp } catch (_: Exception) { 0L }
-            latest = ClipItem(text, if (stamp > 0L) minOf(stamp, now()) else now(), false); latestSensitive = sensitive
+            latest = ClipItem(text, copyTime(stamp), false); latestSensitive = sensitive
             if (sensitive || !history) return false                                          // a password manager's copy is never kept in the history
             val changed = store.add(text)
             if (changed) save()
@@ -62,7 +62,20 @@ class ClipboardHost(private val context: Context, private val now: () -> Long = 
         } catch (_: Exception) { false }          // some Android versions refuse the read when no window has the focus: the history simply does not grow
     }
 
-    companion object { const val SENSITIVE_EXTRA = "android.content.extra.IS_SENSITIVE" }
+    /**
+     * When the copy was made, on this host's clock ([now]). The clip's own timestamp is used when it is on a clock we recognise: milliseconds since the epoch, or since boot (Android versions differ; the documentation of
+     * ClipDescription.getTimestamp is not clear). Anything else counts as "seen just now". A copy made while the keyboard was not running keeps its real age that way.
+     */
+    private fun copyTime(stamp: Long): Long {
+        val n = now()
+        if (stamp <= 0L) return n
+        if (stamp in (n - DAY_MS)..(n + SKEW_MS)) return minOf(stamp, n)
+        val up = android.os.SystemClock.elapsedRealtime()
+        if (stamp in 1L..(up + SKEW_MS) && up - stamp <= DAY_MS) return n - maxOf(0L, up - stamp)
+        return n
+    }
+
+    companion object { const val DAY_MS = 24L * 60L * 60L * 1000L; const val SKEW_MS = 60_000L; const val SENSITIVE_EXTRA = "android.content.extra.IS_SENSITIVE" }
 }
 
 /** What the strip may offer as its first box (owner R20a): the copy, when it was made (the clip's own timestamp), and whether it is sensitive (shown as dots, still pasteable). */

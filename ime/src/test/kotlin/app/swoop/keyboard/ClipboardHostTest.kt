@@ -30,13 +30,6 @@ class ClipboardHostTest {
         (app.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager).setPrimaryClip(clip)
     }
 
-    @Test fun probe() {
-        val cm = app.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager; copy("probe")
-        val clip = cm.primaryClip; org.junit.Assert.assertNotNull("primaryClip", clip)
-        val h = host(); try { h.capture(); } catch (e: Throwable) { org.junit.Assert.fail("capture threw $e") }
-        org.junit.Assert.assertNotNull("latest after capture; ts=${clip!!.description.timestamp} count=${clip.itemCount} text=${clip.getItemAt(0).coerceToText(app)}", h.latest)
-    }
-
     @Test fun aFreshCopyIsOfferedAndAnOldOneIsNot() {
         val h = host(); copy("hello there"); h.capture()
         val o = h.latestFresh(CLIP_CHIP_TTL_MS); assertNotNull(o); assertEquals("hello there", o!!.text); assertFalse(o.sensitive)
