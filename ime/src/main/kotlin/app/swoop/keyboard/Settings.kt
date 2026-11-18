@@ -10,6 +10,7 @@ object Prefs {
     const val GLIDE = "glide_typing"
     const val TRAIL = "trail"
     const val SUGGEST = "suggestions"
+    const val GLIDE_NEXT = "glide_next_word"
     const val AUTOFIX = "auto_fix"
     const val CAPI = "capitalize_i"
     const val AUTOCAPS = "auto_caps"
@@ -60,6 +61,8 @@ class Settings(private val p: SharedPreferences) {
     val glide get() = b(Prefs.GLIDE, true)
     val trail get() = b(Prefs.TRAIL, true)
     val suggest get() = b(Prefs.SUGGEST, true)
+    /** Owner R20b: after a glide the middle box of the strip is the predicted next word (the sides are the other guesses of the glide). */
+    val glideNextWord get() = b(Prefs.GLIDE_NEXT, true)
     val autoFix get() = b(Prefs.AUTOFIX, true)
     val capitalizeI get() = b(Prefs.CAPI, true)
     val autoCaps get() = b(Prefs.AUTOCAPS, true)

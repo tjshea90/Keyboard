@@ -408,6 +408,11 @@ class KeyboardPresenterTest {
         assertEquals("fir", r.view.candidatesForTest().first())
     }
 
+    @Test fun theSettingTurnsTheMiddleBoxBackIntoAGlideGuess() {
+        val r = Rig(suggest = true, words = pairedList, extra = { it.putBoolean(Prefs.GLIDE_NEXT, false) }); r.glide("for")
+        assertEquals("for", r.view.candidatesForTest().first())
+    }
+
     @Test fun withSuggestionsOffTheStripAfterAGlideIsTheOldList() {
         val r = Rig(suggest = false, words = pairedList); r.glide("hello")
         assertEquals("hello", r.view.candidatesForTest().first())

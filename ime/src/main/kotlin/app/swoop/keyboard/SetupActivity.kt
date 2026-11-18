@@ -86,6 +86,7 @@ class SetupActivity : Activity() {
         with(u) {
             typing.row(switchRow("Glide typing", "Slide your finger over the letters to type a word.", st.glide) { change(Prefs.GLIDE, it) })
             typing.row(switchRow("Glide trail", "A glowing line follows your finger while you glide. Turn it off for no line at all: the word still types.", st.trail) { change(Prefs.TRAIL, it) })
+            typing.row(switchRow("Next word after a glide", "After a glide the middle box above the keys is the word that probably comes next (tap it to add it); the boxes at its sides are other words your glide may have meant, and replace the glided word. Off: the three boxes are all guesses for the glide.", st.glideNextWord) { change(Prefs.GLIDE_NEXT, it) })
             typing.row(switchRow("Word suggestions", "Words appear above the keys while you tap, even with glide typing off. Tap one to use it.", st.suggest) { change(Prefs.SUGGEST, it) })
             typing.row(switchRow("Fix typos automatically", "Swaps an obvious typo for the right word when you press space. Backspace right away puts your word back, and it is never changed again.", st.autoFix) { change(Prefs.AUTOFIX, it) })
             typing.row(switchRow("Capital I", "Types i, i'm and i'll as I, I'm and I'll.", st.capitalizeI) { change(Prefs.CAPI, it) })
@@ -102,7 +103,7 @@ class SetupActivity : Activity() {
         val dict = u.card()
         with(u) {
             dict.row(actionRow("My dictionary", "Add words the keyboard should know, and take back words you removed. A word you add is offered when you glide its pattern; a word you remove is never offered again.") { startActivity(Intent(this@SetupActivity, DictionaryActivity::class.java)) })
-            dict.row(switchRow("Suggest copied text", "What you just copied shows as the first box above the keyboard, with a small clipboard: tap it to paste. It goes away after an hour, and never shows in password boxes or for a copy a password manager marked secret.", st.suggestCopied) { change(Prefs.CLIP_SUGGEST, it) })
+            dict.row(switchRow("Suggest copied text", "What you just copied shows as the first box above the keyboard, with a small clipboard: tap it to paste. It goes away after five minutes or when you type, and in password boxes or for a copy a password manager marked secret it shows dots (and still pastes). It never shows in password boxes or for a copy a password manager marked secret.", st.suggestCopied) { change(Prefs.CLIP_SUGGEST, it) })
             dict.row(switchRow("Clipboard history", "The clipboard icon at the top of the keyboard keeps what you copy for an hour. Pin an item to keep it. It stays on this device.", st.clipboardHistory) { change(Prefs.CLIPBOARD, it) })
             dict.row(switchRow("Translate icon", "Shows the translate icon at the top of the keyboard. This is the only thing in the keyboard that uses the internet, and only when you switch translating on there.", st.translateEnabled) { change(Prefs.TRANSLATE, it) })
         }
