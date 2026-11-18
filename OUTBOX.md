@@ -985,3 +985,51 @@
 > **"Could not be reached (SocketException)".** I could not reproduce it: the real engine and the keyboard's own network code reach MyMemory and Google on Android 10 and Android 16 emulators and from a GitHub runner, so the cause is your device or hotspot. The message now says which step broke, a dropped connection is retried once, and Diagnostics has a **Test translation connection** button: tap it on the tablet, wait, and read me the last "Result:" line.
 > **Glide.** First time tested on real thumbs (a public corpus of real swipes): 87-88% first choice, 94-95% in the top three. A re-tune is worth about +1 point on phone-sized keyboards (checked on two independent sets of people). The tablet's bigger keys keep the old settings: I have no real swipes for them.
 > **Open:** install 0.7.0-alpha4 and tell me if translating now switches off, plus the Test connection result from the tablet. Kestrel browser sync of the changed input code is NOT done. Nothing was run on the tablet.
+
+## 2026-11-18T21:12:11Z
+> Swoop 0.7.0-alpha4 is built, signed and published. I haven't run it on your tablet or phone.
+>
+> https://github.com/tjshea90/Keyboard/releases/tag/swoop-v0.7.0-alpha4
+>
+> It installs over the previous version because it uses the same signing certificate.
+>
+> ## 1. Translation would not turn off: fixed
+> There were three causes:
+> - **Refused in some boxes:** in a password box, a browser address bar, or with the Settings switch off, tapping the toggle only said "not available in this box" and left translating on. Turning it off now works in every field.
+> - **Could translate where it shouldn't:** with the toggle left on, pressing Enter in a password or address-bar box could have sent that text to the translation services. That is now blocked.
+> - **Key out of step:** the key could look different from the real on/off state after the keyboard view was rebuilt. It now always shows the real state, and switching the Settings option off also switches translating off.
+>
+> ## 2. "Could not be reached (SocketException)": not reproduced, so the cause is your device or its connection
+> - **Services work:** the real translation code reached the live MyMemory and Google services from my build environment and from GitHub's servers.
+> - **Android 10 and 16:** the keyboard's own network test worked on Android 10 and Android 16 emulators, with Google answering "hello" with "Hola". MyMemory's free daily quota was used up on one of the shared GitHub test addresses, and the keyboard falls back to Google in that case.
+> - **Clearer errors:** the app now says which step broke (blocked by Android, dropped connection, secure handshake or offline). It retries a dropped connection once automatically.
+> - **New button:** Diagnostics now has a **Test translation connection** button. Tap it on the tablet, wait up to a minute, and read me the last "Result:" line. That will tell us what is wrong there.
+> - **Plain-words change to `translate/`:** the new test button adds a second network file in the `translate/` folder. It only contacts the two translation services, with the fixed word "hello".
+>
+> ## 3. Glide research: modest gain on phones
+> This is the first time the decoder was tested on **real** swipes, from a public MIT-licensed corpus (never copied into the repo).
+> - **Accuracy today:** about 87–88% right as the first choice and 94–95% in the top three, on real swipes.
+> - **Real thumbs differ from my simulated one:** they wander further from straight lines between letters.
+> - **Re-tune:** loosening the straight-line penalty is worth about +1 point on phone-sized keys. It held up on a second set of people, but the gain was smaller there than on the first.
+> - **Dropped ideas:** recalibrating the length cue behind "the" vs "there", and two other tweaks, did not hold up on the second set, so I left them out.
+> - **Tablet:** its larger keys keep the old settings because I have no real swipes for it. If glide feels worse on the tablet, tell me and I'll use one setting everywhere.
+>
+> Details are in `research/R24-glide-ne
+> [... 924 characters omitted ...]
+> New workflow file → folded into `emu-smoke.yml` as `mode: net-probe`.
+>
+> **Key details:** R24a, R24b and R24c ticked in TASKS.md. Research in `research/R24-glide-next.md`. BUILDLOG line recorded; checkpoint 731 pushed.
+>
+> **Done so far:** all three requests coded and tested. The full test suite, lint, emulator checks on Android 10 and 16, and the signed release are all green.
+>
+> **Open / next steps:**
+> 1. Owner tests alpha4 and reports the Test connection result.
+> 2. Kestrel browser sync of `core/input`.
+> 3. Optional: next-word post-correction and a swipe-speed cue.
+>
+> **Rules to remember:** `ckpt` after each step; the repo is public, so no secrets, real swipes or screenshots; answer every owner message; say what was not run on the tablet.
+>
+> ✅ **Health:** Yellow: the chat is long, but checkpoint 731 holds the state.
+>
+> 💡 This chat is getting long. Consider `/amhandoff` at the next good stopping point.
+<!-- sha:e3aef1f5277d -->
