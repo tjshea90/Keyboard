@@ -101,13 +101,10 @@ class GlideParams(
      */
     val alwaysAnswer: Boolean = true,
     /**
-     * Owner R20d: besides the one shift of the whole path ([biasGain] and the habit), a small map of where THIS thumb lands on each part of the keyboard ([TouchField]) is learned from the words kept and taken off the path before
-     * it is judged. [fieldRate] is how far each kept letter moves the map (per letter, of the way to what it saw). False = the old single shift only (the tests and evaluation tools compare the two).
+     * Owner R20d: besides the one shift of the whole path (the habit), a plane through where THIS thumb lands on each part of the keyboard ([TouchField]) is learned from the first and last letter of the words kept, and taken
+     * off the path before it is judged. False = the old single shift only (the tests and evaluation tools compare the two).
      */
     val touchField: Boolean = true,
-    val fieldRate: Float = 0.02f,
-    val fieldCols: Int = TouchField.COLS,
-    val fieldRows: Int = TouchField.ROWS,
 )
 
 /** What counts as a rare word (shared by the glide decoder and the tap suggester). ln-probabilities are on the scale of the shipped list: -12.5 is about rank 13 000 of 140 000. */
@@ -152,7 +149,7 @@ class GlideDecoder(private val keys: GlideKeys, private val p: GlideParams = Gli
     /** The offset the learned finger habit adds to every path (pitches): what the finger usually lands beside the key it aims at. Set by [learnFrom]. */
     var biasX = 0f; var biasY = 0f
     /** R20d: where the thumb lands on each part of the keyboard, on top of the single shift. Learned by [learnFrom]; owned by whoever owns the decoder. */
-    val field = TouchField(p.fieldCols, p.fieldRows)
+    val field = TouchField()
     private val fo = FloatArray(2)
     private val fx0 = kx.min(); private val fx1 = kx.max(); private val fy0 = ky.min(); private val fy1 = ky.max()
     private fun fu(x: Float) = if (fx1 > fx0) (x - fx0) / (fx1 - fx0) else 0.5f
@@ -283,10 +280,11 @@ class GlideDecoder(private val keys: GlideKeys, private val p: GlideParams = Gli
         val o = offsetFor(lex, id) ?: return
         // the offset measured now is what is LEFT after the habit so far was taken off, so it is added to the habit
         biasX = (biasX + rate * o[0]).coerceIn(-MAX_BIAS, MAX_BIAS); biasY = (biasY + rate * o[1]).coerceIn(-MAX_BIAS, MAX_BIAS)
-        if (p.touchField) {                                          // R20d: what is left once the word's mean is taken away says where on the keyboard the thumb lands differently
-            for (j in 0 until mCount) {
+        if (p.touchField && mCount >= 2) {                           // R20d: where this thumb lands on the keyboard: only the first and the last letter, the points that are aimed at (the letters between are cut short at corners)
+            for (j in intArrayOf(0, mCount - 1)) {
                 val i = assign[j]; val l = letters[j]
-                field.learn(fu(kx[l]), fv(ky[l]), wx[i] - kx[l] - o[0], wy[i] - ky[l] - o[1], p.fieldRate)
+                field.at(fu(kx[l]), fv(ky[l]), fo)                                      // (what the path was already corrected by there: the observation is what the plane has to explain on top of the single shift)
+                field.add(fu(kx[l]), fv(ky[l]), wx[i] - kx[l] + fo[0], wy[i] - ky[l] + fo[1])
             }
         }
     }
