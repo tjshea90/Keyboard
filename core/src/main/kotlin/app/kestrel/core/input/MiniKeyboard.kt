@@ -156,7 +156,7 @@ class MiniKeyboardModel {
             }
             Key.Shift -> { autoShifted = false; if (shiftLock) { shiftLock = false; shift = false } else shift = !shift }
             Key.ToSymbols -> { symbols = true; shift = shiftLock; glideTail = null }
-            Key.ToLetters -> symbols = false
+            Key.ToLetters -> { symbols = false; autoShift() }                                         // (R22: back on the letters, a sentence start asks for its capital again)
             Key.NextKeyboard -> {}                                                                   // (only the system keyboard has it)
             Key.Go -> { val t = text.trim(); if (t.isNotEmpty()) return KeyResult.Submit(t) }
         }

@@ -73,7 +73,8 @@ class MiniKeyboardSmartTest {
     }
 
     @Test fun theSymbolsPageAndLockedCapitalsAreNotDisturbed() {
-        val m = model(); m.type("hi. "); m.press(Key.ToSymbols); assertTrue("auto shift does not wake on the symbols page", m.shiftLock || !m.symbols || true)
+        val m = model(); m.type("hi. "); assertTrue(m.shift); m.press(Key.ToSymbols); assertFalse("the symbols page has no capitals", m.shift)
+        m.press(Key.ToLetters); assertTrue("and back on the letters the sentence start asks for its capital again", m.shift); m.type("a"); assertEquals("hi. A", m.text)
         val l = model(); l.lockShift(); l.type("ab. "); assertEquals("AB. ", l.text); assertTrue(l.shiftLock)
     }
 }
