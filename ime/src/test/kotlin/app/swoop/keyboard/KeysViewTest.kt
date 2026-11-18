@@ -308,7 +308,7 @@ class KeysViewTest {
     }
 
     @Test fun mulForIsTheExactInverseOfHeightFor() {
-        val v = KeysView(RuntimeEnvironment.getApplication()); v.setField(app.kestrel.core.input.editor.FieldKind.TEXT, "Send")
+        val v = KeysView(RuntimeEnvironment.getApplication()); v.setField(FieldKind.TEXT, "Send")
         for (w in listOf(500, 700, 940, 1100)) for (target in listOf(260, 330, 400, 520)) {
             val m = v.mulFor(w, target); val h = v.heightFor(w, m)
             assertTrue("w=$w wanted $target got $h (mul $m)", Math.abs(h - target) <= 1)
