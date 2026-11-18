@@ -239,7 +239,7 @@ class TouchField(private val keep: Double = 0.998, private val lamConst: Double 
 
 **Evidence.** Every accuracy figure in this repository is simulated (G7). My own run shows the simulator is fragile to what it assumes: a hand with a position-dependent offset changes the answer to "is a touch model worth it" from 0 to +5 points. Google needs 90 M-word arms to see 0.2 to 1 % effects [V S3]; a paired replay on one user needs about 2 350 glides to see a 1-point gain at 90 % when 3 % of glides differ (estimate in `research/kestrel-ref/GLIDE_RESEARCH.md`, [I]). Shadow decoding is paired, so it is the efficient design.
 
-**Today.** `GlideStats` counts kept / picked / undone and timings; `GlideDecoder` has a second instance for previews (`previewDecoder`); no variant flag, no replay, no timestamps.
+**Today.** `GlideStats` counts kept / picked / undone and timings; `GlideTyping` keeps a second decoder instance for previews (`previewDecoder`); no variant flag, no replay, no timestamps.
 
 **Gain.** None directly. It decides which of ranks 1, 3, 4, 5 ship ON, and lets the owner's thumb be the judge. It also removes the biggest unknown (real versus simulated thumbs).
 
