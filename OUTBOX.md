@@ -1243,3 +1243,9 @@
 > - The glide re-tune for bigger tablet keys has no real-swipe data. Your tablet glide numbers look fine so far.
 > - I'll release 0.7.0-alpha6 with the clearer wording once you've reported back.
 <!-- sha:52ec1c259fba -->
+
+## 2026-11-18T23:57:49Z
+> Thanks. The clock reads 23:56 and the **"battery saver ON" is gone** from the limits line, so you switched Battery saver off. The socket is **still refused** (EPERM, 5 ms). That rules battery saver out for your tablet.
+>
+> I can't tell from this whether you also powered the tablet fully off and on (a restart wouldn't show up in the test). Since you may end up reinstalling anyway, I'm building 0.7.0-alpha6 now with the clearer wording, so a fresh install gets the newest version.
+<!-- sha:639e37bdb87c -->
