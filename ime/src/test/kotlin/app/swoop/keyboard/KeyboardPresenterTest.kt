@@ -350,6 +350,23 @@ class KeyboardPresenterTest {
         r.tap("\u232B"); assertEquals("Backspace takes the wrong guess back whole", "", r.text)
     }
 
+    // ------------------------------------------------------------------ R20c (owner 2026-11-18): the pronoun I, whatever the box and however the word arrives
+
+    @Test fun aLoneITypedInABoxThatAsksForNoSuggestionsBecomesACapitalI() {
+        val r = Rig(inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS or InputType.TYPE_TEXT_FLAG_MULTI_LINE, glidePref = false)
+        for (c in "so") r.tap(c.toString()); r.tap("space"); r.tap("i"); r.tap("space"); r.tap("i"); r.tap("'"); r.tap("m"); r.tap("space")
+        assertEquals("so I I'm ", r.text)
+    }
+
+    @Test fun aGlidedIMGetsItsCapitalAndTheStripShowsItWithOne() {
+        val words = LexiconFile.build(listOf("i'm" to 900L, "in" to 800L, "it" to 700L, "hello" to 500L).map { LexiconFile.Entry(it.first, it.second) }, emptyList())
+        val r = Rig(words = words); r.glide("hello"); r.glide("im")
+        assertTrue("the glide decoded i'm (or a neighbour): '${r.text}'", r.text.startsWith("hello "))
+        val typed = r.text.removePrefix("hello ").trim()
+        if (typed.lowercase() == "i'm") assertEquals("I'm", typed)
+        val chips = r.view.candidatesForTest(); assertTrue("no lowercase pronoun on the strip: $chips", chips.none { it == "i'm" || it == "i" })
+    }
+
     @Test fun twoQuickSpacesMakeAFullStopAndTheSwitchTurnsItOff() {
         val r = Rig(glidePref = false); for (c in "hello") r.tap(c.toString()); r.tap("space"); r.tap("space")
         assertEquals("hello. ", r.text)

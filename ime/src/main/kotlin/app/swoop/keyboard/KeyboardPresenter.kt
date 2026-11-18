@@ -417,8 +417,9 @@ class KeyboardPresenter(
     /** What the strip shows for a glide's guesses -> the word the decoder gave (a name shows with its capital; tapping it picks the decoder's word). */
     private var glideRaw: Map<String, String> = emptyMap()
     override fun showCandidates(words: List<String>) {
-        val shown = if (properOn) words.map { w -> glide.engine.caseFormOf(w.lowercase(), controller.previousWord())?.takeIf { it.lowercase() == w.lowercase() } ?: w } else words
-        glideRaw = if (properOn) words.indices.filter { shown[it] != words[it] }.associate { shown[it] to words[it] } else emptyMap()
+        val cased = if (properOn) words.map { w -> glide.engine.caseFormOf(w.lowercase(), controller.previousWord())?.takeIf { it.lowercase() == w.lowercase() } ?: w } else words
+        val shown = if (controller.capitalizeI) cased.map { InputController.pronounI(it) } else cased                  // (R20c: the strip shows I'm, as the text will)
+        glideRaw = if (properOn || controller.capitalizeI) words.indices.filter { shown[it] != words[it] }.associate { shown[it] to words[it] } else emptyMap()
         view?.showCandidates(withEmoji(shown, words.firstOrNull()))
     }
     override fun clearCandidates() { if (!suggestOn) view?.clearCandidates() }   // (with suggestions on, the next answer replaces the strip: no flicker)
@@ -430,7 +431,6 @@ class KeyboardPresenter(
         const val MAX_FIELD = 6000
         /** A second space this soon after the first makes a full stop. */
         const val DOUBLE_SPACE_MS = 600L
-        val I_ENDINGS = setOf("m", "ll", "ve", "d")
         /** The keys after which an automatic fix may happen: the space and the punctuation that ends a sentence or a clause. */
         val FIX_AT = setOf(" ", ".", ",", "!", "?", ";", ":")
     }
