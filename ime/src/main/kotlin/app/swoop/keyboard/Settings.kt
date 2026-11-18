@@ -29,6 +29,7 @@ object Prefs {
     const val NUMBERROW = "number_row"
     const val HIDE_LETTERS = "hide_letters"
     const val CLIPBOARD = "clipboard_history"
+    const val CLIP_SUGGEST = "clipboard_suggest"
     const val TRANSLATE = "translate_enabled"
     const val EMOJI_SUGGEST = "emoji_suggestions"
     const val DOCK_FRAC = "dock_frac_x1000"
@@ -72,6 +73,8 @@ class Settings(private val p: SharedPreferences) {
     val hideLetters get() = b(Prefs.HIDE_LETTERS, false)
     /** The clipboard history (the clipboard icon in the toolbar keeps what was copied for an hour; pinned items stay). */
     val clipboardHistory get() = b(Prefs.CLIPBOARD, true)
+    /** Owner R20a: what you just copied is the first box of the suggestion strip (like Gboard's "Suggest copied text"). */
+    val suggestCopied get() = b(Prefs.CLIP_SUGGEST, true)
     /** The translate icon in the toolbar (English to Mexican Spanish, only when switched on there). */
     val translateEnabled get() = b(Prefs.TRANSLATE, true)
     /** A word with an emoji (clown) offers the emoji among the guesses. */

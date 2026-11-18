@@ -33,12 +33,17 @@ class KeysService : InputMethodService() {
         presenter.onOpenSettings = { openSettings() }
         presenter.onTranslateMessage = { m -> root?.keys?.showNotice(m) }
         presenter.onToggleClipboard = { toggleClipboard() }
+        presenter.clipChipSource = { clips.latestFresh(KeyboardPresenter.CLIP_CHIP_TTL_MS) }
         try { (getSystemService(CLIPBOARD_SERVICE) as android.content.ClipboardManager).addPrimaryClipChangedListener(clipListener) } catch (_: Exception) { }
     }
 
     private val clips by lazy { ClipboardHost(applicationContext) }
     private val clipListener = android.content.ClipboardManager.OnPrimaryClipChangedListener {
-        if (Settings(this).clipboardHistory && !safeMode) { if (clips.capture()) root?.clipboard?.let { if (it.isOpen) it.refresh() } }
+        val st = Settings(this)
+        if ((st.clipboardHistory || st.suggestCopied) && !safeMode) {
+            if (clips.capture(history = st.clipboardHistory)) root?.clipboard?.let { if (it.isOpen) it.refresh() }
+            presenter.onClipboardChanged()                         // the first box of the strip offers the new copy (owner R20a)
+        }
     }
 
     /** The cog in the toolbar: the keyboard's settings screen (the Setup screen) opens in its own task. */
@@ -141,6 +146,7 @@ class KeysService : InputMethodService() {
         super.onStartInputView(editorInfo, restarting)
         root?.clipboard?.close()                                   // a new text box starts on the keys
         root?.applySettings(Settings(this), safeMode)
+        Settings(this).let { st -> if (!safeMode && (st.clipboardHistory || st.suggestCopied)) clips.capture(history = st.clipboardHistory, fromCopy = false) }       // a copy made while the keyboard was not on screen
         Diag.d("onStartInputView safe=$safeMode floating=${root?.floating}")
         presenter.startInput(editorInfo)
     }
