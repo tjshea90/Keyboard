@@ -238,14 +238,14 @@ class WordAroundTest {
     }
 
     @Test fun theWordsAroundItAreItsContext() {
-        val r = at("i went to teh store today", 14); val span = r.c.wordAround()!!
+        val r = at("i went to teh store today", 12); val span = r.c.wordAround()!!
         assertEquals("teh", span.text); assertEquals(Triple<String?, String?, String?>("went", "to", "store"), r.c.contextAround(span))
         val s = at("teh store", 2).c; assertEquals(Triple<String?, String?, String?>(null, null, "store"), s.contextAround(s.wordAround()!!))
         val p = at("go, teh. store", 5).c; assertEquals("punctuation is not a neighbour", Triple<String?, String?, String?>(null, null, null), p.contextAround(p.wordAround()!!))
     }
 
     @Test fun replacingTheWordPutsTheNewOneWhereItStoodAndTheCursorAfterIt() {
-        val r = at("i went to teh store today", 15).also { it.act { } }
+        val r = at("i went to teh store today", 12)
         assertTrue(r.c.replaceWordAround("the")); r.sync(); r.check()
         assertEquals("i went to the store today", r.text); assertEquals(13, r.c.selStart); assertEquals(13, r.ed.selS)
         assertEquals("a second replacement of the new word works too", true, r.c.replaceWordAround("this").also { r.sync() }); assertEquals("i went to this store today", r.text); r.check()
