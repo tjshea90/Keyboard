@@ -540,3 +540,47 @@
 >
 > 💡 The code word is off in this chat. Type `/amcodeword` and I'll start every reply with 'Yes Boss!', so you'll notice if I start losing track.
 <!-- sha:5a9f2dbba3a3 -->
+
+## 2026-11-18T02:06:34Z
+> All five changes are built into **Swoop 0.6.0-alpha1**. The unit tests and GitHub's build, lint and signing checks passed, but I haven't run any of it on your tablet, your phone or an emulator.
+>
+> https://github.com/tjshea90/Keyboard/releases/tag/swoop-v0.6.0-alpha1
+>
+> It installs over your current Swoop.
+>
+> **1. Tap an old word to change it.** Tapping any word already in the text puts replacement words on the strip. They are words whose glide pattern is close to the tapped word, ranked using the words around it. Tapping one replaces exactly that word, keeping its capitals. The keyboard learns the fix, and the old word stays on the strip so you can switch back. On the real word list, the word I meant was first in 37 of 40 test slips and in the top three in 38. The two misses were `there`/`their` and `hear`/`here`, which don't look alike as glides. It doesn't work in password or address boxes.
+>
+> **2. Auto capitals.**
+> - **Sentence starts:** an empty text box, a new line, and after `.` `!` `?`. This now also works through closing quotes and brackets, and not after "e.g.", "Mr." or "Dr.".
+> - **Names:** days, months, countries, languages, common names and brands get their capital.
+> - **Your own names:** a name you type with a capital twice becomes yours.
+> - **Undo:** one Backspace takes a capital back and the keyboard remembers.
+> - **Bug fixed:** turning auto-capitals off in settings didn't apply to the first letter of a new box. It does now.
+> - **Side effect:** any plain text box now starts with a capital, including web login fields. That is a side effect of what you asked for; the Capital letters switch in Settings turns it off.
+>
+> **3. Resizing.**
+> - **Full size button:** a "Full size" button appears in the glowing bar whenever the keyboard is squeezed or floating. One tap puts it back to full width, and double-tapping the bar still works.
+> - **Smoother resize:** while your finger is down, only a picture of the keyboard moves, with no re-layout per touch. The keys are laid out once when you let go. I couldn't see the old jitter here, so whether it's gone is for you to confirm on the tablet.
+>
+> **4. Hide letters.** The key area is now one solid colour with no key shapes at all, in day and night. Typing and gliding still work. I hid every key on the letters page, including Shift, Backspace and Enter. The symbols page still shows its keys.
+>
+> **5. Smarter learning.** Added:
+> - the words you start sentences with
+> - your capitals
+> - how often you undo an automatic fix, so it fixes less if you undo a lot
+> - the words you swap in by tapping an old one
+> - a glide that matched nothing followed by you typing the word, which teaches that glide
+>
+> On a test person, the sentence-start prediction went from 0% to 87% hits.
+>
+> **Not done:**
+> - **Kestrel copy:** the Kestrel browser's pinned copy of the keyboard engine is not updated, because its checkout isn't in this session. Kestrel types through Swoop, so it gets all of this anyway.
+> - **Your testing:** please test on the tablet and phone.
+>
+> **Please test:**
+> - tapping an old word, and the Full size button
+> - how smooth the resize feels
+> - the first capital in a plain text box
+>
+> I haven't opened a PR; all work is on `claude/keyboard-typing-improvements-jetik4`.
+<!-- sha:375287bdc744 -->
