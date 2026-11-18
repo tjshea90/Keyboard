@@ -56,8 +56,8 @@ class FloatingMathTest {
         assertEquals(500, a.width); assertEquals(600, a.height)
         val b = FloatingMath.dockedResize(0, 200, 800, 400, 5000, 5000, 1000, 500, 280, 600)
         assertEquals(500, b.width); assertEquals("the right edge (1000) stays", 500, b.left); assertEquals(280, b.height)
-        val c = FloatingMath.dockedResize(1, 300, 600, 400, 900, 0, 1000, 500, 280, 600)
-        assertEquals("never wider than the room that is left", 700, c.width); assertEquals(300, c.left)
+        val c = FloatingMath.dockedResize(1, 300, 600, 400, 300, 0, 1000, 500, 280, 600)
+        assertEquals(900, c.width); assertEquals("a keyboard that would run off the right edge is moved left, never cut", 100, c.left)
         val d = FloatingMath.dockedResize(1, 0, 1000, 700, 0, 0, 1000, 500, 280, 600)
         assertEquals("a keyboard already taller than the cap is not cut by a mere touch", 700, d.height)
     }
