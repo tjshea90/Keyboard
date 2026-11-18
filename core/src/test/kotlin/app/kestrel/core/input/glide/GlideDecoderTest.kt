@@ -97,17 +97,18 @@ class GlideDecoderTest {
     }
 
     @Test fun theWordBeforeSwingsAClosecall() {
-        // "world" and "word" differ by one letter that a sloppy finger skips: with the pair "hello world" known, the context decides
+        // "lot" and "lit" are one key apart (o / i) and the same length, so the path alone cannot tell them apart (R23c: a longer word like "world" is no longer a close call for "word", the gesture length now tells them apart):
+        // with the pair "hello lit" known, the context decides
         val withPair = LexiconFile.read(LexiconFile.build(
-            listOf("hello", "world", "word").zip(listOf(500L, 900L, 1200L)).map { LexiconFile.Entry(it.first, it.second) },
-            listOf(LexiconFile.Pair("hello", "world", 400L), LexiconFile.Pair("hello", "word", 1L)),
+            listOf("hello", "lit", "lot").zip(listOf(500L, 900L, 1200L)).map { LexiconFile.Entry(it.first, it.second) },
+            listOf(LexiconFile.Pair("hello", "lit", 400L), LexiconFile.Pair("hello", "lot", 1L)),
         ))
         val dec = GlideDecoder(keys, GlideParams(lmA = 0f, lmW = 6f)) // a heavy language weight so the effect is plain
-        val p = glide("word", SimNoise.NORMAL, 3)
+        val p = glide("lot", SimNoise.NORMAL, 3)
         val plain = decode(dec, withPair, p, null).first().text
         val ctx = decode(dec, withPair, p, "hello").first().text
-        assertEquals("word", plain)
-        assertEquals("world", ctx)
+        assertEquals("lot", plain)
+        assertEquals("lit", ctx)
     }
 
     @Test fun theThumbHabitIsLearnedFromAcceptedWords() {

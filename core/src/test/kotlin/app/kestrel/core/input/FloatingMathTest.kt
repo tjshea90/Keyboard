@@ -10,7 +10,7 @@ class FloatingMathTest {
         assertEquals(232f, FloatingMath.clampWidthDp(100f, 412f), 0f); assertEquals(412f, FloatingMath.clampWidthDp(900f, 412f), 0f); assertEquals(620f, FloatingMath.clampWidthDp(900f, 1000f), 0f)
         assertEquals(200f, FloatingMath.clampWidthDp(500f, 200f), 0f)                    // a tiny screen: never wider than the screen
         assertEquals(360f, FloatingMath.defaultWidthDp(412f), 0f); assertEquals(460f, FloatingMath.defaultWidthDp(800f), 0f); assertEquals(300f, FloatingMath.defaultWidthDp(300f), 0f)
-        assertEquals(0.7f, FloatingMath.clampHeightMul(0.1f), 0f); assertEquals(2.2f, FloatingMath.clampHeightMul(9f), 0f)
+        assertEquals(0.45f, FloatingMath.clampHeightMul(0.1f), 0f); assertEquals(2.2f, FloatingMath.clampHeightMul(9f), 0f)
     }
 
     @Test fun positionRoundTripsAndStaysOnScreen() {
