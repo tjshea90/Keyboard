@@ -79,6 +79,13 @@ class InputController(editor: EditorBridge, val stats: InputStats = InputStats()
      * person typed is never touched. -1 = none.
      */
     private var autoTrailAt = -1
+    /**
+     * Owner R23b (2026-11-18): "never at any time allow the keyboard to learn and save anything from the clipboard. Just because i copy and paste something doesn't mean it is a word to learn." The letters of the word before the
+     * cursor that were TYPED on this keyboard by key presses ("" when the word, or any of it, came from anywhere else: a paste, an app, a glide, a strip word). Only such a word is ever learned from tapping ([typedWord]).
+     */
+    private var typedRun = ""
+    /** The ends of the last pastes (the keyboard's own paste: the copied-text box, the clipboard panel): words before them are not the language the person is writing, so they are no context for what comes after ([afterPaste]). */
+    private val pastedTails = ArrayList<String>(3)
 
     private val pending = Pending()
     /** The editor may still hold a composing region this keyboard lost track of (a failed call, a new session): it is closed before the next edit. */
@@ -107,7 +114,7 @@ class InputController(editor: EditorBridge, val stats: InputStats = InputStats()
     /** A new field got the focus (onStartInput / onStartInputView). Forgets everything about the previous one. */
     fun startInput(info: FieldInfo) {
         field = info
-        composing = null; lastGlide = null; shift = ShiftState.OFF; composingUnknown = true; adopt = 0; keepTight = -1; autoTrailAt = -1
+        composing = null; lastGlide = null; shift = ShiftState.OFF; composingUnknown = true; adopt = 0; keepTight = -1; autoTrailAt = -1; typedRun = ""; pastedTails.clear()
         clearPending("c1"); early.clear(); inlineEditor = false
         selStart = info.initialSelStart; selEnd = info.initialSelEnd
         refresh()
@@ -157,7 +164,7 @@ class InputController(editor: EditorBridge, val stats: InputStats = InputStats()
         // the same selection as believed: usually only the composing region changed; but an app that replaced the text and left the cursor where it was looks the same, so with no own edit outstanding the window is checked
         if (newSelStart == selStart && newSelEnd == selEnd && (!pending.isEmpty() || windowStillTrue())) return true
         if (selStart < 0) {                                           // the first reports after an unknown state are the truth (and the text may have changed with them)
-            keepTight = -1; autoTrailAt = -1
+            keepTight = -1; autoTrailAt = -1; typedRun = ""
             if (adopt > 0) adopt--
             selStart = newSelStart; selEnd = newSelEnd; refresh()
             if (composing != null && candStart < 0) composing = null                // the editor no longer shows the word being tapped
@@ -168,7 +175,7 @@ class InputController(editor: EditorBridge, val stats: InputStats = InputStats()
         if (composing != null) ed.finishComposing()
         stats.foreignReports++
         val glide = lastGlide; val wasAt = selStart
-        composing = null; lastGlide = null; keepTight = -1; autoTrailAt = -1
+        composing = null; lastGlide = null; keepTight = -1; autoTrailAt = -1; typedRun = ""
         clearPending("c3")
         selStart = newSelStart; selEnd = newSelEnd
         refresh()
@@ -193,6 +200,7 @@ class InputController(editor: EditorBridge, val stats: InputStats = InputStats()
         if (autoSpace && composing == null && isLetter(key) && needsAutoSpace() && commit(" ")) { lastGlide = null; autoCaps() }   // "hello." "w" -> "hello. w", and the new sentence starts with a capital
         if (composing == null && key.length == 1 && (key[0] == ' ' || key[0] in PRONOUN_BOUNDARY)) fixLoneI()
         val t = if (shift != ShiftState.OFF && isSingleCodePoint(key)) key.uppercase() else key
+        typedRun = if (isSingleCodePoint(t) && (isLetter(t) || t == "'")) (typedRun + t).takeLast(TYPED_RUN_MAX) else ""       // (R23b: the word being typed key by key)
         if (isLetter(t) || (composing != null && isWordConnector(t))) {
             if (field.composingAllowed) { typeComposing(t); return }
         }
@@ -225,7 +233,8 @@ class InputController(editor: EditorBridge, val stats: InputStats = InputStats()
         if (text.isEmpty()) return false
         settle()
         endComposing()
-        lastGlide = null; keepTight = -1; autoTrailAt = -1
+        lastGlide = null; keepTight = -1; autoTrailAt = -1; typedRun = ""
+        text.takeLast(PASTE_TAIL).takeIf { it.isNotBlank() }?.let { pastedTails.add(it); while (pastedTails.size > 3) pastedTails.removeAt(0) }       // (R23b: nothing before this counts as context)
         val ok = commit(text)
         ensureWindow()
         autoCaps()
@@ -264,7 +273,13 @@ class InputController(editor: EditorBridge, val stats: InputStats = InputStats()
     }
 
     /** One press of Backspace. A tapped word loses its last letter; the word a glide just added goes whole; otherwise the editor deletes (selection or one character). */
-    fun backspace() { backspaceInner(); autoCaps() }
+    fun backspace() {
+        val had = typedRun; val s0 = selStart
+        backspaceInner()
+        // R23b: a letter taken off the end of the word being typed shortens the typed run (a typo fixed mid-word is still a typed word); anything bigger ends it
+        typedRun = if (had.isEmpty() || s0 < 0 || selStart < 0) "" else { val d = s0 - selStart; if (d in 1..had.length) had.dropLast(d) else "" }
+        autoCaps()
+    }
 
     private fun backspaceInner() {
         settle(); autoTrailAt = -1
@@ -331,7 +346,7 @@ class InputController(editor: EditorBridge, val stats: InputStats = InputStats()
      * the spaces before it. A word still being tapped goes whole; a glide just made goes whole (as one Backspace does); a selection is deleted. Nothing before the cursor in the window: one plain Backspace.
      */
     fun deleteWord() {
-        settle()
+        settle(); typedRun = ""
         if (composing != null || lastGlide != null || selStart != selEnd) { backspaceInner(); autoCaps(); return }
         stats.backspaces++
         revertedCorrection = null
@@ -358,7 +373,7 @@ class InputController(editor: EditorBridge, val stats: InputStats = InputStats()
     fun enter() {
         settle()
         stats.enters++
-        endComposing(); lastGlide = null; keepTight = -1; autoTrailAt = -1
+        endComposing(); lastGlide = null; keepTight = -1; autoTrailAt = -1; typedRun = ""
         fixLoneI()
         val a = field.imeAction
         val useAction = !field.noEnterAction && a != ImeActions.UNSPECIFIED && a != ImeActions.NONE
@@ -378,6 +393,7 @@ class InputController(editor: EditorBridge, val stats: InputStats = InputStats()
         val lead = leadForNewWord()
         val w = written(when (shiftWithLead(lead)) { ShiftState.LOCK -> word.uppercase(); ShiftState.ONCE -> if (form != null && form.first().isUpperCase()) form else (form ?: word).replaceFirstChar { it.uppercase() }; ShiftState.OFF -> form ?: word })
         val tail = lead + w + " "
+        typedRun = ""
         if (!commit(tail)) return
         stats.glides++
         lastGlide = GlideTail(tail, w); autoTrailAt = if (selStart >= 0) selStart else -1
@@ -437,7 +453,7 @@ class InputController(editor: EditorBridge, val stats: InputStats = InputStats()
         }
         if (ok) ok = commit(" ")
         endBatch(s0, e0)
-        lastGlide = null; autoTrailAt = if (ok && selStart >= 0) selStart else -1
+        lastGlide = null; autoTrailAt = if (ok && selStart >= 0) selStart else -1; typedRun = ""
         if (!ok) { resync(); return false }
         stats.swaps++
         if (shift == ShiftState.ONCE) shift = ShiftState.OFF
@@ -496,7 +512,7 @@ class InputController(editor: EditorBridge, val stats: InputStats = InputStats()
         if (delta == 0) return
         settle()
         stats.cursorMoves++
-        endComposing(); lastGlide = null; keepTight = -1; autoTrailAt = -1
+        endComposing(); lastGlide = null; keepTight = -1; autoTrailAt = -1; typedRun = ""
         val left = delta < 0
         val steps = minOf(Math.abs(delta), 64)
         var predicted = selStart >= 0 && selStart == selEnd   // a selection collapses to one end and the selected text joins the window: re-read instead of predicting
@@ -603,7 +619,7 @@ class InputController(editor: EditorBridge, val stats: InputStats = InputStats()
 
     /** The plain word that [text] ends with (a trailing space is skipped), lowercase; null when it ends in something else. */
     fun wordEndingAt(text: String): String? {
-        val tok = text.trimEnd().substringAfterLast(' ').trimStart { it in OPENING_MARKS }       // (R21: a word just inside a quote or a bracket is still a word: "hello and (hello)
+        val tok = afterPaste(text).trimEnd().substringAfterLast(' ').trimStart { it in OPENING_MARKS }       // (R21: a word just inside a quote or a bracket is still a word: "hello and (hello)
         if (tok.isEmpty() || tok.length > 24 || !tok.all { it.isLetter() || it == '\'' }) return null
         return tok.lowercase()
     }
@@ -611,8 +627,31 @@ class InputController(editor: EditorBridge, val stats: InputStats = InputStats()
     /** (the second last word, the last word) before the cursor, lowercase: the language's context for the next glide. Both null when the last thing is not a plain word; the first null when only one word precedes. */
     fun previousTwo(): Pair<String?, String?> = twoBefore(before)
 
+    /**
+     * R23b: the part of [text] that stands after the last paste whose end is in it (a paste is not the language the person is writing: the words before it are no context for the words after it). A text with no paste in it is
+     * returned whole.
+     */
+    private fun afterPaste(text: String): String {
+        var cut = -1
+        for (t in pastedTails) { val i = text.lastIndexOf(t); if (i >= 0 && i + t.length > cut) cut = i + t.length }
+        return if (cut > 0) text.substring(cut) else text
+    }
+
+    /**
+     * R23b: the word before the cursor when ALL of it was typed on this keyboard, key by key (a typo fixed with Backspace on the way is still typed); null when any of it came from elsewhere: a paste, an app, a glide, a strip
+     * word, a word the cursor was moved to. This is the only kind of word tapping ever teaches the keyboard.
+     */
+    fun typedWord(): String? {
+        val w = wordBeforeCursor() ?: return null
+        val r = typedRun.trimStart('\'')
+        return if (r.isNotEmpty() && r == w && before.endsWith(typedRun)) w else null
+    }
+
+    /** R23b: [word] stands inside one of the last pastes (so a correction of it is a correction of the clipboard's text, which teaches nothing). */
+    fun wasPasted(word: String): Boolean = word.isNotEmpty() && pastedTails.any { it.contains(word, ignoreCase = true) }
+
     private fun twoBefore(text: String): Pair<String?, String?> {
-        val toks = text.trimEnd().split(' ')
+        val toks = afterPaste(text).trimEnd().split(' ')
         fun plain(raw: String): String? { val t = raw.trimStart { it in OPENING_MARKS }; return if (t.isNotEmpty() && t.length <= 24 && t.all { it.isLetter() || it == '\'' }) t.lowercase() else null }       // (R21: skip an opening quote or bracket)
         val last = toks.lastOrNull()?.let { plain(it) } ?: return null to null
         val second = if (toks.size >= 2) plain(toks[toks.size - 2]) else null
@@ -894,6 +933,10 @@ class InputController(editor: EditorBridge, val stats: InputStats = InputStats()
         fun isPronounI(w: String): Boolean = w == "i" || (w.length in 3..4 && w[0] == 'i' && (w[1] == '\'' || w[1] == '\u2019') && w.substring(2) in PRONOUN_ENDINGS)
         fun pronounI(w: String): String = if (isPronounI(w)) "I" + w.substring(1) else w
 
+        /** How many typed letters are remembered as "the word being typed" (longer than any word is learned). */
+        private const val TYPED_RUN_MAX = 26
+        /** How much of the end of a paste is remembered to tell where it stood. */
+        private const val PASTE_TAIL = 30
         const val WINDOW_BEFORE = 64
         const val WINDOW_AFTER = 16
         const val MIN_BEFORE = 16

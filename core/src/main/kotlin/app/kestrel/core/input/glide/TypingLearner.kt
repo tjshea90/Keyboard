@@ -103,6 +103,8 @@ class TypingLearner(
 
     private fun finishWord(g: GlideTyping, fix: String?) {
         val typed = controller.wordBeforeCursor() ?: run { return }
+        // R23b (owner: "never at any time allow the keyboard to learn and save anything from the clipboard"): only a word typed here, key by key, is ever learned - not one that was pasted, put in by an app, or only stands before the cursor
+        if (controller.typedWord() != typed) return
         val (p2, p1) = controller.contextBefore(typed)
         val realFix = fix?.takeIf { !it.equals(typed, ignoreCase = true) }      // ("i" -> "I" only changes the capital: not a correction)
         var word = (realFix ?: typed).lowercase()
