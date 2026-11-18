@@ -685,3 +685,7 @@
 ## 2026-11-18T05:01:10Z
 > The gates are re-running with the corrected test (about 8 minutes). When they pass I'll dispatch the build once and follow it through to the Release.
 <!-- sha:c97fe304b982 -->
+
+## 2026-11-18T05:09:09Z
+> The build is dispatched and the dispatch is checkpointed. I'll check the run when the timer fires.
+<!-- sha:d7fc46f83dcd -->
