@@ -208,7 +208,7 @@ class InputController(editor: EditorBridge, val stats: InputStats = InputStats()
         if (text.isEmpty()) return false
         settle()
         endComposing()
-        lastGlide = null
+        lastGlide = null; keepTight = -1
         val ok = commit(text)
         ensureWindow()
         autoCaps()
@@ -323,7 +323,7 @@ class InputController(editor: EditorBridge, val stats: InputStats = InputStats()
     fun enter() {
         settle()
         stats.enters++
-        endComposing(); lastGlide = null
+        endComposing(); lastGlide = null; keepTight = -1
         val a = field.imeAction
         val useAction = !field.noEnterAction && a != ImeActions.UNSPECIFIED && a != ImeActions.NONE
         val ok = if (useAction) ed.performAction(a) else ed.sendKey(KeyCodes.ENTER)
@@ -459,7 +459,7 @@ class InputController(editor: EditorBridge, val stats: InputStats = InputStats()
         if (delta == 0) return
         settle()
         stats.cursorMoves++
-        endComposing(); lastGlide = null
+        endComposing(); lastGlide = null; keepTight = -1
         val left = delta < 0
         val steps = minOf(Math.abs(delta), 64)
         var predicted = selStart >= 0 && selStart == selEnd   // a selection collapses to one end and the selected text joins the window: re-read instead of predicting

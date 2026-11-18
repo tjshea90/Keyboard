@@ -31,7 +31,7 @@ class SentenceStartTest {
     @Test fun aGlideAfterACommaOrAnAbbreviationStaysLowercase() {
         val r = rig("we left"); r.typeAll(","); r.act { commitGlide("then") }; assertEquals("we left, then ", r.text)
         val q = rig("see e.g"); q.typeAll("."); q.act { commitGlide("this") }; assertEquals("see e.g. this ", q.text)
-        val u = rig("go to "); u.typeAll("www.x"); u.act { commitGlide("this") }; assertEquals("no capital in the middle of an address-like word", "go to www.x this ", u.text)
+        val u = rig("it costs 3"); u.typeAll(".5"); u.act { commitGlide("this") }; assertEquals("no capital after a number", "it costs 3.5 this ", u.text)
     }
 
     @Test fun theShiftStateAtTheNextWordIsCountedForTheSpaceThatWillBeAdded() {
@@ -84,8 +84,8 @@ class SentenceStartTest {
 
     @Test fun theDeletedSpaceIsRememberedForThatPlaceOnlyAndTheNextSentenceGetsItsSpaceAgain() {
         val r = rig("visit "); r.typeAll("example.c"); r.act { backspace() }; r.act { backspace() }; r.typeAll("com")
-        r.typeAll(" and then. ok"); assertEquals("visit example.com and then. Ok", r.text)
-        val q = rig("visit "); q.typeAll("example.c"); q.act { backspace() }; q.act { backspace() }; q.typeAll("c"); q.act { backspace() }; q.typeAll("om"); assertEquals("letters deleted again at the same place: still tight", "visit example.com", q.text)
+        r.typeAll(" and then.ok"); assertEquals("the next sentence gets its space and its capital as usual", "visit example.com and then. Ok", r.text)
+        val q = rig("visit "); q.typeAll("example.c"); q.act { backspace() }; q.act { backspace() }; q.typeAll("c"); q.act { backspace() }; q.typeAll("com"); assertEquals("letters deleted again at the same place: still tight", "visit example.com", q.text)
     }
 
     @Test fun aGlideAfterADeletedSpaceAlsoStaysTight() {
