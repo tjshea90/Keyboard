@@ -669,3 +669,7 @@
 ## 2026-11-18T04:03:19Z
 > Four new requests. Per the working agreement I write them into TASKS.md in your words first, then start. The two research items (how other keyboards do clipboard chips and next-word placement; glide-learning techniques) I'll hand to research agents while I investigate the "I" bug myself.
 <!-- sha:b83ccaa52f20 -->
+
+## 2026-11-18T04:47:06Z
+> The measurement is running; I'll record the numbers in the docs as soon as it finishes.
+<!-- sha:d310468738a0 -->
