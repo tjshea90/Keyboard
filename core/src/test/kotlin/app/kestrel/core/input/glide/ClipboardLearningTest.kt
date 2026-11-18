@@ -58,7 +58,7 @@ class ClipboardLearningTest {
     @Test fun theWordsOfAPasteAreNoContextForWhatIsTypedAfterIt() {
         val e = Env(); e.paste("hello world "); e.type("typed "); val m = e.model()
         assertEquals("the typed word is learned", 1f, m.weightOf("typed"), 0.01f); assertEquals("no pair with the pasted word", 0f, m.pairProb("world", "typed"), 0f); assertEquals(0, m.pairCount)
-        assertNull("the controller sees no word before it", e.rig.c.previousWord().let { null })
+        assertNull("the controller sees no word before it", e.rig.c.previousWord())
         val g = Env(); g.paste("hello world "); assertEquals(null to null, g.rig.c.previousTwo()); g.type("the "); g.type("typed "); assertTrue("what is typed after the paste does pair up", g.model().pairProb("the", "typed") > 0.5f)
     }
 
