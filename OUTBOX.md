@@ -963,3 +963,7 @@
 > 💡 This chat is getting long. Consider `/amhandoff` at the next good stopping point.
 > 💡 The code word is off in this chat. Type `/amcodeword` and I'll start every reply with 'Yes Boss!', so you'll notice if I start losing track.
 <!-- sha:ac97b2b85537 -->
+
+## 2026-11-18T20:55:13Z
+> The release gates are running (they include the full test suite, about 11 minutes). I'll dispatch the signed GitHub build as soon as they pass.
+<!-- sha:724a8f4f07ea -->
