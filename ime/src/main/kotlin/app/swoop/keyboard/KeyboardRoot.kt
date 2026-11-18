@@ -49,7 +49,8 @@ class GripBar(context: Context) : View(context) {
         fun gripDock()
         /** Docked: the end arrow on [side] (0 left, 1 right) was dragged [dx] pixels from where the finger went down; the width at that moment is the reference. */
         fun gripSqueezeStart(side: Int) {}
-        fun gripSqueeze(side: Int, dx: Float) {}
+        /** Docked: the arrow is dragged ([dx], [dy]) pixels from where the finger went down: sideways changes the width, UP makes the keyboard taller and down shorter (owner R19c). */
+        fun gripSqueeze(side: Int, dx: Float, dy: Float) {}
         /** Docked: two fingers pinch the bar; [scale] is the distance between them now over the distance when they went down. */
         fun gripPinchStart() {}
         fun gripPinch(scale: Float) {}
@@ -61,7 +62,7 @@ class GripBar(context: Context) : View(context) {
         fun gripFullWidth() {}
         /** True when the docked keyboard is narrower than the screen. */
         fun gripSqueezed(): Boolean = false
-        /** True when there is a full-size keyboard to snap back to (squeezed, or floating): the bar then shows its "Full size" pill. */
+        /** True when there is a full-size keyboard to snap back to (squeezed, resized taller or shorter, or floating): the bar then shows its "Full size" pill. */
         fun gripCanRestore(): Boolean = false
         /** The "Full size" pill was tapped: back to the full-width docked keyboard. */
         fun gripRestore() {}
@@ -180,7 +181,7 @@ class GripBar(context: Context) : View(context) {
             }
             MotionEvent.ACTION_MOVE -> {
                 val dx = rx - downX; val dy = ry - downY
-                if (mode == 1 || mode == 2) { moved = true; host?.gripSqueeze(mode - 1, dx); return true }
+                if (mode == 1 || mode == 2) { moved = true; host?.gripSqueeze(mode - 1, dx, dy); return true }
                 if (mode == 4) { host?.gripSlide(rx - lastX); lastX = rx; lastY = ry; return true }
                 if (!floating && !dragging && host?.gripSqueezed() == true && Math.abs(dx) > SLOP_DP * 2 * d && Math.abs(dx) > Math.abs(dy)) { handler.removeCallbacks(longPress); mode = 4; moved = true; host?.gripSlide(rx - lastX); lastX = rx; lastY = ry; return true }
                 if (floating) {
@@ -198,7 +199,7 @@ class GripBar(context: Context) : View(context) {
                 if (e.actionMasked == MotionEvent.ACTION_UP) {
                     val pr = pillRect()
                     if (!moved && !dragging && pr != null && e.x >= pr.left - 6 * d && e.x <= pr.right + 6 * d) { lastTapAt = Long.MIN_VALUE / 2; host?.gripRestore(); dragging = false; moved = false; return true }
-                    if (!moved && !floating && host?.gripSqueezed() == true) { val now = SystemClock.uptimeMillis(); if (now - lastTapAt < DOUBLE_TAP_MS) { lastTapAt = Long.MIN_VALUE / 2; host?.gripFullWidth() } else lastTapAt = now }
+                    if (!moved && !floating && host?.gripCanRestore() == true) { val now = SystemClock.uptimeMillis(); if (now - lastTapAt < DOUBLE_TAP_MS) { lastTapAt = Long.MIN_VALUE / 2; host?.gripFullWidth() } else lastTapAt = now }
                     if (moved) host?.gripDrop()
                     else if (floating) { val now = SystemClock.uptimeMillis(); if (now - lastTapAt < DOUBLE_TAP_MS) { lastTapAt = Long.MIN_VALUE / 2; host?.gripDock() } else lastTapAt = now }
                 }
@@ -233,6 +234,11 @@ class KeyboardRoot(context: Context) : FrameLayout(context), GripBar.Host {
         fun modeChanged(floating: Boolean)
         /** The panel was moved or resized for good (a finger lifted): the decoder needs the new key positions. */
         fun geometryChanged()
+        /**
+         * Docked, a drag of the bar's arrow that changes the height needs room above the keyboard to grow into: the window is the whole screen (transparent, only the keyboard takes touches, the app is not resized) until the finger lifts (owner R19c).
+         * Floating has the whole-screen window anyway ([modeChanged]).
+         */
+        fun windowTall(tall: Boolean) {}
     }
 
     val keys = KeysView(context)
@@ -256,8 +262,17 @@ class KeyboardRoot(context: Context) : FrameLayout(context), GripBar.Host {
     private var settings: Settings? = null
     /** The docked keyboard's width as a fraction of the screen (1 = full width) and where it stands (0..1 of the free room): squeezed with two fingers or the bar's arrows, moved by dragging the bar. */
     private var dockFrac = 1f; private var dockX = 0.5f
+    /** The docked keyboard's row height multiplier (owner R19c: it can be made taller or shorter at the bottom), on top of the key height setting. 1 = as the settings say. */
+    private var dockHMul = 1f
+    /** True while a drag of the bar's arrow changes the height: the window is the whole screen so the keyboard can grow upwards ([Host.windowTall]). */
+    var dockResizing = false; private set
+    /** The panel's height when that drag began: the part of the screen the app is already laid out above, and kept so while the finger drags. */
+    private var coveredH = 0
+    fun dockCoveredHeight() = coveredH
+    /** The window is as tall as the screen: floating, or a docked height drag in progress. */
+    val windowTall: Boolean get() = floating || dockResizing
     val squeezed: Boolean get() = !floating && (if (previewing) pvW < 0.995f * screenW() else dockFrac < 0.995f)
-    private var sqStartW = 0; private var sqStartLeft = 0; private var pinchW0 = 0
+    private var sqStartW = 0; private var sqStartLeft = 0; private var sqStartH = 0; private var pinchW0 = 0
 
     // ---- the live picture of a resize (owner R18c: "it jitters as i'm moving it to resize. make it resize smoothly")
     // While a finger drags a corner, an arrow of the bar, or pinches it, nothing is laid out again and nothing is measured: the finished panel is only scaled and moved on the GPU (view transforms), once per touch
@@ -337,6 +352,8 @@ class KeyboardRoot(context: Context) : FrameLayout(context), GripBar.Host {
         posX = st.floatX / 1000f; posY = st.floatY / 1000f; wDp = st.floatWDp.toFloat(); hMul = FloatingMath.clampHeightMul(st.floatHMul)
         floatEnabled = st.floatEnabled && !safe
         dockFrac = if (safe) 1f else st.dockFrac / 1000f; dockX = st.dockX / 1000f
+        dockHMul = if (safe) 1f else st.dockH / 1000f
+        if (dockResizing) { dockResizing = false; clearPreview(); host?.windowTall(false) }       // (a drag that was cut off by the keyboard closing)
         val want = floatEnabled && st.floating && !previewOnly
         if (want != floating) setFloating(want, save = false) else applyMode()
     }
@@ -380,19 +397,26 @@ class KeyboardRoot(context: Context) : FrameLayout(context), GripBar.Host {
      * The window behind the panel. Docked and squeezed, the keyboard window is still as wide as the screen: the strips beside the narrower panel are in the keyboard's colour too (they showed the keyboard WINDOW's own
      * background, white on a phone in day mode). Floating, the window is the whole screen and must stay transparent: the app shows around the panel.
      */
-    private fun rootBackground(): android.graphics.drawable.Drawable? = if (floating) null else android.graphics.drawable.ColorDrawable(keys.backgroundColor)
+    private fun rootBackground(): android.graphics.drawable.Drawable? = if (windowTall) null else android.graphics.drawable.ColorDrawable(keys.backgroundColor)
 
     /** Docked: full width at the bottom. Floating: the chosen width, the chosen row height, at the saved position, in a neon frame. */
     private fun applyMode() {
         clearPreview()
         grip.floating = floating
-        keys.floatMul = if (floating) hMul else 1f
+        keys.floatMul = if (floating) hMul else dockHMul
         val f = frame()
         panel.setPadding(f + (if (floating) 0 else navLeft), f / 2, f + (if (floating) 0 else navRight), f + (if (floating) 0 else navBottom))
         panel.background = panelBackground()
         background = rootBackground()
         panel.elevation = if (floating) 12 * d else 0f
-        minimumHeight = if (floating) screenH() else 0
+        minimumHeight = if (windowTall) screenH() else 0
+        requestLayout()
+    }
+
+    /** The window became as tall as the screen or went back to the keyboard's height (a docked height drag): the room above the keyboard shows the app, so the window paints nothing there. */
+    private fun syncWindowState() {
+        minimumHeight = if (windowTall) screenH() else 0
+        background = rootBackground()
         requestLayout()
     }
 
@@ -487,25 +511,49 @@ class KeyboardRoot(context: Context) : FrameLayout(context), GripBar.Host {
 
     override fun gripDock() { setFloating(false); host?.geometryChanged() }
 
-    // ---- squeeze and slide of the docked keyboard (M8)
-    private fun applyDock(left: Int, w: Int) {
+    // ---- squeeze, resize and slide of the docked keyboard (M8, R19c)
+    private fun applyDock(left: Int, w: Int, h: Int = curHeight()) {
         val sw = screenW()
         val ww = w.coerceIn(Math.round(MIN_DOCK_FRAC * sw), sw)
         val l = left.coerceIn(0, sw - ww)
-        setPreview(l, panel.top, ww, panel.height)                       // only the picture moves; the layout waits for the finger to lift (gripSqueezeEnd)
+        setPreview(l, panel.bottom - h, ww, h)                           // only the picture moves; the layout waits for the finger to lift (gripSqueezeEnd)
     }
     private fun curLeft(): Int = if (previewing) pvLeft else if (dockFrac >= 0.995f) 0 else Math.round(dockX * (screenW() - Math.round(dockFrac * screenW())))
     private fun curWidth(): Int = if (previewing) pvW else if (dockFrac >= 0.995f) screenW() else Math.round(dockFrac * screenW())
-    override fun gripSqueezeStart(side: Int) { sqStartW = curWidth(); sqStartLeft = curLeft() }
-    override fun gripSqueeze(side: Int, dx: Float) {
-        // the left arrow dragged right (or the right arrow dragged left) squeezes from that side; the other edge stays where it is
-        if (side == 0) { val w = sqStartW - Math.round(dx); applyDock(sqStartLeft + sqStartW - w.coerceIn(Math.round(MIN_DOCK_FRAC * screenW()), screenW()), w) }
-        else applyDock(sqStartLeft, sqStartW + Math.round(dx))
+    private fun curHeight(): Int = if (previewing) pvH else panel.height
+    override fun gripSqueezeStart(side: Int) { sqStartW = curWidth(); sqStartLeft = curLeft(); sqStartH = curHeight() }
+
+    /** The docked keyboard grows upwards from the bottom edge: the window must be the whole screen for it (see [Host.windowTall]). */
+    private fun beginDockResize() {
+        if (dockResizing || floating || previewOnly) return
+        dockResizing = true; coveredH = panel.height
+        Diag.d("docked height drag: the window is the whole screen (covered=$coveredH)")
+        syncWindowState()
+        host?.windowTall(true)
     }
-    override fun gripPinchStart() { sqStartW = curWidth(); sqStartLeft = curLeft() }
+
+    /**
+     * Owner R19c: an end arrow of the bar drags like a top corner of the floating keyboard: sideways = narrower / wider (the other edge stays), UP = taller, down = shorter, the bottom edge stays on the bottom of the screen.
+     * Only a picture moves meanwhile ([setPreview]). A little drift up or down while squeezing sideways is ignored ([FloatingMath.softDead]).
+     */
+    override fun gripSqueeze(side: Int, dx: Float, dy: Float) {
+        val sw = screenW()
+        val vy = if (previewOnly) 0f else FloatingMath.softDead(dy, VERT_DEAD_DP * d)
+        if (!dockResizing && vy != 0f) beginDockResize()
+        val minW = Math.round(MIN_DOCK_FRAC * sw)
+        val guessW = (if (side == 0) sqStartW - Math.round(dx) else sqStartW + Math.round(dx)).coerceIn(minW, sw)
+        val keysW = guessW - navLeft - navRight; val gripH = gripHeight()
+        val minH = gripH + keys.heightFor(keysW, FloatingMath.DOCK_MIN_H_MUL) + navBottom
+        val maxByMul = gripH + keys.heightFor(keysW, FloatingMath.DOCK_MAX_H_MUL) + navBottom
+        val maxH = maxOf(sqStartH, minOf(maxByMul, Math.round(FloatingMath.DOCK_MAX_SCREEN_FRAC * screenH())))
+        val r = FloatingMath.dockedResize(side, sqStartLeft, sqStartW, sqStartH, Math.round(dx), if (dockResizing) Math.round(vy) else 0, sw, minW, minOf(minH, sqStartH), maxH)
+        setPreview(r.left, panel.bottom - r.height, r.width, r.height)
+    }
+    private fun gripHeight(): Int = if (grip.height > 0) grip.height else Math.round(GripBar.HEIGHT_DP * d)
+    override fun gripPinchStart() { sqStartW = curWidth(); sqStartLeft = curLeft(); sqStartH = curHeight() }
     override fun gripPinch(scale: Float) {
         val w = Math.round(sqStartW * scale).coerceIn(Math.round(MIN_DOCK_FRAC * screenW()), screenW())
-        applyDock(sqStartLeft + (sqStartW - w) / 2, w)                  // pinching keeps the middle where it was
+        applyDock(sqStartLeft + (sqStartW - w) / 2, w, sqStartH)        // pinching keeps the middle where it was (and the height)
     }
     override fun gripSlide(dx: Float) { applyDock(curLeft() + Math.round(dx), curWidth()) }
     /** The finger lifted: the size the picture shows is laid out for real (once), kept, and the glide decoder is told where the keys are now. */
@@ -513,16 +561,19 @@ class KeyboardRoot(context: Context) : FrameLayout(context), GripBar.Host {
         if (previewing) {
             val sw = screenW()
             dockFrac = pvW / sw.toFloat(); dockX = if (sw - pvW <= 0) 0.5f else pvLeft / (sw - pvW).toFloat()
+            if (dockResizing) dockHMul = FloatingMath.clampDockMul(keys.mulFor(pvW - navLeft - navRight, pvH - gripHeight() - navBottom))     // (the exact inverse: the keys come out as tall as the picture was)
+            keys.floatMul = dockHMul
             clearPreview(); requestLayout(); grip.invalidate()
         }
-        settings?.saveDock(Math.round(dockFrac * 1000f), Math.round(dockX * 1000f)); host?.geometryChanged()
+        if (dockResizing) { dockResizing = false; syncWindowState(); host?.windowTall(false) }
+        settings?.saveDock(Math.round(dockFrac * 1000f), Math.round(dockX * 1000f), Math.round(dockHMul * 1000f)); host?.geometryChanged()
     }
-    override fun gripFullWidth() { clearPreview(); dockFrac = 1f; dockX = 0.5f; requestLayout(); grip.invalidate(); gripSqueezeEnd() }
+    override fun gripFullWidth() { clearPreview(); dockFrac = 1f; dockX = 0.5f; dockHMul = 1f; if (!floating) keys.floatMul = 1f; requestLayout(); grip.invalidate(); gripSqueezeEnd() }
     override fun gripSqueezed(): Boolean = squeezed
-    override fun gripCanRestore(): Boolean = floating || squeezed
-    /** The "Full size" pill: a squeezed keyboard goes back to the full width; a floating one docks again, full width (owner R18c). */
+    override fun gripCanRestore(): Boolean = floating || squeezed || Math.abs(dockHMul - 1f) > 0.005f
+    /** The "Full size" pill: a squeezed (or resized) keyboard goes back to the full width and the normal height; a floating one docks again, full size (owner R18c, R19c). */
     override fun gripRestore() {
-        if (floating) { dockFrac = 1f; dockX = 0.5f; settings?.saveDock(1000, 500); setFloating(false); host?.geometryChanged() }
+        if (floating) { dockFrac = 1f; dockX = 0.5f; dockHMul = 1f; settings?.saveDock(1000, 500, 1000); setFloating(false); host?.geometryChanged() }
         else gripFullWidth()
     }
 
@@ -597,6 +648,8 @@ class KeyboardRoot(context: Context) : FrameLayout(context), GripBar.Host {
     companion object {
         /** The docked keyboard is never narrower than this share of the screen. */
         const val MIN_DOCK_FRAC = 0.5f
+        /** A drag of an arrow of the bar changes the height only after the finger has moved this far up or down (dp). */
+        const val VERT_DEAD_DP = 10f
         const val FRAME_DP = 8f
         const val CORNER_DP = 24f
     }

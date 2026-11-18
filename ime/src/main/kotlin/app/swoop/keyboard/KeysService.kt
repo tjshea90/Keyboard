@@ -64,6 +64,7 @@ class KeysService : InputMethodService() {
         this.root = root
         root.host = object : KeyboardRoot.Host {
             override fun modeChanged(floating: Boolean) { applyWindow(floating) }
+            override fun windowTall(tall: Boolean) { applyWindow(tall) }
             override fun geometryChanged() { presenter.prepareGlide() }
         }
         root.clipboard.host = object : ClipboardPanel.Host {
@@ -80,7 +81,7 @@ class KeysService : InputMethodService() {
     }
 
     /**
-     * Docked, the keyboard window is as tall as the keyboard and sits at the bottom. Floating, it is the whole screen (transparent) so the panel can stand anywhere; [onComputeInsets] then tells Android that only the panel
+     * Docked, the keyboard window is as tall as the keyboard and sits at the bottom. Floating (or while a docked height drag needs room to grow, R19c), it is the whole screen (transparent) so the panel can stand anywhere; [onComputeInsets] then tells Android that only the panel
      * takes touches and that the app behind is not covered at all (docs/FLOATING.md).
      */
     private fun applyWindow(floating: Boolean) {
@@ -92,6 +93,15 @@ class KeysService : InputMethodService() {
     override fun onComputeInsets(outInsets: Insets) {
         super.onComputeInsets(outInsets)
         val r = root ?: return
+        if (!r.floating && r.dockResizing && r.height > 0) {      // owner R19c: a docked height drag: the window is the whole screen, but the app stays laid out as it was and only the keyboard takes touches
+            val h = maxOf(r.height, window?.window?.decorView?.height ?: 0)
+            val top = (h - r.dockCoveredHeight()).coerceIn(0, h)
+            outInsets.contentTopInsets = top
+            outInsets.visibleTopInsets = top
+            outInsets.touchableInsets = Insets.TOUCHABLE_INSETS_REGION
+            outInsets.touchableRegion.set(r.touchRegion())
+            return
+        }
         if (!r.floating && r.squeezed && r.height > 0) {            // a narrow docked keyboard: only it takes touches, the app shows (and takes touches) on both sides
             outInsets.touchableInsets = Insets.TOUCHABLE_INSETS_REGION
             outInsets.touchableRegion.set(r.touchRegion())
