@@ -105,6 +105,17 @@ class GlideParams(
      * off the path before it is judged. False = the old single shift only (the tests and evaluation tools compare the two).
      */
     val touchField: Boolean = true,
+    /**
+     * Owner R23c (2026-11-18): "the keyboard isn't very good at predicting between small words, notably 'the' often becomes 'there'. 'The' uses a shorter gesture than there, so it shouldn't confuse them." The length of
+     * the gesture is evidence: a word whose ideal path (the straight lines through its letters) is much longer than what the finger drew is unlikely ("there" has e-r-e more than "the"), and one that is a little shorter is
+     * only slightly unlikely (people wander). [lengthExpect] is the share of the ideal path a finger really draws (corners are cut), [lengthSigmaLow] / [lengthSigmaHigh] how far the length may stray (in ln units) below / above that,
+     * [lengthW] the price of z squared / 2 in cost units, never more than [lengthCap]. [lengthW] 0 = off.
+     */
+    val lengthW: Float = 1.0f,
+    val lengthExpect: Float = 0.92f,
+    val lengthSigmaLow: Float = 0.16f,
+    val lengthSigmaHigh: Float = 0.30f,
+    val lengthCap: Float = 4.0f,
 )
 
 /** What counts as a rare word (shared by the glide decoder and the tap suggester). ln-probabilities are on the scale of the shipped list: -12.5 is about rank 13 000 of 140 000. */
@@ -439,7 +450,22 @@ class GlideDecoder(private val keys: GlideKeys, private val p: GlideParams = Gli
     private fun careful(lex: GlideLexicon, id: Int): Float {
         if (!loadLetters(lex, id)) return Float.MAX_VALUE / 8
         setWork(0f, 0f)
-        return dp(mCount)
+        val c = dp(mCount)
+        return if (c >= Float.MAX_VALUE / 8) c else c + lengthCost()
+    }
+
+    /**
+     * R23c: what the length of the gesture says against the length of the ideal path through the letters in [letters] (call after [loadLetters]): z squared / 2 of how far the ratio is from what a finger draws, priced by
+     * [GlideParams.lengthW]. "there" is 2 key widths longer than "the": a gesture of "the" is too short for it.
+     */
+    private fun lengthCost(): Float {
+        if (p.lengthW <= 0f || mCount < 2 || gestureLen <= 0f) return 0f
+        var ideal = 0f
+        for (j in 1 until mCount) { val a = letters[j - 1]; val b = letters[j]; ideal += Math.sqrt(d2(kx[a] - kx[b], ky[a] - ky[b]).toDouble()).toFloat() }
+        if (ideal < 0.5f) return 0f
+        val d = Math.log((gestureLen / (ideal * p.lengthExpect)).toDouble()).toFloat()
+        val z = if (d < 0f) d / p.lengthSigmaLow else d / p.lengthSigmaHigh
+        return Math.min(p.lengthCap, p.lengthW * 0.5f * z * z)
     }
 
     /** The second look: move the whole path by [GlideParams.biasGain] of how far it sat off the word's letters, and judge again (the better of the two, with the move charged). */
@@ -450,7 +476,7 @@ class GlideDecoder(private val keys: GlideKeys, private val p: GlideParams = Gli
         val o = meanOffset(mCount)
         val mx = o[0] * p.biasGain; val my = o[1] * p.biasGain
         setWork(mx, my)
-        val c2 = dp(mCount) + p.biasW * (mx * mx + my * my) * mCount
+        val c2 = dp(mCount) + p.biasW * (mx * mx + my * my) * mCount + lengthCost()
         return if (c2 < cost1) c2 else cost1
     }
 
