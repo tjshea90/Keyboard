@@ -80,12 +80,12 @@ class TouchFieldTest {
     @Test fun theExportCarriesTheMapAndAnOlderFileWithoutOneStillReads() {
         val f = TouchField(); repeat(60) { f.learn(0.1f, 0.2f, 0.25f, -0.1f, 0.08f) }
         val habit = floatArrayOf(0.1f, -0.05f) + f.toArray()
-        val text = LearnedExport.write(PersonalModel().also { it.learn(null, "hello", 2f, null, null, 1f) }, habit, null)
+        val text = LearnedExport.write(PersonalModel().also { it.add(null, "hello", 2f) }, habit, null)
         assertTrue(text.lines().any { it.startsWith("touch ") })
         val back = LearnedExport.read(text)!!
         assertEquals(0.1f, back.habit!![0], 0.001f); assertTrue("the map came back", back.touch != null && back.touch!!.size == f.toArray().size)
         val g = TouchField(); assertTrue(g.fromArray(back.touch!!)); assertEquals(f.dx[0], g.dx[0], 0.002f)
-        val old = LearnedExport.write(PersonalModel().also { it.learn(null, "hello", 2f, null, null, 1f) }, floatArrayOf(0.1f, -0.05f), null)
+        val old = LearnedExport.write(PersonalModel().also { it.add(null, "hello", 2f) }, floatArrayOf(0.1f, -0.05f), null)
         assertTrue("a file without the map has no touch line", old.lines().none { it.startsWith("touch ") }); assertEquals(null, LearnedExport.read(old)!!.touch)
         val broken = text.lines().joinToString("\n") { if (it.startsWith("touch ")) "touch 1 2 3" else it }
         assertEquals("a map of the wrong size is ignored, the rest is read", null, LearnedExport.read(broken)!!.touch)
