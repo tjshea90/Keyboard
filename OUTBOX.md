@@ -1119,3 +1119,46 @@
 > **0.7.0-alpha5** makes the connection test say which: it checks Android's internet group, tells a refused connection (Data Saver, with a button to the right settings page) from a blocked socket, and no longer guesses in its messages.
 > **Please send me:** the lines that start with FAIL, and the "Result:" line, from Diagnostics > Test translation connection (which step, and the code EPERM or EACCES; and whether "Internet access group" says OK). Try restarting the tablet once first.
 > **Not run on the tablet. Kestrel browser sync of the changed input code is still not done.**
+
+## 2026-11-18T23:39:49Z
+> Swoop 0.7.0-alpha5 is built and signed, and the signature was verified on the exact APK. I haven't run it on your tablet.
+>
+> https://github.com/tjshea90/Keyboard/releases/tag/swoop-v0.7.0-alpha5
+>
+> ## What I found about "Android is not letting the keyboard use the socket"
+>
+> I tested what each Android limit does to a keyboard-like background app on an Android 10 emulator:
+>
+> | Limit | What the app sees |
+> |---|---|
+> | Data Saver (Swoop not on the "Unrestricted data" list) | connection **refused** |
+> | Same, with Swoop on that list | works |
+> | Battery saver | connection **times out** |
+> | Doze | connection **times out** |
+> | App standby | works |
+>
+> **None of these gives the socket refusal you saw.** My first guess, Data Saver, was wrong for your error. I told you it was likely earlier, so please ignore that.
+>
+> What your error can mean:
+> - **Missing internet access:** Android didn't give the Swoop process its internet access. This can happen after an update that adds the permission (Swoop added it in 0.4.0), and a restart fixes it.
+> - **Something blocking Swoop:** a firewall, VPN or ad-block app, a vendor setting that blocks an app's internet, or a parental-control or school profile.
+>
+> ## What changed in alpha5
+> - **The connection test checks Android's internet group:** on a healthy Android 10 emulator this check reads "OK", so it won't cry wolf.
+> - **A refused connection and a blocked socket now get separate, accurate messages.** The refused case includes a Diagnostics button that opens the Data Saver "Unrestricted data" page.
+> - **No new permissions:** I couldn't read Data Saver's state without adding one, so the test says it can't be read instead of guessing.
+>
+> ## What I need from you
+> 1. **Restart the tablet once** and try translating again.
+> 2. If it still fails, open Diagnostics → **Test translation connection** and send me:
+>    - the lines that start with `FAIL`
+>    - the **Result:** line
+>    - whether **Internet access group** says OK
+>
+>    That tells me which cause it is. Reinstalling would delete your learned words unless you export them first.
+>
+> ## Still open
+> - Kestrel browser sync of the changed input code is not done; I couldn't reach that repo here.
+> - The glide re-tune from alpha4 has no real-swipe data for the tablet's bigger keys. If glide feels worse there, tell me.
+> - The task for your socket error stays open until I see your test lines.
+<!-- sha:c17d7f7051db -->
