@@ -1207,3 +1207,12 @@
 > - Kestrel browser sync of the changed input code is not done.
 > - Glide re-tune: the tablet's bigger keys keep the old settings, with no real-swipe data.
 <!-- sha:b73fc7d722f0 -->
+
+## 2026-11-18T23:54:40Z
+> Thank you. Reading this carefully: the probe lines are the **same run** as your last message (same 23:49 UTC clock reading), now with the connection log added. So I don't yet know whether you've restarted the tablet or tried Battery saver off. The new facts:
+>
+> - **14 translate attempts**, in two bursts (18:47 and 18:48), **all fail instantly** with the same socket refusal, 6–195 ms each. Nothing flaky about it.
+> - **Glide on your tablet is healthy:** decode averages 70 ms (worst 124 ms), the word appears about 72 ms after you lift, and 88% of glided words are kept.
+>
+> There is also a clue in the error class that I missed. A failure to *connect* shows up as `ConnectException`, but yours is a plain `SocketException`. That fits Android refusing to **create** the socket at all, 3 ms in. That is a permission-record problem, not a network-path problem, which makes my earlier firewall-style guesses less likely. It's an inference, not yet proven, so I'm making the test report it directly. Let me add that to the message.
+<!-- sha:946f65b5228d -->

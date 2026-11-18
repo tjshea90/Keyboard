@@ -109,6 +109,11 @@ class ConnectionProbeTest {
         assertFalse("the group is fine: no reinstall advice", v.contains("uninstall"))
     }
 
+    @Test fun aRefusedSocketCreationIsNamedAsAPermissionRecordProblemWithTheRestartFirst() {
+        val v = ConnectionProbe.verdict(healthy + st("MyMemory: connect IPv4", false, "SocketException (EPERM, socket creation refused)"))
+        assertTrue(v, v.contains("refuses to even CREATE the socket") && v.contains("completely off and on"))
+    }
+
     @Test fun batterySaverAloneIsAWarningWithTheRightFix() {
         val v = ConnectionProbe.verdict(healthy + st("Android limits", false, "Data Saver cannot be read, battery saver ON, standby bucket active"))
         assertTrue(v, v.contains("Switch Battery saver off") && !v.contains("Unrestricted data and switch Swoop on"))

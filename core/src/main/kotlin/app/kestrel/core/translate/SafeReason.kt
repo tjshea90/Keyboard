@@ -19,6 +19,7 @@ object SafeReason {
 
     /** Lower-case fragment of a message to the words that are kept for it (first match wins, so the specific ones come first). */
     private val PHRASES = listOf(
+        "socket failed" to "socket creation refused",        // (R25c: Android's own text when it will not even CREATE the socket; a failed connect says "failed to connect")
         "software caused connection abort" to "connection aborted",
         "connection reset" to "connection reset",
         "connection abort" to "connection aborted",

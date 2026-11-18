@@ -8,7 +8,8 @@ import org.junit.Test
 /** R24a: a failure reason that can say what broke (EPERM, ECONNRESET, ...) and can NEVER carry an address or the translated words. */
 class SafeReasonTest {
     @Test fun blockedSocketNamesTheErrno() {
-        assertEquals("SocketException (EPERM, not permitted)", SafeReason.of("SocketException", "socket failed: EPERM (Operation not permitted)"))
+        assertEquals("SocketException (EPERM, socket creation refused)", SafeReason.of("SocketException", "socket failed: EPERM (Operation not permitted)"))
+        assertEquals("a refused connect is a different thing", "SocketException (EPERM, not permitted)", SafeReason.of("SocketException", "connect failed: EPERM (Operation not permitted)"))
     }
 
     @Test fun aResetNamesErrnoAndPhrase() {

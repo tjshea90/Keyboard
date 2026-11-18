@@ -160,7 +160,8 @@ object ConnectionProbe {
             return "Result: Android did not give the Swoop process its internet access (it is not in the internet group), although the permission is declared. This happens after an update that added the permission. Restart the device now. If it still fails afterwards, uninstall Swoop and install it again from the Release (export your learned words first)."
         }
         if (blocked != null) {
-            val head = "Result: Android refuses the keyboard a network socket (${blocked.name}: ${SafeReason.errnoOf(blocked.note) ?: "refused"})."
+            val head = "Result: Android refuses the keyboard a network socket (${blocked.name}: ${SafeReason.errnoOf(blocked.note) ?: "refused"})." +
+                (if (blocked.note.contains("socket creation refused")) " It refuses to even CREATE the socket, so this is Android's permission record for Swoop (or a tablet-maker block on the app), not a problem on the network path. Switch the tablet completely off and on again first: a permission added by an update is sometimes not passed on to Android's network layer until then." else "")
             // R25c: measured on an Android 10 emulator: Data Saver = refused connections, battery saver and doze = time-outs, never EPERM; but the owner's tablet gave EPERM with battery saver ON, so a tablet maker's build can be stricter: say so
             if (limits != null && limits.note.contains("battery saver ON")) {
                 return head + " Battery saver is ON. On Android's own builds that only makes connections slow, but some tablets cut an app's network completely while it is on (this test screen was in front, so it is not a background rule). Switch Battery saver off (Settings, Battery) and test again. If it still fails: restart the device once, then look for a firewall, VPN or ad-blocking app, a vendor switch that blocks an app's internet (Settings, Apps, Swoop), or a parental-control or school profile."

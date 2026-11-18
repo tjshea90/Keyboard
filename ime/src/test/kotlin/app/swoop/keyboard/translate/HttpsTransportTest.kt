@@ -156,7 +156,7 @@ class HttpsTransportTest {
     }
 
     @Test fun theReasonNamesTheErrnoAndNeverTheAddressOrTheWords() {
-        assertEquals("SocketException (EPERM, not permitted)", why(SocketException("socket failed: EPERM (Operation not permitted)")))
+        assertEquals("SocketException (EPERM, socket creation refused)", why(SocketException("socket failed: EPERM (Operation not permitted)")))
         val w = why(ConnectException("failed to connect to api.mymemory.translated.net/203.0.113.7 (port 443): https://api.mymemory.translated.net/get?q=top%20secret ECONNREFUSED"))
         assertEquals("ConnectException (ECONNREFUSED)", w)
         assertFalse(w!!.contains("secret") || w.contains("203"))
