@@ -697,3 +697,7 @@
 ## 2026-11-18T05:16:13Z
 > Waiting for the APK build and publish step.
 <!-- sha:cc677df98282 -->
+
+## 2026-11-18T05:17:59Z
+> New request (R21). I'm writing it into TASKS.md first, and recording that the 0.7.0-alpha1 build is still in flight so a cut-off session doesn't lose that step. Then I'll look at where the quote spaces come from.
+<!-- sha:5bc59ef796c2 -->
