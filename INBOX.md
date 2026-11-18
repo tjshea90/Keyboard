@@ -304,3 +304,12 @@ The keyboard is automatically putting spaces between a word inside quotation mar
 ```
 Put all the updates  into kestrel keyboard 
 ```
+
+## 2026-11-18T06:13:49Z
+```
+1) if i long press the delete key, progressively delete from slow to fast, and eventually to deleting entire words at once.
+2) never at any time  allow the keyboard to learn and save anything from the clipboard. Just because i copy and paste something doesn't mean it is a word to learn for the keyboard.
+3) right now the keyboard isn't very good at predicting between small  words, notably  "the" often becomes "there". "The" uses a shorter gesture than there, so it shouldn't confuse them.
+4) if possible, have the keyboard "see" if the field I'm typing in is for numbers only. If so, automatically bring up a full size number pad comparable to other popular keyboards .
+5) can the keyboard be made to be even shorter than its current minimum vertical size? If so, allow me to resize it smaller 
+```
