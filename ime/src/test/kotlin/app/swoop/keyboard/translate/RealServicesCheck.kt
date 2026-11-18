@@ -1,5 +1,6 @@
 package app.swoop.keyboard.translate
 
+import app.kestrel.core.translate.TranslateLog
 import app.kestrel.core.translate.Translation
 import app.kestrel.core.translate.TranslationEngine
 import org.junit.Assert.assertTrue
@@ -22,7 +23,7 @@ class RealServicesCheck {
         val steps = ConnectionProbe.run(null)
         out.appendLine("## Staged probe (JVM, the same code as the Diagnostics button)").appendLine(ConnectionProbe.format(steps)).appendLine()
         // 2 the engine end to end, both directions, with the real transport
-        val engine = TranslationEngine(HttpsTransport()) { s, ms, r -> log.add("$s, $ms ms, $r") }
+        val engine = TranslationEngine(HttpsTransport(), TranslateLog { s, ms, r -> log.add("$s, $ms ms, $r") })
         var worked = 0
         for ((text, way) in listOf(
             "Where is the bus stop?" to Translation.Way.TO_MEXICAN,
