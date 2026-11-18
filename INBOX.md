@@ -272,3 +272,12 @@ Tell me the status on this without breaking or interrupting any other session
 ```
 Do whatever else is left to do and build the release
 ```
+
+## 2026-11-18T01:12:35Z
+```
+1) if i press on any word that i already typed, even several words ago, put suggested words in the top to change the word to, in case it is an error. the suggested words should be words with close glide typing patterns. 
+2) auto capitalize words at the beginning of sentences and where it makes sense to auto capitalize.
+3) the keyboard resize works but i need an easy way to snap it back to full size. also it jitters as i'm moving it to resize. make it resize smoothly.
+4) make the word typing learning as smart as possible.
+5) for the setting to hide letters on the keyboard, don't even show the blank keys. just make it one solid blank slate 
+```
