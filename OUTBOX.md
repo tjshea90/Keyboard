@@ -638,3 +638,7 @@
 ## 2026-11-18T03:42:49Z
 > That notification was just the short pause I'd already used. The 5-minute timer is still running; when it fires I'll check run 44232237543, confirm the Release has the APK, record it, and send you the link.
 <!-- sha:f01e7d5bf9af -->
+
+## 2026-11-18T03:47:18Z
+> Waiting for the `build` job (APK compile, certificate check, publish).
+<!-- sha:7f20d2e4eee3 -->
