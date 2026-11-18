@@ -1,21 +1,28 @@
-# CHECKPOINT 464 — read me first, then TASKS.md
+# CHECKPOINT 466 — read me first, then TASKS.md
 
-**Written:** 2026-11-18T02:06:20Z · **tests:** all 1 fast checks green (gradle suite: see ship.sh)
-**Branch:** `claude/keyboard-typing-improvements-jetik4` · **builds on:** `f0167b9` (this checkpoint is the commit after it)
+**Written:** 2026-11-18T02:13:38Z · **tests:** all 1 fast checks green (gradle suite: see ship.sh)
+**Branch:** `claude/keyboard-typing-improvements-jetik4` · **builds on:** `454c6dc` (this checkpoint is the commit after it)
 
 ## Just done
-0.6.0-alpha1 RELEASED AND RECORDED: run 44220063374 green (check, test-jvm incl. lint, build+verify+publish); Release swoop-v0.6.0-alpha1 has swoop-0.6.0-alpha1.apk (SHA-256 cb12e605...). R18a-e done. NOT run on the tablet/phone/emulator
+handoff saved (.handoff/handoff.md + archive; CLAUDE.md/AGENTS.md learnings block refreshed) after swoop-v0.6.0-alpha1 release
 
 ## Do this next
-Nothing running. Owner: install https://github.com/tjshea90/Keyboard/releases/tag/swoop-v0.6.0-alpha1 on tablet + phone and test the 5 things (tap an old word; capitals; Full size pill + resize smoothness; hide letters; learning). Possible next: sync Kestrel pinned engine copy (needs /home/user/Browser checkout, own branch only), emulator smoke (emu-smoke.yml dispatch) for the new tapped-word + pill UI, trigram/KB-201 and the owner's call on quotes on the strip
+Nothing running. Owner tests swoop-v0.6.0-alpha1 on tablet + phone; then fix what they report (next release 0.6.0-alpha2 code 11 via bash ship.sh). Optional: emu-smoke.yml for the new UI; sync Kestrel pinned copy when a Browser checkout exists
 
 *(resuming? CLAUDE.md's "FIRST ACTION OF EVERY SESSION" says how; the briefing is tools/resume.sh. Do that first, or autosave may stay off all session.)*
 
 ## Uncommitted right now
-    (nothing — the tree is clean as of this checkpoint)
+    M  .handoff/handoff.json
+    M  .handoff/handoff.md
+    A  .handoff/handoffs/2026-11-18/handoff-2026-11-18T02-13-20-707Z.json
+    A  .handoff/handoffs/2026-11-18/handoff-2026-11-18T02-13-20-707Z.md
+    M  .handoff/handoffs/index.md
+    M  AGENTS.md
+    M  CLAUDE.md
 
 ## Last ten checkpoints
 ```
+  c028463 ckpt 464: 0.6.0-alpha1 RELEASED AND RECORDED: run 44220063374 green (check, test-jvm inc
   37209dd ckpt 462: 0.6.0-alpha1 shipped to GitHub: ship.sh gates green, android.yml DISPATCHED ON
   6e52915 ckpt 461: gated swoop-v0.6.0-alpha1 (ime code 10) and pushed it: handoff self-test, unit
   2b21971 ckpt 446: R18a done: tap any earlier word -> strip offers words with close glide pattern
@@ -25,5 +32,7 @@ Nothing running. Owner: install https://github.com/tjshea90/Keyboard/releases/ta
   2a3d366 ckpt 404: R18: wrote the owner's five 2026-11-18 requests (R18a-e) into TASKS.md in his 
   b7c6303 ckpt 401: FINAL STATE (2026-11-17 22:30Z): Swoop 0.5.0-alpha4 and Kestrel G alpha68 are 
   64e1f2b ckpt 397: BOTH RELEASES PUBLISHED AND RECORDED: Swoop 0.5.0-alpha4 (https://github.com/t
-  67fccbc ckpt 390: Swoop 0.5.0-alpha4 RELEASED (run 44187302136 green: check, test-jvm, build wit
 ```
+
+(1 automatic checkpoint(s) since the last deliberate one — the
+session was still mid-step. `git diff` against it shows what changed.)
