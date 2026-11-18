@@ -286,3 +286,11 @@ Do whatever else is left to do and build the release
 ```
 The keyboard is working well. But sometimes it doesn't capitalize new sentences. once i put a period, it should add a space and capitalize the next letter for a new sentence. Also, if i put a period then deliberately backspace to do something like a website url which ends in .com without a space, do not let the keyboard automatically add a space if i deliberately delete the space. finally, when the keyboard is docked at the bottom of the screen, let me resize it both horizontally and vertically. When i am glide typing, it often says no word fits, try again. it should always input a word, the closest word to the pattern i glided, even if it picks an incorrect word 
 ```
+
+## 2026-11-18T04:02:07Z
+```
+1) if i copied something, the first suggested word in the keyboard suggestion boxes should be what i copied. Adopt this function from how other keyboards do this. Use the same logic.
+2) make the keyboard also suggest future words by predicting the next words i'm going to type based on predictive sentences. Figure out the most logical place to put this, maybe in the middle box of the suggest words, while the left and right boxes of the three suggested words boxes above the keyboard give possible words i meant to type based on glide pattern. Research how other popular keyboards do this.
+3) i just began this sentence that you are reading and it didn't auto capitalize the word I. I also wrote i'm and it didn't capitalize the i in that word either.
+4) do more research and work on making the keyboard learning as good as possible. I want it to be very good at predicting my glide typing.
+```
