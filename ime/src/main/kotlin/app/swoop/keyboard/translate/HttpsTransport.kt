@@ -112,7 +112,7 @@ class HttpsTransport internal constructor(
         val kind = when (e) {
             is UnknownHostException, is NoRouteToHostException -> TransportException.Kind.NO_INTERNET
             // refused / unreachable / timed out while connecting = no internet; EPERM / EACCES = Android refused the socket
-            is ConnectException -> if (blocked(e)) TransportException.Kind.BLOCKED else TransportException.Kind.NO_INTERNET
+            is ConnectException -> if (blocked(e)) TransportException.Kind.BLOCKED else if (SafeReason.errnoOf(e.message) == "ECONNREFUSED" || low.contains("connection refused")) TransportException.Kind.REFUSED else TransportException.Kind.NO_INTERNET
             is SocketTimeoutException -> TransportException.Kind.TIMEOUT
             is SSLException -> if (droppedNotRejected(low)) TransportException.Kind.DROPPED else TransportException.Kind.SECURE
             // a plain SocketException: the socket was refused (EPERM), or a connection that was made got reset / aborted / closed

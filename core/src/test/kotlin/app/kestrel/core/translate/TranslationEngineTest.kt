@@ -86,6 +86,8 @@ class TranslationEngineTest {
         assertEquals(ErrorCode.DROPPED, dropped.code); assertTrue(dropped.why, dropped.why.startsWith("The connection broke while translating (SocketException (ECONNRESET, connection reset))"))
         val blocked = r(TransportException.Kind.BLOCKED, "SocketException (EPERM, not permitted)")
         assertEquals(ErrorCode.BLOCKED, blocked.code); assertTrue(blocked.why, blocked.why.startsWith("Android is not letting the keyboard use the network (SocketException (EPERM") && blocked.why.contains("Data Saver"))
+        val refused = r(TransportException.Kind.REFUSED, "ConnectException (ECONNREFUSED, connection refused)")
+        assertEquals(ErrorCode.REFUSED, refused.code); assertTrue(refused.why, refused.why.startsWith("The connection was refused (ConnectException (ECONNREFUSED") && refused.why.contains("Data Saver"))
         val secure = r(TransportException.Kind.SECURE, "SSLHandshakeException (certificate not trusted)")
         assertEquals(ErrorCode.SECURE, secure.code); assertTrue(secure.why, secure.why.contains("date and time"))
         val other = r(TransportException.Kind.OTHER, "IOException")

@@ -128,6 +128,10 @@ class TranslationEngine(
             TransportException.Kind.DROPPED -> TranslateResult.failed(
                 "The connection broke while translating$why. The hotspot may be flaky: try again. Diagnostics has a connection test.", false, by, ErrorCode.DROPPED
             )
+            TransportException.Kind.REFUSED -> TranslateResult.failed(
+                "The connection was refused$why. On Android that is usually Data Saver: Settings, Network and internet, Data Saver, Unrestricted data, switch Swoop on (Diagnostics has a button for it).",
+                false, by, ErrorCode.REFUSED
+            )
             TransportException.Kind.BLOCKED -> TranslateResult.failed(
                 "Android is not letting the keyboard use the network$why. Most often Data Saver: in Diagnostics tap Test translation connection and Allow Swoop to use data when Data Saver is on.",
                 false, by, ErrorCode.BLOCKED

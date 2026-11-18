@@ -17,6 +17,8 @@ enum class ErrorCode {
     SERVICE_ERROR,
     /** The connection was made and then dropped (reset, aborted, closed): a flaky hotspot or a middlebox. */
     DROPPED,
+    /** The connection was refused (ECONNREFUSED): usually Data Saver stopping a background app (reproduced on Android 10), else a firewall. */
+    REFUSED,
     /** Android refused the socket (EPERM / EACCES): permission, data saver or a firewall app. */
     BLOCKED,
     /** The secure handshake failed: certificate, wrong date on the device, or a middlebox. */

@@ -104,12 +104,12 @@ class HttpsTransportTest {
         try { transport(readMs = 300).call("$mm/slow", null); fail() } catch (e: TransportException) { assertEquals(TransportException.Kind.TIMEOUT, e.kind) }
     }
 
-    @Test fun noServerIsNoInternet() {
+    @Test fun aClosedPortIsARefusedConnection() {
         val closed = FakeServer()
         val p = closed.port
         closed.stop()
         val t = HttpsTransport({ "http://127.0.0.1:$p/x" })
-        try { t.call("$mm/get", null); fail() } catch (e: TransportException) { assertEquals(TransportException.Kind.NO_INTERNET, e.kind) }
+        try { t.call("$mm/get", null); fail() } catch (e: TransportException) { assertEquals(TransportException.Kind.REFUSED, e.kind) }
     }
 
     @Test fun errorsNeverCarryTheAddressOrTheText() {
@@ -137,7 +137,8 @@ class HttpsTransportTest {
         assertEquals(TransportException.Kind.BLOCKED, kind(ConnectException("connect failed: EACCES (Permission denied)")))
         assertEquals(TransportException.Kind.NO_INTERNET, kind(UnknownHostException("Unable to resolve host \"x\": No address associated with hostname")))
         assertEquals(TransportException.Kind.NO_INTERNET, kind(NoRouteToHostException("Host unreachable")))
-        assertEquals(TransportException.Kind.NO_INTERNET, kind(ConnectException("failed to connect to x (port 443) after 8000ms: isConnected failed: ECONNREFUSED (Connection refused)")))
+        assertEquals("a refused connection (what Data Saver does to a background app) is its own kind", TransportException.Kind.REFUSED, kind(ConnectException("failed to connect to x (port 443) after 8000ms: isConnected failed: ECONNREFUSED (Connection refused)")))
+        assertEquals(TransportException.Kind.NO_INTERNET, kind(ConnectException("failed to connect to x (port 443) after 8000ms: isConnected failed: ENETUNREACH (Network is unreachable)")))
         assertEquals(TransportException.Kind.TIMEOUT, kind(SocketTimeoutException("failed to connect to x after 8000ms")))
         assertEquals(TransportException.Kind.DROPPED, kind(SocketException("Connection reset")))
         assertEquals(TransportException.Kind.DROPPED, kind(SocketException("Socket closed")))

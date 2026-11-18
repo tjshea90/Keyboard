@@ -158,6 +158,7 @@ object ConnectionProbe {
         }
         bad("name lookup")?.let { return "Result: the name of ${it.name.substringBefore(':')} could not be looked up: the device is offline, or private DNS / a filter blocks it. Is the phone's mobile data on?" }
         val connects = steps.filter { it.name.contains(": connect ") }
+        if (connects.isNotEmpty() && connects.none { it.ok } && connects.any { it.note.contains("ECONNREFUSED") }) return "Result: the connection is REFUSED (ECONNREFUSED), the services themselves never do that. On Android 10 that is what Data Saver does to a background app on a metered link such as a phone's hotspot: open Settings, Network and internet, Data Saver, Unrestricted data and switch Swoop on (the first button below opens it), or turn Data Saver off."
         if (connects.isNotEmpty() && connects.none { it.ok }) return "Result: no connection could be made to the services (${connects.first().note}). Offline, or a firewall blocks them."
         bad("secure handshake")?.let { return "Result: the secure handshake with ${it.name.substringBefore(':')} failed (${it.note}). Check the date and time; a hotspot filter may be cutting it." }
         bad("answer")?.let { return "Result: ${it.name.substringBefore(':')} was reached but the exchange broke (${it.note}). Flaky link: try again." }

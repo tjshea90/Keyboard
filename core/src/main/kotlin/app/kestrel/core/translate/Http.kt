@@ -9,6 +9,8 @@ class TransportException(val kind: Kind, message: String? = null) : Exception(me
         NO_INTERNET, TIMEOUT, TOO_BIG,
         /** The connection was made and then dropped (reset, aborted, closed, cut off): a flaky hotspot. One quick retry is worth it. */
         DROPPED,
+        /** The connection was actively REFUSED (ECONNREFUSED): the services never refuse port 443, so something on this device or its link does. On an Android 10 emulator Data Saver (metered link, app not on the Unrestricted data list) gives exactly this to a background app (R25). */
+        REFUSED,
         /** Android refused the socket itself (EPERM / EACCES): the keyboard may not use the network (permission, data saver, firewall). */
         BLOCKED,
         /** The secure handshake failed (certificate, wrong clock, middlebox). */
