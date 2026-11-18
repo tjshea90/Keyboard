@@ -394,7 +394,7 @@ class KeyboardRootTest {
         assertTrue("a taller keyboard offers the way back, though it is full width", r.gripCanRestore()); assertFalse(r.squeezed)
         val tall = r.panelRect().height(); val (x, y) = gripCentre(r); val g0 = c.geometry
         touch(r, MotionEvent.ACTION_DOWN, x, y); touch(r, MotionEvent.ACTION_UP, x, y)
-        assertTrue("shorter again: ${r.panelRect().height()} vs $tall", r.panelRect().height() < tall - 30 * dp); assertEquals(1000, Settings(app).dockH); assertFalse(r.gripCanRestore()); assertTrue(c.geometry > g0)
+        assertTrue("shorter again: ${r.panelRect().height()} vs $tall; restore=${r.gripCanRestore()} dockH=${Settings(app).dockH} mul=${r.keys.floatMul} at $x,$y grip=${r.grip.width}x${r.grip.height}@${r.grip.top} panel=${r.panelRect()}", r.panelRect().height() < tall - 30 * dp); assertEquals(1000, Settings(app).dockH); assertFalse(r.gripCanRestore()); assertTrue(c.geometry > g0)
     }
 
     @Test fun aDoubleTapOnTheBarAlsoRestoresTheHeight() {
