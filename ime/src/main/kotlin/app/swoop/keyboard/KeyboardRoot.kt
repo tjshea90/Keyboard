@@ -61,6 +61,10 @@ class GripBar(context: Context) : View(context) {
         fun gripFullWidth() {}
         /** True when the docked keyboard is narrower than the screen. */
         fun gripSqueezed(): Boolean = false
+        /** True when there is a full-size keyboard to snap back to (squeezed, or floating): the bar then shows its "Full size" pill. */
+        fun gripCanRestore(): Boolean = false
+        /** The "Full size" pill was tapped: back to the full-width docked keyboard. */
+        fun gripRestore() {}
     }
     var host: Host? = null
     var accent = 0xFF00DDE6.toInt(); set(v) { field = v; invalidate() }
@@ -81,15 +85,34 @@ class GripBar(context: Context) : View(context) {
 
     override fun onMeasure(w: Int, h: Int) { setMeasuredDimension(MeasureSpec.getSize(w), (HEIGHT_DP * d).toInt()) }
 
+    private val label = android.text.TextPaint(Paint.ANTI_ALIAS_FLAG).apply { typeface = android.graphics.Typeface.DEFAULT_BOLD }
+    private val pillBox = RectF()
+
+    /**
+     * The "Full size" pill (owner R18c: "an easy way to snap it back to full size"): in the middle of the bar, between the squeeze arrows, whenever the keyboard is squeezed or floating. One tap puts the full-width docked
+     * keyboard back (a double tap on the bar still does). Null when there is nothing to restore or the bar is too narrow for it.
+     */
+    private fun pillRect(): RectF? {
+        if (host?.gripCanRestore() != true) return null
+        val zone = if (floating) 0f else ARROW_ZONE_DP * d
+        val w = Math.min(PILL_W_DP * d, width - 2 * zone - 8 * d)
+        if (w < 26 * d) return null
+        pillBox.set(width / 2f - w / 2f, 2 * d, width / 2f + w / 2f, height - 2 * d)
+        return pillBox
+    }
+
     override fun onDraw(c: Canvas) {
         val cx = width / 2f; val cy = height / 2f
         val len = (if (floating) 72f else 52f) * d; val th = 4f * d
-        // the glow: a wider, fainter bar behind the bright one
-        paint.style = Paint.Style.FILL
-        paint.color = (accent and 0x00FFFFFF) or ((if (floating) 90 else 55) shl 24)
-        box.set(cx - len / 2 - 5 * d, cy - th / 2 - 3 * d, cx + len / 2 + 5 * d, cy + th / 2 + 3 * d); c.drawRoundRect(box, 8 * d, 8 * d, paint)
-        paint.color = if (floating) lighten(accent) else accent
-        box.set(cx - len / 2, cy - th / 2, cx + len / 2, cy + th / 2); c.drawRoundRect(box, th / 2, th / 2, paint)
+        val pr = pillRect()
+        if (pr != null) drawPill(c, pr) else {
+            // the glow: a wider, fainter bar behind the bright one
+            paint.style = Paint.Style.FILL
+            paint.color = (accent and 0x00FFFFFF) or ((if (floating) 90 else 55) shl 24)
+            box.set(cx - len / 2 - 5 * d, cy - th / 2 - 3 * d, cx + len / 2 + 5 * d, cy + th / 2 + 3 * d); c.drawRoundRect(box, 8 * d, 8 * d, paint)
+            paint.color = if (floating) lighten(accent) else accent
+            box.set(cx - len / 2, cy - th / 2, cx + len / 2, cy + th / 2); c.drawRoundRect(box, th / 2, th / 2, paint)
+        }
         if (!floating) {                       // the squeeze arrows at both ends: drag one inwards (or pinch the bar) to make the keyboard narrower
             paint.style = Paint.Style.STROKE; paint.strokeCap = Paint.Cap.ROUND; paint.strokeWidth = 2.4f * d; paint.color = accent
             val a = 5f * d
@@ -102,6 +125,25 @@ class GripBar(context: Context) : View(context) {
         }
     }
     private val path = Path()
+
+    /** The pill: a faint accent fill, an accent outline, two arrows pointing outwards (drawn: the tablet's fonts may lack the symbol) and, when it is wide enough, the words "Full size". */
+    private fun drawPill(c: Canvas, r: RectF) {
+        val rad = r.height() / 2f
+        paint.style = Paint.Style.FILL; paint.color = (accent and 0x00FFFFFF) or (70 shl 24); c.drawRoundRect(r, rad, rad, paint)
+        paint.style = Paint.Style.STROKE; paint.strokeWidth = 1.4f * d; paint.strokeCap = Paint.Cap.ROUND; paint.strokeJoin = Paint.Join.ROUND; paint.color = accent
+        c.drawRoundRect(r, rad, rad, paint)
+        val words = context.getString(R.string.grip_full_size)
+        label.textSize = 10.5f * d; label.color = accent
+        val arrowW = 15f * d
+        val showWords = r.width() >= 70f * d
+        val total = if (showWords) arrowW + 5f * d + label.measureText(words) else arrowW
+        var x = r.centerX() - total / 2f; val cy = r.centerY(); val a = 3f * d
+        c.drawLine(x, cy, x + arrowW, cy, paint)                                                    // the double-headed arrow
+        path.reset(); path.moveTo(x + a, cy - a); path.lineTo(x, cy); path.lineTo(x + a, cy + a); c.drawPath(path, paint)
+        path.reset(); path.moveTo(x + arrowW - a, cy - a); path.lineTo(x + arrowW, cy); path.lineTo(x + arrowW - a, cy + a); c.drawPath(path, paint)
+        if (showWords) { x += arrowW + 5f * d; val fm = label.fontMetrics; c.drawText(words, x, cy - (fm.ascent + fm.descent) / 2f, label) }
+        paint.style = Paint.Style.FILL
+    }
 
     private fun half(x: Int) = x + (255 - x) / 2
     private fun lighten(c: Int): Int = 0xFF000000.toInt() or (half((c shr 16) and 255) shl 16) or (half((c shr 8) and 255) shl 8) or half(c and 255)
@@ -154,6 +196,8 @@ class GripBar(context: Context) : View(context) {
                 handler.removeCallbacks(longPress)
                 if (mode != 0) { host?.gripSqueezeEnd(); mode = 0; moved = false; dragging = false; return true }
                 if (e.actionMasked == MotionEvent.ACTION_UP) {
+                    val pr = pillRect()
+                    if (!moved && !dragging && pr != null && e.x >= pr.left - 6 * d && e.x <= pr.right + 6 * d) { lastTapAt = Long.MIN_VALUE / 2; host?.gripRestore(); dragging = false; moved = false; return true }
                     if (!moved && !floating && host?.gripSqueezed() == true) { val now = SystemClock.uptimeMillis(); if (now - lastTapAt < DOUBLE_TAP_MS) { lastTapAt = Long.MIN_VALUE / 2; host?.gripFullWidth() } else lastTapAt = now }
                     if (moved) host?.gripDrop()
                     else if (floating) { val now = SystemClock.uptimeMillis(); if (now - lastTapAt < DOUBLE_TAP_MS) { lastTapAt = Long.MIN_VALUE / 2; host?.gripDock() } else lastTapAt = now }
@@ -173,6 +217,8 @@ class GripBar(context: Context) : View(context) {
         const val LONG_PRESS_MS = 350L
         const val SLOP_DP = 4f
         const val DOUBLE_TAP_MS = 320L
+        /** The "Full size" pill is this wide at most. */
+        const val PILL_W_DP = 92f
     }
 }
 
