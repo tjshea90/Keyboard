@@ -281,3 +281,8 @@ Do whatever else is left to do and build the release
 4) make the word typing learning as smart as possible.
 5) for the setting to hide letters on the keyboard, don't even show the blank keys. just make it one solid blank slate 
 ```
+
+## 2026-11-18T03:14:12Z
+```
+The keyboard is working well. But sometimes it doesn't capitalize new sentences. once i put a period, it should add a space and capitalize the next letter for a new sentence. Also, if i put a period then deliberately backspace to do something like a website url which ends in .com without a space, do not let the keyboard automatically add a space if i deliberately delete the space. finally, when the keyboard is docked at the bottom of the screen, let me resize it both horizontally and vertically. When i am glide typing, it often says no word fits, try again. it should always input a word, the closest word to the pattern i glided, even if it picks an incorrect word 
+```
