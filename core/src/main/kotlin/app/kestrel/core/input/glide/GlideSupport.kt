@@ -364,6 +364,24 @@ class GlideTyping(
         }
     }
 
+    /**
+     * R18a: the words to offer in place of [word], which is already in the text ([Alternatives]): the ones whose glide pattern is close to it, ranked with the words before it ([prev2], [prev]) and the word after it
+     * ([next]). [done] is called on a worker thread, unless a newer request (of any kind) has been made by then.
+     */
+    fun alternatives(word: String, prev2: String?, prev: String?, next: String?, limit: Int, done: (List<String>) -> Unit) {
+        val my = suggestSeq.incrementAndGet()
+        previewExecutor.execute {
+            if (my != suggestSeq.get()) return@execute
+            val m = main; val k = keys
+            if (m == null || k == null || !ready) return@execute
+            val t0 = System.nanoTime()
+            val d = dictionary
+            val r = try { Alternatives.find(m, userLex, personal, previewDecoder, k, word, prev2, prev, next, limit + EXTRA_FOR_BLOCKED) { d.isBlocked(it) }.take(limit) } catch (e: Exception) { emptyList() }
+            stats.onSuggested((System.nanoTime() - t0) / 1_000_000)
+            if (my == suggestSeq.get()) done(r)
+        }
+    }
+
     /** What the strip shows is no longer wanted (a glide started, the field changed): an answer on its way is dropped. */
     fun cancelSuggest() { suggestSeq.incrementAndGet() }
 

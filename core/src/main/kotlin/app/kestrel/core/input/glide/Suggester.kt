@@ -40,7 +40,8 @@ object Suggester {
 
     private class Cand(val text: String, val lower: String, var score: Float, val fix: Boolean, val bonus: Float)
 
-    fun suggest(main: BinaryLexicon, personal: PersonalModel?, keys: GlideKeys?, typed: String, prev: String?, prev2: String?, limit: Int = 3): Suggestions {
+    /** [fixesOnly]: only the typo fixes of the word, not the longer words that start with it (what [Alternatives] asks for a word that is already complete). */
+    fun suggest(main: BinaryLexicon, personal: PersonalModel?, keys: GlideKeys?, typed: String, prev: String?, prev2: String?, limit: Int = 3, fixesOnly: Boolean = false): Suggestions {
         val t = typed.lowercase()
         if (t.isEmpty()) return nextWords(main, personal, prev, prev2, limit)
         if (!t.all { it in 'a'..'z' || it == '\'' } || t.startsWith("'")) return Suggestions(emptyList(), true, null, typed)
@@ -56,7 +57,7 @@ object Suggester {
         }
 
         // 1. completions: the most common words that start with the letters typed (a short list is enough: the person's own words are added below)
-        val range = main.prefixIds(t)
+        val range = if (fixesOnly) IntRange.EMPTY else main.prefixIds(t)
         val topIds = IntArray(POOL); val topLp = FloatArray(POOL) { -Float.MAX_VALUE }; var minAt = 0
         for (id in range) {
             val lp = main.logProb(id)
@@ -70,7 +71,7 @@ object Suggester {
         if (prevId >= 0) for (id in main.successors(prevId)) if (id in range) offer(main.text(id), logP(main, pm, id, null, prevId, prev, prev2, total), false)
 
         // 2. the person's own words with these letters (also those the shipped list lacks)
-        if (pm != null) for (w in pm.completions(t, 12, 1f)) {
+        if (pm != null && !fixesOnly) for (w in pm.completions(t, 12, 1f)) {
             val id = main.idOf(w).takeIf { it >= 0 && main.text(it).lowercase() == w } ?: -1
             val knownToMain = id >= 0
             if (!knownToMain && pm.weightOf(w) < OWN_WORD_USES) continue   // a word typed once that nobody knows may be a slip
@@ -99,7 +100,7 @@ object Suggester {
         val mainKnows = exactId >= 0 && main.text(exactId).lowercase() == t && (main.logProb(exactId) >= DEEP_TAIL || (pm?.weightOf(t) ?: 0f) > 0f)
         val own = pm?.weightOf(t) ?: 0f
         val typedKnown = mainKnows || own >= OWN_WORD_USES
-        val ranked = found.values.sortedByDescending { it.score }
+        val ranked = found.values.sortedByDescending { it.score }.let { r -> if (fixesOnly) r.filter { it.fix } else r }
         var auto: String? = null
         // the same letters WITH an apostrophe ("dont" -> "don't", "im" -> "I'm", "cant" -> "can't"): people mean the contraction. A real word that happens to be spelled the same ("ill", "were") is only changed when the
         // contraction is about twenty times as likely; one Backspace puts the typed word back and the keyboard never changes it again.
@@ -156,6 +157,14 @@ object Suggester {
         "nigger", "niggers", "nigga", "niggas", "faggot", "faggots", "fag", "fags", "retard", "retarded", "retards", "bastard", "bastards", "dick", "dicks", "cock", "cocks", "pussy", "pussies",
         "asshole", "assholes", "piss", "pissed", "tits", "titties", "boobs", "cum", "cumming", "blowjob", "handjob", "porn", "slutty",
     )
+
+    /** ln P(word | the words before it) as the strip scores it: the word's share on the shipped list, the person's own and recent use, the pair and triple with the words before, minus the price of a rare word. [word] is lowercase. */
+    fun contextLogP(main: BinaryLexicon, personal: PersonalModel?, word: String, prev: String?, prev2: String?): Float {
+        val pm = personal?.takeIf { !it.isEmpty }
+        val id = main.idOf(word).takeIf { it >= 0 && main.text(it).lowercase() == word } ?: -1
+        val prevId = if (prev.isNullOrEmpty()) -1 else main.idOf(prev)
+        return logP(main, pm, id, if (id < 0) word else null, prevId, prev, prev2, main.totalCount)
+    }
 
     /** ln P(word | the words before): its own share (plus the person's use and recent use), mixed with how likely it is after them. [id] < 0 = not in the shipped list: only what the person wrote counts. */
     private fun logP(main: BinaryLexicon, pm: PersonalModel?, id: Int, own: String?, prevId: Int, prev: String?, prev2: String?, total: Double): Float {
