@@ -894,3 +894,12 @@
 >
 > **Open:** R24a (translation reach, waiting on the emulator result), R24b (real-swipe glide research), R24c (run tests), then release 0.7.0-alpha4.
 <!-- sha:6487fc33a303 -->
+
+## 2026-11-18T20:02:16Z
+> Now waiting on two things in parallel: the local full test suite and the re-run of the Android 10/16 emulator network check. Status for you:
+>
+> - **Translation won't turn off (R24c):** fixed in code. Turning it off now works in every field, Enter can no longer translate in a password or address-bar field, and the key's lit state follows the real state. The three tests for this haven't run yet.
+> - **"Could not be reached" (R24a):** the real engine works against the live services from a GitHub runner, so the cause is on the device or its link. The emulator check failed the first time only because of how my test launched the app. Fixed, re-running now.
+>
+> Open: R24a (emulator result), R24b (real-swipe glide replay), R24c (run its tests), then release 0.7.0-alpha4.
+<!-- sha:6b681c448190 -->
