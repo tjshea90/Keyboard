@@ -320,3 +320,8 @@ I tried the translation feature but it says the translation service could not be
 
 Do more research to improve the word glide prediction if possible, but it is pretty good right now 
 ```
+
+## 2026-11-18T19:55:37Z
+```
+Also i just tried to turn the translation feature off and it won't turn off 
+```
