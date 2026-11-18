@@ -256,8 +256,28 @@ class KeyboardRoot(context: Context) : FrameLayout(context), GripBar.Host {
     private var settings: Settings? = null
     /** The docked keyboard's width as a fraction of the screen (1 = full width) and where it stands (0..1 of the free room): squeezed with two fingers or the bar's arrows, moved by dragging the bar. */
     private var dockFrac = 1f; private var dockX = 0.5f
-    val squeezed: Boolean get() = !floating && dockFrac < 0.995f
+    val squeezed: Boolean get() = !floating && (if (previewing) pvW < 0.995f * screenW() else dockFrac < 0.995f)
     private var sqStartW = 0; private var sqStartLeft = 0; private var pinchW0 = 0
+
+    // ---- the live picture of a resize (owner R18c: "it jitters as i'm moving it to resize. make it resize smoothly")
+    // While a finger drags a corner, an arrow of the bar, or pinches it, nothing is laid out again and nothing is measured: the finished panel is only scaled and moved on the GPU (view transforms), once per touch
+    // event, so the weak tablet has nothing to compute between two frames and the edge follows the finger exactly. When the finger lifts the new size is laid out ONCE, with the keys at their proper shape.
+    private var previewing = false
+    private var pvLeft = 0; private var pvTop = 0; private var pvW = 0; private var pvH = 0           // the rectangle the panel is meant to cover now, in this view's pixels
+    private fun setPreview(l: Int, t: Int, w: Int, h: Int) {
+        val lw = panel.width; val lh = panel.height
+        if (lw <= 0 || lh <= 0 || w <= 0 || h <= 0) return
+        pvLeft = l; pvTop = t; pvW = w; pvH = h; previewing = true
+        panel.pivotX = 0f; panel.pivotY = 0f
+        panel.scaleX = w / lw.toFloat(); panel.scaleY = h / lh.toFloat()
+        panel.translationX = (l - panel.left).toFloat(); panel.translationY = (t - panel.top).toFloat()
+        invalidate()
+    }
+    private fun clearPreview() {
+        if (!previewing) return
+        previewing = false
+        panel.scaleX = 1f; panel.scaleY = 1f; panel.translationX = 0f; panel.translationY = 0f
+    }
     /** How far the keyboard was dragged since it detached: letting go near the bottom docks it only after a real drag, so a long press that is released at once leaves it floating. */
     private var travelled = 0f
 
@@ -364,6 +384,7 @@ class KeyboardRoot(context: Context) : FrameLayout(context), GripBar.Host {
 
     /** Docked: full width at the bottom. Floating: the chosen width, the chosen row height, at the saved position, in a neon frame. */
     private fun applyMode() {
+        clearPreview()
         grip.floating = floating
         keys.floatMul = if (floating) hMul else 1f
         val f = frame()
@@ -405,7 +426,7 @@ class KeyboardRoot(context: Context) : FrameLayout(context), GripBar.Host {
     fun logKeymapNow() { if (Diag.enabled) keys.keymapLine()?.let { lastKeymapLog = it; Diag.d(it) } }
 
     /** The panel's rectangle in this view's coordinates. */
-    fun panelRect(): Rect = Rect(panel.left, panel.top, panel.right, panel.bottom)
+    fun panelRect(): Rect = if (previewing) Rect(pvLeft, pvTop, pvLeft + pvW, pvTop + pvH) else Rect(panel.left, panel.top, panel.right, panel.bottom)
 
     private fun cornerSize() = (CORNER_DP * d).toInt()
 
@@ -471,12 +492,10 @@ class KeyboardRoot(context: Context) : FrameLayout(context), GripBar.Host {
         val sw = screenW()
         val ww = w.coerceIn(Math.round(MIN_DOCK_FRAC * sw), sw)
         val l = left.coerceIn(0, sw - ww)
-        dockFrac = ww / sw.toFloat()
-        dockX = if (sw - ww <= 0) 0.5f else l / (sw - ww).toFloat()
-        requestLayout()
+        setPreview(l, panel.top, ww, panel.height)                       // only the picture moves; the layout waits for the finger to lift (gripSqueezeEnd)
     }
-    private fun curLeft(): Int = if (dockFrac >= 0.995f) 0 else Math.round(dockX * (screenW() - Math.round(dockFrac * screenW())))
-    private fun curWidth(): Int = if (dockFrac >= 0.995f) screenW() else Math.round(dockFrac * screenW())
+    private fun curLeft(): Int = if (previewing) pvLeft else if (dockFrac >= 0.995f) 0 else Math.round(dockX * (screenW() - Math.round(dockFrac * screenW())))
+    private fun curWidth(): Int = if (previewing) pvW else if (dockFrac >= 0.995f) screenW() else Math.round(dockFrac * screenW())
     override fun gripSqueezeStart(side: Int) { sqStartW = curWidth(); sqStartLeft = curLeft() }
     override fun gripSqueeze(side: Int, dx: Float) {
         // the left arrow dragged right (or the right arrow dragged left) squeezes from that side; the other edge stays where it is
@@ -489,9 +508,23 @@ class KeyboardRoot(context: Context) : FrameLayout(context), GripBar.Host {
         applyDock(sqStartLeft + (sqStartW - w) / 2, w)                  // pinching keeps the middle where it was
     }
     override fun gripSlide(dx: Float) { applyDock(curLeft() + Math.round(dx), curWidth()) }
-    override fun gripSqueezeEnd() { settings?.saveDock(Math.round(dockFrac * 1000f), Math.round(dockX * 1000f)); host?.geometryChanged() }
-    override fun gripFullWidth() { dockFrac = 1f; dockX = 0.5f; requestLayout(); gripSqueezeEnd() }
+    /** The finger lifted: the size the picture shows is laid out for real (once), kept, and the glide decoder is told where the keys are now. */
+    override fun gripSqueezeEnd() {
+        if (previewing) {
+            val sw = screenW()
+            dockFrac = pvW / sw.toFloat(); dockX = if (sw - pvW <= 0) 0.5f else pvLeft / (sw - pvW).toFloat()
+            clearPreview(); requestLayout(); grip.invalidate()
+        }
+        settings?.saveDock(Math.round(dockFrac * 1000f), Math.round(dockX * 1000f)); host?.geometryChanged()
+    }
+    override fun gripFullWidth() { clearPreview(); dockFrac = 1f; dockX = 0.5f; requestLayout(); grip.invalidate(); gripSqueezeEnd() }
     override fun gripSqueezed(): Boolean = squeezed
+    override fun gripCanRestore(): Boolean = floating || squeezed
+    /** The "Full size" pill: a squeezed keyboard goes back to the full width; a floating one docks again, full width (owner R18c). */
+    override fun gripRestore() {
+        if (floating) { dockFrac = 1f; dockX = 0.5f; settings?.saveDock(1000, 500); setFloating(false); host?.geometryChanged() }
+        else gripFullWidth()
+    }
 
     // ------------------------------------------------------------------ the corners
 
@@ -503,7 +536,7 @@ class KeyboardRoot(context: Context) : FrameLayout(context), GripBar.Host {
         if (resizeCorner >= 0) {
             when (ev.actionMasked) {
                 MotionEvent.ACTION_MOVE -> doResize(ev)
-                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> { resizeCorner = -1; save(); host?.geometryChanged(); invalidate() }
+                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> endResize()
             }
             return true
         }
@@ -513,25 +546,39 @@ class KeyboardRoot(context: Context) : FrameLayout(context), GripBar.Host {
     private fun startResize(corner: Int, ev: MotionEvent) {
         val r = panelRect()
         resizeCorner = corner; rsLeft = r.left; rsTop = r.top; rsW = r.width(); rsH = r.height(); rsX = ev.rawX; rsY = ev.rawY
+        panel.elevation = 0f                                      // (the shadow is drawn again at every size: nothing the weak tablet GPU needs while a finger drags)
         performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP); invalidate()
     }
 
+    /** One touch event of a corner drag: the rectangle the finger asks for (the opposite corner stays put) is only SHOWN (see [setPreview]); nothing is measured or laid out here. */
     private fun doResize(ev: MotionEvent) {
         val sw = if (width > 0) width else screenW(); val sh = (if (height > 0) height else screenH()) - navBottom
         val f = frame(); val gripH = (GripBar.HEIGHT_DP * d).toInt()
         val minW = Math.round(FloatingMath.clampWidthDp(FloatingMath.MIN_W_DP, sw / d) * d); val maxW = Math.round(FloatingMath.clampWidthDp(FloatingMath.MAX_W_DP, sw / d) * d)
-        val baseKeysH = keys.heightFor(rsW - 2 * f, 1f)
         val minH = gripH + keys.heightFor(minW - 2 * f, FloatingMath.MIN_H_MUL) + f * 3 / 2
         val maxH = gripH + keys.heightFor(maxW - 2 * f, FloatingMath.MAX_H_MUL) + f * 3 / 2
         val r = FloatingMath.resize(resizeCorner, rsLeft, rsTop, rsW, rsH, (ev.rawX - rsX).toInt(), (ev.rawY - rsY).toInt(), minW, maxW, minH, maxH, sw, sh)
-        wDp = r.width / d
-        val keysH = (r.height - gripH - f * 3 / 2).toFloat()
-        hMul = FloatingMath.clampHeightMul(keysH / maxOf(1, keys.heightFor(r.width - 2 * f, 1f)))
-        keys.floatMul = hMul
-        val ph = panelHeightAt(r.width)
-        val top = if (resizeCorner == 0 || resizeCorner == 1) FloatingMath.clampPos(rsTop + rsH - ph, ph, sh) else r.top
-        posX = FloatingMath.fracF(r.left, sw - r.width); posY = FloatingMath.fracF(top, sh - ph)
-        requestLayout()
+        setPreview(r.left, r.top, r.width, r.height)
+    }
+
+    /** The finger lifted: the rectangle that was shown becomes the real size (width, row height, position), laid out once; a top corner keeps the bottom edge where it was. */
+    private fun endResize() {
+        val corner = resizeCorner
+        resizeCorner = -1
+        if (previewing) {
+            val sw = if (width > 0) width else screenW(); val sh = (if (height > 0) height else screenH()) - navBottom
+            val f = frame(); val gripH = (GripBar.HEIGHT_DP * d).toInt()
+            wDp = pvW / d
+            hMul = FloatingMath.clampHeightMul(keys.mulFor(pvW - 2 * f, pvH - gripH - f * 3 / 2))     // (the exact inverse: the keys come out as tall as the picture was)
+            keys.floatMul = hMul
+            val ph = panelHeightAt(pvW)
+            val top = if (corner == 0 || corner == 1) FloatingMath.clampPos(rsTop + rsH - ph, ph, sh) else FloatingMath.clampPos(pvTop, ph, sh)
+            posX = FloatingMath.fracF(pvLeft, sw - pvW); posY = FloatingMath.fracF(top, sh - ph)
+            clearPreview()
+            requestLayout()
+        }
+        panel.elevation = if (floating) 12 * d else 0f
+        save(); host?.geometryChanged(); invalidate()
     }
 
     override fun dispatchDraw(c: Canvas) {
