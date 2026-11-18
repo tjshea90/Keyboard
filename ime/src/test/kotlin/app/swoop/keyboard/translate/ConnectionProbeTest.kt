@@ -89,8 +89,8 @@ class ConnectionProbeTest {
     }
 
     @Test fun theGroupCheckSaysNothingOnNewAndroid() {
-        // (the JVM test runs without Android: SDK_INT is 0 here, below 33, and /proc/self/status has no inet group: that is "false" or null, never a crash)
-        AndroidLimits.inInetGroup()
+        // (the JVM test runs without Android: SDK_INT is 0 here: "cannot be told", never a false alarm and never a crash)
+        assertEquals(null, AndroidLimits.inInetGroup())
     }
 
     @Test fun aLimitAloneIsAWarningThatTheKeyboardMayBeRefused() {

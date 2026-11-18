@@ -43,7 +43,8 @@ object AndroidLimits {
      * (newer Android checks internet access another way and an app need not show the group there: only asked below API 33).
      */
     fun inInetGroup(): Boolean? {
-        if (android.os.Build.VERSION.SDK_INT >= 33) return null
+        val sdk = android.os.Build.VERSION.SDK_INT
+        if (sdk <= 0 || sdk >= 33) return null          // (0 = a plain JVM test with no Android)
         return try {
             val line = java.io.File("/proc/self/status").readLines().firstOrNull { it.startsWith("Groups:") } ?: return null
             line.removePrefix("Groups:").trim().split(Regex("\\s+")).contains("3003")
