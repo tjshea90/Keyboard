@@ -280,9 +280,9 @@ class KeyboardPresenterTest {
 
     @Test fun theEmulatorSequenceHiBackspaceSymbolsQuestionMarkAKeepsTheSmartSpace() {      // what tools/emu/smoke.sh types on a real Android: it must behave the same on every Android version
         for (suggest in listOf(false, true)) {
-            val r = Rig(glidePref = true, suggest = suggest)
-            r.tap("h"); r.tap("i"); r.tap("\u232B"); r.tap("?123"); r.tap("?"); r.tap("a")
-            assertEquals("suggest=$suggest", "h? A", r.text)      // (this plain test field has no capital-at-start flag; the real Android 10 emulator printed H?a here: see TASKS Q-SMARTSPACE)
+            val r = Rig(glidePref = true, suggest = suggest, extra = { it.putBoolean(Prefs.AUTOCAPS, true) })
+            r.tapLetter("h"); r.tapLetter("i"); r.tap("\u232B"); r.tap("?123"); r.tap("?"); r.tapLetter("a")
+            assertEquals("suggest=$suggest", "H? A", r.text)      // (the box starts with a capital, R18b; the real Android 10 emulator printed H?a here: see TASKS Q-SMARTSPACE)
         }
     }
 
@@ -292,7 +292,7 @@ class KeyboardPresenterTest {
      * text and then counted its own edit a second time (the trace on the emulator showed the text window one character too long after every key).
      */
     @Test fun anEditorInTheKeyboardsOwnProcessReportsInsideTheEditCallAndNothingGoesWrong() {
-        val r = Rig(inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_CAP_SENTENCES or InputType.TYPE_TEXT_FLAG_MULTI_LINE, glidePref = true, suggest = true, sameProcess = true)
+        val r = Rig(inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_CAP_SENTENCES or InputType.TYPE_TEXT_FLAG_MULTI_LINE, glidePref = true, suggest = true, sameProcess = true, extra = { it.putBoolean(Prefs.AUTOCAPS, true) })
         r.tapLetter("h"); r.tapLetter("i"); r.tap("\u232B"); r.tap("?123"); r.tap("?"); r.tapLetter("a")
         assertEquals("the space after ? and the capital, as on every other Android", "H? A", r.text)
         r.tap("."); r.tap("space"); r.tapLetter("b")
@@ -312,8 +312,8 @@ class KeyboardPresenterTest {
     }
 
     @Test fun aLetterAfterPunctuationGetsItsSpaceAndTheSwitchTurnsItOff() {
-        val r = Rig(glidePref = false); for (c in "hello") r.tap(c.toString()); r.tap("."); r.tap("w")
-        assertEquals("the new sentence starts with a capital by default", "hello. W", r.text)
+        val r = Rig(glidePref = false, extra = { it.putBoolean(Prefs.AUTOCAPS, true) }); for (c in "hello") r.tapLetter(c.toString()); r.tap("."); r.tapLetter("w")
+        assertEquals("the box and the new sentence start with a capital by default", "Hello. W", r.text)
         val lower = Rig(glidePref = false, extra = { it.putBoolean(Prefs.AUTOCAPS, false) }); for (c in "hello") lower.tap(c.toString()); lower.tap("."); lower.tap("w")
         assertEquals("hello. w", lower.text)
         val off = Rig(glidePref = false, extra = { it.putBoolean(Prefs.AUTOSPACE, false) }); for (c in "hello") off.tap(c.toString()); off.tap("."); off.tap("w")
@@ -382,7 +382,7 @@ class KeyboardPresenterTest {
     }
 
     @Test fun afterAFullStopAndASpaceTheNextLetterIsACapitalByDefault() {
-        val r = Rig(glidePref = false); for (c in "hi") r.tap(c.toString()); r.tap("."); r.tap("space"); r.tap("A")
-        assertEquals("hi. A", r.text)
+        val r = Rig(glidePref = false, extra = { it.putBoolean(Prefs.AUTOCAPS, true) }); for (c in "hi") r.tapLetter(c.toString()); r.tap("."); r.tap("space"); r.tap("A")
+        assertEquals("Hi. A", r.text)
     }
 }
