@@ -24,6 +24,7 @@ A small, fast Android keyboard with **glide typing that keeps learning from you*
 - Text, URL, e-mail, number and phone layouts; two-thumb typing; in address bars that complete what you type inline (Chrome, Brave) a tap on a suggested word still replaces the glided word.
 - Learns nothing in password fields or when an app asks for incognito typing.
 - A crash-loop "safe layout" and a globe key, so a bug can never lock you out of typing.
+- Hold Backspace: it deletes slowly at first, speeds up, and after a few seconds takes a whole word at a time. Text you paste or copy is never learned as words. Number, phone and date fields get a big number pad. The keyboard can be resized down to under half its normal height. Glide typing weighs the length of the gesture, so a short glide for "the" is not read as "there" as easily.
 - Diagnostics screen (numbers only, nothing you typed) with a Copy button.
 
 
