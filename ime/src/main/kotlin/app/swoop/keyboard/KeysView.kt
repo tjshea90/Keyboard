@@ -351,7 +351,6 @@ class KeysView(context: Context) : View(context) {
         if (key === Key.Shift) { drawShift(c, box, ink, shift != ShiftState.OFF, locked); return }
         if (key === Key.Backspace) { drawBackspace(c, box, ink); return }
         if (key === Key.Go && k.label == "⏎") { drawEnter(c, box, ink); return }
-        if (hideLetters && isLetter(k)) return                                  // a blank key: it is still there and still types
         val t = (key as? Key.Ch)?.text
         if (t == " " && kind != FieldKind.NUMBER && kind != FieldKind.PHONE) return          // the space bar is blank, like the photo
         val label = if (key === Key.ToLetters) "ABC" else k.label
