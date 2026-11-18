@@ -813,3 +813,7 @@
 > - [ ] Not built, ranked lower in the research: correcting the previous glided word using the next word, learning from tap positions, and A/B measurement on your real thumb.
 > - [ ] Anything you find goes into 0.7.0-alpha3. Everything is saved to GitHub, and the next session resumes from `CHECKPOINT.md`.
 <!-- sha:4c17c3d8c9a6 -->
+
+## 2026-11-18T05:52:09Z
+> New request (R22). Per the working agreement I'm writing it into TASKS.md first. Then I check how the Kestrel browser repo is linked to this one, because that decides how the updates can be moved across.
+<!-- sha:5542e2af6bc7 -->
