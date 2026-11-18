@@ -325,3 +325,8 @@ Do more research to improve the word glide prediction if possible, but it is pre
 ```
 Also i just tried to turn the translation feature off and it won't turn off 
 ```
+
+## 2026-11-18T22:33:04Z
+```
+It says Android is not letting the keyboard use the socket 
+```
