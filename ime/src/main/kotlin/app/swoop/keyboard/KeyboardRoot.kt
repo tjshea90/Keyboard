@@ -421,6 +421,9 @@ class KeyboardRoot(context: Context) : FrameLayout(context), GripBar.Host {
     }
 
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
+        // The overlay and the clipboard are measured like the keys (their size IS the keys' size) but are siblings of the keys: a change of the keys' height flags the keys and their parents, never these two, so a SHORTER
+        // keyboard kept the old taller measure of the overlay and the panel stayed tall (found by the Full size pill test, R19c: a docked keyboard dragged shorter). They are measured again whenever the root is.
+        overlay.forceLayout(); clipboard.forceLayout()
         val lp = panel.layoutParams as LayoutParams
         lp.width = panelWidthPx()
         if (floating) {

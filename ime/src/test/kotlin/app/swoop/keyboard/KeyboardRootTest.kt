@@ -394,8 +394,7 @@ class KeyboardRootTest {
         assertTrue("a taller keyboard offers the way back, though it is full width", r.gripCanRestore()); assertFalse(r.squeezed)
         val tall = r.panelRect().height(); val (x, y) = gripCentre(r); val g0 = c.geometry
         touch(r, MotionEvent.ACTION_DOWN, x, y); touch(r, MotionEvent.ACTION_UP, x, y)
-        val pn = r.getChildAt(0); val pane = (pn as ViewGroup).getChildAt(1); val dbg0 = "pane=${pane.measuredHeight} forced=${pn.isLayoutRequested}/${pane.isLayoutRequested}"; val dbg = "rootH=${r.height}/${r.measuredHeight} panel=${pn.top}..${pn.bottom} meas=${pn.measuredHeight} keysMeasured=${r.keys.measuredHeight} keysH=${r.keys.height} req=${r.keys.isLayoutRequested}"; layout(r); r.keys.requestLayout(); layout(r); val dbg2 = "after keys.requestLayout+layout: ${r.panelRect().height()} $dbg0"
-        assertTrue("$dbg $dbg2 shorter again: ${r.panelRect().height()} vs $tall; restore=${r.gripCanRestore()} dockH=${Settings(app).dockH} mul=${r.keys.floatMul} at $x,$y grip=${r.grip.width}x${r.grip.height}@${r.grip.top} panel=${r.panelRect()}", r.panelRect().height() < tall - 30 * dp); assertEquals(1000, Settings(app).dockH); assertFalse(r.gripCanRestore()); assertTrue(c.geometry > g0)
+        assertTrue("shorter again: ${r.panelRect().height()} vs $tall", r.panelRect().height() < tall - 30 * dp); assertEquals(1000, Settings(app).dockH); assertFalse(r.gripCanRestore()); assertTrue(c.geometry > g0)
     }
 
     @Test fun aDoubleTapOnTheBarAlsoRestoresTheHeight() {
@@ -418,5 +417,13 @@ class KeyboardRootTest {
         two(r, MotionEvent.ACTION_DOWN, 0, 40f * dp, y, 40f * dp, y); two(r, MotionEvent.ACTION_POINTER_DOWN, 1, 40f * dp, y, 372f * dp, y); two(r, MotionEvent.ACTION_MOVE, 0, 120f * dp, y, 290f * dp, y)
         two(r, MotionEvent.ACTION_POINTER_UP, 1, 120f * dp, y, 290f * dp, y)
         assertFalse("a pinch needs no room above", r.windowTall); assertTrue(r.squeezed); assertEquals("the height setting is kept", 1300, Settings(app).dockH)
+    }
+
+    /** Found while testing R19c: the overlay (a sibling of the keys, measured like them) kept its old height, so the panel stayed tall when the keys got shorter. */
+    @Test fun aShorterKeyboardReallyShrinksThePanelAndTheOverlay() {
+        val (r, _) = root { it.putInt(Prefs.DOCK_H, 1500) }; val tall = r.panelRect().height()
+        r.keys.floatMul = 1f; layout(r)
+        assertTrue("the panel follows the keys: ${r.panelRect().height()} vs $tall", r.panelRect().height() < tall - 100 * dp)
+        assertEquals("the overlay is exactly as tall as the keys", r.keys.height, r.overlay.height); assertEquals(r.keys.height + r.grip.height, r.panelRect().height())
     }
 }
