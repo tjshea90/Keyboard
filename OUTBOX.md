@@ -597,3 +597,28 @@
 > - **Kestrel:** its pinned copy of the keyboard engine isn't re-synced, because its checkout isn't in this session. Kestrel types through Swoop, so it gets the changes anyway.
 > - **Emulator check:** I can dispatch the Android 10 and 16 emulator tests for the new strip, button and blank panel if you want a real-Android check before you test.
 <!-- sha:6d800bcd6f81 -->
+
+## 2026-11-18T03:36:48Z
+> While the release gates run (about 5 minutes), here's where things stand.
+>
+> **Done and tested** (all in `tjshea90/Keyboard`, branch `claude/keyboard-caps-space-resize-glide-r72nmp`, pushed continuously):
+>
+> 1. **Capitals after a period (R19a):** a glided or strip-picked word right after `.` `!` `?` got its space but not the capital. That's now fixed. I also stopped trusting an app's own "capitalise?" answer on its own, and "…so did I." now counts as a sentence end.
+> 2. **Deleted space stays deleted (R19b):** if you Backspace over the space after `. , ! ? ; :`, it isn't re-added at that spot — not for a tapped letter, a glide or a strip word. `example.com` works. The next sentence still gets its space.
+> 3. **Resize both ways when docked (R19c):** drag an arrow at either end of the glowing bar like a corner. Sideways makes it narrower or wider. Up makes it taller and down makes it shorter, and it stays on the bottom edge. **Full size** (or a double-tap on the bar) restores width and height.
+> 4. **A glide always types a word (R19d):** if nothing fits by the strict rules, a second pass types the closest word anyway. Backspace takes it back, and the strip still offers alternatives. This deliberately reverses the old "says so instead of typing a nearest word" rule.
+>
+> I also found and fixed an older bug: after shrinking, the key overlay kept its old taller size and the panel stayed tall.
+>
+> **Tests:** the new tests fail when each fix is switched off and pass with it on. They cover core, the keyboard root, and the presenter driven by real touches. Lint is green. The full-suite run inside `ship.sh` is in progress.
+>
+> **Not run on a device or emulator** (none in this sandbox): the whole-screen window during a docked height drag, and how a real app reacts to it. It reuses the mechanism the floating keyboard already uses on your devices.
+>
+> Next, once the gates pass: dispatch the build and give you the Release link.
+>
+> **Open items:**
+> - [ ] Ship 0.6.0-alpha2 (gates running)
+> - [ ] You test on tablet and phone, especially the docked two-way resize
+> - [ ] Optional: emulator smoke run for the resize
+> - [ ] Optional: Kestrel pinned-copy sync (no Browser checkout in this session)
+<!-- sha:af32f524da67 -->
