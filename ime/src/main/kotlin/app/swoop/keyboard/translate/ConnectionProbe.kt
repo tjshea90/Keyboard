@@ -83,7 +83,10 @@ object ConnectionProbe {
                     add(ProbeStep("$who: connect $fam", true, System.currentTimeMillis() - t, "port 443 reached"))
                     if (reachable == null) reachable = a
                 } catch (e: Exception) {
-                    add(ProbeStep("$who: connect $fam", false, System.currentTimeMillis() - t, reason(e)))
+                    val why = reason(e)
+                    // no IPv6 route while IPv4 works is normal (many hotspots and the emulators have none): not a failure, translation uses IPv4
+                    if (reachable != null && fam == "IPv6" && noRoute(why)) add(ProbeStep("$who: connect $fam", true, System.currentTimeMillis() - t, "not available here ($why): IPv4 is used"))
+                    else add(ProbeStep("$who: connect $fam", false, System.currentTimeMillis() - t, why))
                 }
             }
             val target = reachable
@@ -125,6 +128,9 @@ object ConnectionProbe {
             ProbeStep("$who: answer", false, System.currentTimeMillis() - t, reason(e))
         }
     }
+
+    /** A refusal that says "there is no such route" at once (not a timeout, not a reset): ENETUNREACH / EHOSTUNREACH. */
+    internal fun noRoute(reason: String): Boolean = reason.contains("ENETUNREACH") || reason.contains("EHOSTUNREACH") || reason.contains("network unreachable")
 
     private fun reason(e: Throwable): String = SafeReason.of(e.javaClass.simpleName, e.message)
 

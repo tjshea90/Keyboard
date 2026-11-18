@@ -46,6 +46,14 @@ class ConnectionProbeTest {
         assertTrue(steps[0].line(), steps[0].ok)
     }
 
+    @Test fun noIpv6RouteIsNotAFailureButATimeoutOrAResetIs() {
+        assertTrue(ConnectionProbe.noRoute("ConnectException (ENETUNREACH, network unreachable)"))
+        assertTrue(ConnectionProbe.noRoute("NoRouteToHostException (EHOSTUNREACH)"))
+        assertFalse(ConnectionProbe.noRoute("SocketTimeoutException (timed out)"))
+        assertFalse(ConnectionProbe.noRoute("SocketException (ECONNRESET, connection reset)"))
+        assertFalse(ConnectionProbe.noRoute("ConnectException (EPERM, not permitted)"))
+    }
+
     private fun st(n: String, ok: Boolean, note: String = "") = ProbeStep(n, ok, 5, note)
 
     private val healthy = listOf(
