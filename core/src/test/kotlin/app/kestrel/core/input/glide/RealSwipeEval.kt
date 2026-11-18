@@ -139,6 +139,7 @@ class RealSwipeEval {
         "shapeW 0" to GlideParams(shapeW = 0f), "shapeW .5" to GlideParams(shapeW = 0.5f), "shapeW .75" to GlideParams(shapeW = 0.75f),
         "shapeW 1.25" to GlideParams(shapeW = 1.25f), "shapeW 1.5" to GlideParams(shapeW = 1.5f),
         "shape1 visit4" to GlideParams(shapeW = 1f, visitCap = 4f), "shape1 visit5" to GlideParams(shapeW = 1f, visitCap = 5f), "shape1 visit6" to GlideParams(shapeW = 1f, visitCap = 6f),
+        "shape1 visit5 biasW1.5" to GlideParams(shapeW = 1f, visitCap = 5f, biasW = 1.5f),
         "shape1 end2" to GlideParams(shapeW = 1f, endW = 2f), "shape1 end4" to GlideParams(shapeW = 1f, endW = 4f),
         "shape1 biasW 1.5" to GlideParams(shapeW = 1f, biasW = 1.5f), "shape1 biasW 6" to GlideParams(shapeW = 1f, biasW = 6f),
         "shape1 biasGain .9" to GlideParams(shapeW = 1f, biasGain = 0.9f),

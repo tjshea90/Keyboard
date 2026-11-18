@@ -907,3 +907,11 @@
 ## 2026-11-18T20:31:43Z
 > Waiting on the sweep to finish; I'll apply the winning settings once I can see the numbers.
 <!-- sha:232759a51100 -->
+
+## 2026-11-18T20:36:29Z
+> The sweep is clear:
+> - **shapeW is the one robust lever**: anything from 0.5 to 1.25 plateaus at about +1.1–1.3 points; 0 collapses (the shape term matters), 2.0 (shipped) and 4.0 are worse.
+> - Recalibrating the length term to the real 1.09 gives **nothing once shapeW is lowered** (87.5 vs 87.7), so I won't ship that. visitCap, endW and biasW moves are within noise.
+>
+> Now the honesty check: validating the finalists on the **held-out slice B (different donors)** before touching the decoder.
+<!-- sha:73ae4e1686f7 -->
