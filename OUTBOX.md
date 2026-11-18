@@ -879,3 +879,18 @@
 >
 > Still waiting on the full local test suite and the emulator run. Open items: R24a (verify on emulators, then ship), R24b (replay, tune, measure), and the 0.7.0-alpha4 release.
 <!-- sha:0df9374f2acf -->
+
+## 2026-11-18T19:57:48Z
+> Everything that can run is running. Where things stand, in plain words:
+>
+> **"Translation won't turn off" (R24c): found and fixed in code, not yet test-run.** Three causes, all in the keyboard's toggle logic:
+> - In a password box, a browser address bar, or with the Settings switch off, tapping the toggle only said "not available in this box" and **left it on**. Turning off now always works, in every field.
+> - With the toggle left on, pressing Enter in a password or address-bar field could still send that text to the translation services. That's now blocked.
+> - The key's lit state could disagree with the real state after the keyboard view was rebuilt or the Settings switch was changed. The key now always follows the real state, and the Settings switch off now really switches translating off.
+>
+> I added three tests for these. They run as soon as the current test run finishes.
+>
+> **Still running:** the full local test suite, and the Android 10 and Android 16 emulator network checks on GitHub. The real engine already passed against the live services on a GitHub runner.
+>
+> **Open:** R24a (translation reach, waiting on the emulator result), R24b (real-swipe glide research), R24c (run tests), then release 0.7.0-alpha4.
+<!-- sha:6487fc33a303 -->
