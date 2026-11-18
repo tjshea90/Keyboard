@@ -642,3 +642,26 @@
 ## 2026-11-18T03:47:18Z
 > Waiting for the `build` job (APK compile, certificate check, publish).
 <!-- sha:7f20d2e4eee3 -->
+
+## 2026-11-18T03:50:19Z
+> All four of your requests are built into Swoop 0.6.0-alpha2. GitHub built and signed it, and the certificate check passed on that exact APK. I haven't run it on a tablet, a phone or an emulator, because this sandbox has none. The unit tests, lint and GitHub's checks all passed.
+>
+> Install it from the Release page; it installs over your current Swoop:
+> https://github.com/tjshea90/Keyboard/releases/tag/swoop-v0.6.0-alpha2
+>
+> **What changed:**
+> - **Capitals after a period:** a word you glide or pick from the strip right after `.` `!` `?` used to get its space but a lowercase letter. It now gets the capital too. Fields where the app misreports capitalisation now get the capital as well. "…so did I." now counts as a sentence end.
+> - **Space you delete on purpose:** if you Backspace the space after `. , ! ? ; :`, it isn't added back at that spot. That works for typed letters, glides and strip words, so `example.com` can be typed. The next sentence still gets its space as usual.
+> - **Resizing the docked keyboard:** drag the arrow at either end of the glowing bar like a corner. Sideways makes it narrower or wider, up makes it taller, down makes it shorter, and it stays on the bottom edge. It stops at 60% of the screen height. **Full size** (or a double-tap on the bar) restores both width and height.
+> - **Glides never say "no word fits":** if nothing fits by the old strict rules, the keyboard now types the closest word anyway. The strip still shows alternatives, and Backspace removes the wrong guess in one press. This deliberately reverses the old rule that refused to guess.
+>
+> I also fixed an older bug found along the way: after the keyboard got shorter, part of it kept its old tall size.
+>
+> **What I couldn't check:** during a height drag the keyboard temporarily uses a full-screen window so it has room to grow upward. It reuses what the floating keyboard already does, but I couldn't try it on a device. Please test that one first.
+>
+> **Open items:**
+> - [ ] You test on the tablet and phone. Try a glide after a period, delete the space then type `com`, the docked resize in all directions, and a nonsense glide.
+> - [ ] Optional: run the emulator smoke test (`emu-smoke.yml`) to cover the full-screen window during a height drag.
+> - [ ] Optional: copy these changes into the Kestrel browser's keyboard code; there was no Browser checkout this session.
+> - [ ] Anything you find goes into 0.6.0-alpha3. Everything is saved to GitHub, and the next session resumes from `CHECKPOINT.md`.
+<!-- sha:2e8d0d859dcf -->
