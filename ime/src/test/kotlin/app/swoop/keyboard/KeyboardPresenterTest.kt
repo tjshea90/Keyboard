@@ -678,4 +678,50 @@ class KeyboardPresenterTest {
         val text = Rig(glidePref = false)
         assertNotNull("a text field keeps its letters", text.view.centerOf("q"))
     }
+
+    // ---- R24c (2026-11-18): "i tried to turn the translation feature off and it won't turn off"
+
+    private fun passwordInfo() = EditorInfo().apply { inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD }
+    private fun tool(r: Rig) = r.presenter.onToolbar(KeysView.TOOL_TRANSLATE)
+
+    @Test fun translatingCanAlwaysBeTurnedOffEvenInABoxWhereItCannotBeTurnedOn() {
+        val r = Rig(); val msgs = ArrayList<String>(); r.presenter.onTranslateMessage = { msgs.add(it) }
+        tool(r); assertTrue("on in an ordinary box", r.view.translateOn)
+        r.presenter.startInput(passwordInfo())                       // the person goes on to a login box: the key still tells the truth ...
+        assertTrue(r.view.translateOn)
+        tool(r)                                                      // ... and ONE tap there turns it off (it used to answer "not available in this box" and stay on)
+        assertFalse("off after one tap in a password box", r.view.translateOn)
+        assertEquals(app.getString(R.string.translate_off), msgs.last())
+        tool(r); assertFalse("it cannot be turned ON there", r.view.translateOn); assertEquals(app.getString(R.string.translate_not_here), msgs.last())
+        r.presenter.startInput(r.info); assertFalse("and it stays off in the next ordinary box", r.view.translateOn)
+        tool(r); assertTrue("on again in an ordinary box", r.view.translateOn)
+        tool(r); assertFalse("off again with one tap", r.view.translateOn)
+    }
+
+    @Test fun enterNeverTranslatesInAPasswordBoxAndNeverWithTheSettingOff() {
+        val r = Rig(); val msgs = ArrayList<String>(); r.presenter.onTranslateMessage = { msgs.add(it) }
+        tool(r); assertTrue(r.view.translateOn)
+        // a login box while the toggle is still on: Enter is the normal Enter (digits: they are never "words", so this makes no request even if the guard were missing)
+        r.presenter.startInput(passwordInfo()); r.et.setText("123456")
+        val before = Engine.inputStats.enters
+        r.presenter.onKey(Key.Go)
+        assertEquals("the normal Enter ran", before + 1, Engine.inputStats.enters)
+        assertFalse("no translating started", msgs.contains(app.getString(R.string.translate_working)))
+        // the setting switched off while the toggle was on: the feature is OFF, not just hidden
+        app.getSharedPreferences(Prefs.FILE, 0).edit().putBoolean(Prefs.TRANSLATE, false).commit()
+        r.presenter.startInput(r.info); r.et.setText("123456")
+        assertFalse("the key is unlit", r.view.translateOn)
+        val b2 = Engine.inputStats.enters
+        r.presenter.onKey(Key.Go)
+        assertEquals("Enter is the normal Enter with the setting off", b2 + 1, Engine.inputStats.enters)
+        assertFalse(msgs.contains(app.getString(R.string.translate_working)))
+    }
+
+    @Test fun aRebuiltKeyboardViewShowsTheRealTranslateState() {
+        val r = Rig(); tool(r); assertTrue(r.view.translateOn)
+        val v2 = KeysView(app); r.presenter.view = v2
+        assertTrue("a new keys view starts in the real state, not unlit", v2.translateOn)
+        tool(r); assertFalse(v2.translateOn)
+        val v3 = KeysView(app); r.presenter.view = v3; assertFalse(v3.translateOn)
+    }
 }
