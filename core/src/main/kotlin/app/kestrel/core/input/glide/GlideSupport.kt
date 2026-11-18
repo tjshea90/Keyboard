@@ -390,6 +390,27 @@ class GlideTyping(
         }
     }
 
+    /**
+     * R18b: how [lower] is written inside a sentence (this person's own habit first, then the built-in names and date words after [prev]); null = as it was typed. Cheap and safe on any thread (the keyboard asks it on the UI thread).
+     */
+    fun caseFormOf(lower: String, prev: String? = null): String? = try { CaseBook.form(lower, personal, prev) } catch (e: Exception) { null }
+
+    /**
+     * R18b: [shown] is the way the person wrote a word inside a sentence (a capital at the start of a sentence says nothing and is never sent here). A capital form counts toward "this word is written with a capital";
+     * a small one only counts for a word whose capital is in question (the keyboard's list has it, or the person wrote it with a capital before). [weight] 2 = the person took the keyboard's capital back.
+     */
+    fun learnCase(shown: String, weight: Float = 1f) {
+        executor.execute {
+            ensurePersonal(); ensureDictionary()
+            val lower = shown.lowercase()
+            if (dictionary.isBlocked(lower)) return@execute
+            if (shown == lower && !(CaseBook.hasBuiltin(lower) || personal.hasCase(lower))) return@execute
+            personal.addCase(shown, weight)
+            personalDirty = true
+            if (System.nanoTime() / 1_000_000 - lastSaveAt > SAVE_EVERY_MS) saveNow()
+        }
+    }
+
     /** A word the person deleted after it was learned: what it earned is taken back (a slip that was typed once and erased must not become a favourite). */
     fun unlearnWord(prev: String?, word: String, weight: Float, prev2: String? = null) {
         executor.execute {

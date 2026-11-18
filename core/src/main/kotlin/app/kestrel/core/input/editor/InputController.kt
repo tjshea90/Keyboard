@@ -56,10 +56,10 @@ class InputController(editor: EditorBridge, val stats: InputStats = InputStats()
     /** A letter typed right after punctuation that touches the word before it ("hello.world") gets a space first ("hello. world"). */
     var autoSpace = false
     /**
-     * The way a glided or picked word is written inside a sentence when it is not the start of one (R18b: "Monday", "Sarah", "iPhone"): given the lowercase word, the form or null. Set by the keyboard from its case book
+     * The way a glided or picked word is written inside a sentence when it is not the start of one (R18b: "Monday", "Sarah", "iPhone"): given the lowercase word and the lowercase word before it (or null), the form or null. Set by the keyboard from its case book
      * (built-in names plus what this person writes with capitals); the default writes every word as the decoder gave it.
      */
-    var caseForm: (String) -> String? = { null }
+    var caseForm: (String, String?) -> String? = { _, _ -> null }
 
     private val pending = Pending()
     /** The editor may still hold a composing region this keyboard lost track of (a failed call, a new session): it is closed before the next edit. */
@@ -325,7 +325,7 @@ class InputController(editor: EditorBridge, val stats: InputStats = InputStats()
         if (word.isEmpty()) return
         settle()
         endComposing()
-        val form = caseForm(word)
+        val form = caseForm(word, previousWord())
         val w = when (shift) { ShiftState.LOCK -> word.uppercase(); ShiftState.ONCE -> if (form != null && form.first().isUpperCase()) form else (form ?: word).replaceFirstChar { it.uppercase() }; ShiftState.OFF -> form ?: word }
         val needsLead = before.isNotEmpty() && !before.last().isWhitespace() && before.last() !in NO_SPACE_AFTER
         val tail = (if (needsLead) " " else "") + w + " "
@@ -342,7 +342,7 @@ class InputController(editor: EditorBridge, val stats: InputStats = InputStats()
         if (!verifyBefore(g.text)) { lastGlide = null; return false }          // (a selection that starts right after the word is an address bar's inline completion: the new word replaces it)
         val lead = if (g.text.startsWith(" ")) " " else ""
         val shown = g.word
-        val form = caseForm(word.lowercase())
+        val form = caseForm(word.lowercase(), wordEndingAt(before.dropLast(g.text.length)))
         val w = if (shown.length > 1 && shown.all { it.isUpperCase() }) word.uppercase() else if (shown.firstOrNull()?.isUpperCase() == true) (if (form != null && form.first().isUpperCase()) form else word.replaceFirstChar { it.uppercase() }) else form ?: word
         val newTail = lead + w + " "
         val s0 = selStart; val e0 = selEnd
@@ -487,8 +487,11 @@ class InputController(editor: EditorBridge, val stats: InputStats = InputStats()
         if (before.endsWith(word)) twoBefore(before.dropLast(word.length)) else null to null
 
     /** The word before the cursor in the window, lowercase, for the language (null when there is none or it is not a plain word). */
-    fun previousWord(): String? {
-        val tok = before.trimEnd().substringAfterLast(' ')
+    fun previousWord(): String? = wordEndingAt(before)
+
+    /** The plain word that [text] ends with (a trailing space is skipped), lowercase; null when it ends in something else. */
+    fun wordEndingAt(text: String): String? {
+        val tok = text.trimEnd().substringAfterLast(' ')
         if (tok.isEmpty() || tok.length > 24 || !tok.all { it.isLetter() || it == '\'' }) return null
         return tok.lowercase()
     }
@@ -648,7 +651,7 @@ class InputController(editor: EditorBridge, val stats: InputStats = InputStats()
         /** Closing quotes and brackets: a sentence can end inside them ("Stop." He said). */
         private const val CLOSERS = "\"'\u201D\u2019)]}\u00BB"
         /** Words that end in a full stop without ending the sentence (compared in lowercase). */
-        private val ABBREVIATIONS = setOf("e.g.", "i.e.", "mr.", "mrs.", "ms.", "dr.", "vs.", "prof.", "st.", "jr.", "sr.", "inc.", "ltd.", "approx.", "cf.", "fig.", "dept.", "no.", "ex.")
+        private val ABBREVIATIONS = setOf("e.g.", "i.e.", "mr.", "mrs.", "ms.", "dr.", "vs.", "prof.", "st.", "jr.", "sr.", "inc.", "ltd.", "approx.", "cf.", "fig.", "dept.")
 
         /**
          * True when the next letter typed after [text] (the text before the cursor, [selStart] the cursor's offset or -1) starts a sentence: the box is empty, the text ends with a newline, or it ends with . ! ? or an

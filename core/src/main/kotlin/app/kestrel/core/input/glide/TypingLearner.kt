@@ -3,6 +3,7 @@ package app.kestrel.core.input.glide
 import app.kestrel.core.input.Key
 import app.kestrel.core.input.editor.FieldKind
 import app.kestrel.core.input.editor.InputController
+import app.kestrel.core.input.editor.ShiftState
 
 /**
  * What TAP typing teaches the keyboard (N6, owner: "the learning is the most important part. it must work well and learn at all times regardless of the app i'm in"). It listens to the keys the person
@@ -52,6 +53,9 @@ class TypingLearner(
         val fix = controller.revertedCorrection ?: return
         val g = engine() ?: return
         if (!active()) return
+        if (fix.typed.equals(fix.word, ignoreCase = true)) {                                                    // only a capital was put in (a name, a day): the person writes it small
+            g.learnCase(fix.typed.lowercase(), 2f); g.stats.onAutoCorrectUndone(); last = null; erased = null; return
+        }
         val l = last
         if (l != null && l.word == fix.word.lowercase()) g.unlearnWord(l.prev, l.word, l.weight + 1f, l.prev2)   // the fix and what it earned go
         g.learnWord(l?.prev, fix.typed, 2f, l?.prev2)                                                           // what was typed is the person's word: twice, so it is never "fixed" again
@@ -92,6 +96,21 @@ class TypingLearner(
         erased = null
         g.learnWord(p1, word, weight, p2, guessed, if (weight > 1f) 2f else 1f)
         last = Done(word, p1, p2, weight)
+        learnCaseOf(g, typed, fix)
+    }
+
+    /**
+     * R18b: how the person writes this word INSIDE a sentence: with a capital (a name, a place, iPhone) or small. A capital at the start of a sentence says nothing, the keyboard's own capital ([fix] set) says nothing,
+     * and a word shouted in capitals is not a habit.
+     */
+    private fun learnCaseOf(g: GlideTyping, typed: String, fix: String?) {
+        if (fix != null || controller.shift == ShiftState.LOCK) return
+        if (typed.length > 4 && typed == typed.uppercase()) return
+        val b = controller.before
+        if (!b.endsWith(typed)) return
+        val head = b.dropLast(typed.length)
+        if (InputController.startsSentence(head, controller.selStart - typed.length)) return
+        g.learnCase(typed)
     }
 
     /** A Backspace that reaches into the word just finished: the person is taking it back. */
