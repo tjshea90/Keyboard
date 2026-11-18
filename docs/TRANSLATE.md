@@ -62,6 +62,21 @@ breaks, sentences, words, then letters (never inside an emoji).
 | Toggle off / leaving the field | `Translator.cancel()`, `TranslateFlow.setOn(false)` / `leaveField()`: late answers are ignored |
 | Formal "usted" answer for a casual text | the other service is asked once; both formal: shown unchanged, flagged |
 
+## R24 (2026-11-18): "could not be reached (SocketException)", and "it won't turn off"
+- **Failures say which step broke.** `TransportException.Kind` now has DROPPED (a connection was made and then reset / aborted / closed / cut off), BLOCKED (Android refused the socket: EPERM / EACCES),
+  SECURE (the secure handshake failed: certificate, wrong device date) besides NO_INTERNET / TIMEOUT / TOO_BIG / OTHER. `HttpsTransport.classify` decides from the exception alone; the error carries a
+  `SafeReason` (core): the class name plus an errno name from an allowlist or a known harmless phrase, NEVER an address or text. Plain-words sentences are in `TranslationEngine.failure`.
+- **One quick retry.** A DROPPED connection is retried once after 600 ms on a fresh connection (not for timeouts, blocks, handshakes; an abort ends the wait). The JDK and Android's own HTTP stack already retry one
+  dropped connection silently, so this is the second line, mostly for a flaky hotspot.
+- **Diagnostics > "Test translation connection"** (`ConnectionProbe`, the second file that may open a socket; the guard test lists both): internet permission, device clock, then per service name lookup, TCP connect (IPv4
+  and IPv6 separately), secure handshake and a real answer for the fixed word "hello", ending with a verdict in plain words. Contacts only the two hosts; no typed text, no addresses in the result.
+  **Diagnostics also lists the last 20 connections** (`ConnectionLog`: time, service, ms, result code and safe reason; never words).
+- **Evidence the services work:** `RealServicesCheck` (skipped unless `SWOOP_REAL_SERVICES=1`) runs the real engine through the real transport; it passed from the build sandbox and from a GitHub runner on 2026-11-18
+  (MyMemory answered all three sentences; Google answered the probe word). `emu-smoke.yml` with input `mode: net-probe` runs the keyboard's own probe on Android 10 and Android 16 emulators (`tools/emu/net_probe.sh`).
+- **Toggle (R24c):** turning translating OFF works in every field (it used to refuse in a password box / address bar / with the Settings switch off, because "not available in this box" was checked first). Enter never
+  translates where translating is not allowed (password box, address bar, safe mode, Settings off), whatever the toggle says. The key's lit state is set from the real state whenever a field starts and
+  whenever a keys view is attached. The Settings switch "Translate icon" off also switches the toggle off.
+
 ## Guard rails (plan 9.2) provided by this work
 - `tools/expected-permissions.txt` lists exactly `android.permission.INTERNET`; the manifest has that one `uses-permission` and
   `android:usesCleartextTraffic="false"`; `TranslateGuardTest` checks both, and that no other URL/host appears in the translate package.
