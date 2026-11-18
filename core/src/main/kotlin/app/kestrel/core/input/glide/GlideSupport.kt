@@ -252,7 +252,7 @@ class GlideTyping(
     fun prepare(k: GlideKeys, habit: FloatArray?, own: UserWords?) {
         executor.execute {
             try {
-                if (decoder == null && habit != null && habit.size == 2) { bx = habit[0]; by = habit[1] } // the saved habit starts the engine; later it keeps what it learned itself
+                if (decoder == null && habit != null && habit.size >= 2) { bx = habit[0]; by = habit[1]; if (habit.size > 2) touchSaved = habit.copyOfRange(2, habit.size) } // the saved habit (and the touch map after it) starts the engine; later it keeps what it learned itself
                 if (main == null && !loading) {
                     loading = true
                     val t0 = System.nanoTime()
@@ -262,8 +262,8 @@ class GlideTyping(
                 }
                 ensurePersonal()
                 keys = k
-                decoder = GlideDecoder(k).also { it.biasX = bx; it.biasY = by; it.personal = personal }
-                previewDecoder = GlideDecoder(k).also { it.biasX = bx; it.biasY = by; it.personal = personal }
+                decoder = GlideDecoder(k).also { it.biasX = bx; it.biasY = by; it.personal = personal; touchSaved?.let { a -> it.field.fromArray(a) } }
+                previewDecoder = GlideDecoder(k).also { it.biasX = bx; it.biasY = by; it.personal = personal; touchSaved?.let { a -> it.field.fromArray(a) } }
                 ensureDictionary()
                 if (own != null) { ownRef = own; setOwn(own) } else rebuildUserLexicon()
                 ready = main != null
@@ -273,6 +273,8 @@ class GlideTyping(
     }
 
     private var warmed = false
+    /** R20d: the learned touch map (see [TouchField.toArray]), kept here so a new decoder (the keyboard changed size) starts with it; null = nothing learned. */
+    private var touchSaved: FloatArray? = null
 
     /**
      * One glide of "the" is decoded and thrown away while the keyboard opens: the runtime compiles the decoder's hot loops on the first run (and runs them slowly until then), so the person's first
@@ -336,7 +338,7 @@ class GlideTyping(
             try {
                 val d = previewDecoder; val m = main
                 if (d != null && m != null) {
-                    decoder?.let { d.biasX = it.biasX; d.biasY = it.biasY }
+                    decoder?.let { d.biasX = it.biasX; d.biasY = it.biasY; d.field.copyFrom(it.field) }
                     val t0 = System.nanoTime()
                     val lexicons = ArrayList<GlideLexicon>(2); lexicons.add(m); userLex?.let { lexicons.add(it) }
                     val r = try { cleaned(d.decode(px, py, count, lexicons, prev, 3 + EXTRA_FOR_BLOCKED, prev2), 3) } catch (e: Exception) { emptyList() }
@@ -538,6 +540,7 @@ class GlideTyping(
             personal.mergeFrom(parsed.model)
             for ((w, n) in parsed.ownWords) if (!own.contains(w)) own.add(w, n)
             // the thumb habit of a file is taken only while this keyboard has not learned one of its own (what it learned here is newer than any file)
+            if (parsed.touch != null && touchSaved == null) { touchSaved = parsed.touch; decoder?.field?.fromArray(parsed.touch); previewDecoder?.field?.fromArray(parsed.touch); habit(floatArrayOf(bx, by) + parsed.touch) }
             if (parsed.habit != null && Math.abs(bx) + Math.abs(by) < 0.01f) { bx = parsed.habit[0]; by = parsed.habit[1]; habitX = bx; habitY = by; decoder?.let { it.biasX = bx; it.biasY = by }; habit(floatArrayOf(bx, by)); keys?.let { stats.onHabit(bx * it.pitch, by * it.pitch) } }
             setOwn(own)
             personalDirty = true
@@ -562,7 +565,8 @@ class GlideTyping(
         executor.execute {
             personal.clear(); personalDirty = false; lastPrint = null; deletedPrint = null; deletedGuess = null; stats.onLearned(0, 0, 0, 0)
             userLex = null; bx = 0f; by = 0f; habitX = 0f; habitY = 0f
-            decoder?.let { it.biasX = 0f; it.biasY = 0f }
+            decoder?.let { it.biasX = 0f; it.biasY = 0f; it.field.clear() }
+            previewDecoder?.field?.clear(); touchSaved = null
             stats.onHabit(0f, 0f)
             try { savePersonal("") } catch (e: Exception) { /* nothing left to save */ }
             done()
@@ -582,7 +586,8 @@ class GlideTyping(
             bx = d.biasX; by = d.biasY; habitX = bx; habitY = by
             val k = keys
             if (k != null) stats.onHabit(bx * k.pitch, by * k.pitch)
-            habit(floatArrayOf(bx, by))
+            val t = d.field.toArray(); touchSaved = t
+            habit(floatArrayOf(bx, by) + t)
         }
     }
 

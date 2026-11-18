@@ -67,13 +67,14 @@ class GlideHost(
 
     /** The thumb habit (where this person's finger lands, in key pitches), kept between sessions. */
     private fun loadHabit(): FloatArray? = try {
-        if (habitFile.isFile) habitFile.readText().trim().split(' ').map { it.toFloat() }.takeIf { it.size == 2 }?.toFloatArray() else null
+        if (habitFile.isFile) habitFile.readText().trim().split(' ').map { it.toFloat() }.takeIf { it.size == 2 || it.size == 2 + app.kestrel.core.input.glide.TouchField().toArray().size }?.toFloatArray() else null
     } catch (e: Exception) { null }
 
     /** The saved thumb habit, for an export (null when none was learned yet). */
     fun habitOrNull(): FloatArray? = loadHabit()
 
-    fun saveHabit(h: FloatArray) { if (h.size == 2) writeAtomically(habitFile, "${h[0]} ${h[1]}") }
+    /** [h] is the thumb habit (x, y in pitches), optionally followed by the touch map ([app.kestrel.core.input.glide.TouchField.toArray]); one line of numbers. */
+    fun saveHabit(h: FloatArray) { if (h.size >= 2 && h.all { it.isFinite() }) writeAtomically(habitFile, h.joinToString(" ")) }
 
     /**
      * Owner (M14): "ensure that any keyboard learning or data is saved and doesn't get removed or deleted by an app update". An update keeps the app's private files (same signing key, same package); on top of that
