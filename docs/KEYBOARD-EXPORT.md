@@ -19,6 +19,7 @@ every line it does not know (a later version may add kinds of line) and refuses 
 | :- | :- |
 | `KESTREL-KEYBOARD-LEARNING 1` | name and version; must be the first line (a byte order mark before it is allowed) |
 | `habit <x> <y>` | where this thumb lands beside the key it aims at, in key widths (x right, y down); a reader clamps both to -0.6 .. 0.6 |
+| `touch <22 numbers>` | (R20d, optional) where on the keyboard this thumb lands differently: the offset plane of `TouchField` (6 plane weights in key widths, the evidence count, the 3x3 sums and 2 x 3 sums of its ridge fit). A reader ignores the line unless it has exactly 22 finite numbers; an older reader skips it as an unknown kind. Taken only while this keyboard has learned no plane of its own, like `habit` |
 | `own <word> <times>` | a word the shipped word list lacks that the person typed (a name, a site such as doraby); 1 to 1000 times; lowercase letters only, 3 to 24 long |
 | `w <word> <weight>` | how much the person used the word (a kept glide counts 1, a word chosen over the first guess counts 3) |
 | `p <before> <word> <weight>` | how often `<word>` followed `<before>` |
@@ -27,7 +28,7 @@ every line it does not know (a later version may add kinds of line) and refuses 
 | `r <word> <recency>` | how lately the word was used; fades with every new word, a reader may ignore it |
 | `k <word> <Form> <weight>` | (R18b) the way the word is written INSIDE a sentence: a name with its capital (`k sarah Sarah 3.00`, `k iphone iPhone 2.00`), or the lowercase word itself when the person took the keyboard's capital back (`k monday monday 2.00`). `Form` must be the word in some capitalisation; a reader skips a line where it is not. A form counts once its weight is 2 and it is not outweighed 1.5 to 1 by the other way of writing it |
 | `s <word> <n> u0 v0 u1 v1 ... u15 v15` | the SHAPE of a glide the person drew for the word: 16 points, `n` = how often it was confirmed; see below |
-| `end <entries>` | how many `habit`, `own`, `w`, `p`, `t`, `c`, `r` and `s` lines there are; a file without it, or with another number, was cut off or edited (a reader may still use it and says so) |
+| `end <entries>` | how many `habit`, `touch`, `own`, `w`, `p`, `t`, `c`, `r` and `s` lines there are; a file without it, or with another number, was cut off or edited (a reader may still use it and says so) |
 
 Words are lowercase `a` to `z` and the apostrophe of a contraction (`don't`), 2 to 24 long (the words in `p` and `t` as context may be 1 letter: `a`, `i`), never a letter three or more
 times in a row. Numbers are written with a dot, never a comma, whatever language the device is in. Weights are positive and finite; a reader ignores a line whose number is not.
