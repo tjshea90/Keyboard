@@ -46,6 +46,8 @@ class KeysView(context: Context) : View(context) {
         fun onGlideEnd(xs: FloatArray, ys: FloatArray, count: Int) {}
         /** A guess in the strip was tapped. */
         fun onCandidate(word: String) {}
+        /** The first box of the strip holds what the person copied, and it was tapped: paste it (owner R20a). */
+        fun onClipChip() {}
         /** A guess in the strip was PRESSED AND HELD (owner: long press a recommended word to delete it for good). */
         fun onCandidateLong(word: String) {}
         /** The person answered "remove this word for good?" ([yes]) for a word they had held in the strip. */
@@ -169,7 +171,7 @@ class KeysView(context: Context) : View(context) {
     /** A guess in the strip was held: ask to remove it for good (the person confirms with a tap). */
     private val stripHold = Runnable {
         val i = stripDown
-        if (i >= 0 && confirmWord == null && i in cands.indices) { stripLong = true; haptic(); listener?.onCandidateLong(cands[i]) }
+        if (i >= 0 && confirmWord == null && i in cands.indices && !(clipChip && i == 0)) { stripLong = true; haptic(); listener?.onCandidateLong(cands[i]) }
     }
 
     private val unlight = Runnable { litKey = null; dyn() }
@@ -211,9 +213,11 @@ class KeysView(context: Context) : View(context) {
      * The guesses in the strip, left to right. [accent] is the box that gets the accent outline (the one a Space would take): the first by default, none (-1) after a glide, where the middle box is the NEXT word and the others
      * replace the glided one (owner R20b). An empty string is a box that is not filled yet: nothing is drawn there and it takes no touch.
      */
-    fun showCandidates(words: List<String>, accent: Int = 0) { cands = words; accentChip = accent; noWordUntil = 0L; dyn() }
+    fun showCandidates(words: List<String>, accent: Int = 0, clip: Boolean = false) { cands = words; accentChip = accent; clipChip = clip && words.isNotEmpty(); noWordUntil = 0L; dyn() }
     private var accentChip = 0
-    fun clearCandidates() { if (cands.isNotEmpty() || noWordUntil != 0L) { cands = emptyList(); accentChip = 0; noWordUntil = 0L; dyn() } }
+    /** The first box holds what the person copied (owner R20a): it shows a small clipboard and a tap pastes the whole copy ([Listener.onClipChip]), not the shortened text shown. */
+    private var clipChip = false
+    fun clearCandidates() { if (cands.isNotEmpty() || noWordUntil != 0L) { cands = emptyList(); accentChip = 0; clipChip = false; noWordUntil = 0L; dyn() } }
     private var notice: String? = null
     /** A short message in the strip (translating, an error) for a few seconds. */
     fun showNotice(msg: String) { notice = msg; cands = emptyList(); noWordUntil = SystemClock.uptimeMillis() + NOTICE_MS; handler.removeCallbacks(noWordOff); handler.postDelayed(noWordOff, NOTICE_MS); dyn() }
@@ -225,7 +229,7 @@ class KeysView(context: Context) : View(context) {
     /** Everything in flight stops (the keyboard closed or the field changed). */
     fun reset() {
         handler.removeCallbacks(repeat); handler.removeCallbacks(unlight); handler.removeCallbacks(hold); handler.removeCallbacks(spaceHold); handler.removeCallbacks(stripHold); toolDown = -1; stripLong = false; confirmWord = null; popup = null; spaceIsDown = false; spaceHeld = false; handler.removeCallbacks(noWordOff); removeCallbacks(fadeStep)
-        armed = false; gliding = false; gn = 0; fadeStart = 0L; cands = emptyList(); noWordUntil = 0L; stripDown = -1
+        armed = false; gliding = false; gn = 0; fadeStart = 0L; cands = emptyList(); clipChip = false; noWordUntil = 0L; stripDown = -1
         activeId = -1; down = null; pressedLetter = null; litKey = null; holdAlt = null; bubbleKey = null; spaceDown = false; sliding = false
         invalidate()
     }
@@ -510,6 +514,13 @@ class KeysView(context: Context) : View(context) {
             c.drawRoundRect(rect, r, r, fill)
             if (i == accentChip && confirmWord == null) { line.strokeWidth = dp(1.2f); line.color = cAccent; box.set(rect); box.inset(dp(0.6f), dp(0.6f)); c.drawRoundRect(box, r, r, line) }
             text.color = if (confirmWord != null && i == 0) cAccentText else cText
+            if (clipChip && i == 0) {                                                    // what was copied: a small clipboard, then the start of the text
+                val iw = dp(18f); val ib = RectF(rect.left + dp(4f), rect.centerY() - iw / 2f, rect.left + dp(4f) + iw, rect.centerY() + iw / 2f)
+                drawClipboard(c, ib, cAccent)
+                val tx = rect.left + dp(4f) + iw + dp(2f)
+                c.drawText(TextUtils.ellipsize(w, text, rect.right - tx - dp(6f), TextUtils.TruncateAt.END).toString(), (tx + rect.right - dp(4f)) / 2f, rect.centerY() - (fm.ascent + fm.descent) / 2f, text)
+                continue
+            }
             c.drawText(TextUtils.ellipsize(w, text, rect.width() - dp(8f), TextUtils.TruncateAt.END).toString(), rect.centerX(), rect.centerY() - (fm.ascent + fm.descent) / 2f, text)
         }
     }
@@ -770,7 +781,7 @@ class KeysView(context: Context) : View(context) {
             if (stripLong) { stripLong = false; return }             // the long press already asked its question
             val cw = confirmWord
             if (c == was && cw != null) { confirmWord = null; listener?.onRemoveWord(cw, c == 0) }
-            else if (c == was && c in cands.indices) listener?.onCandidate(cands[c])
+            else if (c == was && c in cands.indices) { if (clipChip && c == 0) listener?.onClipChip() else listener?.onCandidate(cands[c]) }
             return
         }
         if (gliding) { for (h in 0 until e.historySize) addPoint(e.getHistoricalX(i, h), e.getHistoricalY(i, h)); addPoint(x, y); endGlide(); return }
