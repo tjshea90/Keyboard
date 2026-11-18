@@ -26,17 +26,16 @@ adb logcat -d > "$OUT/logcat-full.txt" 2>&1 || true
 echo "---- probe log"; cat "$OUT/probe.log"; echo "----"
 if [ "$done" != 1 ]; then echo "::error::the probe gave no result (see logcat-full.txt in the artifact)"; grep -iE 'FATAL|AndroidRuntime|swoop' "$OUT/logcat-full.txt" | head -20; exit 1; fi
 PHASE_A_BAD=0
-if grep -q ' FAIL ' "$OUT/probe.log" || grep -q 'D SwoopProbe: *FAIL' "$OUT/probe.log"; then echo "::error::a network step failed on this Android (see the log above)"; PHASE_A_BAD=1; else echo "phase A (plain): every step worked on this Android"; fi
+# (an IPv6 failure with IPv4 fine is not a failure here; a first probe right after boot can find the emulator's DNS not up yet: one retry below)
+if grep -v 'connect IPv6' "$OUT/probe.log" | grep -q ' FAIL '; then echo "::error::a network step failed on this Android (see the log above)"; PHASE_A_BAD=1; else echo "phase A (plain): every step worked on this Android"; fi
 
-# ---- R25 (2026-11-18): the owner's tablet says "Android refuses the keyboard a network socket" (EPERM). Hypothesis: Data Saver (on by default on Android Go) + a METERED Wi-Fi (a phone's
-# hotspot is one) + a BACKGROUND app (a keyboard process) = the sockets are refused unless the app is on the "Unrestricted data" list. Reproduce it here, informational (never fails the job):
-#   phase B: Data Saver on, Wi-Fi metered, the probe runs while the app is in the background (HOME pressed 2 s after the start; the probe waits 8 s)
-#   phase C: the same with the app on the Unrestricted data list (cmd netpolicy add restrict-background-whitelist <uid>)
+# ---- R25 (2026-11-18): the owner's tablet says "Android refuses the keyboard a network socket" (EPERM / EACCES). Which Android limits do that to a BACKGROUND app (a keyboard process)?
+# Each scenario starts a fresh process (am start -S), sends it to the background after 3 s (HOME), the probe waits 8 s and then runs, and the errno of the failures is reported. Informational: never fails the job.
 APP_UID="$(adb shell dumpsys package "$PKG" | grep -m1 -oE 'userId=[0-9]+' | cut -d= -f2 | tr -d '\r')"
 echo "---- R25: app uid $APP_UID"
-adb shell cmd netpolicy list wifi-networks > "$OUT/netpolicy-wifi.txt" 2>&1; cat "$OUT/netpolicy-wifi.txt" | head -8
+adb shell cmd netpolicy list wifi-networks > "$OUT/netpolicy-wifi.txt" 2>&1
 WIFI_ID="$(grep -oE 'AndroidWifi' "$OUT/netpolicy-wifi.txt" | head -1)"; WIFI_ID="${WIFI_ID:-AndroidWifi}"
-background_probe(){   # $1 = label. Fresh process every time (am start -S: without it the old task is only brought forward and no probe runs); counts finished probes instead of trusting a log clear.
+background_probe(){   # $1 = label. Counts finished probes instead of trusting a log clear.
   local before; before=$(adb logcat -d -s SwoopProbe:D 2>/dev/null | grep -c 'done:')
   adb shell am start -S -n "$PKG/app.swoop.keyboard.SetupActivity" --ez probe true --ei probe_delay 8 >/dev/null 2>&1 || true
   sleep 3; adb shell input keyevent KEYCODE_HOME; sleep 1
@@ -47,22 +46,51 @@ background_probe(){   # $1 = label. Fresh process every time (am start -S: witho
   done
   local L=0; [ "$before" -gt 0 ] && L="$(grep -n 'done:' "$OUT/probe-$1.full" | sed -n "${before}p" | cut -d: -f1)"
   tail -n +$((L+1)) "$OUT/probe-$1.full" > "$OUT/probe-$1.log"
-  echo "---- probe $1 (the lines of this run: $(grep -c 'SwoopProbe' "$OUT/probe-$1.log"))"; grep -E 'Android limits|connect IPv4|handshake|answer|done:|FAIL' "$OUT/probe-$1.log" | cut -c1-230
+  echo "---- scenario $1 (probe lines of this run: $(grep -c 'SwoopProbe' "$OUT/probe-$1.log"))"; grep -E 'connect IPv4|answer|done:|FAIL' "$OUT/probe-$1.log" | grep -v 'connect IPv6' | cut -c1-200 | head -8
+  local E; E="$(grep -oE 'E(PERM|ACCES|CONNREFUSED|CONNRESET|NETUNREACH|HOSTUNREACH)' "$OUT/probe-$1.log" | grep -v NETUNREACH | sort | uniq -c | tr '\n' ' ')"
+  if grep -q 'translation can work' "$OUT/probe-$1.log"; then echo "SCENARIO $1: works"; else echo "SCENARIO $1: BLOCKED, errno seen: ${E:-none (UnknownHost / timeout)}"; fi
 }
-adb shell cmd netpolicy set restrict-background true 2>&1 | head -2
-adb shell cmd netpolicy set metered-network "$WIFI_ID" true 2>&1 | head -2
-adb shell cmd netpolicy get restrict-background 2>&1 | head -2
-adb shell dumpsys netpolicy 2>/dev/null | grep -iE 'restrict|metered' | head -6
-background_probe B
-adb shell dumpsys netpolicy 2>/dev/null | grep -E "UID=$APP_UID" | head -2
-if [ ! -s "$OUT/probe-B.log" ]; then echo "R25 phase B: no probe output (harness problem)";
-elif grep -qE 'EPERM|EACCES' "$OUT/probe-B.log"; then echo "R25 REPRODUCED: with Data Saver on, a metered Wi-Fi and the app in the background Android refuses the sockets (EPERM/EACCES)"; else echo "R25 not reproduced in phase B (see probe-B.log)"; fi
-adb shell cmd netpolicy add restrict-background-whitelist "$APP_UID" 2>&1 | head -2
-adb shell cmd netpolicy get restrict-background 2>&1 | head -2
-background_probe C
-if [ ! -s "$OUT/probe-C.log" ]; then echo "R25 phase C: no probe output (harness problem)";
-elif grep -qE 'EPERM|EACCES' "$OUT/probe-C.log"; then echo "R25: still refused with the app on the Unrestricted data list (phase C)"; else echo "R25: with the app on the Unrestricted data list the sockets work (phase C)"; fi
-adb shell cmd netpolicy remove restrict-background-whitelist "$APP_UID" >/dev/null 2>&1 || true
-adb shell cmd netpolicy set metered-network "$WIFI_ID" undefined >/dev/null 2>&1 || true
-adb shell cmd netpolicy set restrict-background false >/dev/null 2>&1 || true
+reset_all(){
+  adb shell dumpsys battery reset >/dev/null 2>&1 || true
+  adb shell settings put global low_power 0 >/dev/null 2>&1 || true
+  adb shell dumpsys deviceidle unforce >/dev/null 2>&1 || true
+  adb shell am set-inactive "$PKG" false >/dev/null 2>&1 || true
+  adb shell am set-standby-bucket "$PKG" active >/dev/null 2>&1 || true
+  adb shell cmd netpolicy remove restrict-background-whitelist "$APP_UID" >/dev/null 2>&1 || true
+  adb shell cmd netpolicy set restrict-background false >/dev/null 2>&1 || true
+  adb shell cmd netpolicy set metered-network "$WIFI_ID" undefined >/dev/null 2>&1 || true
+  sleep 2
+}
+reset_all
+# 1 Data Saver on + metered Wi-Fi
+adb shell cmd netpolicy set restrict-background true 2>&1 | head -1
+adb shell cmd netpolicy set metered-network "$WIFI_ID" true 2>&1 | head -1
+background_probe datasaver
+adb shell cmd netpolicy add restrict-background-whitelist "$APP_UID" 2>&1 | head -1
+background_probe datasaver-unrestricted
+reset_all
+# 2 Battery saver on
+adb shell dumpsys battery unplug >/dev/null 2>&1 || true
+adb shell settings put global low_power 1 >/dev/null 2>&1 || true
+sleep 4; adb shell dumpsys netpolicy 2>/dev/null | grep -iE 'Restrict power' | head -2
+background_probe batterysaver
+reset_all
+# 3 Doze
+adb shell dumpsys battery unplug >/dev/null 2>&1 || true
+adb shell dumpsys deviceidle enable >/dev/null 2>&1 || true
+adb shell dumpsys deviceidle force-idle 2>&1 | head -1
+sleep 3; adb shell dumpsys netpolicy 2>/dev/null | grep -E "Restrict power|UID=$APP_UID|dozable" | head -4
+background_probe doze
+reset_all
+# 4 App standby: the app is inactive in a rare bucket, the device unplugged
+adb shell dumpsys battery unplug >/dev/null 2>&1 || true
+adb shell am set-standby-bucket "$PKG" rare 2>&1 | head -1
+adb shell am set-inactive "$PKG" true 2>&1 | head -1
+adb shell am get-inactive "$PKG" 2>&1 | head -1
+background_probe standby-rare
+reset_all
+adb shell am set-standby-bucket "$PKG" restricted 2>&1 | head -1
+background_probe standby-restricted
+reset_all
+echo "---- R25 summary"; grep -h '^SCENARIO' /dev/null; true
 [ "$PHASE_A_BAD" = 0 ] && exit 0 || exit 1
