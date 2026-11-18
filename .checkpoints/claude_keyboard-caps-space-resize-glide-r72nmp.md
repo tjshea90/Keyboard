@@ -1,21 +1,22 @@
-# CHECKPOINT 514 — read me first, then TASKS.md
+# CHECKPOINT 524 — read me first, then TASKS.md
 
-**Written:** 2026-11-18T04:03:16Z · **tests:** all 1 fast checks green (gradle suite: see ship.sh)
-**Branch:** `claude/keyboard-caps-space-resize-glide-r72nmp` · **builds on:** `c73f799` (this checkpoint is the commit after it)
+**Written:** 2026-11-18T04:07:53Z · **tests:** all 1 fast checks green (gradle suite: see ship.sh)
+**Branch:** `claude/keyboard-caps-space-resize-glide-r72nmp` · **builds on:** `328567e` (this checkpoint is the commit after it)
 
 ## Just done
-wrote owner's second 2026-11-18 batch R20a-d into TASKS.md (his words); 0.6.0-alpha2 is released and recorded
+R20c done+tested (pronoun I everywhere: InputController.capitalizeI/fixLoneI/written, presenter wiring, strip shows I'm). Research agents for R20a/b/d running in background, they write research/R20-clipboard-and-strip.md and research/R20-glide-personalization.md
 
 ## Do this next
-start: (1) spawn 2 research agents (clipboard chip + next-word strip layout in Gboard/SwiftKey/iOS; glide-decoder personalisation techniques) writing to research/R20-*.md, (2) meanwhile R20c: grep capitalizeI in KeyboardPresenter, write a failing presenter test for 'i' and 'i\'m' typed in the middle of text/after '3) ', find root cause, (3) read ime/.../ClipboardHost.kt + KeysView chips for R20a
+R20a: read ime/.../ClipboardHost.kt + core ClipboardStore + KeysView chips (candidatesForTest, showCandidates, withEmoji in KeyboardPresenter) and design the clipboard chip (leftmost chip when strip is at start-of-word, fresh copy, not password, tap pastes whole clip, one-use); then R20b strip layout [glide alt][next word][glide alt]; then R20d from research/R20-glide-personalization.md
 
 *(resuming? CLAUDE.md's "FIRST ACTION OF EVERY SESSION" says how; the briefing is tools/resume.sh. Do that first, or autosave may stay off all session.)*
 
 ## Uncommitted right now
-     M TASKS.md
+    (nothing — the tree is clean as of this checkpoint)
 
 ## Last ten checkpoints
 ```
+  c72bbee ckpt 514: wrote owner's second 2026-11-18 batch R20a-d into TASKS.md (his words); 0.6.0-
   b4f6a50 ckpt 511: swoop-v0.6.0-alpha2 RELEASED AND RECORDED: run 44232237543 green (check, test-
   cffd8a8 ckpt 506: DISPATCHED android.yml ONCE for swoop-v0.6.0-alpha2 (code 11) on ref claude/ke
   ae7bda6 ckpt 505: gated swoop-v0.6.0-alpha2 (ime code 11) and pushed it: handoff self-test, unit
@@ -25,8 +26,7 @@ start: (1) spawn 2 research agents (clipboard chip + next-word strip layout in G
   02723ef ckpt 469: wrote owner's four 2026-11-18 requests R19a-d into TASKS.md (his words)
   3839c16 ckpt 466: handoff saved (.handoff/handoff.md + archive; CLAUDE.md/AGENTS.md learnings bl
   c028463 ckpt 464: 0.6.0-alpha1 RELEASED AND RECORDED: run 44220063374 green (check, test-jvm inc
-  37209dd ckpt 462: 0.6.0-alpha1 shipped to GitHub: ship.sh gates green, android.yml DISPATCHED ON
 ```
 
-(2 automatic checkpoint(s) since the last deliberate one — the
+(9 automatic checkpoint(s) since the last deliberate one — the
 session was still mid-step. `git diff` against it shows what changed.)
