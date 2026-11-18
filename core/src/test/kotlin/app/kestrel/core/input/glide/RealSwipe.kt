@@ -18,11 +18,11 @@ object RealSwipe {
     class Swipe(val word: String, val sentence: String, val wordIdx: Int, val canvasW: Float, val canvasH: Float, val orientation: String, val xs: FloatArray, val ys: FloatArray, val ts: FloatArray)
 
     /** Downloads about [bytes] from the start of [url] into [to] (whole lines only). Returns the number of bytes kept. */
-    fun fetch(url: String, bytes: Long, to: File): Long {
+    fun fetch(url: String, bytes: Long, to: File, offset: Long = 0L): Long {
         to.parentFile?.mkdirs()
         val c = URL(url).openConnection() as HttpURLConnection
         c.connectTimeout = 30_000; c.readTimeout = 60_000; c.instanceFollowRedirects = true
-        c.setRequestProperty("Range", "bytes=0-" + (bytes - 1))
+        c.setRequestProperty("Range", "bytes=" + offset + "-" + (offset + bytes - 1))
         c.setRequestProperty("User-Agent", "swoop-eval")
         val code = c.responseCode
         check(code == 200 || code == 206) { "HTTP $code" }
@@ -32,8 +32,10 @@ object RealSwipe {
         c.disconnect()
         val cut = all.lastIndexOf('\n'.code.toByte())
         check(cut > 0) { "no complete line in $bytes bytes" }
-        to.writeBytes(all.copyOf(cut + 1))
-        return (cut + 1).toLong()
+        // from the middle of the file the first line is cut off: start after the first newline (different byte ranges = different donors, for a held-out check)
+        val start = if (offset > 0) all.indexOf('\n'.code.toByte()) + 1 else 0
+        to.writeBytes(all.copyOfRange(start, cut + 1))
+        return (cut + 1 - start).toLong()
     }
 
     @Suppress("UNCHECKED_CAST")

@@ -72,7 +72,7 @@ class RealSwipeEval {
     @Test fun replay() {
         assumeTrue("set REAL_SWIPES=1", System.getenv("REAL_SWIPES") == "1")
         val f = File(System.getenv("REAL_SWIPES_FILE") ?: "build/real-swipes.jsonl")
-        if (!f.exists()) println("fetched " + RealSwipe.fetch(System.getenv("REAL_SWIPES_URL") ?: RealSwipe.DEV_URL, (System.getenv("REAL_SWIPES_MB")?.toLongOrNull() ?: 20L) * 1_000_000, f) + " bytes")
+        if (!f.exists()) println("fetched " + RealSwipe.fetch(System.getenv("REAL_SWIPES_URL") ?: RealSwipe.DEV_URL, (System.getenv("REAL_SWIPES_MB")?.toLongOrNull() ?: 20L) * 1_000_000, f, (System.getenv("REAL_SWIPES_OFFSET_MB")?.toLongOrNull() ?: 0L) * 1_000_000) + " bytes")
         val limit = System.getenv("REAL_SWIPES_N")?.toIntOrNull() ?: Int.MAX_VALUE
         val sw = RealSwipe.read(f, limit)
         val fit = calibrate(sw)
@@ -135,7 +135,17 @@ class RealSwipeEval {
         "len 1.0 s.15/.20" to GlideParams(lengthExpect = 1.0f, lengthSigmaLow = 0.15f, lengthSigmaHigh = 0.20f),
         "len 1.09 s.13/.20 cap6" to GlideParams(lengthExpect = 1.09f, lengthSigmaLow = 0.13f, lengthSigmaHigh = 0.20f, lengthCap = 6f),
         "bias off" to GlideParams(biasGain = 0f), "bias 1.0" to GlideParams(biasGain = 1.0f),
-        "bigramMix .6" to GlideParams(bigramMix = 0.6f), "rare off" to GlideParams(rareW = 0f)
+        "bigramMix .6" to GlideParams(bigramMix = 0.6f), "rare off" to GlideParams(rareW = 0f),
+        "shapeW 0" to GlideParams(shapeW = 0f), "shapeW .5" to GlideParams(shapeW = 0.5f), "shapeW .75" to GlideParams(shapeW = 0.75f),
+        "shapeW 1.25" to GlideParams(shapeW = 1.25f), "shapeW 1.5" to GlideParams(shapeW = 1.5f),
+        "shape1 visit4" to GlideParams(shapeW = 1f, visitCap = 4f), "shape1 visit5" to GlideParams(shapeW = 1f, visitCap = 5f), "shape1 visit6" to GlideParams(shapeW = 1f, visitCap = 6f),
+        "shape1 end2" to GlideParams(shapeW = 1f, endW = 2f), "shape1 end4" to GlideParams(shapeW = 1f, endW = 4f),
+        "shape1 biasW 1.5" to GlideParams(shapeW = 1f, biasW = 1.5f), "shape1 biasW 6" to GlideParams(shapeW = 1f, biasW = 6f),
+        "shape1 biasGain .9" to GlideParams(shapeW = 1f, biasGain = 0.9f),
+        "shape1 len1.09" to GlideParams(shapeW = 1f, lengthExpect = 1.09f, lengthSigmaLow = 0.13f, lengthSigmaHigh = 0.20f),
+        "shape1 visit5 len1.09" to GlideParams(shapeW = 1f, visitCap = 5f, lengthExpect = 1.09f, lengthSigmaLow = 0.13f, lengthSigmaHigh = 0.20f),
+        "shape.75 visit5 len1.09" to GlideParams(shapeW = 0.75f, visitCap = 5f, lengthExpect = 1.09f, lengthSigmaLow = 0.13f, lengthSigmaHigh = 0.20f),
+        "shape1 visit5 len1.09 end2" to GlideParams(shapeW = 1f, visitCap = 5f, endW = 2f, lengthExpect = 1.09f, lengthSigmaLow = 0.13f, lengthSigmaHigh = 0.20f)
     )
 
     /** Where the real misses come from: words the list lacks, candidate recall, ranking misses (more / less common than the word meant), examples. */
