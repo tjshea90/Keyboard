@@ -7,10 +7,11 @@ package app.kestrel.core.input
 object FloatingMath {
     const val MIN_W_DP = 232f
     const val MAX_W_DP = 620f
-    const val MIN_H_MUL = 0.7f
+    /** Owner R23e (2026-11-18, "can the keyboard be made to be even shorter than its current minimum vertical size?"): the rows may be dragged down to this share of their normal height (it was 0.7). */
+    const val MIN_H_MUL = 0.45f
     const val MAX_H_MUL = 2.2f
     /** The docked keyboard's rows may be this much shorter / taller than the settings say (owner R19c: resize it both ways while it sits at the bottom). */
-    const val DOCK_MIN_H_MUL = 0.7f
+    const val DOCK_MIN_H_MUL = 0.45f
     const val DOCK_MAX_H_MUL = 1.8f
     /** ... and the docked keyboard never grows past this share of the screen's height (unless it already was taller: a phone held sideways). */
     const val DOCK_MAX_SCREEN_FRAC = 0.6f
