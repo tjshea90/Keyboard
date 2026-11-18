@@ -1162,3 +1162,13 @@
 > - The glide re-tune from alpha4 has no real-swipe data for the tablet's bigger keys. If glide feels worse there, tell me.
 > - The task for your socket error stays open until I see your test lines.
 <!-- sha:c17d7f7051db -->
+
+## 2026-11-18T23:51:29Z
+> Thank you. I've ignored the "Hello" message. This test output is exactly what I needed, and it changes the picture:
+>
+> - **Not a missing internet group:** that check is OK, the permission is granted, and name lookups work.
+> - **The connection itself is refused in 3 ms with a socket refusal (`EPERM`) for both services.** That happened while the test screen was in front, so it's not a "background app" rule.
+> - **The one odd fact is `battery saver ON`.** On Android's own builds battery saver only makes connections time out (I measured that). Your tablet's maker may have made it stricter, so I was too quick to say "that is not battery saver" in the Result line. That sentence is wrong for your tablet.
+>
+> Writing it down first, then fixing the wording.
+<!-- sha:446312d03756 -->

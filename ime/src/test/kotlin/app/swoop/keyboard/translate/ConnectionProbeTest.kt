@@ -77,7 +77,7 @@ class ConnectionProbeTest {
     @Test fun aBlockedSocketIsNotBlamedOnDataSaverAndPointsAtTheRealCandidates() {
         val v = ConnectionProbe.verdict(healthy + st("MyMemory: connect IPv4", false, "ConnectException (EPERM, not permitted)"))
         assertTrue(v, v.contains("refuses the keyboard a network socket (MyMemory: connect IPv4: EPERM)"))
-        assertTrue(v, v.contains("not Data Saver") && v.contains("firewall, VPN") && v.contains("Restart the device"))
+        assertTrue(v, v.contains("this is something else") && v.contains("firewall, VPN") && v.contains("Restart the device"))
         val eacces = ConnectionProbe.verdict(healthy + st("Google: connect IPv4", false, "ConnectException (EACCES, permission denied)"))
         assertTrue(eacces, eacces.contains("EACCES"))
     }
@@ -91,6 +91,27 @@ class ConnectionProbeTest {
     @Test fun theGroupCheckSaysNothingOnNewAndroid() {
         // (the JVM test runs without Android: SDK_INT is 0 here: "cannot be told", never a false alarm and never a crash)
         assertEquals(null, AndroidLimits.inInetGroup())
+    }
+
+    @Test fun theOwnersTabletOutputNamesBatterySaverAndNeverRulesItOut() {
+        // the exact steps the owner pasted on 2026-11-18 (R25c): group OK, battery saver ON, names resolve, connect refused with EPERM in 3 ms
+        val steps = listOf(
+            st("Internet permission", true, "granted"), st("Internet access group", true, "this process has Android's internet group (inet)"),
+            st("Android limits", false, "Data Saver cannot be read (...), battery saver ON, standby bucket active"), st("Device clock", true, "2026-11-18 23:49 UTC"),
+            st("MyMemory: name lookup", true, "3 address(es): 3 IPv4, 0 IPv6"), st("MyMemory: connect IPv4", false, "SocketException (EPERM, not permitted)"),
+            st("MyMemory: answer", false, "BLOCKED, SocketException (EPERM, not permitted)"), st("Google: name lookup", true, "1 address(es): 1 IPv4, 0 IPv6"),
+            st("Google: connect IPv4", false, "SocketException (EPERM, not permitted)"), st("Google: answer", false, "BLOCKED, SocketException (EPERM, not permitted)")
+        )
+        val v = ConnectionProbe.verdict(steps)
+        assertTrue(v, v.contains("(MyMemory: connect IPv4: EPERM)"))
+        assertTrue(v, v.contains("Battery saver is ON") && v.contains("Switch Battery saver off"))
+        assertFalse(v, v.contains("not Data Saver or battery saver"))
+        assertFalse("the group is fine: no reinstall advice", v.contains("uninstall"))
+    }
+
+    @Test fun batterySaverAloneIsAWarningWithTheRightFix() {
+        val v = ConnectionProbe.verdict(healthy + st("Android limits", false, "Data Saver cannot be read, battery saver ON, standby bucket active"))
+        assertTrue(v, v.contains("Switch Battery saver off") && !v.contains("Unrestricted data and switch Swoop on"))
     }
 
     @Test fun aLimitAloneIsAWarningThatTheKeyboardMayBeRefused() {

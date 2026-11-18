@@ -64,7 +64,8 @@ object ConnectionProbe {
         if (context != null) {
             // R25: Data Saver / battery saver / doze / a restricted app: what can make Android refuse a BACKGROUND app (a keyboard is one) the network on purpose
             val f = AndroidLimits.read(context)
-            val blocksNetwork = f.dataSaver == AndroidLimits.DataSaver.ON_NOT_ALLOWED || f.backgroundRestricted || f.standbyBucket == "restricted"
+            // battery saver and doze count too: on Android's own builds they only make connections time out, but a tablet maker's build can refuse an app's sockets outright while battery saver is on (the owner's tablet, R25c)
+            val blocksNetwork = f.dataSaver == AndroidLimits.DataSaver.ON_NOT_ALLOWED || f.backgroundRestricted || f.standbyBucket == "restricted" || f.batterySaver || f.doze
             add(ProbeStep("Android limits", !blocksNetwork, 0, f.note()))
         }
         val cal = java.util.Calendar.getInstance(TimeZone.getTimeZone("UTC"))
@@ -159,8 +160,12 @@ object ConnectionProbe {
             return "Result: Android did not give the Swoop process its internet access (it is not in the internet group), although the permission is declared. This happens after an update that added the permission. Restart the device now. If it still fails afterwards, uninstall Swoop and install it again from the Release (export your learned words first)."
         }
         if (blocked != null) {
-            // EPERM / EACCES is NOT what Data Saver (refused), battery saver or doze (time-outs) do: measured on an Android 10 emulator, R25
-            return "Result: Android refuses the keyboard a network socket (${blocked.name}: ${SafeReason.errnoOf(blocked.note) ?: "refused"}). That is not Data Saver or battery saver (they show as refused or timed out). Restart the device once; then look for a firewall, VPN or ad-blocking app, a vendor setting that blocks an app's internet (Settings, Apps, Swoop: mobile data / network switches), or a parental-control or school profile on this device."
+            val head = "Result: Android refuses the keyboard a network socket (${blocked.name}: ${SafeReason.errnoOf(blocked.note) ?: "refused"})."
+            // R25c: measured on an Android 10 emulator: Data Saver = refused connections, battery saver and doze = time-outs, never EPERM; but the owner's tablet gave EPERM with battery saver ON, so a tablet maker's build can be stricter: say so
+            if (limits != null && limits.note.contains("battery saver ON")) {
+                return head + " Battery saver is ON. On Android's own builds that only makes connections slow, but some tablets cut an app's network completely while it is on (this test screen was in front, so it is not a background rule). Switch Battery saver off (Settings, Battery) and test again. If it still fails: restart the device once, then look for a firewall, VPN or ad-blocking app, a vendor switch that blocks an app's internet (Settings, Apps, Swoop), or a parental-control or school profile."
+            }
+            return head + " Android's own Data Saver shows as a refused connection and battery saver or doze as time-outs, so this is something else. Restart the device once; then look for a firewall, VPN or ad-blocking app, a vendor setting that blocks an app's internet (Settings, Apps, Swoop: mobile data / network switches), a parental-control or school profile, or Battery saver (switch it off to rule it out)."
         }
         bad("name lookup")?.let { return "Result: the name of ${it.name.substringBefore(':')} could not be looked up: the device is offline, or private DNS / a filter blocks it. Is the phone's mobile data on?" }
         val connects = steps.filter { it.name.contains(": connect ") }
@@ -169,7 +174,10 @@ object ConnectionProbe {
         bad("secure handshake")?.let { return "Result: the secure handshake with ${it.name.substringBefore(':')} failed (${it.note}). Check the date and time; a hotspot filter may be cutting it." }
         bad("answer")?.let { return "Result: ${it.name.substringBefore(':')} was reached but the exchange broke (${it.note}). Flaky link: try again." }
         steps.firstOrNull { it.name == "Device clock" && !it.ok }?.let { return "Result: the device date is wrong; fix it." }
-        if (limits != null) return "Result: Android limits what Swoop may use in the background (${limits.note}). This test passed because this screen is in front, but the keyboard runs in the background, so translating from it may be refused. Open Settings, Network and internet, Data Saver, Unrestricted data and switch Swoop on (the button below opens it)."
+        if (limits != null) {
+            val fix = if (limits.note.contains("Data Saver ON")) "Open Settings, Network and internet, Data Saver, Unrestricted data and switch Swoop on (the first button below opens it)." else "Switch Battery saver off (Settings, Battery), or allow Swoop under the app's battery settings (the second button below)."
+            return "Result: Android limits what Swoop may use (${limits.note}). This test passed because this screen is in front, but the keyboard runs in the background, so translating from it may be refused. $fix"
+        }
         val answers = steps.filter { it.name.endsWith(": answer") }
         if (answers.any { it.note.contains("became") }) return "Result: translation can work from here."
         return "Result: the services were reached but did not translate the test word (see the answer lines)."
