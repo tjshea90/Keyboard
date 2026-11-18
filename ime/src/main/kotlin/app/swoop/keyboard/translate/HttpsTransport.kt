@@ -2,22 +2,31 @@ package app.swoop.keyboard.translate
 
 import app.kestrel.core.translate.Http
 import app.kestrel.core.translate.HttpReply
+import app.kestrel.core.translate.SafeReason
 import app.kestrel.core.translate.TransportException
 import java.io.ByteArrayOutputStream
+import java.io.EOFException
 import java.io.IOException
 import java.io.InputStream
 import java.net.ConnectException
 import java.net.HttpURLConnection
 import java.net.NoRouteToHostException
+import java.net.SocketException
 import java.net.SocketTimeoutException
 import java.net.URL
 import java.net.UnknownHostException
+import javax.net.ssl.SSLException
 
 /**
- * The ONLY code in the keyboard that opens a connection. HttpURLConnection, HTTPS to the two hosts of [TranslateGuard] only,
- * timeouts for a flaky 5 Mbit phone hotspot, redirects NOT followed (Google's picture-puzzle page is one; a redirect to another host
- * must never be followed), no cache, a bounded answer, a User-Agent that names nothing personal. It never logs and never puts the
- * text (or an exception message, which could hold the address with the text in it) into an error.
+ * The code in the keyboard that opens a connection for a translation ([ConnectionProbe] is the other one, for the Diagnostics test).
+ * HttpURLConnection, HTTPS to the two hosts of [TranslateGuard] only, timeouts for a flaky 5 Mbit phone hotspot, redirects NOT followed
+ * (Google's picture-puzzle page is one; a redirect to another host must never be followed), no cache, a bounded answer, a User-Agent that
+ * names nothing personal. It never logs and never puts the text (or an exception message, which could hold the address with the text in
+ * it) into an error: failures carry a [SafeReason] (class name, an errno name, a known phrase) and a [TransportException.Kind] that says
+ * WHICH step broke (2026-11-18: the owner saw only "SocketException" and nobody could tell what it meant).
+ *
+ * One quick automatic retry (after [RETRY_MS]) when a connection was made and then dropped ([TransportException.Kind.DROPPED]): the
+ * flaky phone hotspot resets connections now and then, and a second try on a fresh connection usually works.
  *
  * Blocking: call from a background thread only ([Translator] does).
  */
@@ -25,15 +34,39 @@ class HttpsTransport internal constructor(
     /** Tests only: maps the https address to a local fake server AFTER the allowlist check. Null in the app. */
     private val rewrite: ((String) -> String)?,
     private val connectMs: Int = CONNECT_MS,
-    private val readMs: Int = READ_MS
+    private val readMs: Int = READ_MS,
+    /** Wait before the one automatic retry of a dropped connection; 0 = no retry (tests). */
+    private val retryMs: Int = RETRY_MS
 ) : Http {
     constructor() : this(null)
 
     @Volatile private var current: HttpURLConnection? = null
+    /** Counts aborts: a retry that waited through an [abort] is stale and is not made. */
+    @Volatile private var abortGen = 0
+    /** How many connections were opened (tests: the retry makes two). */
+    @Volatile internal var attempts = 0
 
     override fun call(url: String, form: String?): HttpReply {
         if (!TranslateGuard.allows(url)) throw TransportException(TransportException.Kind.OTHER, "address not allowed")
+        val gen = abortGen
+        try {
+            return once(url, form)
+        } catch (e: TransportException) {
+            if (e.kind != TransportException.Kind.DROPPED || retryMs <= 0) throw e
+            var waited = 0
+            while (waited < retryMs) { // wait in small steps so that an abort (cancel, newer request) ends the wait at once
+                try { Thread.sleep(50) } catch (_: InterruptedException) { throw e }
+                waited += 50
+                if (abortGen != gen) throw e
+            }
+            if (abortGen != gen) throw e
+            return once(url, form)
+        }
+    }
+
+    private fun once(url: String, form: String?): HttpReply {
         val target = rewrite?.invoke(url) ?: url
+        attempts++
         var c: HttpURLConnection? = null
         try {
             c = URL(target).openConnection() as HttpURLConnection
@@ -62,16 +95,25 @@ class HttpsTransport internal constructor(
         } catch (e: TransportException) {
             throw e
         } catch (e: UnknownHostException) {
-            throw TransportException(TransportException.Kind.NO_INTERNET)
+            throw TransportException(TransportException.Kind.NO_INTERNET, SafeReason.of(e.javaClass.simpleName, e.message))
         } catch (e: NoRouteToHostException) {
-            throw TransportException(TransportException.Kind.NO_INTERNET)
+            throw TransportException(TransportException.Kind.NO_INTERNET, SafeReason.of(e.javaClass.simpleName, e.message))
         } catch (e: ConnectException) {
-            throw TransportException(TransportException.Kind.NO_INTERNET)
+            // refused / unreachable / timed out while connecting = no internet; EPERM / EACCES = Android refused the socket
+            throw TransportException(if (blocked(e)) TransportException.Kind.BLOCKED else TransportException.Kind.NO_INTERNET, SafeReason.of(e.javaClass.simpleName, e.message))
         } catch (e: SocketTimeoutException) {
-            throw TransportException(TransportException.Kind.TIMEOUT)
+            throw TransportException(TransportException.Kind.TIMEOUT, SafeReason.of(e.javaClass.simpleName, e.message))
+        } catch (e: SSLException) {
+            throw TransportException(if (droppedNotRejected(e)) TransportException.Kind.DROPPED else TransportException.Kind.SECURE, SafeReason.of(e.javaClass.simpleName, e.message))
+        } catch (e: SocketException) {
+            // a plain SocketException: the socket was refused (EPERM), or a connection that was made got reset / aborted / closed
+            throw TransportException(if (blocked(e)) TransportException.Kind.BLOCKED else TransportException.Kind.DROPPED, SafeReason.of(e.javaClass.simpleName, e.message))
+        } catch (e: EOFException) {
+            throw TransportException(TransportException.Kind.DROPPED, SafeReason.of(e.javaClass.simpleName, e.message))
         } catch (e: IOException) {
-            // the class name only: the message of an IOException can hold the address, and the address holds the text
-            throw TransportException(TransportException.Kind.OTHER, e.javaClass.simpleName)
+            // only the SafeReason (class name, errno, known phrase): the message of an IOException can hold the address, and the address holds the text
+            val cut = (e.message ?: "").lowercase().contains("unexpected end of stream")
+            throw TransportException(if (cut) TransportException.Kind.DROPPED else TransportException.Kind.OTHER, SafeReason.of(e.javaClass.simpleName, e.message))
         } finally {
             current = null
             try { c?.disconnect() } catch (e: RuntimeException) { }
@@ -79,7 +121,20 @@ class HttpsTransport internal constructor(
     }
 
     override fun abort() {
+        abortGen++
         try { current?.disconnect() } catch (e: RuntimeException) { }
+    }
+
+    private fun blocked(e: IOException): Boolean {
+        val n = SafeReason.errnoOf(e.message)
+        return n == "EPERM" || n == "EACCES"
+    }
+
+    /** An SSL failure that is the connection being cut (reset, aborted, closed by the peer), not a refusal of the certificate or protocol. */
+    private fun droppedNotRejected(e: SSLException): Boolean {
+        val m = (e.message ?: "").lowercase()
+        return m.contains("connection reset") || m.contains("abort") || m.contains("i/o error during system call") || m.contains("broken pipe") ||
+            m.contains("closed by peer") || m.contains("connection closed") || m.contains("unexpected end") || m.contains("socket closed")
     }
 
     private fun read(stream: InputStream): String {
@@ -101,6 +156,7 @@ class HttpsTransport internal constructor(
     companion object {
         const val CONNECT_MS = 8000
         const val READ_MS = 15000
+        const val RETRY_MS = 600
         const val TOTAL_MS = 30_000L
         const val MAX_ANSWER = 256 * 1024
         const val USER_AGENT = "Swoop"
