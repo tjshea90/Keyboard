@@ -482,6 +482,25 @@ class KeyboardPresenterTest {
         assertTrue("nothing fresh to offer: ${r.view.candidatesForTest()}", r.view.candidatesForTest().none { it == "old" })
     }
 
+    // ------------------------------------------------------------------ R21 (owner 2026-11-18): no spaces between a quotation mark and the word inside it
+
+    @Test fun aGlidedWordInsideQuotationMarksHasNoSpaceBeforeOrAfter() {
+        val r = Rig(words = pairedList)
+        r.presenter.onKey(Key.Ch("\"")); r.report(); r.glide("hello")
+        assertEquals("no space between the opening quote and the word", "\"hello ", r.text)
+        r.presenter.onKey(Key.Ch("\"")); r.report()
+        assertEquals("the closing quote takes the glide's trailing space away", "\"hello\"", r.text)
+        r.glide("world"); assertEquals("a word after the closing quote still gets its space", "\"hello\" world ", r.text)
+    }
+
+    @Test fun aWordPickedFromTheStripInsideQuotesBehavesTheSame() {
+        val r = Rig(suggest = true, words = pairedList)
+        r.presenter.onKey(Key.Ch("\"")); r.report(); r.glide("hello")
+        r.tapChip(1)                                                                         // the next word (world), picked from the strip
+        assertEquals("\"hello world ", r.text)
+        r.presenter.onKey(Key.Ch("\"")); r.report(); assertEquals("\"hello world\"", r.text)
+    }
+
     @Test fun twoQuickSpacesMakeAFullStopAndTheSwitchTurnsItOff() {
         val r = Rig(glidePref = false); for (c in "hello") r.tap(c.toString()); r.tap("space"); r.tap("space")
         assertEquals("hello. ", r.text)
