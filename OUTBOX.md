@@ -1033,3 +1033,7 @@
 >
 > 💡 This chat is getting long. Consider `/amhandoff` at the next good stopping point.
 <!-- sha:e3aef1f5277d -->
+
+## 2026-11-18T22:34:54Z
+> Understood. That wording is from the connection test's "Result" line, so the exact errno is `EPERM`/`EACCES`, meaning Android itself is refusing the network connection. Writing this into TASKS.md in your words first, then digging in.
+<!-- sha:0b36b45a0f77 -->
