@@ -74,13 +74,23 @@ class ConnectionProbeTest {
         assertTrue(ConnectionProbe.verdict(listOf(st("Device clock", false, "1970"))).contains("date is wrong"))
     }
 
-    @Test fun aBlockedSocketWithDataSaverOnNamesDataSaverAndTheFix() {
-        val limit = st("Android limits", false, "Data Saver ON and Swoop is NOT on the Unrestricted data list, standby bucket active")
-        val v = ConnectionProbe.verdict(healthy + limit + st("MyMemory: connect IPv4", false, "ConnectException (EPERM, not permitted)"))
+    @Test fun aBlockedSocketIsNotBlamedOnDataSaverAndPointsAtTheRealCandidates() {
+        val v = ConnectionProbe.verdict(healthy + st("MyMemory: connect IPv4", false, "ConnectException (EPERM, not permitted)"))
         assertTrue(v, v.contains("refuses the keyboard a network socket (MyMemory: connect IPv4: EPERM)"))
-        assertTrue(v, v.contains("Data Saver ON") && v.contains("Unrestricted data"))
-        val plain = ConnectionProbe.verdict(healthy + st("Google: connect IPv4", false, "ConnectException (EACCES, permission denied)"))
-        assertTrue(plain, plain.contains("EACCES") && !plain.contains("The cause is on this device"))
+        assertTrue(v, v.contains("not Data Saver") && v.contains("firewall, VPN") && v.contains("Restart the device"))
+        val eacces = ConnectionProbe.verdict(healthy + st("Google: connect IPv4", false, "ConnectException (EACCES, permission denied)"))
+        assertTrue(eacces, eacces.contains("EACCES"))
+    }
+
+    @Test fun aProcessOutsideTheInetGroupIsNamedFirstWithTheRestartAndReinstallFix() {
+        val v = ConnectionProbe.verdict(healthy + st("Internet access group", false, "this process is NOT in Android's internet group (inet)") + st("MyMemory: connect IPv4", false, "ConnectException (EACCES, permission denied)"))
+        assertTrue(v, v.startsWith("Result: Android did not give the Swoop process its internet access"))
+        assertTrue(v, v.contains("Restart the device") && v.contains("export your learned words"))
+    }
+
+    @Test fun theGroupCheckSaysNothingOnNewAndroid() {
+        // (the JVM test runs without Android: SDK_INT is 0 here, below 33, and /proc/self/status has no inet group: that is "false" or null, never a crash)
+        AndroidLimits.inInetGroup()
     }
 
     @Test fun aLimitAloneIsAWarningThatTheKeyboardMayBeRefused() {

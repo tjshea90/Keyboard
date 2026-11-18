@@ -133,7 +133,7 @@ class TranslationEngine(
                 false, by, ErrorCode.REFUSED
             )
             TransportException.Kind.BLOCKED -> TranslateResult.failed(
-                "Android is not letting the keyboard use the network$why. Most often Data Saver: in Diagnostics tap Test translation connection and Allow Swoop to use data when Data Saver is on.",
+                "Android is not letting the keyboard use the network$why. Restart the device once; if it stays, open Diagnostics and tap Test translation connection (a firewall, VPN or vendor setting may be blocking Swoop).",
                 false, by, ErrorCode.BLOCKED
             )
             TransportException.Kind.SECURE -> TranslateResult.failed(

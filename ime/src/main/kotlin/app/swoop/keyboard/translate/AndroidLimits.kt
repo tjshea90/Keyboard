@@ -37,6 +37,19 @@ object AndroidLimits {
         }
     }
 
+    /**
+     * R25: does this process belong to the "inet" group (gid 3003)? On the kernels of Android 10 tablets (4.9) a process outside that group gets EACCES from every socket() call: Android did not hand
+     * the app its internet access, which can happen right after an update that ADDED the INTERNET permission (Swoop added it in 0.4.0) until the device restarts. True / false, or null when it cannot be told
+     * (newer Android checks internet access another way and an app need not show the group there: only asked below API 33).
+     */
+    fun inInetGroup(): Boolean? {
+        if (android.os.Build.VERSION.SDK_INT >= 33) return null
+        return try {
+            val line = java.io.File("/proc/self/status").readLines().firstOrNull { it.startsWith("Groups:") } ?: return null
+            line.removePrefix("Groups:").trim().split(Regex("\\s+")).contains("3003")
+        } catch (e: Exception) { null }
+    }
+
     fun read(context: Context): Facts {
         val saver = try {
             when ((context.getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager)?.restrictBackgroundStatus) {

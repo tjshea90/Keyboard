@@ -58,6 +58,9 @@ object ConnectionProbe {
             val granted = try { context.checkSelfPermission("android.permission.INTERNET") == PackageManager.PERMISSION_GRANTED } catch (e: RuntimeException) { false }
             add(ProbeStep("Internet permission", granted, 0, if (granted) "granted" else "NOT granted to this app"))
         }
+        AndroidLimits.inInetGroup()?.let { member ->
+            add(ProbeStep("Internet access group", member, 0, if (member) "this process has Android's internet group (inet)" else "this process is NOT in Android's internet group (inet): Android did not give Swoop its internet access"))
+        }
         if (context != null) {
             // R25: Data Saver / battery saver / doze / a restricted app: what can make Android refuse a BACKGROUND app (a keyboard is one) the network on purpose
             val f = AndroidLimits.read(context)
@@ -151,10 +154,13 @@ object ConnectionProbe {
         }
         val limits = steps.firstOrNull { it.name == "Android limits" && !it.ok }
         val blocked = steps.firstOrNull { !it.ok && it.name != "Android limits" && (it.note.contains("EPERM") || it.note.contains("EACCES")) }
+        val noGroup = steps.firstOrNull { it.name == "Internet access group" && !it.ok }
+        if (noGroup != null) {
+            return "Result: Android did not give the Swoop process its internet access (it is not in the internet group), although the permission is declared. This happens after an update that added the permission. Restart the device now. If it still fails afterwards, uninstall Swoop and install it again from the Release (export your learned words first)."
+        }
         if (blocked != null) {
-            val fix = if (limits != null) " The cause is on this device (${limits.note}). Open Settings, Network and internet, Data Saver, Unrestricted data and switch Swoop on (the button below opens it), or turn Data Saver off."
-            else " Most likely Data Saver or a background-data limit (Data Saver is on by default on many Android Go tablets, and a phone's hotspot counts as a metered connection): open Settings, Network and internet, Data Saver, Unrestricted data and switch Swoop on (the first button below opens it), or turn Data Saver off. Also check the app's mobile data and battery settings (second button), switch off any firewall app, restart the device once."
-            return "Result: Android refuses the keyboard a network socket (${blocked.name}: ${SafeReason.errnoOf(blocked.note) ?: "refused"})." + fix
+            // EPERM / EACCES is NOT what Data Saver (refused), battery saver or doze (time-outs) do: measured on an Android 10 emulator, R25
+            return "Result: Android refuses the keyboard a network socket (${blocked.name}: ${SafeReason.errnoOf(blocked.note) ?: "refused"}). That is not Data Saver or battery saver (they show as refused or timed out). Restart the device once; then look for a firewall, VPN or ad-blocking app, a vendor setting that blocks an app's internet (Settings, Apps, Swoop: mobile data / network switches), or a parental-control or school profile on this device."
         }
         bad("name lookup")?.let { return "Result: the name of ${it.name.substringBefore(':')} could not be looked up: the device is offline, or private DNS / a filter blocks it. Is the phone's mobile data on?" }
         val connects = steps.filter { it.name.contains(": connect ") }
