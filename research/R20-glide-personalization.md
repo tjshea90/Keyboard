@@ -391,7 +391,7 @@ The simulator says what a new owner will feel: first stretch of 300 glides 86.0 
 
 | Idea | Existing harness | New simulator piece needed |
 | :- | :- | :- |
-| 4.1 touch field | `GlideEval` / `GlideHabitEval.Hand` through `GestureSim.path(word, noise, shift)` (per-letter dp shifts) | A `Hand` family (uniform, fan, tilt, zones, thumb-pivot, left / right thumb chosen by the start key's side, portrait / landscape switch). No `GestureSim` change is strictly needed. For taps: a `TapSim` (touch = key centre + field + Gaussian 0.55 key units) and a tap decoder that uses coordinates. |
+| 4.1 touch field | `GlideEval` / `GlideHabitEval.Hand` through `GestureSim.path(word, noise, shift)` (per-letter dp shifts) | A `Hand` family (uniform, fan, tilt, zones, thumb-pivot, left / right thumb chosen by the start key's side, portrait / landscape switch). No `GestureSim` change is strictly needed. For taps: a `TapSim` (touch = key centre + field + Gaussian 0.4 to 0.55 key sizes) and a tap decoder that uses coordinates. |
 | 4.2 shadow / replay | counters in `GlideStats`; `ReplayEval` (new) | `SimNoise` calibrated from the replay and from the FUTO corpus |
 | 4.3 post-correction | `PredictionEval.glideInContext` extended with the previous N-best (my `PostCorr` is the prototype) | none |
 | 4.4 speed / dwell / loop | `GlideEval` with twin-group accuracy added | `SimNoise.timing`: timestamps on every point (`GestureSim.Path.ts`), minimum-jerk speed between aim points, pause probability per letter, loop-or-dwell probability at doubled letters (and the repeated letter drawn as one touch plus a cue), per-person speed scale; today doubled letters are one touch |
