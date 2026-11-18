@@ -5,6 +5,7 @@ import android.os.Looper
 import android.os.SystemClock
 import android.view.MotionEvent
 import android.view.View
+import app.kestrel.core.input.BackspaceRepeat
 import app.kestrel.core.input.ImeLayout
 import app.kestrel.core.input.Key
 import app.kestrel.core.input.Page
@@ -34,6 +35,7 @@ class KeysViewTest {
         val keys = ArrayList<String>(); var cursor = 0
         override fun onKey(key: Key) { keys.add(when (key) { is Key.Ch -> key.text; Key.Backspace -> "<bs>"; Key.Go -> "<go>"; Key.Shift -> "<shift>"; Key.NextKeyboard -> "<next>"; else -> key.toString() }) }
         override fun onCursor(steps: Int) { cursor += steps }
+        override fun onDeleteWord() { keys.add("<bsw>") }
     }
 
     private fun view(w: Int = 564, kind: FieldKind = FieldKind.TEXT, action: String = "⏎"): Pair<KeysView, Rec> {
@@ -101,8 +103,22 @@ class KeysViewTest {
         down(v, x, y); assertEquals(listOf("<bs>"), r.keys)
         advance(KeysView.REPEAT_FIRST_MS - 50); assertEquals(1, r.keys.size)
         advance(100); assertEquals(2, r.keys.size)
-        advance(KeysView.REPEAT_MS * 3); assertEquals(5, r.keys.size)
+        advance(BackspaceRepeat.SLOW_MS + 20); assertEquals(3, r.keys.size)
         up(v, x, y); val n = r.keys.size; advance(500); assertEquals("repeat must stop at lift, and the lift itself types nothing", n, r.keys.size)
+    }
+    @Test fun aHeldBackspaceSpeedsUpAndThenDeletesWholeWords() {   // owner R23a
+        val (v, r) = view(); val (x, y) = at(v, "⌫")
+        down(v, x, y)
+        advance(BackspaceRepeat.FIRST_MS + 1)
+        val early = r.keys.size; advance(1000); val laterSecond = r.keys.size - early
+        advance(1000); val third = r.keys.size - early - laterSecond
+        assertTrue("it gets faster while held: $laterSecond then $third repeats in a second", third > laterSecond)
+        assertTrue("letters only, no word yet", r.keys.none { it == "<bsw>" })
+        advance(BackspaceRepeat.WORDS_AFTER_MS)
+        assertTrue("after the long hold whole words go", r.keys.contains("<bsw>"))
+        val before = r.keys.size; advance(1500)
+        assertTrue("and they keep going", r.keys.drop(before).all { it == "<bsw>" } && r.keys.size > before)
+        up(v, x, y); val n = r.keys.size; advance(800); assertEquals(n, r.keys.size)
     }
     @Test fun theGlobeKeyComesBackWhenAskedAndReportsNextKeyboard() {
         val (v, r) = view(); v.showGlobe = true; v.measure(View.MeasureSpec.makeMeasureSpec((564 * dp).toInt(), View.MeasureSpec.EXACTLY), View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED)); v.layout(0, 0, v.measuredWidth, v.measuredHeight)
