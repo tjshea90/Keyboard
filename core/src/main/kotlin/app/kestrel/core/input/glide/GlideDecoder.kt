@@ -156,8 +156,8 @@ class GlideDecoder(private val keys: GlideKeys, private val p: GlideParams = Gli
     private val injected = ArrayList<String>()  // the remembered words the last decode put among the survivors on top of the quick pass's own
 
     /**
-     * [xs]/[ys] are the first [count] touch points in view pixels. [prev] is the word before (lowercase letters) or null. Returns up to [max] words, best first; empty when the path is a tap or
-     * nothing fits.
+     * [xs]/[ys] are the first [count] touch points in view pixels. [prev] is the word before (lowercase letters) or null. Returns up to [max] words, best first; empty when the path is a tap or a short wiggle (not a glide), and, only when [relax]
+     * is false or [GlideParams.alwaysAnswer] is off, when nothing fits (R19d: otherwise the closest word is answered anyway).
      */
     fun decode(xs: FloatArray, ys: FloatArray, count: Int, lexicons: List<GlideLexicon>, prev: String?, max: Int = 3, prev2: String? = null, relax: Boolean = true): List<GlideCandidate> {
         val strict = decodePass(xs, ys, count, lexicons, prev, max, prev2, relaxed = false)
