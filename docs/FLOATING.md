@@ -19,3 +19,9 @@ Owner, 2026-11-17: "make the keyboard able to detach from the bottom of the scre
 
 ## Tests
 Robolectric: bar long press detaches and a drag moves it; clamp to the screen; corner drags resize within limits and the keys still type and glide; dock by double tap and by dropping at the bottom; settings persistence; `onComputeInsets` values in both modes; the touch region; safe mode docks. Not run: the real tablet and phone (touch feel of the 350 ms and the 26 dp corner squares, how each Android version treats a full-screen transparent IME window) - the emulator smoke run on GitHub checks the window really is full-screen and touches pass through.
+
+## Smooth resizing and "Full size" (R18c, 2026-11-18)
+* **No layout while a finger is down.** Dragging a corner (floating), an arrow of the bar, or pinching the bar (docked) only scales and moves the finished panel with view transforms (`KeyboardRoot.setPreview`): nothing is measured or laid out between two touch events, and the shadow is switched off for the drag. When the finger lifts the size is laid out ONCE (`endResize` / `gripSqueezeEnd`), with the row height computed by the exact inverse `KeysView.mulFor` so the keys come out as tall as the picture was. `panelRect()` always answers with the rectangle the person sees.
+* **Full size button.** While the docked keyboard is squeezed or the keyboard floats, the middle of the bar is a pill that says "Full size" (`GripBar.pillRect`). One tap docks it at the full width again (`gripRestore`); double-tapping the bar still does the same.
+* Tests: `KeyboardRootTest` (pill, one-tap restore, "only a picture changes while dragging", every corner drag exact and the opposite edge never moves), `KeysViewTest.mulForIsTheExactInverseOfHeightFor`. NOT run on the tablet.
+
