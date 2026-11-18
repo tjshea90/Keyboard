@@ -431,8 +431,9 @@ class KeyboardPresenterTest {
     @Test fun duringAGlideTheStripKeepsTheGlideGuessesAndTheCopyWaitsForTheNextWord() {
         val r = Rig(suggest = true, words = pairedList); r.glide("hello"); r.copied("my copied note")
         assertTrue("the glide's strip stays: ${r.view.candidatesForTest()}", r.view.candidatesForTest().none { it == "my copied note" })
-        r.tap("space"); r.tap("\u232B"); r.tap("space")
-        assertEquals("my copied note", r.view.candidatesForTest().firstOrNull())
+        r.tap("space")
+        assertEquals("a new word starts: the copy is first now", "my copied note", r.view.candidatesForTest().firstOrNull())
+        r.tap("\u232B"); assertTrue("and one more key (here Backspace) dismisses it: ${r.view.candidatesForTest()}", r.view.candidatesForTest().none { it == "my copied note" })
     }
 
     @Test fun theCopyIsFirstAtTheStartOfAWordAndGoesAwayForGoodAsSoonAsLettersAreTyped() {
