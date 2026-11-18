@@ -915,3 +915,7 @@
 >
 > Now the honesty check: validating the finalists on the **held-out slice B (different donors)** before touching the decoder.
 <!-- sha:73ae4e1686f7 -->
+
+## 2026-11-18T20:37:17Z
+> Slice B is still running its first pass; the monitor will report when it finishes.
+<!-- sha:b042a8620f2e -->
