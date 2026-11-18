@@ -23,7 +23,7 @@ Sources are numbered S1... and listed with URLs in section 10.
 
 What the numbers say about where the remaining errors are (all [M], simulated thumb, 380 dp wide keyboard, 140k-word list, first guess):
 
-* The right word is in the 400-word careful pass 99.1 to 99.9 % of the time. Candidate recall is NOT the problem; ranking is.
+* The right word is among the words that reach the careful pass 99.1 to 99.9 % of the time for calm to sloppy fingers (98.6 % for a "bad" one). Candidate recall is NOT the problem; ranking is.
 * 82 to 99 % of the first-guess misses are glides where the word the keyboard chose is MORE COMMON than the word meant. Misses are mostly "meant the less common word".
 * For a normal finger, 26 % of misses are words whose ideal shape lies within 0.4 key of the chosen word's, 41 % between 0.4 and 0.8 key, 31 % further. For a calm finger 45 % / 41 % / 14 %. So most misses are look-alike words, not wild paths.
 * After the keyboard has learned a person who repeats phrases, words seen 6 or more times are right 99 to 100 % of the time, but words seen only once or twice stay at 76 % (a hand with a 10 dp habit per word) to 90 % (no habit). The long tail of rare use is what personal learning does not yet reach.
