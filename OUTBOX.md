@@ -1216,3 +1216,30 @@
 >
 > There is also a clue in the error class that I missed. A failure to *connect* shows up as `ConnectException`, but yours is a plain `SocketException`. That fits Android refusing to **create** the socket at all, 3 ms in. That is a permission-record problem, not a network-path problem, which makes my earlier firewall-style guesses less likely. It's an inference, not yet proven, so I'm making the test report it directly. Let me add that to the message.
 <!-- sha:946f65b5228d -->
+
+## 2026-11-18T23:55:22Z
+> Everything you pasted is written down in the task list. Here is what I read from it and what to try, in order.
+>
+> ## What the paste tells me
+> - **Same test run as before.** The probe lines carry the same 23:49 UTC clock reading, so I can't tell yet whether you restarted the tablet or switched Battery saver off. The one-minute-earlier log shows 14 translate attempts, all refused in a few milliseconds.
+> - **The refusal is at creating the socket, not at connecting.** That fits Android's permission record for Swoop being wrong, or a tablet-maker block on the app. It makes the firewall guesses less likely. This is my inference and not proven.
+> - **A known kind of problem:** when an update adds a permission, Android's network layer sometimes doesn't pick it up until the tablet has been fully powered off and on. Swoop's internet permission arrived in an update (0.4.0).
+> - **Your tablet's glide is healthy:** 70 ms average decode, the word appears about 72 ms after you lift, and 88% of glided words are kept.
+>
+> ## Please try these, in this order (stop at the first one that works)
+> 1. **Power the tablet fully off and on** (not just closing the keyboard). Then Diagnostics → **Test translation connection**.
+> 2. **Battery saver off** (Settings → Battery), then test again.
+> 3. Settings → **Apps → Swoop**: look for any mobile-data or network switch. Also check for any VPN, firewall or ad-block app on the tablet.
+> 4. **Last resort: reinstall.** Uninstalling deletes your 999 learned words, so first use Setup → **Export what it learned** and keep that file. After reinstalling, import it.
+>
+> Alpha5 will keep saying "not permitted" in the Result line. The next release will say "socket creation refused" and point at the restart first.
+>
+> ## One question
+> Have you already fully powered the tablet off and on since updating to 0.4.0 or later? If yes, I'd skip straight to steps 2 and 3.
+>
+> ## Still open
+> - **R25** (your socket error): waiting on the results of the steps above.
+> - Kestrel browser sync of the changed input code is not done.
+> - The glide re-tune for bigger tablet keys has no real-swipe data. Your tablet glide numbers look fine so far.
+> - I'll release 0.7.0-alpha6 with the clearer wording once you've reported back.
+<!-- sha:52ec1c259fba -->
