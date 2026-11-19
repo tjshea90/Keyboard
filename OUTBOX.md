@@ -1285,3 +1285,10 @@
 ## 2026-11-19T00:18:51Z
 > The build is nearly done; I'll check it again in a couple of minutes.
 <!-- sha:ca0dcce30ec4 -->
+
+## 2026-11-19 (session ccr-2630e41a-palpyu): release 0.7.0-alpha6 and where the socket problem stands
+> **Your retest:** Battery saver off did not help (the socket is still refused, instantly), so battery saver is ruled out on your tablet.
+> **What the error means:** Android refuses to *create* a network socket for Swoop (a plain socket error, not a failed connect). That points to Android's permission record for Swoop (Swoop's internet permission arrived in an update, 0.4.0, and Android sometimes does not pass that on until a fresh start) or a tablet-maker block on the app. It is not a firewall-on-the-network problem and not Data Saver.
+> **0.7.0-alpha6** (link below) makes the connection test say this in plain words and no longer claims things it cannot rule out.
+> **Do, in this order (stop when it works):** (1) switch the tablet fully off and on; (2) Settings > Apps > Swoop: any mobile-data / network switch on? any VPN, firewall or ad-block app? (3) Setup > Export what it learned (keep the file), uninstall Swoop, install 0.7.0-alpha6, enable it, Import what it learned. Tell me which step changed the result.
+> **Not run on the tablet. Kestrel browser sync of the changed input code is still not done.**
