@@ -1376,3 +1376,7 @@
 > - **Done and tested:** post-correction ("fix the word before"), the on-device shadow counters (they will show whether learning is what turns "the" into "there"), the "Forget where my thumb lands" reset, and the Kestrel sync. Kestrel's own test suite passed.
 > - **In progress:** the grammar experiment (R27b), then the combined release.
 <!-- sha:717dc49c308c -->
+
+## 2026-11-19T01:02:13Z
+> The language floor at 0.45 is again a small, consistent plus on the second set (+0.1 first-choice, +0.3 everyday, one fewer short→long slip), so I'll take it with the phone settings. Applying that, then launching the grammar (word-class) experiment on both real-swipe slices.
+<!-- sha:ded1d12c7155 -->
