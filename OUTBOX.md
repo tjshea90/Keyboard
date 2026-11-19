@@ -1281,3 +1281,7 @@
 ## 2026-11-19T00:07:46Z
 > The 0.7.0-alpha6 build is running on GitHub and recorded as dispatched once. I'll check it in about eleven minutes, confirm the Release holds the APK, and send you the link. You don't need to wait for it to try the power-off and on first.
 <!-- sha:d8e8bdc52ce3 -->
+
+## 2026-11-19T00:18:51Z
+> The build is nearly done; I'll check it again in a couple of minutes.
+<!-- sha:ca0dcce30ec4 -->
