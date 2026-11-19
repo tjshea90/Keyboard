@@ -1277,3 +1277,7 @@
 > - **Kestrel browser sync:** the changed input code is not synced.
 > - **Tablet glide re-tune:** the larger keys keep the old settings, with no real-swipe data.
 <!-- sha:514faab8889e -->
+
+## 2026-11-19T00:07:46Z
+> The 0.7.0-alpha6 build is running on GitHub and recorded as dispatched once. I'll check it in about eleven minutes, confirm the Release holds the APK, and send you the link. You don't need to wait for it to try the power-off and on first.
+<!-- sha:d8e8bdc52ce3 -->
