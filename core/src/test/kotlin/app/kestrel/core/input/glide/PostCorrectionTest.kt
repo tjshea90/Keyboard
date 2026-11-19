@@ -26,8 +26,7 @@ class PostCorrectionTest {
         val s = GlideSession(rig.c, { engine }, { 1_000L }, { })
         init { engine.prepare(keys, null, null); assertTrue(engine.ready); s.ui = object : GlideSession.Ui { override fun showCandidates(words: List<String>) {}; override fun clearCandidates() {}; override fun showNoWord() {} } }
         fun glide(vararg c: GlideCandidate, lm: Float = 1.0f, more: List<GlideCandidate> = emptyList()) {
-            s.beforeKey(Key.Ch("~glide"))
-            val (p2, p) = s.context()
+            val (p2, p) = s.context()      // (like the presenter: a glide sends no key to the session, only its decoded answer)
             s.onDecoded(GlideResult(c.toList(), 1, true, lm, more), p, p2); rig.sync(); rig.check()
         }
     }
