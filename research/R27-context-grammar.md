@@ -24,6 +24,8 @@ That is a word-level n-gram model with personal adaptation: the same family as t
 | 2 | 88.4 / 95.0 | 91.7 / 97.0 |
 | 4 | 88.0 / 95.0 | 91.4 / 97.0 |
 
+Slice B (other donors, 5 734 swipes with a word before, phone settings): alpha 0 / 0.5 / 1 / 2 / 4 = 89.7 / 89.7 / 89.6 / 89.4 / 89.2 first choice, 95.6 / 95.6 / 95.5 / 95.4 / 95.4 top-3 (everyday words 93.5 / 93.5 / 93.4 / 93.4 / 93.3).
+
 **It does not help and gets worse as it is trusted more.** Likely reasons (not proven): (1) the classes and transitions come from the conversational pair list while the corpus is encyclopaedic text, so the grammar learned does not match the text it is tested on (the owner's own writing is conversational, but there is no
 real swipe data of his to test that); (2) giving unseen pairs probability blurs the signal that a SEEN pair is likelier than an unseen one. Not shipped. The model, its builder and the decoder hook stay in the code, off (no asset ships, `classModel` is null), so that a better variant can be measured the same way:
 back-off weighted Katz-style instead of added, classes learned from the owner's text, or classes from a matching corpus.
