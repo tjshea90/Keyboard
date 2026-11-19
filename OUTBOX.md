@@ -1470,3 +1470,29 @@
 > - Kestrel: merging my branch into the shipping branch, and its app tests.
 > - Optional later: a better version of the grammar layer, if you want it measured again.
 <!-- sha:6a5d8cad994b -->
+
+## 2026-11-19T02:21:26Z
+> The session handoff is saved and pushed, so a new session can pick the project up cold. Swoop 0.7.0-alpha7 is released and nothing is running now.
+>
+> **Release link:**
+> https://github.com/tjshea90/Keyboard/releases/tag/swoop-v0.7.0-alpha7
+>
+> **Handoff:** it's in `.handoff/handoff.md` (also `.json`, plus a dated archive copy), and the "Session Learnings" blocks in `CLAUDE.md` and `AGENTS.md` are refreshed. Checkpoint 848 is pushed. A fresh session should start with `bash tools/resume.sh`. The automatic handoff restore won't fire on its own, because the handoff tool warned that this session's project directory differs from the repo's.
+>
+> **What alpha7 contains for your requests:**
+> - **Translation "could not be reached":** the real cause was a stale Android network permission record on the tablet after the update that added internet access. A full restart fixed it, as you confirmed. Failure messages now say why, and Diagnostics has a "Test translation connection" button.
+> - **Translation won't turn off:** it now always turns off.
+> - **"the" turning into "there", "and" into "access":** I could not reproduce it on real phone swipes or on a tablet-sized simulation. I added a count in Diagnostics of how often learning changes the first guess, and a Settings button, "Forget where my thumb lands".
+> - **Fix the word before:** when the next word shows the previous one was a look-alike, the keyboard swaps it. Tests on real swipes: it fixes about eight words for each one it spoils. There is a Settings switch to turn it off.
+> - **Glide tuning:** tuned on real swipes, but only on a phone-sized keyboard. There is no real-swipe data for the tablet, so the tablet keeps the old values.
+> - **Context and grammar learning:** the grammar back-off I tried made predictions flat or worse, so it is built but left off.
+> - **Kestrel sync:** the latest Swoop engine is on the Kestrel branch `ccr-2630e41a-palpyu` (commit dd3c6ef). It is not released or merged, and Kestrel's own app tests were not run.
+>
+> Nothing was run on the real tablet.
+>
+> **Open items, all waiting on you:**
+> 1. Install alpha7 on the tablet and phone and use it for a day. Then paste Diagnostics, including the lines "learning changed the first guess" and "touch plane up to".
+> 2. If the "the"/"and" slips continue, try Settings > Forget where my thumb lands and tell me what happens.
+> 3. Tell me if Fix the word before ever changes a word that was correct.
+> 4. Kestrel: you, or whichever session ships Kestrel, merges `ccr-2630e41a-palpyu`.
+<!-- sha:e0aa10168343 -->
