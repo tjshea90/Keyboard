@@ -1392,3 +1392,7 @@
 ## 2026-11-19T01:08:33Z
 > The grammar experiment's confirmation run on the second set of people is going. Everything else for the release is built; once it finishes I'll run the full test suites, re-sync Kestrel, and release.
 <!-- sha:b79f03ad381c -->
+
+## 2026-11-19T01:13:44Z
+> The grammar back-off is flat-to-negative on the second set too (89.7% → 89.7% → 89.6% → 89.4% as the weight rises), so it is not shipped. Adding that line to the research note, then running the full test suites over everything built this session.
+<!-- sha:c2fe9f4cdc0e -->
