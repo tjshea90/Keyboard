@@ -1328,3 +1328,7 @@
 
 ## 2026-11-19: confirmed - the restart fixed translation
 > The tablet restart fixed it: Android had not passed Swoop's internet permission on after the update that added it. No reinstall was needed and your learned words are untouched. If it ever happens again after an update: restart the tablet first. 0.7.0-alpha6's connection test now says exactly that. Open: Kestrel browser sync of the changed input code; the glide re-tune for the tablet's bigger keys has no real-swipe data (tell me if glide feels worse there).
+
+## 2026-11-19T00:24:55Z
+> ¡Qué buena noticia! (I'll answer in English since that's how we work.) That confirms it: the problem was Android's permission record for Swoop, not your network and not anything in the keyboard's code. I'm recording the confirmation so it's never lost.
+<!-- sha:5d826046f538 -->
