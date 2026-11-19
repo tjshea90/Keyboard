@@ -33,6 +33,7 @@ class PostCorrectionTest {
 
     @Test fun theNextWordFixesAGlidedLookAlike() {
         val e = Env()
+        e.engine.stats.onDecoded(1, true)                  // (the Diagnostics line only appears once a real glide was counted)
         e.glide(cand("form", 5.0f), cand("from", 4.8f))
         assertEquals("form ", e.rig.text)
         e.glide(cand("the", 5.0f))
