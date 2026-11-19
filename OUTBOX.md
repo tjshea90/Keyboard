@@ -1332,3 +1332,21 @@
 ## 2026-11-19T00:24:55Z
 > ¡Qué buena noticia! (I'll answer in English since that's how we work.) That confirms it: the problem was Android's permission record for Swoop, not your network and not anything in the keyboard's code. I'm recording the confirmation so it's never lost.
 <!-- sha:5d826046f538 -->
+
+## 2026-11-19T00:25:04Z
+> Translation works again after restarting the tablet, and I've marked the socket-error task done. Your message arrived in Spanish, so I assume the translation did that itself.
+>
+> **What the problem was:** Android hadn't passed Swoop's internet permission on to its network layer. Swoop first asked for that permission in an update (0.4.0), and Android sometimes needs a full restart before it takes effect. The keyboard's code was fine.
+>
+> **What you don't need to do:** Reinstalling is unnecessary and your 999 learned words are untouched. If it ever happens again after a Swoop update, restart the tablet first. Release 0.7.0-alpha6 now says exactly that in its connection test.
+>
+> **What I recorded:**
+> - The task list entries for your socket error are ticked, with the evidence behind them.
+> - A note in `docs/TRANSLATE.md` and in my working notes, so a future session starts with the answer.
+>
+> ## Still open
+> 1. **Kestrel browser sync:** the changed input code isn't synced into the Kestrel browser's copy, because I couldn't reach that repo in this session.
+> 2. **Glide on the tablet:** the retune is tested on phone-sized keys. The tablet's larger keys keep the old settings, with no real-swipe data. If glide feels worse there, tell me. I can switch the tablet to the same setting as phones.
+> 3. **Not yet checked by you:** that translating now switches off everywhere, including in password and address-bar boxes.
+> 4. **Optional research, if you want it:** fixing the previous word from the next one, and using swipe speed to tell look-alike words apart.
+<!-- sha:83ea0468e059 -->
