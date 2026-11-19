@@ -21,7 +21,8 @@ class PostCorrectionTest {
 
     private inner class Env {
         val rig = Rig("")
-        val engine = GlideTyping({ bytes }, Executor { it.run() }, savePersonal = { })
+        val saved = ArrayList<String>()
+        val engine = GlideTyping({ bytes }, Executor { it.run() }, savePersonal = { saved.add(it) })
         val s = GlideSession(rig.c, { engine }, { 1_000L }, { })
         init { engine.prepare(keys, null, null); assertTrue(engine.ready); s.ui = object : GlideSession.Ui { override fun showCandidates(words: List<String>) {}; override fun clearCandidates() {}; override fun showNoWord() {} } }
         fun glide(vararg c: GlideCandidate, lm: Float = 1.0f, more: List<GlideCandidate> = emptyList()) {
@@ -46,8 +47,9 @@ class PostCorrectionTest {
         e.glide(cand("world", 5.0f))                      // the glide after settles the one before
         e.engine.saveLearned()
         assertEquals("from the world ", e.rig.text)
-        assertTrue(e.engine.personal.weightOf("from") > 0f)
-        assertEquals(0f, e.engine.personal.weightOf("form"), 0f)
+        val pm = PersonalModel.parse(e.saved.last())
+        assertTrue(pm.weightOf("from") > 0f)
+        assertEquals(0f, pm.weightOf("form"), 0f)
     }
 
     @Test fun nothingChangesWithoutEvidenceFromTheNextWord() {
