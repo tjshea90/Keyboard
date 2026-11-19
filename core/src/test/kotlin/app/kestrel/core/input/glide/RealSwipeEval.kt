@@ -56,17 +56,19 @@ class RealSwipeEval {
 
     private fun distinct(s: String): Int { var m = 0; var p = ' '; for (c in s) if (c != p) { m++; p = c }; return m }
 
-    class Score(val n: Int, val top1: Int, val top3: Int) { fun pct(x: Int) = 100.0 * x / n; override fun toString() = "n=%d top1=%.1f%% top3=%.1f%%".format(n, pct(top1), pct(top3)) }
+    /** [s2l]: a short word (4 letters or fewer) was meant and the first choice is a word 2 or more letters LONGER (the -> there, and -> access). */
+    class Score(val n: Int, val top1: Int, val top3: Int, val s2l: Int = 0) { fun pct(x: Int) = 100.0 * x / n; override fun toString() = "n=%d top1=%.1f%% top3=%.1f%% s2l=%d".format(n, pct(top1), pct(top3), s2l) }
 
     fun score(items: List<Item>, p: GlideParams, context: Boolean): Score {
         val dec = GlideDecoder(keys, p)
-        var t1 = 0; var t3 = 0
+        var t1 = 0; var t3 = 0; var s2l = 0
         for (it in items) {
             val c = dec.decode(it.xs, it.ys, it.xs.size, listOf(lex), if (context) it.prev else null, 3)
+            if (c.isNotEmpty() && String(GlideLetters.keyOf(c[0].text)) != it.key && it.word.length <= 4 && c[0].text.length - it.word.length >= 2) s2l++
             if (c.isNotEmpty() && String(GlideLetters.keyOf(c[0].text)) == it.key) t1++
             if (c.any { x -> String(GlideLetters.keyOf(x.text)) == it.key }) t3++
         }
-        return Score(items.size, t1, t3)
+        return Score(items.size, t1, t3, s2l)
     }
 
     @Test fun replay() {
@@ -276,6 +278,8 @@ class RealSwipeEval {
         "len 1.09 s.13/.20 cap6" to GlideParams(lengthExpect = 1.09f, lengthSigmaLow = 0.13f, lengthSigmaHigh = 0.20f, lengthCap = 6f),
         "bias off" to GlideParams(biasGain = 0f), "bias 1.0" to GlideParams(biasGain = 1.0f),
         "bigramMix .6" to GlideParams(bigramMix = 0.6f), "rare off" to GlideParams(rareW = 0f),
+        "lmMin .2" to GlideParams(lmMin = 0.2f), "lmMin .3" to GlideParams(lmMin = 0.3f), "lmMin .45" to GlideParams(lmMin = 0.45f),
+        "lmMin .3 lmMax 1.6" to GlideParams(lmMin = 0.3f, lmMax = 1.6f), "lmMin .6" to GlideParams(lmMin = 0.6f),
         "shapeW 0" to GlideParams(shapeW = 0f), "shapeW .5" to GlideParams(shapeW = 0.5f), "shapeW .75" to GlideParams(shapeW = 0.75f),
         "shapeW 1.25" to GlideParams(shapeW = 1.25f), "shapeW 1.5" to GlideParams(shapeW = 1.5f),
         "shape1 visit4" to GlideParams(shapeW = 1f, visitCap = 4f), "shape1 visit5" to GlideParams(shapeW = 1f, visitCap = 5f), "shape1 visit6" to GlideParams(shapeW = 1f, visitCap = 6f),
