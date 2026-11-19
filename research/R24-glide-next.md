@@ -122,3 +122,28 @@ smaller) is the better guess. THE TABLET SIDE HAS NO REAL-SWIPE EVIDENCE. If the
 `REAL_SWIPES=1 REAL_SWIPES_FILE=build/real-swipes-A.jsonl REAL_SWIPES_MB=40 REAL_VARIANTS=all ./gradlew --no-build-cache :core:cleanTest :core:test --tests '*RealSwipeEval*' -i` (add
 `REAL_SWIPES_OFFSET_MB=150` and another file name for held-out donors; `REAL_DIAG=1` prints the miss analysis; `--no-build-cache` and `cleanTest` because Gradle ignores environment variables as inputs). A run of 3 000
 swipes x 20 variants takes about 5 minutes on 4 cores.
+
+## 7. R26a (2026-11-19): the two ideas left open in section 5, measured on the same real swipes
+
+### 7.1 Next-word post-correction: BUILT (ships in 0.7.0-alpha7)
+Replay of real sentences word by word (`REAL_POST=1`): a word with two or more different letters is glided (decoded with the word ON SCREEN before it as context: the decoder's own first choice, not the truth); after the next word is on screen the five best
+candidates of the word before are re-scored with how likely the new word is after each (`lm x ln(0.6 p(next) + 0.4 p(next | candidate))`, the decoder's own prior) and replaced when another candidate beats the first choice by more than a margin.
+
+| margin | slice A (4 628 judged words) | slice B, other donors (4 878 judged words) |
+| :- | :- | :- |
+| 0.5 | +0.86 points (55 fixed, 15 spoiled) | +0.88 (54 fixed, 11 spoiled) |
+| **1.0 (shipped)** | **+0.82 (43 fixed, 5 spoiled)** | **+0.66 (41 fixed, 9 spoiled)** |
+| 2.0 | +0.43 (22 fixed, 2 spoiled) | +0.39 (20 fixed, 1 spoiled) |
+| 3.0 | +0.19 (10 fixed, 1 spoiled) | - |
+
+Consistent on both slices (the first gave a larger gain on the simulator in R20, +0.3 to +1.5). Shipped at margin 1.0: about 1 word in 110 is fixed and 1 in 700 spoiled. Built into `GlideSession.revisePrevious` (swaps with the same `swapGlide` a strip pick uses;
+only when the glided word is still the last thing typed, the person did not pick or retype it, and the engine knows the new word; the fixed word is what is learned). A Settings switch "Fix the word before" (default on) turns it off. `PostCorrectionTest` (8 tests).
+
+### 7.2 Dwell / speed cue: NOT BUILT (no signal)
+The corpus has a timestamp per touch point (`REAL_DWELL=1`). Features: pause share (time slower than a fifth of the swipe's own median speed), slow points per point, milliseconds per pitch of path. AUC (0.5 = nothing) between words with a doubled letter and words without,
+same number of distinct letters, slice A: **pause share 0.477, slow points 0.478, time per pitch 0.528**. A thumb does not slow down or pause on a doubled letter in these swipes. Among the 54 twin-ambiguous swipes (collapsed key sequence shared with another word) only 3 had a doubled
+letter: too few to say anything. R20's ceiling for a doubled-letter cue was 0.48 % of usage anyway. Verdict: no cue to build; the corpus does not support the claim of the Google patent and the Grammarly post for this population.
+
+### 7.3 Language floor: adopted (small)
+`lmMin` 0.12 -> 0.45 in `GlideParams.forPitchDp` (the language keeps at least this weight on a CLEAN glide, exactly where look-alike words fit equally well): slice A +0.2 first / +0.4 everyday words, slice B (with the phone settings) +0.1 / +0.3, short-for-long slips 48 -> 47 and 20 -> 19.
+0.6 was worse on slice B. Small but the same sign on both slices.
