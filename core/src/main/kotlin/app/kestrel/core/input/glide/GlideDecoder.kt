@@ -133,7 +133,7 @@ class GlideParams(
          */
         fun forPitchDp(pitchDp: Float, touchField: Boolean = true): GlideParams {
             val t = ((pitchDp - SMALL_PITCH_DP) / (LARGE_PITCH_DP - SMALL_PITCH_DP)).coerceIn(0f, 1f)
-            return GlideParams(shapeW = 1.0f + t, visitCap = 5.0f - 2.0f * t, touchField = touchField)
+            return GlideParams(shapeW = 1.0f + t, visitCap = 5.0f - 2.0f * t, lmMin = 0.45f, touchField = touchField)      // (lmMin: the language keeps at least this weight on a CLEAN glide, where look-alike words fit equally well; +0.1 / +0.2 points first choice on both slices, fewer short-for-long slips)
         }
     }
 }

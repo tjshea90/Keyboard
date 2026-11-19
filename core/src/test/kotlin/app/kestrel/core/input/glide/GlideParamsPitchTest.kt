@@ -27,7 +27,7 @@ class GlideParamsPitchTest {
 
     @Test fun nothingElseChanges() {
         val a = GlideParams.forPitchDp(33f); val d = GlideParams()
-        assertEquals(d.lmA, a.lmA, 0f); assertEquals(d.endW, a.endW, 0f); assertEquals(d.lengthExpect, a.lengthExpect, 0f); assertEquals(d.samples, a.samples)
+        assertEquals(d.lmA, a.lmA, 0f); assertEquals(d.endW, a.endW, 0f); assertEquals("R27a: a higher floor for the language weight", 0.45f, a.lmMin, 0f); assertEquals(0.45f, GlideParams.forPitchDp(96f).lmMin, 0f); assertEquals(d.lengthExpect, a.lengthExpect, 0f); assertEquals(d.samples, a.samples)
     }
 
     @Test fun keysKnowTheirPitchInDpAndDefaultToThePixelPitch() {
