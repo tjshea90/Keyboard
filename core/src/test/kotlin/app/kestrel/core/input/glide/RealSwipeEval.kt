@@ -280,6 +280,8 @@ class RealSwipeEval {
         "bigramMix .6" to GlideParams(bigramMix = 0.6f), "rare off" to GlideParams(rareW = 0f),
         "lmMin .2" to GlideParams(lmMin = 0.2f), "lmMin .3" to GlideParams(lmMin = 0.3f), "lmMin .45" to GlideParams(lmMin = 0.45f),
         "lmMin .3 lmMax 1.6" to GlideParams(lmMin = 0.3f, lmMax = 1.6f), "lmMin .6" to GlideParams(lmMin = 0.6f),
+        "shape1 visit5 lmMin .45" to GlideParams(shapeW = 1f, visitCap = 5f, lmMin = 0.45f), "shape1 visit5 lmMin .6" to GlideParams(shapeW = 1f, visitCap = 5f, lmMin = 0.6f),
+        "shape1 visit5 lmMin .3" to GlideParams(shapeW = 1f, visitCap = 5f, lmMin = 0.3f),
         "shapeW 0" to GlideParams(shapeW = 0f), "shapeW .5" to GlideParams(shapeW = 0.5f), "shapeW .75" to GlideParams(shapeW = 0.75f),
         "shapeW 1.25" to GlideParams(shapeW = 1.25f), "shapeW 1.5" to GlideParams(shapeW = 1.5f),
         "shape1 visit4" to GlideParams(shapeW = 1f, visitCap = 4f), "shape1 visit5" to GlideParams(shapeW = 1f, visitCap = 5f), "shape1 visit6" to GlideParams(shapeW = 1f, visitCap = 6f),
