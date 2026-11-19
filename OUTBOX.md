@@ -1404,3 +1404,7 @@
 ## 2026-11-19T01:22:55Z
 > The full suite is **green: core, app and lint all passed** (exit 0), including the new tests for post-correction, the shadow counters, the thumb reset and the language floor. Ticking the research and build tasks with their evidence, then cutting the release.
 <!-- sha:4149cadc1e7d -->
+
+## 2026-11-19T01:23:00Z
+> The release gates for 0.7.0-alpha7 are running. The three research tasks are ticked, with the evidence recorded for each. After the gates pass, I'll dispatch the signed build, then sync the final engine into the Kestrel branch while it builds.
+<!-- sha:710ab46edcdf -->
