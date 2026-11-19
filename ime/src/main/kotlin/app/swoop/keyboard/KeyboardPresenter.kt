@@ -223,7 +223,7 @@ class KeyboardPresenter(
         suggestOn = !safeMode && st.suggest && field.composingAllowed
         autoFixOn = suggestOn && st.autoFix && field.kind != FieldKind.OMNIBOX            // (never rewrite what is typed into an address box)
         capitalizeI = !safeMode && st.capitalizeI && field.composingAllowed && field.kind != FieldKind.OMNIBOX
-        clipOn = !safeMode && st.suggestCopied; clipShown = null; glideNextOn = st.glideNextWord
+        clipOn = !safeMode && st.suggestCopied; clipShown = null; glideNextOn = st.glideNextWord; session.reviseBefore = !safeMode && st.reviseBefore
         controller.capitalizeI = !safeMode && st.capitalizeI && field.kind != FieldKind.OMNIBOX          // (R20c: also in boxes that show no composing text, for glided and strip words, and at Enter)
         properOn = !safeMode && st.autoCaps && field.composingAllowed && field.kind != FieldKind.OMNIBOX
         doubleSpaceOn = !safeMode && st.doubleSpace
