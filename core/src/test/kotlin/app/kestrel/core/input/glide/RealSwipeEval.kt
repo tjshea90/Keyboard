@@ -34,7 +34,7 @@ class RealSwipeEval {
         return Fit(ax.toFloat(), bx.toFloat(), ay.toFloat(), by.toFloat(), (Math.sqrt(rss / wt.sum()) / keys.pitch).toFloat())
     }
 
-    class Item(val word: String, val key: String, val prev: String?, val xs: FloatArray, val ys: FloatArray, val lexId: Int)
+    class Item(val word: String, val key: String, val prev: String?, val xs: FloatArray, val ys: FloatArray, val lexId: Int, val ts: FloatArray = FloatArray(0))
 
     private fun clean(w: String) = w.lowercase().trim { !it.isLetter() }
 
@@ -49,7 +49,7 @@ class RealSwipeEval {
             val toks = s.sentence.split(' ')
             val prev = if (s.wordIdx > 0 && s.wordIdx - 1 < toks.size) clean(toks[s.wordIdx - 1]).ifEmpty { null } else null
             val xs = FloatArray(s.xs.size) { fit.ax * s.xs[it] + fit.bx }; val ys = FloatArray(s.xs.size) { fit.ay * s.ys[it] + fit.by }
-            out.add(Item(lex.text(id), String(GlideLetters.keyOf(lex.text(id))), prev?.takeIf { lex.idOf(it) >= 0 }, xs, ys, id))
+            out.add(Item(lex.text(id), String(GlideLetters.keyOf(lex.text(id))), prev?.takeIf { lex.idOf(it) >= 0 }, xs, ys, id, s.ts))
         }
         return out
     }
@@ -102,6 +102,8 @@ class RealSwipeEval {
         println("ln(drawn / ideal length), words of 3+ letters: n=%d mean %.3f (ratio %.2f) sd %.3f  p10 %.3f p50 %.3f p90 %.3f  (decoder: expect ln .92 = -0.083, sigma .16 low / .30 high)".format(lr.size, lr.average(), Math.exp(lr.average()), sd(lr), sorted[sorted.size / 10], sorted[sorted.size / 2], sorted[sorted.size * 9 / 10]))
         // the variants
         if (System.getenv("REAL_DIAG") == "1") diagnose(sw, its)
+        if (System.getenv("REAL_POST") == "1") postCorrection(sw, fit)
+        if (System.getenv("REAL_DWELL") == "1") dwellStudy(its)
         // the same swipes, only the words people use every day (the 5000 commonest of the list): what texting looks like (the corpus itself is encyclopaedia text full of names)
         val ranked = (0 until lex.size).sortedByDescending { lex.logProb(it) }.take(5000).toHashSet()
         val common = its.filter { it.lexId in ranked }
@@ -116,6 +118,112 @@ class RealSwipeEval {
             println("variants on the first ${vit.size} swipes / ${cit.size} everyday-word swipes, with the word before as context:")
             for (j in jobs) println(j.get())
             pool.shutdown()
+        }
+    }
+
+    /**
+     * R26a part 1: next-word post-correction on REAL consecutive words. Each sentence of the corpus is replayed word by word the way a person types it: a word with two or more different letters is
+     * glided (decoded with the word ON SCREEN before it as context: the decoder's own first choice, not the truth), a one-letter word is "tapped" (correct). After word k+1 is on screen, word k's five
+     * best candidates are re-scored with the likelihood of the word that now follows them (lm * ln(0.6 p(next) + 0.4 p(next | candidate)), the decoder's own prior formula with the candidate as the word
+     * before) and word k is replaced when a candidate beats the first choice by more than [margin] nats. Reported: first-choice accuracy of word k before and after, mended and spoiled words.
+     */
+    private fun postCorrection(sw: List<RealSwipe.Swipe>, fit: Fit) {
+        val dec = GlideDecoder(keys, GlideParams.forPitchDp(keys.pitchDp))
+        class Slot(val truthKey: String?, var onScreen: String, val cands: List<GlideCandidate>?, val lm: Float, val tapped: Boolean)
+        val margins = (System.getenv("REAL_POST_MARGINS") ?: "0.5,1,2,3,4").split(',').map { it.trim().toFloat() }
+        val weights = (System.getenv("REAL_POST_WEIGHTS") ?: "1").split(',').map { it.trim().toFloat() }
+        val maxChains = System.getenv("REAL_POST_N")?.toIntOrNull() ?: Int.MAX_VALUE
+        // the chains: consecutive swipes of one sentence with word_idx going up by one
+        val chains = ArrayList<List<RealSwipe.Swipe>>(); var cur = ArrayList<RealSwipe.Swipe>()
+        for (s0 in sw) {
+            if (cur.isNotEmpty() && (cur.last().sentence != s0.sentence || s0.wordIdx != cur.last().wordIdx + 1)) { chains.add(cur); cur = ArrayList() }
+            cur.add(s0)
+        }
+        if (cur.isNotEmpty()) chains.add(cur)
+        val tot = IntArray(margins.size * weights.size); val before = IntArray(margins.size * weights.size); val after = IntArray(margins.size * weights.size)
+        val mended = IntArray(margins.size * weights.size); val spoiled = IntArray(margins.size * weights.size); val changed = IntArray(margins.size * weights.size)
+        var words = 0; var glided = 0
+        for ((ci, chain) in chains.withIndex()) {
+            if (ci >= maxChains) break
+            val slots = ArrayList<Slot>()
+            var onScreenPrev: String? = null
+            for (s0 in chain) {
+                val letters = RealSwipe.letters(s0.word); val w = clean(s0.word); val id = if (letters == null) -1 else lex.idOf(w).let { if (it >= 0) it else lex.idOf(letters) }
+                words++
+                if (letters == null || id < 0 || distinct(letters) < 2) { slots.add(Slot(null, w, null, 0f, true)); onScreenPrev = w.takeIf { lex.idOf(it) >= 0 } ?: onScreenPrev; continue }
+                val xs = FloatArray(s0.xs.size) { fit.ax * s0.xs[it] + fit.bx }; val ys = FloatArray(s0.xs.size) { fit.ay * s0.ys[it] + fit.by }
+                val c = dec.decode(xs, ys, xs.size, listOf(lex), onScreenPrev?.takeIf { lex.idOf(it) >= 0 }, 5)
+                glided++
+                val tk = String(GlideLetters.keyOf(lex.text(id)))
+                if (c.isEmpty()) { slots.add(Slot(tk, "", null, 0f, false)); continue }
+                slots.add(Slot(tk, c[0].text, c, dec.lastLm, false)); onScreenPrev = c[0].text
+            }
+            for (k in 0 until slots.size - 1) {
+                val a = slots[k]; val nx = slots[k + 1]
+                val cands = a.cands ?: continue
+                val nid = lex.idOf(nx.onScreen)
+                if (nid < 0) continue
+                val ok0 = String(GlideLetters.keyOf(cands[0].text)) == a.truthKey
+                val pnext = Math.exp(lex.logProb(nid).toDouble())
+                for ((wi, wt) in weights.withIndex()) {
+                    val lnP = DoubleArray(cands.size) { i -> val cid = lex.idOf(cands[i].text); var pb = 0.0; if (cid >= 0) { val b = lex.bigramLogProb(cid, nid); if (!b.isNaN()) pb = Math.exp(b.toDouble()) }; Math.log(0.6 * pnext + 0.4 * pb) }
+                    val tot2 = DoubleArray(cands.size) { i -> cands[i].score + wt * a.lm * lnP[i] }
+                    var best = 0; for (i in 1 until cands.size) if (tot2[i] > tot2[best]) best = i
+                    for ((mi, m) in margins.withIndex()) {
+                        val ix = wi * margins.size + mi
+                        tot[ix]++; if (ok0) before[ix]++
+                        val pick = if (best != 0 && tot2[best] - tot2[0] > m) best else 0
+                        val ok1 = String(GlideLetters.keyOf(cands[pick].text)) == a.truthKey
+                        if (ok1) after[ix]++
+                        if (pick != 0) { changed[ix]++; if (!ok0 && ok1) mended[ix]++ else if (ok0 && !ok1) spoiled[ix]++ }
+                    }
+                }
+            }
+        }
+        println("POST words $words, glided $glided, chains ${chains.size}; judged words (a glided word with a next word on screen): ${tot[0]}")
+        for ((wi, wt) in weights.withIndex()) for ((mi, m) in margins.withIndex()) {
+            val ix = wi * margins.size + mi
+            println("POST weight %.1f margin %.1f: first-choice before %.2f%% after %.2f%% (%+.2f points); changed %d, mended %d, spoiled %d".format(wt, m, 100.0 * before[ix] / tot[ix], 100.0 * after[ix] / tot[ix], 100.0 * (after[ix] - before[ix]) / tot[ix], changed[ix], mended[ix], spoiled[ix]))
+        }
+    }
+
+    /**
+     * R26a part 2: is there a DWELL / SPEED signal in real swipes at all? Per swipe: pause share (time spent moving slower than a fifth of the swipe's own median speed), slow-point count, duration per
+     * pitch of path. AUC (Mann-Whitney, 0.5 = no signal) of each feature between words WITH a doubled letter (the finger is expected to dwell or loop) and words without, among words of the same number
+     * of distinct letters; and, for the decoder's real ambiguity, among TWIN words (the collapsed key sequence is shared with another word of the list: to/too, of/off, god/good).
+     */
+    private fun dwellStudy(its: List<Item>) {
+        class F(val pause: Double, val slow: Double, val tPerPitch: Double, val doubled: Boolean, val len: Int, val twin: Boolean)
+        val byKey = HashMap<String, Int>()
+        for (id in 0 until lex.size) { val k = String(GlideLetters.keyOf(lex.text(id))); byKey.merge(k, 1, Int::plus) }
+        val feats = ArrayList<F>()
+        for (it in its) {
+            if (it.ts.size != it.xs.size || it.xs.size < 8) continue
+            val n = it.xs.size
+            val sp = DoubleArray(n - 1); var tt = 0.0; var dist = 0.0
+            for (i in 1 until n) { val dt = (it.ts[i] - it.ts[i - 1]).toDouble().coerceAtLeast(1.0); val d = Math.hypot((it.xs[i] - it.xs[i - 1]).toDouble(), (it.ys[i] - it.ys[i - 1]).toDouble()) / keys.pitch; sp[i - 1] = d / dt; tt += dt; dist += d }
+            if (dist < 0.8 || tt <= 0) continue
+            val med = sp.sorted()[sp.size / 2]
+            if (med <= 0) continue
+            var pauseT = 0.0; var slowN = 0
+            for (i in 1 until n) { val dt = (it.ts[i] - it.ts[i - 1]).toDouble().coerceAtLeast(1.0); if (sp[i - 1] < med / 5.0) { pauseT += dt; slowN++ } }
+            val doubled = it.word.lowercase().filter { c -> c in 'a'..'z' }.let { w -> (1 until w.length).any { i -> w[i] == w[i - 1] } }
+            feats.add(F(pauseT / tt, slowN.toDouble() / n, tt / dist, doubled, distinct(it.key), (byKey[it.key] ?: 0) > 1))
+        }
+        fun auc(pos: List<Double>, neg: List<Double>): Double {
+            if (pos.isEmpty() || neg.isEmpty()) return Double.NaN
+            val all = (pos.map { it to 1 } + neg.map { it to 0 }).sortedBy { it.first }
+            var rankSum = 0.0; var i = 0
+            while (i < all.size) { var j = i; while (j + 1 < all.size && all[j + 1].first == all[i].first) j++; val r = (i + j) / 2.0 + 1.0; for (q in i..j) if (all[q].second == 1) rankSum += r; i = j + 1 }
+            return (rankSum - pos.size * (pos.size + 1) / 2.0) / (pos.size.toDouble() * neg.size)
+        }
+        println("DWELL swipes with timing: ${feats.size}; with a doubled letter: ${feats.count { it.doubled }}; twin-ambiguous: ${feats.count { it.twin }} (doubled among them ${feats.count { it.twin && it.doubled }})")
+        for ((name, f) in listOf<Pair<String, (F) -> Double>>("pause share" to { it.pause }, "slow points per point" to { it.slow }, "ms per pitch of path" to { it.tPerPitch })) {
+            // same number of distinct letters only: compare each length class and average the AUCs weighted by the smaller group
+            var wsum = 0.0; var asum = 0.0
+            for (l in 3..8) { val g = feats.filter { it.len == l }; val p = g.filter { it.doubled }.map(f); val q = g.filter { !it.doubled }.map(f); if (p.size >= 20 && q.size >= 20) { val a = auc(p, q); val w = Math.min(p.size, q.size).toDouble(); wsum += w; asum += a * w } }
+            val tw = feats.filter { it.twin }; val tp = tw.filter { it.doubled }.map(f); val tq = tw.filter { !it.doubled }.map(f)
+            println("DWELL %-24s AUC doubled vs not (same distinct-letter count) %.3f; among twin-ambiguous words %.3f (n %d / %d)".format(name, if (wsum > 0) asum / wsum else Double.NaN, auc(tp, tq), tp.size, tq.size))
         }
     }
 
