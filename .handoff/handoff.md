@@ -1,86 +1,91 @@
 ---
-date: 2026-11-18T02:13:20.707Z
+date: 2026-11-19T02:20:50.982Z
 project: Keyboard
-session: 428095a5
+session: 4942e5dd
 schema_version: 1
-next_steps_count: 5
-has_blockers: false
-keywords: swoop keyboard, tapped word alternatives, auto capitalize, full size resize, hide letters, learning, 0.6.0-alpha1, glide typing
-headline: Goal: implement owner's 5 R18 requests for Swoop Android keyboard (tjshea90/Keyboard, branch claude/keyboard-typing-impr
+next_steps_count: 7
+has_blockers: true
+keywords: swoop keyboard, translation socket, glide decoder, real swipes, post-correction, 0.7.0-alpha7, kestrel sync, forget thumb
+headline: Goal: keep Swoop (light glide+tap Android system keyboard, Android 10 Go tablet + Android 16 phone) fixed and improving 
 ---
 
 # Session Handoff Snapshot
-> **Generated:** 11/18/2026, 2:13:20 AM
+> **Generated:** 11/19/2026, 2:20:50 AM
 
 ## 🎯 High-Level Objective
-* **Goal:** Goal: implement owner's 5 R18 requests for Swoop Android keyboard (tjshea90/Keyboard, branch claude/keyboard-typing-improvements-jetik4) and release. Core intent: owner types daily on Android 10 Go tablet (2 GB, no Google services) + Android 16 phone; wants Gboard-like quality in light private keyboard: fix old-word typos by tapping, sensible capitals, easy+smooth resize, blank-slate hide-letters, learning as smart as possible.
+* **Goal:** Goal: keep Swoop (light glide+tap Android system keyboard, Android 10 Go tablet + Android 16 phone) fixed and improving per owner reports; translate-to-Mexican-Spanish must work reliably; glide decode accuracy improved with real-thumb evidence. Core intent: owner types daily on it, cannot type Spanish, and every owner request must be written down, tested, released, and resumable after interruption.
 
 ## 📌 Current State & Next Steps
-* **Status:** Done: R18a-e implemented, unit-tested, shipped, recorded, pushed. Remaining: device verification by owner (tablet MT8168B + phone); emulator smoke for new UI; Kestrel pinned-copy sync (blocked: /home/user/Browser absent this session). No blockers on code.
-* **Next Action:** Owner: install https://github.com/tjshea90/Keyboard/releases/tag/swoop-v0.6.0-alpha1 on Android 10 tablet and Android 16 phone; test tapping an old word (strip offers, replaces only that word), auto capitals incl. first letter of plain boxes (web login fields also capitalise; Settings > Capital letters turns off), Full size pill + resize smoothness, hide letters blank slate, learning. NOT run on any device/emulator.
+* **Status:** Done: R24a-c, R25, R26a-b, R27a-b all coded, tested (core + presenter tests, CI), released as 0.7.0-alpha7 with cert verified; TASKS.md ticked; CHECKPOINT.md says nothing running. Remaining: owner field-testing of alpha7 on tablet and phone (nothing was run on the real tablet; no emulator smoke of the tablet glide); Kestrel branch ccr-2630e41a-palpyu pushed but not merged/released and Kestrel :app tests not run.
+* **Blocker:** None in code. Waiting on owner field results from alpha7; nothing was run on the real tablet.
+* **Next Action:** Run bash tools/resume.sh in a new session; CHECKPOINT.md 'Do this next' says nothing is running and waits on the owner. Do NOT re-dispatch 0.7.0-alpha7 (already shipped once, tag swoop-v0.7.0-alpha7)
 
 ### Remaining Queue
-- [ ] Optional: dispatch .github/workflows/emu-smoke.yml (api 29 and 36) to cover tapped-word strip, pill and blank slate on real Android.
-- [ ] Kestrel pinned copy of core/.../input not re-synced (no /home/user/Browser checkout): when available run bash /home/user/Browser/tools/sync-keyboard-core.sh <this checkout> on Browser's OWN branch only; Kestrel already types through Swoop IME.
-- [ ] Open owner calls (CHECKPOINT): show typed word in quotes on strip only when a fix is pending; trigram support KB-201; Q-HEARTBEAT.
-- [ ] If owner reports bugs: next release 0.6.0-alpha2 versionCode 11 via bash ship.sh; never re-dispatch android.yml for swoop-v0.6.0-alpha1.
+- [ ] Owner installs alpha7 on tablet and phone, uses it a day, pastes Diagnostics; read the lines 'learning changed the first guess N times (...)' and 'touch plane up to X dp' to decide whether the the/and -> there/access slips come from learned state
+- [ ] If the slips remain, owner tries Settings > Forget where my thumb lands and reports; if still wrong consider tablet-side real-swipe collection design (nothing committed publicly) or per-person retuning
+- [ ] Owner reports whether 'Fix the word before' ever spoils a correct word; if so raise REVISE_MARGIN or turn the setting default off
+- [ ] If glide feels worse on the tablet set GlideParams.SMALL_PITCH_DP = LARGE_PITCH_DP (one-line revert of the pitch-dependent tuning)
+- [ ] Kestrel: shipping session or owner merges Browser branch ccr-2630e41a-palpyu (not released); run Kestrel :app tests (MiniNavTest) there; MiniNav lacks the 'fix the word before' switch
+- [ ] Optional later: Katz-style or owner-text-trained class model for grammar, per-person retuning of glide params
 
 ## 🛠️ Modified Files Delta
-* ime/.../KeysView.kt: blankSlate() draws nothing with hide letters; heightFor split into fixedHeight/rowHeight; new mulFor exact inverse
-* ime/.../KeyboardRoot.kt: GripBar Full size pill (pillRect/drawPill, Host.gripCanRestore/gripRestore); KeyboardRoot transform preview (setPreview/clearPreview), endResize, commit on lift; panelRect visual
-* ime/.../KeyboardPresenter.kt: caps settings before startInput; properOn/properNoun autofix; glide strip case forms (glideRaw); edit mode (userMoved, offerOtherWords, applyOtherWords, replaceTappedWord, shapeLike); starter capitalisation on strip
-* ime/.../res/values/strings.xml: grip_full_size strings
-* ime/.../SetupActivity.kt: hide-letters description text
-* ime/build.gradle.kts: version 0.6.0-alpha1 code 10
-* core/.../editor/InputController.kt: autoCaps rewrite, startsSentence, caseForm hook, WordSpan/wordAround/contextAround/replaceWordAround, wordEndingAt, autoCaps after foreign move
-* core/.../glide/CaseBook.kt: new built-in proper nouns + learned forms
-* core/.../glide/Alternatives.kt: new tapped-word alternatives engine
-* core/.../glide/PersonalModel.kt: cases (k), starts (b), fix counters (f), autoMarginShift, merge/decay/serialize/parse
-* core/.../glide/Suggester.kt: fixesOnly, contextLogP, dress (proper nouns), starters in nextWords, adaptive AUTO_MARGIN
-* core/.../glide/GlideSupport.kt: GlideTyping.alternatives, caseFormOf, learnCase, learnStart, learnFix
-* core/.../glide/TypingLearner.kt: replaced(), case/start/fix learning, case-only revert
-* core/.../glide/GlideSession.kt: pendingShown/pendingStart, no-match retype watch
-* core/.../glide/LearnedExport.kt: accepts k/b/f lines
-* tests: KeysViewLookTest, KeyboardRootTest, KeysViewTest, KeyboardPresenterTest, InputConnectionBridgeTest, AutoCapsTest, InlineReportsTest, Rig, CaseBookTest, AlternativesTest, AdaptiveLearningTest, GlideSessionTest, WordAroundTest (in InputControllerTest.kt)
-* docs: README.md, docs/FLOATING.md, docs/KEYBOARD-EXPORT.md, docs/LAYOUT.md, TASKS.md (R18a-e ticked), BUILDLOG.md (release recorded)
+* core/src/main/kotlin/app/kestrel/core/translate/SafeReason.kt: new, sanitised failure reasons (class + errno allowlist + phrases)
+* core/src/main/kotlin/app/kestrel/core/translate/Http.kt, TranslateResult.kt, TranslationEngine.kt: new Kind/ErrorCode values and per-kind owner messages
+* ime/src/main/kotlin/app/swoop/keyboard/translate/HttpsTransport.kt: classify(IOException), one retry, attempts counter
+* ime/src/main/kotlin/app/swoop/keyboard/translate/ConnectionProbe.kt, ConnectionLog.kt, AndroidLimits.kt: new staged connection test and Android limits facts
+* ime/src/main/kotlin/app/swoop/keyboard/DiagnosticsActivity.kt, SetupActivity.kt, res/values/strings.xml: probe button, settings-page buttons, debug probe extras, Setup rows REVISE_PREV and Forget thumb
+* ime/src/main/kotlin/app/swoop/keyboard/KeyboardPresenter.kt: toggleTranslate off always works, turnTranslateOff, translateAllowed guard, reviseBefore wiring
+* ime/src/main/kotlin/app/swoop/keyboard/KeysView.kt, Settings.kt: glideKeys pitchDp, REVISE_PREV setting
+* core/.../input/glide/GlideDecoder.kt: GlideKeys.pitchDp, GlideParams.forPitchDp, nextLnProb, classModel hook
+* core/.../input/glide/GlideSupport.kt: 5 candidates, nextWordLnProbs, shadow decode, forgetThumb, plane report, stats counters
+* core/.../input/glide/GlideSession.kt: reviseBefore, revisePrevious, shadow bookkeeping
+* core/.../input/glide/ClassModel.kt and core/src/test/.../ClassModelBuilder.kt: class-model experiment, OFF
+* core/src/test: PostCorrectionTest, ShadowAndThumbTest, GlideParamsPitchTest, TabletStudyTest, RealSwipe/RealSwipeLook/RealSwipeEval harness (REAL_SWIPES=1), ime RealServicesCheck
+* .github/workflows/emu-smoke.yml, tools/emu/net_probe.sh: net-probe mode with Android-limit scenarios
+* docs/TRANSLATE.md, research/R24-glide-next.md, research/R27-small-vs-large-words.md, research/R27-context-grammar.md, CLAUDE.md, TASKS.md, OUTBOX.md, BUILDLOG.md: findings and records
+* Kestrel browser repo (branch ccr-2630e41a-palpyu, commit dd3c6ef): KEYBOARD_PIN, vendored core/input, app MiniNav.kt pitchDp, docs/KESTREL-PORT-R22.md R26 note
 
 ## 🚫 Failed Approaches (DO NOT RETRY)
-* Approach: first CaseBook draft listed ambiguous names then skipped them with hack lines → Result: messy unreadable code → Lesson: leave ambiguous words out of the data instead.
-* Approach: rank alternatives purely by glide-shape distance + language → Result: swap typos teh/adn/wrold missed or ranked 2nd-4th → Lesson: add rank-scaled fix bonus and cap shape penalty for tap-model fixes.
-* Approach: startsSentence checked 'no whitespace after punctuation' before newline → Result: text ending in newline did not start a sentence, caught by AutoCapsTest → Lesson: test newline case first.
-* Approach: test PersonalModel with only starts/fix counters → Result: Suggester treats model as empty (isEmpty is word-based) so features not applied → Lesson: add a word in such tests; real flow always adds words.
-* Approach: ./gradlew :ime:lintDebug in sandbox → Result: lint-gradle not cached offline → Lesson: rely on CI test-jvm job for lint (passed on run 44220063374).
-* Approach: asserted caseFormOf returns empty string for 'written small' → Result: CaseBook.form maps explicit-lowercase to null → Lesson: null = write as typed.
+* Approach: hypothesis that Data Saver caused owner's EPERM → Result: emulator scenarios showed Data Saver gives ECONNREFUSED, and owner retest with battery saver off still EPERM → Lesson: measure the Android behaviour before writing advice into user-facing messages; restart-first is the advice for socket creation EPERM
+* Approach: dwell/speed cue as a size discriminator on real swipes → Result: AUC about 0.5, no signal → Lesson: not worth building
+* Approach: word-class grammar back-off (ClassModel) → Result: flat to negative on both real-swipe slices → Lesson: left OFF; only revisit with owner-text-trained or Katz-style class model
+* Approach: recentre length term to real 1.09 ratio → Result: nothing once shapeW was lowered → Lesson: shapeW lowering already captured the gain
+* Approach: dispatch a newly added workflow file → Result: 404 → Lesson: only workflows on the default branch can be dispatched; extend emu-smoke.yml instead
+* Approach: run two Gradle runs at once and rely on env-var-only changes → Result: results directory collisions and cached test results reused → Lesson: run :core:cleanTest with --no-build-cache and never overlap runs on one project
+* Approach: use readNBytes and translate.Json in core test code → Result: not on Java 8 surface / absent in Kestrel → Lesson: manual read loop and self-contained MiniJson in RealSwipe.kt
 
 ## 🔑 Crucial Context & Implicit Rules
-* Stack: Kotlin 2.3.10, JDK 21, Gradle 8.14.3, AGP 8.13.2, minSdk 29 targetSdk 36; :core pure Kotlin/JVM (no Android imports), :ime framework Views only, no AppCompat/Compose/GMS.
-* Repo public: never commit secrets, learning exports (magic KESTREL-KEYBOARD-LEARNING), APKs, screenshots; never log typed text; hooks block curl/wget and absolute home paths in written files.
-* Save ladder: autosave hook + bash tools/ckpt.sh 'did' 'next' after every step with specific next; owner requests into TASKS.md before code; tools/claim.sh <ID> --done 'evidence' to tick.
-* Release order: bump ime/build.gradle.kts versionCode/versionName -> bash ship.sh 'note' -> dispatch android.yml ONCE (ref = session branch, inputs full_build true + note) -> wait for tag swoop-v<ver> + all jobs green + get_release_by_tag APK -> bash tools/record-release.sh <tag> with identical note. Never ship a tag twice; never add push: trigger to workflows; signing = public dev key signing/dev, never regenerate.
-* Develop only on claude/keyboard-typing-improvements-jetik4; no PRs unless asked; never cd into /home/user/Browser, use git -C and own branch only.
-* Export/learned-data format additions k/b/f lines are backward compatible (older readers skip unknown kinds); documented in docs/KEYBOARD-EXPORT.md.
-* Foreground sleep blocked >55s: use background until-loops; offline gradle flags: ./gradlew --offline :core:test :ime:testDebugUnitTest.
-* Say honestly what was not run on device/emulator; answer every owner message plainly and re-list open items.
+* Stack: Kotlin 2.3.10, JDK 21, Gradle 8.14.3, AGP 8.13.2, minSdk 29, targetSdk 36; :core pure Kotlin/JVM Java 8 API surface (package app.kestrel.core), :ime framework Views only; dependencies kotlin-stdlib only, never GMS
+* Save ladder: owner requests into TASKS.md in his words before code; bash tools/ckpt.sh 'did' 'next' after every step; bash tools/claim.sh ID --done 'evidence' to tick; SessionStart runs tools/resume.sh and CHECKPOINT.md 'Do this next' is authoritative
+* Release order: bump ime/build.gradle.kts -> bash ship.sh 'note' -> dispatch android.yml ONCE (ref = session branch, full_build true + note) -> wait for tag and green jobs and APK on Release -> bash tools/record-release.sh <tag> 'identical note'; never ship a tag twice; no push: trigger in workflows; public dev signing key never regenerated
+* Repo is PUBLIC: never commit secrets, learning exports (magic KESTREL-KEYBOARD-LEARNING), real swipes, APKs, screenshots; never log typed text; manifest permissions exactly INTERNET; all network code only in app.swoop.keyboard.translate and tell owner about changes there
+* Sandbox: Bash guard blocks curl/wget, recursive delete text, absolute home paths in written files; foreground sleep over 55 s blocked so use Monitor until-loops; real-swipe harness runs with REAL_SWIPES=1, :core:cleanTest and --no-build-cache; corpus lives in core/build (git-ignored)
+* Kestrel repo /home/user/browser: only git -C on own branch, never cd into it, never main or another session's branch; Browser tests/devices not run for this sync
+* Say plainly what was not run on the tablet or emulator; answer every owner message in plain words and re-list open items; owner writes sometimes in Spanish status messages but will not type Spanish in apps
 
 ## Key Decisions
-- Decision: R18a engine = decode word's ideal glide path via GlideDecoder (bias zeroed) + Suggester typo fixes (new fixesOnly flag), re-ranked by Fingerprint shape distance (SHAPE_W 4, fix shape capped 1.0 key) + context lnP + next-word bigram (UNKNOWN_NEXT -12, NEXT_W 0.3) + rank-scaled FIX_BONUS 2.4 — Reason: owner asked for close glide patterns; swaps (teh/adn) are far as glide shapes but commonest finger slip; yardstick 37/40 first, 38/40 top3.
-- Decision: presenter edit mode only when cursor inside a word, or userMoved (foreign selection report / space-slide) at a word edge; typing at word end or starting a word before an old one stays normal completion flow; off in password/URL/omnibox — Reason: avoid hijacking normal typing.
-- Decision: replacement via InputController.replaceWordAround verifies editor text first, no trailing space, cursor ends after word; TypingLearner.replaced unlearns old word + records confusion only when edit-distance similar — Reason: a changed mind is not a typo.
-- Decision: InputController.startsSentence is the single sentence-start rule (empty TEXT box, newline, . ! ? ellipsis through closing quotes/brackets, whitespace required, exceptions e.g./i.e./Mr./Dr./initials/dotted letters; 'no.' not excepted) — Reason: owner wants auto-caps; empty box now capitalises (reverses earlier 2026-11-17 decision, deliberately).
-- Decision: CaseBook = built-in ~800 names/days/months/countries/languages/brands, ambiguous words excluded, may/march only after date words; PersonalModel.addCase learns mid-sentence capitals (needs 2 uses, 1.5x dominance), Backspace on case-only fix records lowercase weight 2; 'k' export lines — Reason: wrong mid-sentence capital worse than missing one.
-- Decision: presenter must apply caps settings to controller BEFORE controller.startInput — Reason: first Shift state was computed with defaults; bug found via new start-of-box rule.
-- Decision: R18c resize = GPU view-transform preview (KeyboardRoot.setPreview, panelRect returns visual rect, shadow off), single real layout on finger lift; KeysView.mulFor exact inverse of heightFor — Reason: per-touch layout/measure on weak tablet is the plausible jitter source; real cause not reproducible in Robolectric (row height clamps 44-56dp).
-- Decision: Full size pill in GripBar middle (docked squeezed or floating) -> gripRestore = full-width docked; double-tap still works — Reason: owner asked for easy snap-back.
-- Decision: R18e blankSlate draws nothing on any page containing letters, including Shift/Backspace/Enter and lit key; symbols/number pages unaffected — Reason: owner said one solid blank slate; interpretation, easy to relax.
-- Decision: R18d adds PersonalModel starts ('b' lines), fix made/undone ('f' line) driving Suggester AUTO_MARGIN shift -0.3..+1.5, and no-match glide arms retype watch so a typed word teaches the failed glide shape — Reason: measurable (starters 0.00 -> 0.87 first-3 hit rate), uses existing machinery.
-- Decision: test Rig defaults sentenceCaps=false (core) and AUTOCAPS=false (presenter) — Reason: 35+29 old tests type into empty boxes expecting lowercase; AutoCapsTest and new tests opt in.
-- Decision: shipped alpha without Browser sync — Reason: /home/user/Browser not present; Kestrel types through Swoop IME so it gets features anyway.
+- Decision: failures carry SafeReason (class + allowlisted errno + known phrase, never address/text) and new Kind/ErrorCode DROPPED, BLOCKED, SECURE, REFUSED, one quick retry for dropped connections — Reason: bare class name could not tell blocked socket from dropped connection; address holds translated text so it must never be logged
+- Decision: Diagnostics 'Test translation connection' button (ConnectionProbe, ConnectionLog, AndroidLimits) with staged checks and verdict that leads with restart-the-device for socket-creation EPERM — Reason: measured on Android 10 emulator that Data Saver gives ECONNREFUSED and battery saver/doze give time-outs, none give EPERM; owner's EPERM was stale permission record fixed by full restart
+- Decision: translating OFF always works in every field; Enter never translates in password/address-bar fields; key lit state follows real state — Reason: owner could not turn it off (R24c)
+- Decision: GlideParams.forPitchDp = shapeW 1.0, visitCap 5, lmMin 0.45 at phone key pitch up to 45 dp, sliding back to old shapeW 2.0 / visitCap 3 at 70 dp+; GlideKeys.pitchDp set from density in KeysView and Kestrel MiniNav — Reason: measured on two disjoint slices of real swipes (research/R24-glide-next.md); tablet side has no real-swipe evidence so old values kept there
+- Decision: post-correction GlideSession.revisePrevious (margin 1.0, only when pendingWeight==1, not after undo, old==topGuess, lastGlide!=null), Settings switch 'Fix the word before' (REVISE_PREV) — Reason: +0.66 to +0.82 points on both slices, ~8 words fixed per 1 spoiled
+- Decision: shadow decode with no personal learning plus Diagnostics counters, touch-plane size line, Settings 'Forget where my thumb lands' — Reason: the->there / and->access could not be reproduced on real swipes or tablet-sized simulation, so give the owner tools to detect a learned-state cause on his tablet
+- Decision: word-class grammar back-off ClassModel left in code but OFF (GlideDecoder.classModel hook null) — Reason: flat to negative on both real-swipe slices
+- Decision: network probe folded into emu-smoke.yml mode net-probe (scenarios boolean) — Reason: a brand-new workflow file cannot be dispatched unless on the default branch
+- Decision: Kestrel sync on own branch via git -C only, KEYBOARD_PIN to Swoop 4ed7b4c — Reason: CLAUDE.md forbids cd into the Browser repo, never main or other sessions' branches
 
 ## 🙋 User Contribution (human-authored)
-Owner specified the 5 requests (R18a-e) in their own words at session start; no other input this session.
+Owner reported the translation socket error, that translation would not turn off, pasted Test translation connection and full Diagnostics output (twice, once after switching Battery saver off), confirmed in Spanish that restarting the tablet made translation work, and reported the short-word confusion (the->there, and->access) and asked for context/grammar learning, Kestrel sync and a final release of all logical fixes.
+
+## 🙋 User Decisions (made by the human)
+- **Finish the research, then build and release all logical fixes, improvements and features in one go**
+  - Reason: Owner asked for the final release after the research batch
+  - Rejected: Releasing piecemeal or leaving items as research only
+- **Sync the latest Swoop version to the Kestrel browser**
+  - Reason: Owner asked 'sync the latest swoop version to kestrel browser' (R26b)
 
 ## Summary
-All 5 requests done, tested, released as swoop-v0.6.0-alpha1 (versionCode 10, GitHub run 44220063374: check, test-jvm incl lint, build+verify+publish all green; recorded in BUILDLOG.md; checkpoint 464). Tests: core 458 + ime 213 green locally. Nothing run on tablet/phone/emulator. R18e hide-letters blank slate; R18c Full size pill + transform-preview resize; R18b auto-caps + CaseBook + learned capitals; R18a tapped-word alternatives via Alternatives engine; R18d sentence starters, adaptive autocorrect margin, no-match-glide shape learning. TASKS R18a-e ticked with evidence; README, docs/FLOATING.md, docs/KEYBOARD-EXPORT.md, docs/LAYOUT.md updated. Release link https://github.com/tjshea90/Keyboard/releases/tag/swoop-v0.6.0-alpha1.
+Session answered owner requests R24-R27 for Swoop keyboard (tjshea90/Keyboard, branch ccr-2630e41a-palpyu). R24a/R25: translation "could not be reached (socketexception)" diagnosed with staged ConnectionProbe + SafeReason; cause on owner's Android 10 tablet was stale Android permission record after the update that added INTERNET (EPERM at socket creation); full tablet restart fixed it (owner confirmed in Spanish). R24c: translate toggle now always turns OFF. R24b/R26a: glide research on real swipes (FUTO corpus, never committed): pitch-dependent GlideParams, post-correction "Fix the word before". R27a/b: short-vs-long word confusion (the->there, and->access) not reproducible on real swipes; shipped diagnostics (shadow decode, touch plane, Forget where my thumb lands); grammar class model measured negative, left OFF. R26b: Swoop engine synced into Kestrel browser repo on own branch (commit dd3c6ef, not released/merged). Released 0.7.0-alpha4..alpha7 (alpha7 code 18, run 44436640730, Release swoop-v0.7.0-alpha7, recorded in BUILDLOG.md).
 
 ---
 *A short hint surfaces on session start; full context loads only if your next prompt matches a keyword above, or via manual `/handoff-resume`. The same record is available as a sibling `.json` file for external tools.*
