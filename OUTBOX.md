@@ -1292,3 +1292,36 @@
 > **0.7.0-alpha6** (link below) makes the connection test say this in plain words and no longer claims things it cannot rule out.
 > **Do, in this order (stop when it works):** (1) switch the tablet fully off and on; (2) Settings > Apps > Swoop: any mobile-data / network switch on? any VPN, firewall or ad-block app? (3) Setup > Export what it learned (keep the file), uninstall Swoop, install 0.7.0-alpha6, enable it, Import what it learned. Tell me which step changed the result.
 > **Not run on the tablet. Kestrel browser sync of the changed input code is still not done.**
+
+## 2026-11-19T00:22:09Z
+> Swoop 0.7.0-alpha6 is built, signed and published. I haven't run it on your tablet.
+>
+> https://github.com/tjshea90/Keyboard/releases/tag/swoop-v0.7.0-alpha6
+>
+> Check the version is 0.7.0-alpha6 (code 17) before installing it. It installs over alpha5 with the same signing certificate.
+>
+> ## What your results say
+> - **Battery saver is ruled out.** It was off in your second test and the socket was still refused.
+> - **Everything else is healthy:** internet permission granted, internet group present, name lookups working.
+> - **Android refuses to create a socket for Swoop.** That points to Android's permission record for Swoop. Swoop's internet permission arrived in an update (0.4.0), and Android sometimes doesn't pass that on until a fresh start. A block put on the app by the tablet's maker is the other possibility. It isn't a network-path problem, Data Saver or battery saver.
+>
+> ## What alpha6 changes
+> - The connection test now says plainly that Android refuses to *create* the socket, and tells you to switch the tablet fully off and on first.
+> - It no longer claims "that is not battery saver" or other causes it can't rule out.
+> - The translate error now says what to try first.
+>
+> ## What to do now (stop at the first one that works)
+> 1. **Switch the tablet fully off and on.** Then Diagnostics → **Test translation connection**.
+> 2. **Settings → Apps → Swoop:** look for any mobile-data or network switch and make sure it's allowed. Also check for a VPN, firewall or ad-blocking app on the tablet.
+> 3. **Reinstall, if the first two don't help:**
+>    - In Swoop's Setup screen use **Export what it learned**. Without this step uninstalling deletes your 999 learned words, so keep the file private.
+>    - Uninstall Swoop and install 0.7.0-alpha6 from the link above.
+>    - Enable and select the keyboard, then use **Import what it learned**.
+>
+> Please tell me which step changed the test result, or paste the new lines if none did. If a clean reinstall still gets the socket refused, then the tablet itself is blocking the app, and I'd need to look at what's in its settings.
+>
+> ## Still open
+> - **R25 (your socket error):** waiting on the steps above.
+> - **Kestrel browser sync:** the changed input code is not synced; I couldn't reach that repo here.
+> - **Tablet glide re-tune:** the larger keys keep the old settings, with no real-swipe data. If glide feels worse there, tell me.
+<!-- sha:b40cfd3f9db6 -->
