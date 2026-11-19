@@ -1396,3 +1396,7 @@
 ## 2026-11-19T01:13:44Z
 > The grammar back-off is flat-to-negative on the second set too (89.7% → 89.7% → 89.6% → 89.4% as the weight rises), so it is not shipped. Adding that line to the research note, then running the full test suites over everything built this session.
 <!-- sha:c2fe9f4cdc0e -->
+
+## 2026-11-19T01:13:50Z
+> Duplicate notice (already read). The full test suite is running now (about 12 minutes). It covers all the new work: post-correction, the shadow counters, the thumb reset, the language floor, and the pitch-aware settings.
+<!-- sha:400bc158a564 -->
