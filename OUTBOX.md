@@ -1412,3 +1412,7 @@
 ## 2026-11-19T01:24:52Z
 > Kestrel's pin check passes and its core test suite is running on the final engine. Meanwhile the signed Swoop build is running on GitHub. I'll check both in about nine minutes.
 <!-- sha:7196e0ddd1f7 -->
+
+## 2026-11-19T01:33:58Z
+> Checking both again in about five minutes: the signed alpha7 build, and Kestrel's tests on the final engine.
+<!-- sha:293e23c602e0 -->
