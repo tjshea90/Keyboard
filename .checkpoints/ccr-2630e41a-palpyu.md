@@ -1,15 +1,13 @@
-# CHECKPOINT 839 — read me first, then TASKS.md
+# CHECKPOINT 840 — read me first, then TASKS.md
 
-**Written:** 2026-11-19T01:24:09Z · **tests:** all 1 fast checks green (gradle suite: see ship.sh)
-**Branch:** `ccr-2630e41a-palpyu` · **builds on:** `bc6e202` (this checkpoint is the commit after it)
+**Written:** 2026-11-19T01:24:41Z · **tests:** all 1 fast checks green (gradle suite: see ship.sh)
+**Branch:** `ccr-2630e41a-palpyu` · **builds on:** `8d33f7d` (this checkpoint is the commit after it)
 
 ## Just done
-gated swoop-v0.7.0-alpha7 (ime code 18) and pushed it: handoff self-test, unit suites and the versionCode check passed here. NOT yet built - GitHub has not been asked.
+swoop-v0.7.0-alpha7 (code 18) DISPATCHED ONCE: android.yml run 44436640730 on sha 8d33f7d (2026-11-19T01:24Z). Do NOT dispatch again. R26a/R27a/R27b ticked; R26b (Kestrel) in progress on Browser branch ccr-2630e41a-palpyu
 
 ## Do this next
-TRIGGER THE BUILD: mcp__github__actions_run_trigger, method run_workflow, workflow_id android.yml, ref ccr-2630e41a-palpyu, inputs {"full_build":"true","note":"0.7.0-alpha7: the next glided word can fix the word before it when that was a look-alike (form/from; Settings: Fix the word before); the language keeps more say on clean glides; Diagnostics shows whether your learning changes the first guess and Settings has Forget where my thumb lands; glide settings tuned on real swipes"}.
-When the run is green, confirm the Release shows the APK (mcp__github__get_release_by_tag swoop-v0.7.0-alpha7), then:  bash tools/record-release.sh swoop-v0.7.0-alpha7 "0.7.0-alpha7: the next glided word can fix the word before it when that was a look-alike (form/from; Settings: Fix the word before); the language keeps more say on clean glides; Diagnostics shows whether your learning changes the first guess and Settings has Forget where my thumb lands; glide settings tuned on real swipes"
-NEVER ship swoop-v0.7.0-alpha7 twice (check BUILDLOG.md and the Releases first).
+1) wait for run 44436640730 green (~12 min), confirm Release swoop-v0.7.0-alpha7 has the APK (get_release_by_tag), bash tools/record-release.sh swoop-v0.7.0-alpha7 with the IDENTICAL note (see CHECKPOINT ckpt 839); 2) R26b: bash /home/user/browser/tools/sync-keyboard-core.sh /home/user/Keyboard (pin = release commit), then git -C /home/user/browser add -A + commit + git -C /home/user/browser -c push.negotiate=true push -u origin ccr-2630e41a-palpyu (own branch only), run /home/user/browser/gradlew -p /home/user/browser :core:test in background (log /tmp/claude-0/sweeps/BROWSER-CORE.log), write the R26 note in the Browser docs/KESTREL-PORT-R22.md, claim.sh R26b --done; 3) tell the owner: alpha7 link, what shipped, what did not (dwell, grammar classes), Kestrel branch name, the Diagnostics lines to paste back
 
 *(resuming? CLAUDE.md's "FIRST ACTION OF EVERY SESSION" says how; the briefing is tools/resume.sh. Do that first, or autosave may stay off all session.)*
 
@@ -18,6 +16,7 @@ NEVER ship swoop-v0.7.0-alpha7 twice (check BUILDLOG.md and the Releases first).
 
 ## Last ten checkpoints
 ```
+  8d33f7d ckpt 839: gated swoop-v0.7.0-alpha7 (ime code 18) and pushed it: handoff self-test, unit
   bc6e202 ckpt 838: pre-ship: 0.7.0-alpha7: the next glided word can fix the word before it when t
   ff86187 ckpt 802: R26a measured on slice A: post-correction +0.82 first-choice at margin 1 (43 m
   0a3f557 ckpt 800: wrote owner's R27a (short words read as long words: the->there, and->access) a
@@ -27,5 +26,4 @@ NEVER ship swoop-v0.7.0-alpha7 twice (check BUILDLOG.md and the Releases first).
   7d2c909 ckpt 780: swoop-v0.7.0-alpha6 (code 17) DISPATCHED ONCE: android.yml run 44426423457 on 
   cec0939 ckpt 779: gated swoop-v0.7.0-alpha6 (ime code 17) and pushed it: handoff self-test, unit
   fc6b8ff ckpt 777: pre-ship: 0.7.0-alpha6: the translation connection test names a refused socket
-  21947b4 ckpt 772: R25d: owner's full Diagnostics paste received (same probe run as R25c + 14 EPE
 ```
