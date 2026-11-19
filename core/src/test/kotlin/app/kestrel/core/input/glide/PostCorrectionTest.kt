@@ -14,7 +14,7 @@ import java.util.concurrent.Executor
 class PostCorrectionTest {
     private val keys = GlideEval.keysFor(564f, 160f)
     private val bytes = LexiconFile.build(
-        listOf("form" to 600L, "from" to 700L, "the" to 5000L, "world" to 800L, "hello" to 500L).map { LexiconFile.Entry(it.first, it.second) },
+        listOf("form" to 600L, "from" to 700L, "the" to 300L, "world" to 800L, "hello" to 500L).map { LexiconFile.Entry(it.first, it.second) },
         listOf(LexiconFile.Pair("from", "the", 3000L), LexiconFile.Pair("from", "world", 300L), LexiconFile.Pair("hello", "world", 400L))
     )
     private fun cand(text: String, score: Float) = GlideCandidate(text, score, 0.2f, 0f, text.length)
