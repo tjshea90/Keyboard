@@ -46,6 +46,8 @@ class GlideSession(
     private var prevAll: List<GlideCandidate> = emptyList()      // the 3 + 2 candidates of the glide that is on screen, best first
     private var prevLm = 0f
     private var prevCtx: String? = null                          // the word before that glided word
+    private var pendingSerial = 0                                // which decode gave the pending word (R27a shadow comparison)
+    private var pendingRevised = false
 
     private var shown: List<String> = emptyList()
     private fun show(words: List<String>) { shown = words; ui?.showCandidates(words) }
@@ -94,7 +96,7 @@ class GlideSession(
         pendingWord = best.text; pendingWeight = 1f; pendingGuessed = null
         topGuess = best.text
         pendingPrev = prev; pendingPrev2 = prev2
-        prevAll = cands + res.more; prevLm = res.lm; prevCtx = prev
+        prevAll = cands + res.more; prevLm = res.lm; prevCtx = prev; pendingSerial = res.serial; pendingRevised = false
         show(cands.map { it.text })
     }
 
@@ -117,7 +119,7 @@ class GlideSession(
         if (best == 0 || bestTotal - first <= REVISE_MARGIN) return
         val w = all[best].text
         if (!controller.swapGlide(w)) return
-        pendingWord = w; pendingGuessed = null; topGuess = w
+        pendingWord = w; pendingGuessed = null; topGuess = w; pendingRevised = true
         pendingShown = if (pendingShown != null) controller.lastGlide?.word else null
         g.stats.onRevised()
     }
@@ -136,6 +138,7 @@ class GlideSession(
         afterUndo = false
         val g = engine()
         g?.stats?.onPicked()
+        g?.shadowFor(pendingSerial)?.let { if (!pendingRevised && it.plain == word && it.learned != word) g.stats.onShadowPlainPicked() }
         g?.accepted(word) { h -> habitChanged(h) }
         show(listOf(word) + shown.filter { it != word }.take(2))
         return true
@@ -170,6 +173,7 @@ class GlideSession(
         pendingWord = null
         val g = engine() ?: return
         g.stats.onKept()
+        if (!pendingRevised && pendingWeight == 1f && !afterUndo) g.shadowFor(pendingSerial)?.let { if (it.plain != it.learned && it.learned == w) g.stats.onShadowLearnedKept() }
         g.accepted(w) { h -> habitChanged(h) }
         if (learnAllowed()) {
             pendingShown?.let { g.learnCase(it) }

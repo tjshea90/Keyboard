@@ -131,9 +131,9 @@ class GlideParams(
          * (the donors' keys were 32-45 dp apart). A finger's scatter is roughly the same size in dp whatever the keyboard, so on big keys (a tablet: 60+ dp apart) it is a SMALLER share of a key and the straighter-line price fits better:
          * the price therefore slides from 1.0 at [SMALL_PITCH_DP] or less to the earlier 2.0 at [LARGE_PITCH_DP] or more, and the price of a letter the path never came near ([visitCap]) from 5 to the earlier 3 (+0.2 to +0.3 points on both slices). The tablet side is NOT validated on real swipes (there are none); it keeps the values the tests were tuned on.
          */
-        fun forPitchDp(pitchDp: Float): GlideParams {
+        fun forPitchDp(pitchDp: Float, touchField: Boolean = true): GlideParams {
             val t = ((pitchDp - SMALL_PITCH_DP) / (LARGE_PITCH_DP - SMALL_PITCH_DP)).coerceIn(0f, 1f)
-            return GlideParams(shapeW = 1.0f + t, visitCap = 5.0f - 2.0f * t)
+            return GlideParams(shapeW = 1.0f + t, visitCap = 5.0f - 2.0f * t, touchField = touchField)
         }
     }
 }
