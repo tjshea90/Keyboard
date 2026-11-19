@@ -1368,3 +1368,11 @@
 >
 > Open: R26a (confirm post-correction on set B, then decide), R26b (Kestrel tests, then commit and push the branch), R27a (the language-prior test running now, plus a tablet-size check), R27b (context and grammar research).
 <!-- sha:b710f6fac6b3 -->
+
+## 2026-11-19T01:00:26Z
+> Held-out check on post-correction: it holds up on the second group of people (+0.66 points, 41 words fixed against 9 spoiled), so it ships with a Settings switch. I'm waiting for the language-floor numbers on that second set, then I'll run the grammar (word-class) experiment on real sentences.
+>
+> Status:
+> - **Done and tested:** post-correction ("fix the word before"), the on-device shadow counters (they will show whether learning is what turns "the" into "there"), the "Forget where my thumb lands" reset, and the Kestrel sync. Kestrel's own test suite passed.
+> - **In progress:** the grammar experiment (R27b), then the combined release.
+<!-- sha:717dc49c308c -->
