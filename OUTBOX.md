@@ -1388,3 +1388,7 @@
 ## 2026-11-19T01:08:12Z
 > The grammar (word-class) back-off is a **negative result**: on real sentences it does not help and gets worse as its weight rises (first-choice 88.8% → 88.7% → 88.6% → 88.0%). Likely reasons: the pair list behind the classes comes from conversational sentences while the corpus is encyclopedic, and adding probability to *unseen* pairs blurs a useful signal. I won't ship it. Writing that down honestly, and updating the task list.
 <!-- sha:b9656d7d14c5 -->
+
+## 2026-11-19T01:08:33Z
+> The grammar experiment's confirmation run on the second set of people is going. Everything else for the release is built; once it finishes I'll run the full test suites, re-sync Kestrel, and release.
+<!-- sha:b79f03ad381c -->
