@@ -1408,3 +1408,7 @@
 ## 2026-11-19T01:23:00Z
 > The release gates for 0.7.0-alpha7 are running. The three research tasks are ticked, with the evidence recorded for each. After the gates pass, I'll dispatch the signed build, then sync the final engine into the Kestrel branch while it builds.
 <!-- sha:710ab46edcdf -->
+
+## 2026-11-19T01:24:52Z
+> Kestrel's pin check passes and its core test suite is running on the final engine. Meanwhile the signed Swoop build is running on GitHub. I'll check both in about nine minutes.
+<!-- sha:7196e0ddd1f7 -->
