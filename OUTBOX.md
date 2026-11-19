@@ -1422,3 +1422,51 @@
 > **About "the" turning into "there" / "and" into "access":** it does not happen on real phone swipes (the is right 99%), nor with a simulated finger on big tablet keys. So I think something LEARNED on your tablet is involved. Please use the tablet for a day, then paste Diagnostics; the new line "learning changed the first guess N times (you kept the learned word M times, you picked the plain decoder's word K times)" and "touch plane up to X dp" tell me. If the slips stay, try Settings > Forget where my thumb lands and tell me whether they stop.
 > **Research finished, not built:** a swipe-speed cue (no signal in real swipes) and a grammar layer (word classes: no gain on real sentences, slightly worse).
 > **Kestrel browser:** my own branch ccr-2630e41a-palpyu in the Browser repo has the latest engine (not released, not merged: the session that ships Kestrel decides). Not run on a device.
+
+## 2026-11-19T01:36:44Z
+> Swoop 0.7.0-alpha7 is built and signed, and I haven't run it on your tablet or phone.
+>
+> https://github.com/tjshea90/Keyboard/releases/tag/swoop-v0.7.0-alpha7
+>
+> It installs over alpha6 with the same signing certificate, and the full test suites (including lint) passed.
+>
+> ## Research finished
+> All of it was measured on real glides from other people (a public set of about a million real swipes), using two separate groups of people so nothing is tuned to just one group.
+>
+> | Idea | Result | What I did |
+> |---|---|---|
+> | The next word fixes the word before it | About +0.7 points. About 1 word in 110 is fixed and 1 in 700 spoiled | **Built** |
+> | A swipe-speed cue (pausing on double letters) | No signal in real swipes | Not built |
+> | A grammar layer (word classes) | No gain, slightly worse as I trusted it more | Not built. The code is left in, switched off |
+> | Language prior floor, phone-size key settings | Small gain on both groups | **Built** |
+>
+> The notes are in `research/R24-glide-next.md`, `R27-small-vs-large-words.md` and `R27-context-grammar.md`.
+>
+> ## What alpha7 does
+> - **Fix the word before:** after you glide a word, the next glided word can show the previous one was a look-alike (form/from) and swap it, as if you'd tapped it in the strip. There's a Settings switch, "Fix the word before", and it's on by default.
+> - **Language keeps more say on clean glides.**
+> - **Diagnostics shows whether your learning is the cause** of wrong first guesses, and how big your learned touch correction is.
+> - **New Settings button, "Forget where my thumb lands".** It clears only that learning and keeps all your words, pairs and corrections.
+>
+> ## Your "the → there" and "and → access"
+> It doesn't happen on real phone swipes ("the" is right 99% of the time). It also doesn't happen with a simulated finger on tablet-sized keys. So I think something *learned* on your tablet causes it.
+>
+> ## What to do
+> 1. Use alpha7 on the tablet for a day, then paste the Diagnostics.
+> 2. Look for two things in what you send:
+>    - "learning changed the first guess N times"
+>    - "touch plane up to X dp"
+> 3. If "the" and "and" still slip, tap **Forget where my thumb lands** and tell me whether it stops.
+> 4. Tell me if "Fix the word before" ever spoils a correct word.
+>
+> ## Kestrel browser sync
+> - **Where it lives:** my own branch `ccr-2630e41a-palpyu` in the browser repo. It's built on the newest tip of the session that ships Kestrel (the one that released alpha70), with the earlier port merged in and the latest engine synced.
+> - **What I checked:** Kestrel's core tests pass.
+> - **What it doesn't have:** "Fix the word before". Kestrel's own keyboard panel doesn't use that part of the engine, and Kestrel uses Swoop's keyboard when it's installed.
+> - **Not run:** Kestrel's app tests and Kestrel on a device. I didn't release or merge anything there, so that's your call or that session's.
+>
+> ## Still open
+> - Your real-device results from alpha7, especially the Diagnostics lines above.
+> - Kestrel: merging my branch into the shipping branch, and its app tests.
+> - Optional later: a better version of the grammar layer, if you want it measured again.
+<!-- sha:6a5d8cad994b -->
