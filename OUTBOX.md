@@ -1416,3 +1416,9 @@
 ## 2026-11-19T01:33:58Z
 > Checking both again in about five minutes: the signed alpha7 build, and Kestrel's tests on the final engine.
 <!-- sha:293e23c602e0 -->
+
+## 2026-11-19 (session ccr-2630e41a-palpyu): release 0.7.0-alpha7, Kestrel sync, research finished
+> **0.7.0-alpha7:** (1) the next glided word can fix the word before it when that was a look-alike (form/from): measured on real swipes about +0.7 points, about 1 word fixed per 110 and 1 spoiled per 700; Settings: "Fix the word before" turns it off. (2) The language keeps more say on clean glides (small gain, fewer short words read as longer ones). (3) Diagnostics now shows whether your learning changes the first guess and how big the touch plane is; Settings has "Forget where my thumb lands". (4) Glide settings tuned on real swipes (earlier alpha4).
+> **About "the" turning into "there" / "and" into "access":** it does not happen on real phone swipes (the is right 99%), nor with a simulated finger on big tablet keys. So I think something LEARNED on your tablet is involved. Please use the tablet for a day, then paste Diagnostics; the new line "learning changed the first guess N times (you kept the learned word M times, you picked the plain decoder's word K times)" and "touch plane up to X dp" tell me. If the slips stay, try Settings > Forget where my thumb lands and tell me whether they stop.
+> **Research finished, not built:** a swipe-speed cue (no signal in real swipes) and a grammar layer (word classes: no gain on real sentences, slightly worse).
+> **Kestrel browser:** my own branch ccr-2630e41a-palpyu in the Browser repo has the latest engine (not released, not merged: the session that ships Kestrel decides). Not run on a device.
