@@ -1380,3 +1380,7 @@
 ## 2026-11-19T01:02:13Z
 > The language floor at 0.45 is again a small, consistent plus on the second set (+0.1 first-choice, +0.3 everyday, one fewer short→long slip), so I'll take it with the phone settings. Applying that, then launching the grammar (word-class) experiment on both real-swipe slices.
 <!-- sha:ded1d12c7155 -->
+
+## 2026-11-19T01:02:48Z
+> The grammar experiment is building the word classes and scoring on the first real-swipe set. I'll read the result when it finishes (a few minutes), then decide what ships.
+<!-- sha:52a2f31ad956 -->
