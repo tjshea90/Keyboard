@@ -417,3 +417,8 @@ El reinicio de la tableta hizo que la traducción funcionara.
 ```
 Do the optional research and sync the latest swoop version to kestrel browser. 
 ```
+
+## 2026-11-19T00:39:23Z
+```
+The keyboard has a hard time differentiating from small and large words. Sometimes when i try to type a small word like the or and, it types there and access. Also, see if you can make the keyboard learn context and grammar for better word prediction 
+```
