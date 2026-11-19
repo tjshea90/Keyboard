@@ -1384,3 +1384,7 @@
 ## 2026-11-19T01:02:48Z
 > The grammar experiment is building the word classes and scoring on the first real-swipe set. I'll read the result when it finishes (a few minutes), then decide what ships.
 <!-- sha:52a2f31ad956 -->
+
+## 2026-11-19T01:08:12Z
+> The grammar (word-class) back-off is a **negative result**: on real sentences it does not help and gets worse as its weight rises (first-choice 88.8% → 88.7% → 88.6% → 88.0%). Likely reasons: the pair list behind the classes comes from conversational sentences while the corpus is encyclopedic, and adding probability to *unseen* pairs blurs a useful signal. I won't ship it. Writing that down honestly, and updating the task list.
+<!-- sha:b9656d7d14c5 -->
