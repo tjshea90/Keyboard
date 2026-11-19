@@ -177,6 +177,9 @@ class GlideDecoder(private val keys: GlideKeys, private val p: GlideParams = Gli
     /** What the person's own words and pairs add to the language (AU2); null = nothing learned yet. Set by whoever owns the model; read on the decode thread. */
     @Volatile var personal: PersonalModel? = null
 
+    /** R27b: word classes (grammar) for the pairs the list does not know; null = none. Only for the shipped list (checked by its size). */
+    @Volatile var classModel: ClassModel? = null
+
     /** The offset the learned finger habit adds to every path (pitches): what the finger usually lands beside the key it aims at. Set by [learnFrom]. */
     var biasX = 0f; var biasY = 0f
     /** R20d: where the thumb lands on each part of the keyboard, on top of the single shift. Learned by [learnFrom]; owned by whoever owns the decoder. */
@@ -590,7 +593,11 @@ class GlideDecoder(private val keys: GlideKeys, private val p: GlideParams = Gli
         if (pm != null) { text = lex.text(id); pu += pm.unigramMass(text, lex.totalCount()) + pm.recentMass(text, lex.totalCount()) }
         var pb = 0.0
         var known = false
-        if (prevId >= 0) { val b = lex.bigramLogProb(prevId, id); known = true; if (!b.isNaN()) pb = Math.exp(b.toDouble()) }
+        if (prevId >= 0) {
+            val b = lex.bigramLogProb(prevId, id); known = true
+            if (!b.isNaN()) pb = Math.exp(b.toDouble())
+            else { val cm = classModel; if (cm != null && cm.size == lex.size) pb = cm.prob(prevId, id, pu) }    // R27b: the exact pair is not in the list: the word CLASSES still say how well this word follows that one
+        }
         if (pm != null && prevText != null) {
             val lam = pm.pairWeight(prevText)
             if (lam > 0f) { val w = text ?: lex.text(id); pb = (1.0 - lam) * pb + lam * pm.pairProb(prevText, w); known = true }
