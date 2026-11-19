@@ -1350,3 +1350,7 @@
 > 3. **Not yet checked by you:** that translating now switches off everywhere, including in password and address-bar boxes.
 > 4. **Optional research, if you want it:** fixing the previous word from the next one, and using swipe speed to tell look-alike words apart.
 <!-- sha:83ea0468e059 -->
+
+## 2026-11-19T00:38:02Z
+> While Kestrel's tests run, I'll start the research proper. Checking the lexicon's pair-probability API (needed for next-word rescoring) and that the real-swipe files are still there.
+<!-- sha:24bfb3d34b3f -->
