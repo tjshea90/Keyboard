@@ -59,8 +59,8 @@ class RealSwipeEval {
     /** [s2l]: a short word (4 letters or fewer) was meant and the first choice is a word 2 or more letters LONGER (the -> there, and -> access). */
     class Score(val n: Int, val top1: Int, val top3: Int, val s2l: Int = 0) { fun pct(x: Int) = 100.0 * x / n; override fun toString() = "n=%d top1=%.1f%% top3=%.1f%% s2l=%d".format(n, pct(top1), pct(top3), s2l) }
 
-    fun score(items: List<Item>, p: GlideParams, context: Boolean): Score {
-        val dec = GlideDecoder(keys, p)
+    fun score(items: List<Item>, p: GlideParams, context: Boolean, cm: ClassModel? = null): Score {
+        val dec = GlideDecoder(keys, p); dec.classModel = cm
         var t1 = 0; var t3 = 0; var s2l = 0
         for (it in items) {
             val c = dec.decode(it.xs, it.ys, it.xs.size, listOf(lex), if (context) it.prev else null, 3)
@@ -106,6 +106,7 @@ class RealSwipeEval {
         if (System.getenv("REAL_DIAG") == "1") diagnose(sw, its)
         if (System.getenv("REAL_POST") == "1") postCorrection(sw, fit)
         if (System.getenv("REAL_DWELL") == "1") dwellStudy(its)
+        if (System.getenv("REAL_CLASS") == "1") classStudy(its)
         // the same swipes, only the words people use every day (the 5000 commonest of the list): what texting looks like (the corpus itself is encyclopaedia text full of names)
         val ranked = (0 until lex.size).sortedByDescending { lex.logProb(it) }.take(5000).toHashSet()
         val common = its.filter { it.lexId in ranked }
@@ -258,6 +259,25 @@ class RealSwipeEval {
             for (l in 3..8) { val g = feats.filter { it.len == l }; val p = g.filter { it.doubled }.map(f); val q = g.filter { !it.doubled }.map(f); if (p.size >= 20 && q.size >= 20) { val a = auc(p, q); val w = Math.min(p.size, q.size).toDouble(); wsum += w; asum += a * w } }
             val tw = feats.filter { it.twin }; val tp = tw.filter { it.doubled }.map(f); val tq = tw.filter { !it.doubled }.map(f)
             println("DWELL %-24s AUC doubled vs not (same distinct-letter count) %.3f; among twin-ambiguous words %.3f (n %d / %d)".format(name, if (wsum > 0) asum / wsum else Double.NaN, auc(tp, tq), tp.size, tq.size))
+        }
+    }
+
+    /**
+     * R27b: does a word-CLASS language model (grammar learned from the shipped pair data) help glide decoding on REAL sentences? Built here from the shipped list ([ClassModelBuilder]); the decoder uses it only where
+     * the exact word pair is unknown. Scored on the swipes that have a word before them (the class model needs context), with the phone parameters of R24b.
+     */
+    private fun classStudy(its: List<Item>) {
+        val t0 = System.currentTimeMillis()
+        val cm = ClassModelBuilder.build(lex)
+        println("CLASS built in ${System.currentTimeMillis() - t0} ms: ${cm.k} classes over ${(0 until lex.size).count { cm.classOfId(it) >= 0 }} words; first classes:\n" + ClassModelBuilder.describe(lex, cm).lines().take(14).joinToString("\n"))
+        val base = GlideParams.forPitchDp(30f)
+        val ctxItems = its.filter { it.prev != null }
+        val common = (0 until lex.size).sortedByDescending { lex.logProb(it) }.take(5000).toHashSet()
+        val ev = ctxItems.filter { it.lexId in common }
+        println("CLASS swipes with a word before: ${ctxItems.size} (everyday ${ev.size})")
+        for (alpha in listOf(0f, 0.5f, 1f, 2f, 4f)) {
+            cm.alpha = alpha
+            println("CLASS alpha %.1f: all %s | everyday %s".format(alpha, score(ctxItems, base, true, if (alpha == 0f) null else cm), score(ev, base, true, if (alpha == 0f) null else cm)))
         }
     }
 
