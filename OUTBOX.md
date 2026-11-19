@@ -1400,3 +1400,7 @@
 ## 2026-11-19T01:13:50Z
 > Duplicate notice (already read). The full test suite is running now (about 12 minutes). It covers all the new work: post-correction, the shadow counters, the thumb reset, the language floor, and the pitch-aware settings.
 <!-- sha:400bc158a564 -->
+
+## 2026-11-19T01:22:55Z
+> The full suite is **green: core, app and lint all passed** (exit 0), including the new tests for post-correction, the shadow counters, the thumb reset and the language floor. Ticking the research and build tasks with their evidence, then cutting the release.
+<!-- sha:4149cadc1e7d -->
