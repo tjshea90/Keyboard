@@ -120,6 +120,13 @@ class KeyboardFlow(private val a: Activity, private val glide: GlideHost, privat
         }
     }
 
+    /** R27a: only where the thumb lands is forgotten (for a keyboard that misreads clear glides the same way every time); words, pairs and corrections stay. */
+    fun forgetThumbNow() {
+        host.ask("Forget where your thumb lands?", "The keyboard learned how far your thumb lands from the keys it aims at, and uses that to read your glides. If it keeps misreading clear glides the same way, that learning may have gone wrong: this clears it and keeps all your words, pairs and corrections. It learns your thumb again as you glide.", "Forget", "Cancel") { ok ->
+            if (ok) Io.exec { glide.forgetThumb { Io.ui { host.say("Done. The keyboard learns where your thumb lands again from now.") } } }
+        }
+    }
+
     class TooBig : IOException()
 
     companion object {

@@ -54,6 +54,9 @@ class GlideHost(
         engine.forgetAll { own.clear(); try { ownFile.delete(); habitFile.delete() } catch (_: Exception) { }; done() }
     }
 
+    /** Settings > Forget where my thumb lands (R27a): the thumb habit and the touch plane are gone, every learned word stays (any thread). */
+    fun forgetThumb(done: () -> Unit = {}) { engine.forgetThumb({ h -> saveHabit(h) }) { done() } }
+
     /** Words the person uses that the shipped list lacks (KB-204 fills it from typing; an import brings the ones in the file). Loaded once, on first use. */
     val own: UserWords by lazy { try { if (ownFile.isFile) UserWords.parse(ownFile.readText(), 1400) else UserWords(1400) } catch (e: Exception) { UserWords(1400) } }
     fun saveOwn(text: String) { writeAtomically(ownFile, text) }

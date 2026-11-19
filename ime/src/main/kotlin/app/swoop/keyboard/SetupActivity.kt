@@ -126,6 +126,7 @@ class SetupActivity : Activity() {
             learn.row(note("Nothing is learned in password boxes, or in apps that ask for private typing."))
             learn.row(actionRow("Export what it learned", "Saves one plain-text file in Downloads. It lists your words: keep it private.") { flow.exportNow() })
             learn.row(actionRow("Import what it learned", "Adds a file to what is learned, including the file the Kestrel browser exported.") { flow.importFromFile() })
+            learn.row(actionRow("Forget where my thumb lands", "Clears only the learned thumb habit and touch plane (how the keyboard shifts your glides). Your words, pairs and corrections stay. Try it if the keyboard keeps reading clear glides wrongly.") { flow.forgetThumbNow() })
             learn.row(actionRow("Forget what it learned", "Deletes your words, pairs and corrections from this device.", danger = true) { flow.forgetNow(); refreshLearned(delay = true) })
         }
         col.addView(learn)
