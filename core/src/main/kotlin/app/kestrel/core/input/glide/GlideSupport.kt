@@ -4,7 +4,7 @@ import java.util.concurrent.Executor
 
 /** What glide typing did, counted on the tablet itself (no words are kept) so a Diagnostics paste says how accurate it was in real use (AT1g). */
 class GlideStats {
-    private var glides = 0; private var noMatch = 0; private var kept = 0; private var picked = 0; private var undone = 0
+    private var glides = 0; private var noMatch = 0; private var kept = 0; private var picked = 0; private var undone = 0; private var revised = 0
     private var ms = 0L; private var msMax = 0L
     private var pending = false
     private var loadMs = -1L; private var loadWords = 0; private var warmMs = -1L
@@ -21,6 +21,8 @@ class GlideStats {
     @Synchronized fun onKept() { if (pending) { kept++; pending = false } }
     @Synchronized fun onPicked() { if (pending) { picked++; pending = false } }
     @Synchronized fun onUndone() { if (pending) { undone++; pending = false } }
+    /** R26a: the word before was changed because the next glide showed it was probably another look-alike word. */
+    @Synchronized fun onRevised() { revised++ }
     @Synchronized fun onLoaded(millis: Long, words: Int) { loadMs = millis; loadWords = words }
     @Synchronized fun onWarm(millis: Long) { warmMs = millis }
     @Synchronized fun onHabit(xDp: Float, yDp: Float) { habitX = xDp; habitY = yDp }
@@ -56,6 +58,7 @@ class GlideStats {
             val judged = kept + picked + undone
             sb.append("$glides glides")
             if (judged > 0) sb.append(": best word kept $kept (${100 * kept / judged} %), another candidate picked $picked, deleted right away $undone")
+            if (revised > 0) sb.append(", word before fixed by the next word $revised times")
             if (noMatch > 0) sb.append(", no word fitted $noMatch")
             sb.append("; decode avg ${ms / glides} ms, worst $msMax ms")
         }
@@ -144,7 +147,11 @@ class UserWords(private val cap: Int = 800) {
 
 /** The result of one glide as the keyboard gets it. */
 /** [ready] is false when the engine had no word list / key positions yet (the glide could not be decoded at all: "still starting", not "no word fits"). */
-class GlideResult(val candidates: List<GlideCandidate>, val millis: Long, val ready: Boolean = true)
+class GlideResult(
+    val candidates: List<GlideCandidate>, val millis: Long, val ready: Boolean = true,
+    /** The language weight this decode used ([GlideDecoder.lastLm]) and the 4th and 5th candidates: what the next word needs to re-judge this one (R26a). */
+    val lm: Float = 0f, val more: List<GlideCandidate> = emptyList()
+)
 
 /**
  * The glide engine the keyboard talks to (AT1): it loads the word list, owns the decoder and the person's own words, and does every bit of that on [executor] (ONE thread, so nothing needs a lock
@@ -316,14 +323,27 @@ class GlideTyping(
             if (d == null || m == null) { done(GlideResult(emptyList(), 0, ready = false)); return@execute }
             val t0 = System.nanoTime()
             val lexicons = ArrayList<GlideLexicon>(2); lexicons.add(m); userLex?.let { lexicons.add(it) }
-            val r = try { cleaned(d.decode(px, py, count, lexicons, prev, 3 + EXTRA_FOR_BLOCKED, prev2), 3) } catch (e: Exception) { emptyList() }
+            val five = try { cleaned(d.decode(px, py, count, lexicons, prev, 5 + EXTRA_FOR_BLOCKED, prev2), 5) } catch (e: Exception) { emptyList() }
+            val r = five.take(3)
+            val lm = d.lastLm
             val ms = (System.nanoTime() - t0) / 1_000_000
             stats.onDecoded(ms, r.isNotEmpty())
             if (r.isNotEmpty() && personal.weightOf(r[0].text) > 0f) stats.onLearnedTop()
             lastPrint = d.lastPrint
             if (d.lastPatternLifted) stats.onShape(d.lastPatternFlipped)
-            done(GlideResult(r, ms))
+            done(GlideResult(r, ms, true, lm, five.drop(3)))
         }
+    }
+
+    /**
+     * R26a: ln P([next] | each of [cands] as the word before it); null when the engine is not ready or [next] is unknown. Synchronous, cheap (a few table look-ups), called on the UI thread between decodes.
+     */
+    fun nextWordLnProbs(cands: List<String>, next: String, candPrev: String?): FloatArray? {
+        val d = decoder; val m = main ?: return null
+        if (d == null) return null
+        val lexicons = ArrayList<GlideLexicon>(2); lexicons.add(m); userLex?.let { lexicons.add(it) }
+        val out = FloatArray(cands.size) { d.nextLnProb(lexicons, cands[it], next, candPrev) }
+        return if (out.any { it.isNaN() }) null else out
     }
 
     /**

@@ -568,6 +568,18 @@ class GlideDecoder(private val keys: GlideKeys, private val p: GlideParams = Gli
     }
 
     /**
+     * R26a: ln P([next] | [cand] as the word before it), in the decoder's own terms (the word's share, the pair's share, the person's own pairs and the three-word phrase with [candPrev]
+     * before [cand]). NaN when [next] is in none of the lists. Reads only the lists and the personal model: safe to call between decodes.
+     */
+    fun nextLnProb(lexicons: List<GlideLexicon>, cand: String, next: String, candPrev: String? = null): Float {
+        for (lx in lexicons) {
+            val nid = lx.idOf(next); if (nid < 0) continue
+            return prior(lx, nid, lx.idOf(cand), cand, candPrev)
+        }
+        return Float.NaN
+    }
+
+    /**
      * ln P(word | the word before): the word's own share (plus what the person's own use adds), mixed with the pair's share when the pair is known (the shipped list's, and the person's own pairs
      * weighted by how often the person wrote something after that word).
      */
