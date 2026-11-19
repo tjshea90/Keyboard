@@ -1354,3 +1354,17 @@
 ## 2026-11-19T00:38:02Z
 > While Kestrel's tests run, I'll start the research proper. Checking the lexicon's pair-probability API (needed for next-word rescoring) and that the real-swipe files are still there.
 <!-- sha:24bfb3d34b3f -->
+
+## 2026-11-19T00:48:00Z
+> Here is what I've found so far, in plain words:
+>
+> **Your complaint ("the" → "there", "and" → "access"):** on real phone swipes it doesn't reproduce: "the" is read right 99% of the time and "and" 96%. A short word turning into one 2+ letters longer happens in under 1% of short-word swipes. So something specific to your tablet (its big keys, or what it learned from you) is involved. I'm testing a concrete weakness: the decoder turns the language prior down when a glide is clean, just when "the"/"there" fit equally well geometrically.
+>
+> **Research (R26a):**
+> - **Fixing the previous word from the next one** works on real swipes: +0.8 points first-choice at a safe setting (43 words fixed, 5 spoiled out of 4,628). I still need to confirm it on the second set of people before building it.
+> - **A swipe-speed cue** shows no signal on real swipes (no pausing on doubled letters), so I'm not building it.
+>
+> **Kestrel sync:** done on my own Browser branch; its tests are running again after I fixed a build problem that I had introduced.
+>
+> Open: R26a (confirm post-correction on set B, then decide), R26b (Kestrel tests, then commit and push the branch), R27a (the language-prior test running now, plus a tablet-size check), R27b (context and grammar research).
+<!-- sha:b710f6fac6b3 -->
