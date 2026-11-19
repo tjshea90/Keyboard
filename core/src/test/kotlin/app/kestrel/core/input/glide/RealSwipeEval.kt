@@ -122,6 +122,38 @@ class RealSwipeEval {
     }
 
     /**
+     * R27a (owner 2026-11-19: "when i try to type a small word like the or and, it types there and access"): who is confused with whom, by LENGTH. Counts the first-choice misses by how much longer / shorter the
+     * chosen word is than the one meant, the commonest (meant -> chosen) pairs, and the accuracy of the commonest short words one by one.
+     */
+    private fun shortLong(its: List<Item>) {
+        val dec = GlideDecoder(keys, GlideParams.forPitchDp(keys.pitchDp))
+        val pairs = HashMap<String, Int>(); val perWord = HashMap<String, IntArray>()
+        var n = 0; var miss = 0; var longer1 = 0; var longer2 = 0; var shorter1 = 0; var shorter2 = 0; var same = 0
+        var shortMeant = 0; var shortMiss = 0; var shortToLong = 0; var longMeant = 0; var longToShort = 0
+        for (it in its) {
+            val c = dec.decode(it.xs, it.ys, it.xs.size, listOf(lex), it.prev, 3)
+            n++
+            val first = c.firstOrNull() ?: continue
+            val hit = String(GlideLetters.keyOf(first.text)) == it.key
+            val a = perWord.getOrPut(it.word) { IntArray(2) }; a[0]++; if (!hit) a[1]++
+            val isShort = it.word.length <= 4
+            if (isShort) shortMeant++ else longMeant++
+            if (hit) continue
+            miss++; if (isShort) shortMiss++
+            val d = first.text.length - it.word.length
+            if (d >= 2) longer2++ else if (d == 1) longer1++ else if (d == 0) same++ else if (d == -1) shorter1++ else shorter2++
+            if (isShort && d >= 2) shortToLong++
+            if (!isShort && d <= -2) longToShort++
+            pairs.merge(it.word + " > " + first.text, 1, Int::plus)
+        }
+        println("SHORTLONG n=$n first-choice misses $miss; chosen word LONGER by 2+ letters: $longer2, by 1: $longer1; same length: $same; SHORTER by 1: $shorter1, by 2+: $shorter2")
+        println("SHORTLONG short meant words (4 letters or fewer): $shortMeant, missed $shortMiss (%.1f%%); of those read as a word 2+ letters longer: $shortToLong (%.1f%% of all short words); long words read as 2+ letters shorter: $longToShort of $longMeant (%.1f%%)".format(100.0 * shortMiss / shortMeant, 100.0 * shortToLong / shortMeant, 100.0 * longToShort / longMeant))
+        println("SHORTLONG commonest confusions (meant > chosen): " + pairs.entries.sortedByDescending { it.value }.take(40).joinToString("  ") { it.key + " " + it.value })
+        val common = listOf("the", "and", "to", "of", "in", "is", "it", "for", "that", "you", "was", "with", "are", "his", "her", "this", "have", "from", "they", "not", "but", "had", "were", "which", "their")
+        println("SHORTLONG the commonest short words, n / miss %: " + common.mapNotNull { w -> perWord[w]?.let { a -> "$w ${a[0]}/%.0f".format(100.0 * a[1] / a[0]) } }.joinToString("  "))
+    }
+
+    /**
      * R26a part 1: next-word post-correction on REAL consecutive words. Each sentence of the corpus is replayed word by word the way a person types it: a word with two or more different letters is
      * glided (decoded with the word ON SCREEN before it as context: the decoder's own first choice, not the truth), a one-letter word is "tapped" (correct). After word k+1 is on screen, word k's five
      * best candidates are re-scored with the likelihood of the word that now follows them (lm * ln(0.6 p(next) + 0.4 p(next | candidate)), the decoder's own prior formula with the candidate as the word
@@ -288,5 +320,6 @@ class RealSwipeEval {
         println("DIAG of the first-choice misses: the word chosen is MORE common than the meant one: $moreCommon, LESS common: $lessCommon; same first and last letter as the meant word: $sameEnds")
         println("DIAG by distinct letters (n / first-choice miss % / not in top 3 %): " + byLen.toSortedMap().entries.joinToString("  ") { (l, a) -> "len$l:${a[0]}/%.0f/%.0f".format(100.0 * a[1] / a[0], 100.0 * a[2] / a[0]) })
         for (m in shown) println("DIAG miss: $m")
+        shortLong(its)
     }
 }
