@@ -1,6 +1,5 @@
 package app.kestrel.core.input.glide
 
-import app.kestrel.core.translate.Json
 import java.io.File
 import java.net.HttpURLConnection
 import java.net.URL
@@ -45,7 +44,7 @@ object RealSwipe {
             for (line in lines) {
                 if (out.size >= max) break
                 if (line.isBlank()) continue
-                val o = try { Json.parseObject(line) } catch (e: Exception) { continue }
+                val o = try { MiniJson(line).parse() as? Map<String, Any?> ?: continue } catch (e: Exception) { continue }
                 val data = o["data"] as? List<Any?> ?: continue
                 if (data.size < 3) continue
                 val xs = FloatArray(data.size); val ys = FloatArray(data.size); val ts = FloatArray(data.size)
@@ -61,4 +60,49 @@ object RealSwipe {
 
     /** The word as the decoder knows it: lower case letters only (apostrophes, hyphens, digits and punctuation dropped). Null when nothing is left. */
     fun letters(word: String): String? { val s = word.lowercase().filter { it in 'a'..'z' }; return s.ifEmpty { null } }
+}
+
+/**
+ * A tiny JSON reader for the corpus lines (objects, arrays, strings, numbers, true / false / null), kept INSIDE this test file so that the file compiles in every repo that carries a copy
+ * of the keyboard's tests (the Kestrel browser has no translate package to borrow one from). Throws on bad input; the caller skips such a line.
+ */
+private class MiniJson(private val s: String) {
+    private var i = 0
+    fun parse(): Any? { ws(); val v = value(); ws(); check(i == s.length) { "trailing characters" }; return v }
+    private fun ws() { while (i < s.length && s[i].isWhitespace()) i++ }
+    private fun value(): Any? {
+        ws(); check(i < s.length) { "end" }
+        return when (val c = s[i]) {
+            '{' -> obj(); '[' -> arr(); '"' -> str()
+            't' -> lit("true", true); 'f' -> lit("false", false); 'n' -> lit("null", null)
+            else -> { check(c == '-' || c.isDigit()) { "bad value" }; num() }
+        }
+    }
+    private fun lit(w: String, v: Any?): Any? { check(s.startsWith(w, i)) { "bad literal" }; i += w.length; return v }
+    private fun num(): Double { val st = i; if (s[i] == '-') i++; while (i < s.length && (s[i].isDigit() || s[i] == '.' || s[i] == 'e' || s[i] == 'E' || s[i] == '+' || s[i] == '-')) i++; return s.substring(st, i).toDouble() }
+    private fun str(): String {
+        i++; val b = StringBuilder()
+        while (true) {
+            check(i < s.length) { "unterminated string" }
+            val c = s[i++]
+            if (c == '"') return b.toString()
+            if (c != '\\') { b.append(c); continue }
+            check(i < s.length) { "bad escape" }
+            when (val e = s[i++]) {
+                'n' -> b.append('\n'); 't' -> b.append('\t'); 'r' -> b.append('\r'); 'b' -> b.append('\b'); 'f' -> b.append('\u000c')
+                'u' -> { check(i + 4 <= s.length) { "bad unicode" }; b.append(s.substring(i, i + 4).toInt(16).toChar()); i += 4 }
+                else -> b.append(e)
+            }
+        }
+    }
+    private fun arr(): List<Any?> {
+        i++; val out = ArrayList<Any?>(); ws()
+        if (s[i] == ']') { i++; return out }
+        while (true) { out.add(value()); ws(); if (s[i] == ',') { i++; continue }; check(s[i] == ']') { "bad array" }; i++; return out }
+    }
+    private fun obj(): Map<String, Any?> {
+        i++; val out = LinkedHashMap<String, Any?>(); ws()
+        if (s[i] == '}') { i++; return out }
+        while (true) { ws(); val k = str(); ws(); check(s[i] == ':') { "bad object" }; i++; out[k] = value(); ws(); if (s[i] == ',') { i++; continue }; check(s[i] == '}') { "bad object end" }; i++; return out }
+    }
 }
