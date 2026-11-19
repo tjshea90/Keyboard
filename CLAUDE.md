@@ -49,6 +49,9 @@ Develop and push ONLY on the branch the session was assigned (this repo: `ccr-c5
 - Views in the keyboard window: the IME window is measured "at most the screen". A plain View (or FrameLayout child) with MATCH_PARENT height then takes the WHOLE screen height and the keyboard covers the app (0.2.0-alpha1 shipped with this bug, found by KeyboardRootTest.theDockedKeyboardIsOnlyAsTallAsItsKeys). Any layer on top of the keys must measure like the keys (KeyOverlay.onMeasure). Robolectric measure tests with AT_MOST catch it; emulator smoke asserts the IME window height.
 
 <!-- handoff:learnings:begin -->
+- Network after an update that ADDS a permission (found 2026-11-19, owner's Android 10 tablet): the keyboard got `SocketException (EPERM)` at once from every socket (name lookups fine, internet group OK) until the tablet was fully restarted; a restart fixed it, no reinstall. Android's own Data Saver shows as ECONNREFUSED, battery saver / doze as time-outs (measured on an emulator with `emu-smoke.yml` mode net-probe, scenarios=true). First advice for "could not be reached" with EPERM: restart the device. The Diagnostics "Test translation connection" is the tool (docs/TRANSLATE.md).
+- Real-swipe evaluation of the glide decoder exists (research/R24-glide-next.md, `REAL_SWIPES=1`, FUTO corpus, never committed): tune only what holds on a held-out slice of other donors.
+
 ## Session Learnings (auto-updated by handoff)
 
 ### Implicit Rules

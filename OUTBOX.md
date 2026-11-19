@@ -1325,3 +1325,6 @@
 > - **Kestrel browser sync:** the changed input code is not synced; I couldn't reach that repo here.
 > - **Tablet glide re-tune:** the larger keys keep the old settings, with no real-swipe data. If glide feels worse there, tell me.
 <!-- sha:b40cfd3f9db6 -->
+
+## 2026-11-19: confirmed - the restart fixed translation
+> The tablet restart fixed it: Android had not passed Swoop's internet permission on after the update that added it. No reinstall was needed and your learned words are untouched. If it ever happens again after an update: restart the tablet first. 0.7.0-alpha6's connection test now says exactly that. Open: Kestrel browser sync of the changed input code; the glide re-tune for the tablet's bigger keys has no real-swipe data (tell me if glide feels worse there).

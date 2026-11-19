@@ -94,6 +94,9 @@ ADDED the INTERNET permission, Swoop did in 0.4.0, until a restart: the probe re
 school profile (netfilter DROP gives EPERM). The data-saver "refused" case has its own message; the diagnostics screen has buttons for the Unrestricted data page and the app settings. Data Saver's state cannot be READ by
 Swoop (ConnectivityManager.getRestrictBackgroundStatus needs the network-state permission, which Swoop does not hold): the probe says so instead of guessing.
 
+**Confirmed 2026-11-19 (owner, Android 10 tablet):** the failure was "socket creation refused" (EPERM at once, name lookups fine, internet group OK, battery saver off did not help) and a full restart of the tablet fixed it:
+Android's network permission record for Swoop was stale after the update that added INTERNET (0.4.0). A fresh install was NOT needed. The connection test (0.7.0-alpha6) now says "restart the tablet first" for exactly this case.
+
 ## Guard rails (plan 9.2) provided by this work
 - `tools/expected-permissions.txt` lists exactly `android.permission.INTERNET`; the manifest has that one `uses-permission` and
   `android:usesCleartextTraffic="false"`; `TranslateGuardTest` checks both, and that no other URL/host appears in the translate package.
