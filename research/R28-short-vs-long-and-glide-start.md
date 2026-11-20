@@ -46,5 +46,28 @@ Reading:
 * Why it grows with key size: the shape lift and the "path fit may be this much worse" gaps are fixed numbers in key-pitch units tuned on a phone, where finger scatter is 0.3 to 0.4 pitch and the margins between look-alike words are small. On a 55 to 90 dp pitch the same finger scatters 0.1 to 0.2 pitch, the right word fits almost perfectly and a wrong look-alike is clearly worse; the same fixed lift can then overrule a clean path (the -> there, and -> access).
 * The glide-shape memory also keeps the personal word counts from running away: without it the short words that came out longer rose from 5 to 27 (portrait) and 4 to 18 (landscape) of about 1 000 short glides, with it they stay near the plain decoder. So switching it off is not the answer; its reach has to follow the key size.
 
-SECOND-SWEEP-PLACEHOLDER
+### 2.3 The fix, measured (what ships): the learned reach follows the key size
+Second sweep, same lab, tablet geometry (first choice learned / plain, all words; short words; short->long): the fixed phone-tuned reach of learned lifts (`patMaxGap` 2.2, `confMaxGap` 0.9 pitch squared per letter) scaled by the finger's scatter in pitches:
+
+| variant | portrait h0 | portrait h10 | landscape h0 | landscape h10 |
+| :- | :- | :- | :- | :- |
+| before (all on) | 95.7 / 96.9 | 94.4 / 95.3 | 94.7 / 96.6 | 94.6 / 95.8 |
+| reach x (45/pitch)^2 | 95.8 | 94.5 | 96.1 | 95.5 |
+| reach x 0.5 x (45/pitch)^2 | **96.5** | **95.1** | **96.9** | **96.3** |
+| shape lift gain 1.25, cap 2.5 | 96.6 | 94.6 | 95.7 | 95.6 |
+| shape lift cap 2.0 | 96.1 | 94.1 | 95.2 | 94.6 |
+| **shipped** `GlideParams.learnedReach(pitch)`: 1 up to 45 dp, then (45/pitch)^2 x (1 - 0.5 x ramp over the next 10 dp) | 96.5 / 96.9 (short 97.6 / 98.1) | 95.1 / 95.3 (96.2 / 96.7) | 96.9 / 96.6 (98.2 / 97.9) | 96.3 / 95.8 (97.5 / 97.9) |
+
+* The tablet in landscape goes from 2 points BELOW a keyboard that learned nothing to 0.3 to 0.5 above it; in portrait from 1.2 / 0.9 below to 0.4 / 0.2 below. Short words: -1.8 -> -0.5 (portrait, clean), -2.1 -> +0.3 (landscape, clean).
+* Short words read as a word 2+ letters longer: 2 to 6 of about 1 000 short glides, the plain decoder 0 to 2; the counts are too small to separate (the simulated finger hardly ever makes the slip the owner reports). Whether this removes the owner's slips on his tablet is NOT shown here; it removes the one mechanism that could be demonstrated.
+* Phone keyboards (pitch up to 45 dp) are bit-for-bit unchanged (`learnedReach` is 1), so the real-swipe numbers of R24b / R26a / R27a stand as they are.
+* Tried and rejected: lowering the shape-lift cap (worse everywhere), switching the shape memory off (it keeps short-for-long from running away: 5 -> 27), switching the thumb habit / touch plane / correction memory off (no effect on this).
+
+## 3. What is NOT known (honest limits)
+* No real swipe from the owner's tablet exists. Everything about the tablet is a simulated finger on the tablet's real key geometry. The new `touch:` Diagnostics line and the existing `learning changed the first guess` / `touch plane up to` lines are what will say more.
+* Two things were measured to NOT explain the slips: key geometry (flat keys, section 2.1) and the decoder on real swipes (0.8 %).
+* If the slips continue after this release: paste Diagnostics (it now carries the touch line), and try Settings > Forget where my thumb lands; a glide whose first guess changes after that is a learned-state case.
+
+## 4. Where the code is
+`KeysView` (start threshold, strip boundary, second-finger hand-over, preview gate, touch notes), `KeyboardPresenter.onTouchNote`, `InputStats.touchLine`, `Diagnostics`, `GlideParams.learnedReach / forPitchDp`; tests `KeysViewTest` (glide start section), `DiagnosticsTest`, `GlideParamsPitchTest`; labs `FlatKeysStudyTest`, `LearnedShortLongLabTest` (both skipped unless REAL_TABLET=1).
 
