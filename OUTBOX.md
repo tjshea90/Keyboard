@@ -1521,3 +1521,7 @@
 ## 2026-11-20T08:00:33Z
 > The first job (`check`) passed and `test-jvm` is running. The build, signing and release steps follow. I'll record the release once the run is green.
 <!-- sha:12fb965f00d4 -->
+
+## 2026-11-20T08:01:08Z
+> Build still running; I'm checking job states every few minutes.
+<!-- sha:2a4d764e2d7d -->
