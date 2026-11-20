@@ -136,14 +136,16 @@ class GlideParams(
          * ([GlideParams.patMaxGap], [GlideParams.confMaxGap]). The gaps are in pitch squared per letter and were tuned where the finger scatters 0.3 to 0.4 pitch. On bigger keys the same finger scatters less than 0.2 pitch, the
          * right word fits almost exactly, a look-alike is clearly worse, and the phone-sized reach let a learned lift overrule a clean path ("the" -> "there", "and" -> "access"). In a simulated long stretch of use on the
          * tablet's real key sizes (research/R28-short-vs-long-and-glide-start.md) this made the first choice 1 to 2 points worse than a keyboard that had learned nothing; the reach shrinking with the square of the pitch
-         * (the finger's scatter in pitches) and halving again from [SMALL_PITCH_DP] to [LARGE_PITCH_DP] brings it level with or above it. 1 up to [SMALL_PITCH_DP] (every phone): unchanged.
+         * (the finger's scatter in pitches) and halving again over the next [REACH_RAMP_DP] dp brings it level with or above it. 1 up to [SMALL_PITCH_DP] (every phone): unchanged.
          */
         fun learnedReach(pitchDp: Float): Float {
             if (pitchDp <= SMALL_PITCH_DP) return 1f
             val r = SMALL_PITCH_DP / pitchDp
-            val t = ((pitchDp - SMALL_PITCH_DP) / (LARGE_PITCH_DP - SMALL_PITCH_DP)).coerceIn(0f, 1f)
+            val t = ((pitchDp - SMALL_PITCH_DP) / REACH_RAMP_DP).coerceIn(0f, 1f)
             return r * r * (1f - 0.5f * t)
         }
+        /** The halving of the learned reach is complete this many dp above [SMALL_PITCH_DP] (the owner's tablet in portrait is at 55 dp, 10 above). */
+        const val REACH_RAMP_DP = 10f
 
         fun forPitchDp(pitchDp: Float, touchField: Boolean = true): GlideParams {
             val t = ((pitchDp - SMALL_PITCH_DP) / (LARGE_PITCH_DP - SMALL_PITCH_DP)).coerceIn(0f, 1f)

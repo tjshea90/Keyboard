@@ -39,7 +39,8 @@ class GlideParamsPitchTest {
         val tablet = GlideParams.forPitchDp(92f)         // the owner's tablet in landscape
         assertEquals(d.patMaxGap * 0.5f * (45f / 92f) * (45f / 92f), tablet.patMaxGap, 1e-5f)
         assertEquals(d.confMaxGap * 0.5f * (45f / 92f) * (45f / 92f), tablet.confMaxGap, 1e-5f)
-        assertTrue("portrait (55 dp) sits between", GlideParams.forPitchDp(55f).patMaxGap in tablet.patMaxGap..d.patMaxGap)
+        assertEquals("portrait (55 dp)", d.patMaxGap * 0.5f * (45f / 55f) * (45f / 55f), GlideParams.forPitchDp(55f).patMaxGap, 1e-5f)
+        assertTrue("in between it slides", GlideParams.forPitchDp(50f).patMaxGap in GlideParams.forPitchDp(55f).patMaxGap..d.patMaxGap)
         assertEquals("only the learned reach changes", d.patGain, tablet.patGain, 0f); assertEquals(d.patCap, tablet.patCap, 0f); assertEquals(d.confCap, tablet.confCap, 0f)
     }
 
