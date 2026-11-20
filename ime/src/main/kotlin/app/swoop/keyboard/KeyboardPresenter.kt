@@ -456,6 +456,17 @@ class KeyboardPresenter(
     /** The copy that is on the strip is not offered again (typing, deleting, gliding, a long press): a NEW copy, even of the same text, brings it back. */
     private fun dismissClip() { clipShown?.let { clipUsedAt = it.at; clipShown = null } }
 
+    /** R28b: the numbers behind the glide start (Diagnostics only, never what was typed). */
+    override fun onTouchNote(kind: Int, a: Int, b: Int, c: Int) {
+        val st = controller.stats
+        when (kind) {
+            KeysView.NOTE_STROKE -> { st.strokes++; st.strokePoints += a; st.strokeMs += b; st.firstMoveMs += c; if (c > st.firstMoveMax) st.firstMoveMax = c }
+            KeysView.NOTE_TAKEOVER -> st.takeovers++
+            KeysView.NOTE_RESTING_IGNORED -> st.restingIgnored++
+            KeysView.NOTE_PADDING_START -> st.paddingStarts++
+        }
+    }
+
     override fun onGlideMove(xs: FloatArray, ys: FloatArray, count: Int) {
         if (!glideOn) return
         dismissClip()
