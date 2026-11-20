@@ -18,9 +18,13 @@ class LearnedShortLongLabTest {
         val glides = System.getenv("REAL_TABLET_N")?.toIntOrNull() ?: 4000
         val blocks = 4
         val geos = listOf("phone 292x161" to (292f to 161f), "tablet portrait 564x272" to (564f to 272f), "tablet landscape 916x272" to (916f to 272f))
-        for ((name, wh) in geos) for (habit in listOf(0f, 10f)) for (aim in listOf(10f)) {
+        val only = System.getenv("LAB_GEOS")?.split(',')
+        val variants = (System.getenv("LAB_VARIANTS") ?: "full").split(',')
+        for ((name, wh) in geos) for (habit in listOf(0f, 10f)) for (aim in listOf(10f)) for (variant in variants) {
+            if (only != null && only.none { name.contains(it) }) continue
             val keys = GlideEval.keysFor(wh.first, wh.second)
-            val params = GlideParams.forPitchDp(keys.pitch)
+            val fp = GlideParams.forPitchDp(keys.pitch)
+            val params = when (variant) { "nopat" -> GlideParams(shapeW = fp.shapeW, visitCap = fp.visitCap, lmMin = fp.lmMin, patGain = 0f); "noconf" -> GlideParams(shapeW = fp.shapeW, visitCap = fp.visitCap, lmMin = fp.lmMin, confGain = 0f); "nofield" -> GlideParams(shapeW = fp.shapeW, visitCap = fp.visitCap, lmMin = fp.lmMin, touchField = false); "pure" -> GlideParams(shapeW = fp.shapeW, visitCap = fp.visitCap, lmMin = fp.lmMin, patGain = 0f, confGain = 0f, touchField = false); else -> fp }
             val noise = SimNoise.aim(aim)
             val seed = 3L
             val rnd = Random(seed * 31 + 7)
@@ -28,7 +32,7 @@ class LearnedShortLongLabTest {
             val dec = GlideDecoder(keys, params)
             val plain = GlideDecoder(keys, GlideParams.forPitchDp(keys.pitch).let { GlideParams(shapeW = it.shapeW, visitCap = it.visitCap, lmMin = 0.45f, patGain = 0f) })
             val model = PersonalModel()
-            dec.personal = model; plain.personal = null
+            dec.personal = if (variant == "nopersonal" || variant == "onlythumb") null else model; plain.personal = null
             val base = GlideEval.frequencyPick(lex, 4000, Random(seed * 13), 2).map { lex.text(it.id) }
             val lexicons = listOf<GlideLexicon>(lex)
             val seen = IntArray(blocks); val hitL = IntArray(blocks); val hitP = IntArray(blocks)
@@ -63,13 +67,12 @@ class LearnedShortLongLabTest {
                         if (first) { model.patterns.add(w, print, 1f); model.patterns.contradict(w, print, 0.7f) }
                         else if (inThree) { model.patterns.add(w, print, 3f); model.patterns.contradict(w, print, 2f) }
                     }
-                    if (first || inThree) { val id = lex.idOf(w); if (id >= 0) dec.learnFrom(lex, id) }
+                    if ((first || inThree) && variant != "nothumb" && variant != "pure") { val id = lex.idOf(w); if (id >= 0) dec.learnFrom(lex, id) }
                     prev2 = prev; prev = w; done++
                 }
             }
-            val sb = StringBuilder("LAB %-26s habit %2.0f dp aim %.0f dp: ".format(name, habit, aim))
-            for (b in 0 until blocks) sb.append("| all %.1f/%.1f short %.1f/%.1f s2l %d/%d flips %d ".format(100.0 * hitL[b] / seen[b].coerceAtLeast(1), 100.0 * hitP[b] / seen[b].coerceAtLeast(1), 100.0 * sHitL[b] / sSeen[b].coerceAtLeast(1), 100.0 * sHitP[b] / sSeen[b].coerceAtLeast(1), s2lL[b], s2lP[b], flip[b]))
-            println(sb)
+            val t = { a: IntArray -> a.sum() }
+            println("LAB %-24s habit %2.0f dp %-10s: learned/plain  all %.1f/%.1f  short %.1f/%.1f  short->long %d/%d  first guess differs %d of %d".format(name, habit, variant, 100.0 * t(hitL) / t(seen), 100.0 * t(hitP) / t(seen), 100.0 * t(sHitL) / t(sSeen), 100.0 * t(sHitP) / t(sSeen), t(s2lL), t(s2lP), t(flip), t(seen)))
         }
     }
 }
