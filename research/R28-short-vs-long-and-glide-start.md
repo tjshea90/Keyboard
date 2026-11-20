@@ -24,4 +24,27 @@ Diagnostics (new line, numbers only): `touch: N glide strokes, avg P touch point
 * The R27a tablet study drew the tablet keyboard with a height of 0.55 x the width (rows 1.4 key pitches apart). The keyboard caps a row at 56 dp (`ROW_H_MAX_DP`), so on the owner's tablet (600x973 at 170 dpi = 564x916 dp) a row is 1.2 pitches apart in portrait and **0.75 in landscape** (a phone: 1.4). `FlatKeysStudyTest` repeats the study with the real row heights: the 24 commonest short words, first choice right **99.6 to 100 %**, short-for-long **0.0 %** at every finger noise (aim 8 and 12 dp), portrait, landscape and the old geometry alike; frequency-weighted words 94.6 to 96.7 % first (a flat keyboard costs about one point). Geometry is not the cause.
 
 ### 2.2 What is left: state the keyboard learned
-RESULTS-PLACEHOLDER
+`LearnedShortLongLabTest` (REAL_TABLET=1; LAB_VARIANTS / LAB_GEOS pick the runs): a simulated person (own habit per word, finger scatter 10 dp absolute) glides 3 000 everyday words on the tablet geometry with the real row heights; the keyboard learns as in the AX1 lab (words, pairs, corrections, glide shapes, thumb habit) and EVERY glide is also decoded by a decoder that learned nothing ("plain"). First-choice rate learned / plain, all words and the short ones (4 letters or fewer), and how often a short word came out 2+ letters longer:
+
+| geometry, finger habit | variant | all | short words | short->long |
+| :- | :- | :- | :- | :- |
+| portrait 564x272, habit 0 | all learning on (what ships) | 95.7 / 96.9 | 96.3 / 98.1 | 2 / 0 |
+| | no glide-shape memory | **97.3** / 96.9 | 98.0 / 98.1 | 2 / 0 |
+| | no personal words/pairs/corrections | 97.0 / 96.9 | 98.2 / 98.1 | 0 / 0 |
+| | no thumb habit / no touch plane / no correction pairs | 95.6 / 95.5 / 95.7 | 96.2 / 96.0 / 96.3 | 2 / 2 / 2 |
+| landscape 916x272, habit 0 | all on | 94.7 / 96.6 | 95.8 / 97.9 | 2 / 1 |
+| | no glide-shape memory | **96.8** / 96.6 | 97.7 / 97.9 | 5 / 1 |
+| portrait, habit 10 dp | all on | 94.4 / 95.3 | 95.1 / 96.7 | 5 / 2 |
+| | no glide-shape memory | 94.7 / 95.3 | 95.2 / 96.7 | **27** / 2 |
+| landscape, habit 10 dp | all on | 94.6 / 95.8 | 95.4 / 97.9 | 4 / 2 |
+| | no glide-shape memory | 96.0 / 95.8 | 97.0 / 97.9 | **18** / 2 |
+| phone 292x161, habit 0 / 10 | all on (first run, per stretch of 1 000 glides) | 88.8-90.2 vs 87.4-89.3 / 78-81 vs 76-78 | | 1-9 / 1-11 |
+
+Reading:
+* On tablet-sized keys the keyboard's own learning makes the FIRST choice 1 to 2 points worse than a keyboard that learned nothing, for a clean finger and (a little less) for one with habits; on a phone-sized keyboard it helps when the hand has habits (+2 to +4 points) and is neutral otherwise. Short words lose more than the rest (-1.8 / -2.1 points in the clean case).
+* The part that hurts on big keys is the glide-shape memory (`patGain` 2.5, up to +4.5 cost units, for any word whose path fit is within `patMaxGap` 2.2 pitch squared per letter of the best). Words / pairs / corrections alone are neutral to slightly positive; shapes alone are neutral; the two together over-count.
+* Why it grows with key size: the shape lift and the "path fit may be this much worse" gaps are fixed numbers in key-pitch units tuned on a phone, where finger scatter is 0.3 to 0.4 pitch and the margins between look-alike words are small. On a 55 to 90 dp pitch the same finger scatters 0.1 to 0.2 pitch, the right word fits almost perfectly and a wrong look-alike is clearly worse; the same fixed lift can then overrule a clean path (the -> there, and -> access).
+* The glide-shape memory also keeps the personal word counts from running away: without it the short words that came out longer rose from 5 to 27 (portrait) and 4 to 18 (landscape) of about 1 000 short glides, with it they stay near the plain decoder. So switching it off is not the answer; its reach has to follow the key size.
+
+SECOND-SWEEP-PLACEHOLDER
+
