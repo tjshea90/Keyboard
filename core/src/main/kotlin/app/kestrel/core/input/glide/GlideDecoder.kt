@@ -131,9 +131,25 @@ class GlideParams(
          * (the donors' keys were 32-45 dp apart). A finger's scatter is roughly the same size in dp whatever the keyboard, so on big keys (a tablet: 60+ dp apart) it is a SMALLER share of a key and the straighter-line price fits better:
          * the price therefore slides from 1.0 at [SMALL_PITCH_DP] or less to the earlier 2.0 at [LARGE_PITCH_DP] or more, and the price of a letter the path never came near ([visitCap]) from 5 to the earlier 3 (+0.2 to +0.3 points on both slices). The tablet side is NOT validated on real swipes (there are none); it keeps the values the tests were tuned on.
          */
+        /**
+         * R28a (2026-11-20): how far what the keyboard LEARNED (a remembered glide shape, a correction made before) may lift a word whose path fits worse than the best one's, as a share of the phone-tuned reach
+         * ([GlideParams.patMaxGap], [GlideParams.confMaxGap]). The gaps are in pitch squared per letter and were tuned where the finger scatters 0.3 to 0.4 pitch. On bigger keys the same finger scatters less than 0.2 pitch, the
+         * right word fits almost exactly, a look-alike is clearly worse, and the phone-sized reach let a learned lift overrule a clean path ("the" -> "there", "and" -> "access"). In a simulated long stretch of use on the
+         * tablet's real key sizes (research/R28-short-vs-long-and-glide-start.md) this made the first choice 1 to 2 points worse than a keyboard that had learned nothing; the reach shrinking with the square of the pitch
+         * (the finger's scatter in pitches) and halving again from [SMALL_PITCH_DP] to [LARGE_PITCH_DP] brings it level with or above it. 1 up to [SMALL_PITCH_DP] (every phone): unchanged.
+         */
+        fun learnedReach(pitchDp: Float): Float {
+            if (pitchDp <= SMALL_PITCH_DP) return 1f
+            val r = SMALL_PITCH_DP / pitchDp
+            val t = ((pitchDp - SMALL_PITCH_DP) / (LARGE_PITCH_DP - SMALL_PITCH_DP)).coerceIn(0f, 1f)
+            return r * r * (1f - 0.5f * t)
+        }
+
         fun forPitchDp(pitchDp: Float, touchField: Boolean = true): GlideParams {
             val t = ((pitchDp - SMALL_PITCH_DP) / (LARGE_PITCH_DP - SMALL_PITCH_DP)).coerceIn(0f, 1f)
-            return GlideParams(shapeW = 1.0f + t, visitCap = 5.0f - 2.0f * t, lmMin = 0.45f, touchField = touchField)      // (lmMin: the language keeps at least this weight on a CLEAN glide, where look-alike words fit equally well; +0.1 / +0.2 points first choice on both slices, fewer short-for-long slips)
+            val d = GlideParams()
+            val g = learnedReach(pitchDp)
+            return GlideParams(shapeW = 1.0f + t, visitCap = 5.0f - 2.0f * t, lmMin = 0.45f, touchField = touchField, patMaxGap = d.patMaxGap * g, confMaxGap = d.confMaxGap * g)      // (lmMin: the language keeps at least this weight on a CLEAN glide, where look-alike words fit equally well; +0.1 / +0.2 points first choice on both slices, fewer short-for-long slips)
         }
     }
 }
