@@ -286,6 +286,8 @@ class KeysViewTest {
         override fun onCandidate(word: String) { cands.add(word) }
         override fun onCandidateLong(word: String) { longs.add(word) }
         override fun onRemoveWord(word: String, yes: Boolean) { removes.add(word to yes) }
+        val notes = ArrayList<IntArray>()
+        override fun onTouchNote(kind: Int, a: Int, b: Int, c: Int) { notes.add(intArrayOf(kind, a, b, c)) }
     }
     private fun glideView(): Pair<KeysView, Tools> { val (v, _) = view(); val t = Tools(); v.listener = t; v.setGlideEnabled(true); v.measure(View.MeasureSpec.makeMeasureSpec((564 * dp).toInt(), View.MeasureSpec.EXACTLY), View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED)); v.layout(0, 0, v.measuredWidth, v.measuredHeight); return v to t }
 
@@ -350,6 +352,25 @@ class KeysViewTest {
         touch(v, MotionEvent.ACTION_POINTER_UP, 0, Triple(0, dx, dy), Triple(1, gx, gy))
         touch(v, MotionEvent.ACTION_UP, 0, Triple(1, gx, gy))
         assertEquals(1, t.glides.size); assertTrue("a resting finger is not a key press", t.keys.isEmpty())
+    }
+
+    @Test fun theViewReportsOnlyNumbersAboutAGlideStrokeAndAHandOver() {
+        val (v, t) = glideView(); val (ax, ay) = at(v, "a"); val (dx, dy) = at(v, "d"); val (hx, hy) = at(v, "h"); val (kx, ky) = at(v, "k")
+        touch(v, MotionEvent.ACTION_DOWN, 0, Triple(0, ax, ay))
+        touch(v, MotionEvent.ACTION_MOVE, 0, Triple(0, (ax + dx) / 2f, ay)); touch(v, MotionEvent.ACTION_MOVE, 0, Triple(0, dx, dy))
+        touch(v, MotionEvent.ACTION_POINTER_DOWN, 1, Triple(0, dx, dy), Triple(1, hx, hy))
+        touch(v, MotionEvent.ACTION_MOVE, 0, Triple(0, dx, dy), Triple(1, (hx + kx) / 2f, hy))
+        touch(v, MotionEvent.ACTION_POINTER_UP, 0, Triple(0, dx, dy), Triple(1, (hx + kx) / 2f, hy))
+        touch(v, MotionEvent.ACTION_UP, 0, Triple(1, kx, ky))
+        val kinds = t.notes.map { it[0] }
+        assertEquals("two strokes were reported", 2, kinds.count { it == KeysView.NOTE_STROKE }); assertEquals(1, kinds.count { it == KeysView.NOTE_TAKEOVER })
+        assertTrue("a stroke has touch points", t.notes.first { it[0] == KeysView.NOTE_STROKE }[1] >= 3)
+    }
+
+    @Test fun aStrokeThatBeginsOnThePaddingAboveTheTopRowIsCounted() {
+        val (v, t) = glideView(); val (tx, ty) = at(v, "t"); val (ex, ey) = at(v, "e")
+        down(v, tx, ty - v.glideKeys()!!.keyH / 2f - 3 * dp); move(v, ex, ey); up(v, ex, ey)
+        assertEquals(1, t.notes.count { it[0] == KeysView.NOTE_PADDING_START })
     }
 
     @Test fun blankKeysStillTypeTheirLetters() {

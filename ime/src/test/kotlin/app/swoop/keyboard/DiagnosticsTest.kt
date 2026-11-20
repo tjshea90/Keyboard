@@ -29,6 +29,15 @@ class DiagnosticsTest {
         assertTrue(t.contains("glide engine ready: true"))
     }
 
+    @Test fun theTouchLineHasOnlyNumbersAndAppearsOnlyAfterAStroke() {
+        val s = InputStats()
+        assertFalse(Diagnostics.text(app, s, "", false).contains("touch:"))
+        s.strokes = 4; s.strokePoints = 120; s.strokeMs = 1600; s.firstMoveMs = 80; s.firstMoveMax = 40; s.takeovers = 1; s.restingIgnored = 2; s.paddingStarts = 3
+        val t = Diagnostics.text(app, s, "", false)
+        assertTrue(t, t.contains("touch: 4 glide strokes, avg 30 touch points in 400 ms"))
+        assertTrue(t.contains("second thumb took over 1 times") && t.contains("3 strokes began on the padding"))
+    }
+
     @Test fun beforeAnyGlideItSaysSo() { assertTrue(Diagnostics.text(app, InputStats(), "", false).contains("glide: no glide yet")) }
 
     @Test fun nothingTypedCanReachTheText() {
