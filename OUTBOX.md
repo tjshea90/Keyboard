@@ -1509,3 +1509,7 @@
 >
 > Nothing has been run on your tablet.
 <!-- sha:67abaf1d9617 -->
+
+## 2026-11-20T07:29:04Z
+> Both background runs are in flight (the second simulation sweep and a timer). I'll pick up when the results land.
+<!-- sha:d9dea452e18f -->
