@@ -1517,3 +1517,7 @@
 ## 2026-11-20T07:56:26Z
 > Still building on GitHub. Nothing else to do until it finishes.
 <!-- sha:5231c9cdfa95 -->
+
+## 2026-11-20T08:00:33Z
+> The first job (`check`) passed and `test-jvm` is running. The build, signing and release steps follow. I'll record the release once the run is green.
+<!-- sha:12fb965f00d4 -->
