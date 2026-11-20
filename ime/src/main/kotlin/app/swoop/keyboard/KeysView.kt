@@ -155,6 +155,10 @@ class KeysView(context: Context) : View(context) {
     private var spaceIsDown = false; private var spaceHeld = false
     private var spaceDown = false; private var sliding = false; private var slideStartX = 0f; private var slideAnchorX = 0f
     private var downX = 0f; private var downY = 0f
+    // R28b: a second thumb that lands while the first one is still gliding (two-thumb typing: the next word's thumb is down before the last word's thumb is up). Its touch is recorded from the first moment and
+    // takes over when the first thumb lifts, instead of being thrown away.
+    private var waitId = -1
+    private var wtx = FloatArray(64); private var wty = FloatArray(64); private var wtn = 0
 
     // ---- glide (KB-103)
     private var glideEnabled = false
@@ -247,7 +251,7 @@ class KeysView(context: Context) : View(context) {
     fun reset() {
         handler.removeCallbacks(repeat); handler.removeCallbacks(unlight); handler.removeCallbacks(hold); handler.removeCallbacks(spaceHold); handler.removeCallbacks(stripHold); toolDown = -1; stripLong = false; confirmWord = null; popup = null; spaceIsDown = false; spaceHeld = false; handler.removeCallbacks(noWordOff); removeCallbacks(fadeStep)
         armed = false; gliding = false; gn = 0; fadeStart = 0L; cands = emptyList(); clipChip = false; noWordUntil = 0L; stripDown = -1
-        activeId = -1; down = null; pressedLetter = null; litKey = null; holdAlt = null; bubbleKey = null; spaceDown = false; sliding = false
+        activeId = -1; waitId = -1; wtn = 0; down = null; pressedLetter = null; litKey = null; holdAlt = null; bubbleKey = null; spaceDown = false; sliding = false
         invalidate()
     }
 
@@ -473,8 +477,10 @@ class KeysView(context: Context) : View(context) {
         if (spread()) { val w = (width - 2 * pad) / toolCount().toFloat(); return RectF(pad + i * w, pad, pad + (i + 1) * w, stripPx() - gap) }
         val w = dp(TOOL_W_DP); return RectF(pad + i * w, pad, pad + (i + 1) * w - gap, stripPx() - gap)
     }
+    /** R28b: the strip ends where the keys begin. The 5 dp of padding above the top row used to belong to the strip, so a glide that started on the top edge of a top-row key (t of "the", o, p, e ...) hit nothing and never started. */
+    private fun inStrip(y: Float) = y < stripPx()
     private fun toolAt(x: Float, y: Float): Int {
-        if (y >= stripPx() + pad) return -1
+        if (!inStrip(y)) return -1
         for (i in 0 until toolCount()) { val r = toolBox(i); if (x >= r.left - gap / 2 && x < r.right + gap / 2) return i }
         return -1
     }
@@ -488,7 +494,7 @@ class KeysView(context: Context) : View(context) {
         return List(n) { i -> RectF(left + i * (cw + gap), pad, left + i * (cw + gap) + cw, h - gap) }
     }
     private fun chipAt(x: Float, y: Float): Int {
-        if (y >= stripPx() + pad || chips().isEmpty()) return -1
+        if (!inStrip(y) || chips().isEmpty()) return -1
         val list = chips()
         for ((i, r) in chipBoxes().withIndex()) if (x >= r.left - gap / 2 && x < r.right + gap / 2) return if (list[i].isEmpty()) -1 else i       // (a box not filled yet takes no touch)
         return -1
@@ -719,26 +725,59 @@ class KeysView(context: Context) : View(context) {
         when (e.actionMasked) {
             MotionEvent.ACTION_DOWN -> { requestUnbufferedDispatch(e); activeId = e.getPointerId(0); pressDown(e.getX(0), e.getY(0)) }   // unbuffered: every touch sample at once, not batched to the frame (a fast trail)
             MotionEvent.ACTION_POINTER_DOWN -> {
-                if (gliding) return true                          // a glide in progress is never cut short by a second touch (a resting palm)
+                if (gliding) {                                    // a glide in progress is never cut short by a second touch (a resting palm); the new finger is only recorded, and takes over if it moves (R28b)
+                    if (waitId < 0) { val i = e.actionIndex; waitId = e.getPointerId(i); wtn = 0; addWait(e.getX(i), e.getY(i)) }
+                    return true
+                }
                 // the second thumb: the letter the first one holds is typed NOW (in the order they were pressed), then the new finger is the tracked one
                 finishHeldLetter()
                 val i = e.actionIndex; activeId = e.getPointerId(i); pressDown(e.getX(i), e.getY(i))
             }
-            MotionEvent.ACTION_MOVE -> { val i = e.findPointerIndex(activeId); if (i >= 0) pressMove(e, i) }
+            MotionEvent.ACTION_MOVE -> {
+                val i = e.findPointerIndex(activeId); if (i >= 0) pressMove(e, i)
+                if (waitId >= 0) { val j = e.findPointerIndex(waitId); if (j >= 0) { for (h in 0 until e.historySize) addWait(e.getHistoricalX(j, h), e.getHistoricalY(j, h)); addWait(e.getX(j), e.getY(j)) } }
+            }
             MotionEvent.ACTION_POINTER_UP -> {
-                val i = e.actionIndex
-                if (e.getPointerId(i) == activeId) { pressUp(e, i); activeId = -1 }
+                val i = e.actionIndex; val id = e.getPointerId(i)
+                if (id == activeId) { pressUp(e, i); activeId = -1; takeOverWaiting(e) }
+                else if (id == waitId) { waitId = -1; wtn = 0 }          // the second finger lifted first: a tap or a palm during the glide, typed nothing (as before)
             }
             MotionEvent.ACTION_UP -> { if (activeId >= 0) { val i = e.findPointerIndex(activeId).let { if (it < 0) 0 else it }; pressUp(e, i) }; activeId = -1 }
-            MotionEvent.ACTION_CANCEL -> { pressCancel(); activeId = -1 }
+            MotionEvent.ACTION_CANCEL -> { pressCancel(); activeId = -1; waitId = -1; wtn = 0 }
         }
         return true
     }
 
-    private fun pressDown(x: Float, y: Float) {
+    private fun addWait(x: Float, y: Float) {
+        if (wtn == wtx.size) { if (wtn >= 1024) return; wtx = wtx.copyOf(wtn * 2); wty = wty.copyOf(wtn * 2) }
+        wtx[wtn] = x; wty[wtn] = y; wtn++
+    }
+
+    /**
+     * R28b: the first thumb lifted while a second one is still down. When the second one has moved (it is drawing the next word), its recorded path becomes the glide in progress, as if it had been tracked since
+     * it landed. A finger that stayed put (a palm, a thumb resting on the screen) types nothing, as before.
+     */
+    private fun takeOverWaiting(e: MotionEvent) {
+        val id = waitId; val n = wtn; waitId = -1; wtn = 0
+        if (id < 0 || n == 0 || !glideEnabled || page != Page.LETTERS) return
+        val j = e.findPointerIndex(id); if (j < 0) return
+        val lim = dp(GLIDE_START_DP) * dp(GLIDE_START_DP)
+        var moved = false
+        for (k in 1 until n) { val dx = wtx[k] - wtx[0]; val dy = wty[k] - wty[0]; if (dx * dx + dy * dy > lim) { moved = true; break } }
+        if (!moved) return
+        if (!isLetter(keyAt(wtx[0], wty[0]))) return
+        activeId = id
+        pressDown(wtx[0], wty[0], quiet = true)
+        if (!armed) { activeId = -1; return }
+        for (k in 1 until n) addPoint(wtx[k], wty[k])
+        addPoint(e.getX(j), e.getY(j))
+        beginGlide(); dyn(); maybePreview()
+    }
+
+    private fun pressDown(x: Float, y: Float, quiet: Boolean = false) {
         handler.removeCallbacks(repeat); clearHold()
         armed = false; gliding = false; stripDown = -1
-        if (y < stripPx() + pad) {                                    // the strip was touched: a toolbar icon or a guess
+        if (inStrip(y)) {                                             // the strip was touched: a toolbar icon or a guess
             toolDown = toolAt(x, y); stripDown = if (toolDown >= 0) -1 else chipAt(x, y); stripLong = false
             if (toolDown >= 0) haptic()
             if (stripDown >= 0 && confirmWord == null) handler.postDelayed(stripHold, STRIP_HOLD_MS)
@@ -751,7 +790,7 @@ class KeysView(context: Context) : View(context) {
         if (isBubbleKey(k)) { bubbleKey = k; bubbleText = k!!.label }
         spaceIsDown = (k?.key as? Key.Ch)?.text == " "; spaceHeld = false
         if (spaceIsDown) handler.postDelayed(spaceHold, SPACE_HOLD_MS)
-        if (k != null) { haptic(); click(); if (altOf(k) != null || isSymbolKey(k)) handler.postDelayed(hold, HOLD_MS) }
+        if (k != null) { if (!quiet) { haptic(); click() }; if (altOf(k) != null || isSymbolKey(k)) handler.postDelayed(hold, HOLD_MS) }
         if (k?.key === Key.Backspace) { listener?.onKey(Key.Backspace); repeatStartAt = SystemClock.uptimeMillis(); handler.postDelayed(repeat, BackspaceRepeat.FIRST_MS) }
         downX = x; downY = y
         if (glideEnabled && page == Page.LETTERS && pressedLetter != null) { armed = true; glideDown = k; addPoint(x, y) }
@@ -838,7 +877,11 @@ class KeysView(context: Context) : View(context) {
         gx[gn] = x; gy[gn] = y; gn++
     }
     private fun pitch(): Float = if (rects.isNotEmpty() && rects[0].size > 1) rects[0][1].centerX - rects[0][0].centerX else dp(29f)
-    private fun movedFar(x: Float, y: Float): Boolean { val dx = x - downX; val dy = y - downY; return dx * dx + dy * dy > dp(GLIDE_START_DP) * dp(GLIDE_START_DP) }
+    private fun movedFar(x: Float, y: Float): Boolean {
+        val dx = x - downX; val dy = y - downY
+        val lim = dp(if (holdAlt != null) GLIDE_START_HELD_DP else GLIDE_START_DP)      // (a long press that already shows its digit is not turned into a glide by a thumb that rolls a little)
+        return dx * dx + dy * dy > lim * lim
+    }
     private fun pathPitches(): Float { var len = 0f; for (i in 1 until gn) len += Math.hypot((gx[i] - gx[i - 1]).toDouble(), (gy[i] - gy[i - 1]).toDouble()).toFloat(); return len / pitch() }
 
     /**
@@ -865,6 +908,7 @@ class KeysView(context: Context) : View(context) {
     private fun maybePreview() {
         val now = SystemClock.uptimeMillis()
         if (now - lastPreviewAt < PREVIEW_MS || gn - lastPreviewN < PREVIEW_POINTS) return
+        if (pathPitches() < MIN_GLIDE_PITCHES) return                      // R28b: a glide now starts at 2.5 dp; a press that only wobbled is not asked about (it would clear the strip's guesses)
         lastPreviewAt = now; lastPreviewN = gn
         listener?.onGlideMove(gx, gy, gn)
     }
@@ -941,8 +985,10 @@ class KeysView(context: Context) : View(context) {
         const val TOOL_SETTINGS = 1
         const val TOOL_CLIPBOARD = 2
         const val TOOL_TRANSLATE = 3
-        /** A finger that has moved this far (dp) from where it went down has started a glide (a short drag that ends up under 1.2 key widths is still a tap). */
-        const val GLIDE_START_DP = 5f
+        /** A finger that has moved this far (dp) from where it went down has started a glide (a path that never leaves its own key and stays short is still a tap, see [stayedOnKey]). R28b: 5 -> 2.5 (owner: "as soon as I start moving my finger it recognizes that I'm glide typing"). */
+        const val GLIDE_START_DP = 2.5f
+        /** ... but a long press that already shows its digit needs this much, so the digit is not lost to a rolling thumb. */
+        const val GLIDE_START_HELD_DP = 8f
         /** A path shorter than this (in key pitches) is a tap that slid a little, not a glide. */
         const val MIN_GLIDE_PITCHES = 0.45f
         /** A path that never strays further than this (key widths) outside the key it started on is a tap. */
