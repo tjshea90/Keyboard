@@ -301,6 +301,57 @@ class KeysViewTest {
         assertTrue(t.glides.isEmpty()); assertEquals(1, t.keys.size)
     }
 
+    // ------------------------------------------------------------------ R28b: a glide must start, every time
+
+    /** Any number of fingers in one event: (pointer id, x, y) each; [idx] is the index of the finger that went down / up. */
+    private fun touch(v: View, action: Int, idx: Int, vararg f: Triple<Int, Float, Float>): Boolean {
+        val props = Array(f.size) { MotionEvent.PointerProperties().apply { id = f[it].first; toolType = MotionEvent.TOOL_TYPE_FINGER } }
+        val coords = Array(f.size) { MotionEvent.PointerCoords().apply { x = f[it].second; y = f[it].third } }
+        val t = SystemClock.uptimeMillis()
+        return v.dispatchTouchEvent(MotionEvent.obtain(t, t, action or (idx shl MotionEvent.ACTION_POINTER_INDEX_SHIFT), f.size, props, coords, 0, 0, 1f, 1f, 0, 0, 0, 0))
+    }
+
+    @Test fun theGlideStartsTheMomentTheFingerReallyMovesButATremorIsStillAPress() {
+        val (v, t) = glideView(); val (gx, gy) = at(v, "g")
+        down(v, gx, gy); assertFalse(v.isGliding)
+        move(v, gx + 1 * dp, gy); assertFalse("1 dp is a tremor, not a glide", v.isGliding)
+        move(v, gx + 3 * dp, gy); assertTrue("3 dp is already a glide (it was 5)", v.isGliding)
+        move(v, gx, gy); up(v, gx, gy)                                              // ...and a finger that came back to its key is still just that letter
+        assertTrue("no glide word asked for", t.glides.isEmpty()); assertEquals("the key it went down on, once", 1, t.keys.size)
+    }
+
+    @Test fun aGlideThatStartsJustAboveTheTopRowIsAGlideAndNotAPressOnTheStrip() {
+        val (v, t) = glideView(); val (tx, ty) = at(v, "t"); val (hx, hy) = at(v, "h"); val (ex, ey) = at(v, "e")
+        val keyTop = ty - v.glideKeys()!!.keyH / 2f
+        down(v, tx, keyTop - 3 * dp)                                                // 3 dp above the key: in the 5 dp of padding between the strip and the keys
+        move(v, (tx + hx) / 2f, (ty + hy) / 2f); move(v, hx, hy); move(v, (hx + ex) / 2f, (hy + ey) / 2f); move(v, ex, ey); up(v, ex, ey)
+        assertEquals("a glide of t-h-e, not a dead touch on the strip", 1, t.glides.size); assertTrue(t.tools.isEmpty() && t.keys.isEmpty() && t.cands.isEmpty())
+    }
+
+    @Test fun aSecondThumbThatLandsBeforeTheFirstGlideEndsGlidesToo() {
+        val (v, t) = glideView(); val (ax, ay) = at(v, "a"); val (dx, dy) = at(v, "d"); val (hx, hy) = at(v, "h"); val (kx, ky) = at(v, "k")
+        val mid = (hx + kx) / 2f
+        touch(v, MotionEvent.ACTION_DOWN, 0, Triple(0, ax, ay))
+        touch(v, MotionEvent.ACTION_MOVE, 0, Triple(0, (ax + dx) / 2f, ay)); touch(v, MotionEvent.ACTION_MOVE, 0, Triple(0, dx, dy))
+        touch(v, MotionEvent.ACTION_POINTER_DOWN, 1, Triple(0, dx, dy), Triple(1, hx, hy))                    // the next word's thumb is down before the last word's thumb is up
+        touch(v, MotionEvent.ACTION_MOVE, 0, Triple(0, dx, dy), Triple(1, mid, hy))
+        touch(v, MotionEvent.ACTION_POINTER_UP, 0, Triple(0, dx, dy), Triple(1, mid, hy))
+        assertEquals("the first glide ends", 1, t.glides.size)
+        touch(v, MotionEvent.ACTION_MOVE, 0, Triple(1, kx, ky))
+        touch(v, MotionEvent.ACTION_UP, 0, Triple(1, kx, ky))
+        assertEquals("the second thumb's glide is not lost", 2, t.glides.size); assertTrue("no stray letter", t.keys.isEmpty())
+    }
+
+    @Test fun aSecondFingerThatOnlyRestsWhileTheFirstGlidesTypesNothing() {
+        val (v, t) = glideView(); val (ax, ay) = at(v, "a"); val (dx, dy) = at(v, "d"); val (gx, gy) = at(v, "g")
+        touch(v, MotionEvent.ACTION_DOWN, 0, Triple(0, ax, ay))
+        touch(v, MotionEvent.ACTION_MOVE, 0, Triple(0, (ax + dx) / 2f, ay)); touch(v, MotionEvent.ACTION_MOVE, 0, Triple(0, dx, dy))
+        touch(v, MotionEvent.ACTION_POINTER_DOWN, 1, Triple(0, dx, dy), Triple(1, gx, gy))                    // a resting palm
+        touch(v, MotionEvent.ACTION_POINTER_UP, 0, Triple(0, dx, dy), Triple(1, gx, gy))
+        touch(v, MotionEvent.ACTION_UP, 0, Triple(1, gx, gy))
+        assertEquals(1, t.glides.size); assertTrue("a resting finger is not a key press", t.keys.isEmpty())
+    }
+
     @Test fun blankKeysStillTypeTheirLetters() {
         val (v, t) = glideView(); v.hideLetters = true
         val (x, y) = at(v, "q"); tap(v, x to y); assertEquals(listOf("q"), t.keys.map { (it as app.kestrel.core.input.Key.Ch).text })
