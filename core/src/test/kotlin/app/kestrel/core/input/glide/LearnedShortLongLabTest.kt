@@ -24,7 +24,12 @@ class LearnedShortLongLabTest {
             if (only != null && only.none { name.contains(it) }) continue
             val keys = GlideEval.keysFor(wh.first, wh.second)
             val fp = GlideParams.forPitchDp(keys.pitch)
-            val params = when (variant) { "nopat" -> GlideParams(shapeW = fp.shapeW, visitCap = fp.visitCap, lmMin = fp.lmMin, patGain = 0f); "noconf" -> GlideParams(shapeW = fp.shapeW, visitCap = fp.visitCap, lmMin = fp.lmMin, confGain = 0f); "nofield" -> GlideParams(shapeW = fp.shapeW, visitCap = fp.visitCap, lmMin = fp.lmMin, touchField = false); "pure" -> GlideParams(shapeW = fp.shapeW, visitCap = fp.visitCap, lmMin = fp.lmMin, patGain = 0f, confGain = 0f, touchField = false); else -> fp }
+            val sc = { x: Float -> val r = 45f / Math.max(keys.pitch, 45f); x * r * r }
+            fun ov(patGain: Float = 2.5f, patCap: Float = 4.5f, patMax: Float = 2.2f, confMax: Float = 0.9f) = GlideParams(shapeW = fp.shapeW, visitCap = fp.visitCap, lmMin = fp.lmMin, patGain = patGain, patCap = patCap, patMaxGap = patMax, confMaxGap = confMax)
+            val params = when (variant) {
+                "gap" -> ov(patMax = sc(2.2f), confMax = sc(0.9f)); "pg1" -> ov(patGain = 1.25f, patCap = 2.5f); "gap+pg1" -> ov(patGain = 1.25f, patCap = 2.5f, patMax = sc(2.2f), confMax = sc(0.9f))
+                "gap2" -> ov(patMax = sc(2.2f) * 0.5f, confMax = sc(0.9f) * 0.5f); "cap2" -> ov(patCap = 2.0f)
+ "nopat" -> GlideParams(shapeW = fp.shapeW, visitCap = fp.visitCap, lmMin = fp.lmMin, patGain = 0f); "noconf" -> GlideParams(shapeW = fp.shapeW, visitCap = fp.visitCap, lmMin = fp.lmMin, confGain = 0f); "nofield" -> GlideParams(shapeW = fp.shapeW, visitCap = fp.visitCap, lmMin = fp.lmMin, touchField = false); "pure" -> GlideParams(shapeW = fp.shapeW, visitCap = fp.visitCap, lmMin = fp.lmMin, patGain = 0f, confGain = 0f, touchField = false); else -> fp }
             val noise = SimNoise.aim(aim)
             val seed = 3L
             val rnd = Random(seed * 31 + 7)
