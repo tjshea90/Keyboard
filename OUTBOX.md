@@ -1529,3 +1529,66 @@
 ## 2026-11-20T08:05:39Z
 > Waiting on the build job.
 <!-- sha:2f9e29d109c7 -->
+
+## 2026-11-20T08:08:33Z
+> Swoop 0.7.0-alpha8 is built and published, with tests green, but none of it has been run on your tablet or an emulator.
+>
+> Install the signed APK from the Release:
+>
+> https://github.com/tjshea90/Keyboard/releases/tag/swoop-v0.7.0-alpha8
+>
+> It installs over your current Swoop.
+>
+> ## "Sometimes the glide doesn't properly start"
+> I found three real causes, and fixed all of them:
+>
+> 1. **A touch just above the top row did nothing.** The 5 dp of padding between the suggestion strip and the top key row counted as the strip. A glide starting on the top edge of t, e, o, p and similar keys hit nothing and never started. "the" starts with t, so it was affected. That padding now belongs to the keys.
+> 2. **A second thumb was dropped.** If the thumb for the next word landed before the first thumb had lifted, its glide was lost completely. It is now recorded and takes over when the first thumb lifts. A finger that only rests on the screen still types nothing.
+> 3. **The start threshold was 5 dp.** It is now 2.5 dp, so the trail and "this is a glide" begin as soon as the finger moves. A tap that wobbles still types its letter once. Each fix has a test, and three of those tests failed before the fix.
+>
+> ## "the → there, and → access"
+> I could not reproduce this, so I can't promise it is gone.
+>
+> - **Real phone swipes:** only 0.8% of short words came out as long ones. "the" is missed 1% of the time and "and" 4%.
+> - **Simulated finger on your tablet's real key sizes, portrait and landscape:** 0% short-for-long slips. The earlier study used keys that were too tall for the tablet.
+>
+> What the simulation did show is that the keyboard's learned memory (remembered glide shapes and corrections) was tuned for phone keys. On tablet keys it made the first guess 1–2 points worse than a keyboard that had learned nothing, because a learned boost could overrule a clean path. I made the boost reach shrink as keys get bigger.
+>
+> | Simulated use | Before | After | No learning |
+> | :- | :- | :- | :- |
+> | Tablet landscape | 94.7% | 96.9% | 96.6% |
+> | Tablet portrait | 95.7% | 96.5% | 96.9% |
+>
+> Phone-sized keys are unchanged.
+>
+> Diagnostics now has a `touch:` line with counts and timings only, no text. If the slips continue, paste Diagnostics, including that line and the "learning changed the first guess" line. You can also try Settings > Forget where my thumb lands.
+>
+> ## Open items
+> 1. Install alpha8 on the tablet and phone, use it for a day, then tell me whether glides now start reliably and whether "the" and "and" still slip.
+> 2. If slips continue, paste Diagnostics as above.
+> 3. The Kestrel browser copy of the keyboard is not synced to these changes, because that repository isn't available in this session. Tell me when you want it synced.
+>
+> The full write-up is in `research/R28-short-vs-long-and-glide-start.md`, and the state is checkpointed and pushed to `ccr-9df989c8-ryoul9` for a cold resume.
+>
+> 📌 **Chat checkpoint: 🟡 Yellow**
+>
+> **Goal:** Fix Swoop's short-glide-word misreads (the→there, and→access) and glides th
+> [... 621 characters omitted ...]
+> , `Diagnostics.kt`, `KeyboardPresenter.kt`, `research/R28-*.md`. Labs are `FlatKeysStudyTest` and `LearnedShortLongLabTest` (`REAL_TABLET=1`).
+>
+> **Done so far:**
+> - R28a and R28b are ticked in `TASKS.md`.
+> - Core and ime tests plus lint are green.
+> - Release recorded in `BUILDLOG.md`.
+>
+> **Open / next steps:**
+> 1. The owner tests alpha8 and reports Diagnostics.
+> 2. Kestrel sync later, when the Browser repo is available.
+>
+> **Rules to remember:** Plain words; state honestly what was not run on the tablet; the repo is public, so no secrets or personal data; never ship a tag twice.
+>
+> ⚠️ **Health:** Long session with many large outputs, but nothing is lost; everything is pushed.
+>
+> 💡 This chat is getting long. Consider `/amhandoff` at the next good stopping point.
+> 💡 The code word is off in this chat. Type `/amcodeword` and I'll start every reply with 'Yes Boss!', so you'll notice if I start losing track.
+<!-- sha:761ee11f22c0 -->
