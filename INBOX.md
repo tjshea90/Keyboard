@@ -427,3 +427,8 @@ The keyboard has a hard time differentiating from small and large words. Sometim
 ```
 Finish research, then build and release all logical fixes improvements and features 
 ```
+
+## 2026-11-20T06:51:31Z
+```
+The keyboard frequently incorrectly predicts large words for short glide words. For example, a lot of times when i try to glide type simple words like the or and , it predicts there or access. Also, sometimes the glide doesn't properly start. Make the glide sensitivity higher, so that as soon as i start moving my finger it recognizes that I'm glide typing 
+```
