@@ -1496,3 +1496,16 @@
 > 3. Tell me if Fix the word before ever changes a word that was correct.
 > 4. Kestrel: you, or whichever session ships Kestrel, merges `ccr-2630e41a-palpyu`.
 <!-- sha:e0aa10168343 -->
+
+## 2026-11-20T07:26:12Z
+> Progress so far (not final):
+>
+> - **Glide start:** I found and fixed three real reasons a glide can fail to start.
+>   - The glide now starts at 2.5 dp of movement instead of 5.
+>   - A touch on the thin padding above the top key row used to hit the suggestion strip and did nothing. That affects words starting with t, e, o, p and similar keys.
+>   - A second finger landing while the first was still finishing a glide was thrown away. It now takes over when the first finger lifts.
+>   - Each of these has a test. Two of them failed before the fix.
+> - **Short words read as long ones:** a simulation on realistic tablet key sizes finds no such slips. A simulation of weeks of learning shows learned state can make decoding slightly worse on big keys. That run is still going, and I'll act on its result.
+>
+> Nothing has been run on your tablet.
+<!-- sha:67abaf1d9617 -->
