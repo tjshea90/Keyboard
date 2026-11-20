@@ -25,6 +25,7 @@ object Diagnostics {
             appendLine("glide engine ready: $glideReady")
             appendLine(if (glideLine.isBlank()) "glide: no glide yet" else "glide: $glideLine")
             appendLine("input: ${input.line()}")
+            input.touchLine().let { if (it.isNotEmpty()) appendLine("touch: $it") }
             val net = app.swoop.keyboard.translate.ConnectionLog.text()
             if (net.isNotEmpty()) { appendLine("translate connections (service, time, result; never words):"); appendLine(net) }
             append("(numbers only: this text never contains anything you typed)")

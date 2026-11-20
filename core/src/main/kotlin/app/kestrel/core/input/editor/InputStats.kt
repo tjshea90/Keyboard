@@ -16,5 +16,23 @@ class InputStats {
     /** Times an editor call failed or surprised the keyboard and it re-read the editor. */
     @JvmField var resyncs = 0
 
+    /** R28b: the touch stream of the glides (numbers only): how many strokes, their touch points and duration, the time to the first move, second-thumb hand-overs. Read by Diagnostics, so a report from the tablet says how its screen delivers touches. */
+    @JvmField var strokes = 0
+    @JvmField var strokePoints = 0L
+    @JvmField var strokeMs = 0L
+    @JvmField var firstMoveMs = 0L
+    @JvmField var firstMoveMax = 0
+    @JvmField var takeovers = 0
+    @JvmField var restingIgnored = 0
+    @JvmField var paddingStarts = 0
+
+    fun touchLine(): String {
+        if (strokes == 0 && takeovers == 0 && restingIgnored == 0 && paddingStarts == 0) return ""
+        val n = if (strokes == 0) 1 else strokes
+        val pts = strokePoints / n; val ms = strokeMs / n
+        val every = if (strokePoints > strokes) strokeMs.toFloat() / (strokePoints - strokes) else 0f
+        return "$strokes glide strokes, avg $pts touch points in $ms ms (a point every ${"%.1f".format(every)} ms), first move after avg ${firstMoveMs / n} ms (worst $firstMoveMax ms); second thumb took over $takeovers times, a resting second finger was ignored $restingIgnored times; $paddingStarts strokes began on the padding above the top row"
+    }
+
     fun line(): String = "keys $keys, backspaces $backspaces, enters $enters, glides $glides, picks $swaps, cursor moves $cursorMoves, foreign changes $foreignReports, resyncs $resyncs"
 }

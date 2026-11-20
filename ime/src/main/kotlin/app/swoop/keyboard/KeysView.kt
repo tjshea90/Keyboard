@@ -44,6 +44,8 @@ class KeysView(context: Context) : View(context) {
         fun onCursor(steps: Int)
         /** A glide is in progress: [count] touch points so far (the arrays are the view's own: copy what you need before returning). Called at most every [PREVIEW_MS] ms. */
         fun onGlideMove(xs: FloatArray, ys: FloatArray, count: Int) {}
+        /** R28b, Diagnostics only (numbers, never what was typed): [kind] one of the NOTE_ constants; for [NOTE_STROKE] a = touch points, b = milliseconds of the stroke, c = milliseconds until the finger first moved. */
+        fun onTouchNote(kind: Int, a: Int = 0, b: Int = 0, c: Int = 0) {}
         /** A glide ended: the whole path (copied). The strip stays empty until the owner calls [showCandidates]. */
         fun onGlideEnd(xs: FloatArray, ys: FloatArray, count: Int) {}
         /** A guess in the strip was tapped. */
@@ -155,6 +157,7 @@ class KeysView(context: Context) : View(context) {
     private var spaceIsDown = false; private var spaceHeld = false
     private var spaceDown = false; private var sliding = false; private var slideStartX = 0f; private var slideAnchorX = 0f
     private var downX = 0f; private var downY = 0f
+    private var downAt = 0L; private var firstMoveAt = 0L
     // R28b: a second thumb that lands while the first one is still gliding (two-thumb typing: the next word's thumb is down before the last word's thumb is up). Its touch is recorded from the first moment and
     // takes over when the first thumb lifts, instead of being thrown away.
     private var waitId = -1
@@ -740,7 +743,7 @@ class KeysView(context: Context) : View(context) {
             MotionEvent.ACTION_POINTER_UP -> {
                 val i = e.actionIndex; val id = e.getPointerId(i)
                 if (id == activeId) { pressUp(e, i); activeId = -1; takeOverWaiting(e) }
-                else if (id == waitId) { waitId = -1; wtn = 0 }          // the second finger lifted first: a tap or a palm during the glide, typed nothing (as before)
+                else if (id == waitId) { waitId = -1; wtn = 0; listener?.onTouchNote(NOTE_RESTING_IGNORED) }          // the second finger lifted first: a tap or a palm during the glide, typed nothing (as before)
             }
             MotionEvent.ACTION_UP -> { if (activeId >= 0) { val i = e.findPointerIndex(activeId).let { if (it < 0) 0 else it }; pressUp(e, i) }; activeId = -1 }
             MotionEvent.ACTION_CANCEL -> { pressCancel(); activeId = -1; waitId = -1; wtn = 0 }
@@ -764,14 +767,14 @@ class KeysView(context: Context) : View(context) {
         val lim = dp(GLIDE_START_DP) * dp(GLIDE_START_DP)
         var moved = false
         for (k in 1 until n) { val dx = wtx[k] - wtx[0]; val dy = wty[k] - wty[0]; if (dx * dx + dy * dy > lim) { moved = true; break } }
-        if (!moved) return
-        if (!isLetter(keyAt(wtx[0], wty[0]))) return
+        if (!moved || !isLetter(keyAt(wtx[0], wty[0]))) { listener?.onTouchNote(NOTE_RESTING_IGNORED); return }
         activeId = id
         pressDown(wtx[0], wty[0], quiet = true)
         if (!armed) { activeId = -1; return }
         for (k in 1 until n) addPoint(wtx[k], wty[k])
         addPoint(e.getX(j), e.getY(j))
         beginGlide(); dyn(); maybePreview()
+        listener?.onTouchNote(NOTE_TAKEOVER)
     }
 
     private fun pressDown(x: Float, y: Float, quiet: Boolean = false) {
@@ -792,8 +795,11 @@ class KeysView(context: Context) : View(context) {
         if (spaceIsDown) handler.postDelayed(spaceHold, SPACE_HOLD_MS)
         if (k != null) { if (!quiet) { haptic(); click() }; if (altOf(k) != null || isSymbolKey(k)) handler.postDelayed(hold, HOLD_MS) }
         if (k?.key === Key.Backspace) { listener?.onKey(Key.Backspace); repeatStartAt = SystemClock.uptimeMillis(); handler.postDelayed(repeat, BackspaceRepeat.FIRST_MS) }
-        downX = x; downY = y
-        if (glideEnabled && page == Page.LETTERS && pressedLetter != null) { armed = true; glideDown = k; addPoint(x, y) }
+        downX = x; downY = y; downAt = SystemClock.uptimeMillis(); firstMoveAt = 0L
+        if (glideEnabled && page == Page.LETTERS && pressedLetter != null) {
+            armed = true; glideDown = k; addPoint(x, y)
+            if (y < stripPx() + pad) listener?.onTouchNote(NOTE_PADDING_START)       // (a touch that used to hit the strip's padding and do nothing)
+        }
     }
 
     private fun pressMove(e: MotionEvent, i: Int) {
@@ -898,7 +904,7 @@ class KeysView(context: Context) : View(context) {
     }
 
     private fun beginGlide() {
-        lastPreviewAt = SystemClock.uptimeMillis(); lastPreviewN = 0
+        lastPreviewAt = SystemClock.uptimeMillis(); lastPreviewN = 0; firstMoveAt = lastPreviewAt
         clearHold(); gliding = true; down = null; pressedLetter = null
         handler.removeCallbacks(repeat); handler.removeCallbacks(unlight); litKey = null
         removeCallbacks(fadeStep); fadeStart = 0L
@@ -921,7 +927,9 @@ class KeysView(context: Context) : View(context) {
             if (k?.key != null) { light(k); emit(k.key!!) }
             return
         }
-        fadeStart = SystemClock.uptimeMillis(); postOnAnimation(fadeStep)
+        val now = SystemClock.uptimeMillis()
+        listener?.onTouchNote(NOTE_STROKE, gn, (now - downAt).toInt(), (firstMoveAt - downAt).toInt().coerceAtLeast(0))
+        fadeStart = now; postOnAnimation(fadeStep)
         listener?.onGlideEnd(gx.copyOf(gn), gy.copyOf(gn), gn)
     }
 
@@ -989,6 +997,10 @@ class KeysView(context: Context) : View(context) {
         const val GLIDE_START_DP = 2.5f
         /** ... but a long press that already shows its digit needs this much, so the digit is not lost to a rolling thumb. */
         const val GLIDE_START_HELD_DP = 8f
+        const val NOTE_STROKE = 1
+        const val NOTE_TAKEOVER = 2
+        const val NOTE_RESTING_IGNORED = 3
+        const val NOTE_PADDING_START = 4
         /** A path shorter than this (in key pitches) is a tap that slid a little, not a glide. */
         const val MIN_GLIDE_PITCHES = 0.45f
         /** A path that never strays further than this (key widths) outside the key it started on is a tap. */
