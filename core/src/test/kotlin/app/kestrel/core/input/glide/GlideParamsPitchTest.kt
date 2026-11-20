@@ -30,6 +30,19 @@ class GlideParamsPitchTest {
         assertEquals(d.lmA, a.lmA, 0f); assertEquals(d.endW, a.endW, 0f); assertEquals("R27a: a higher floor for the language weight", 0.45f, a.lmMin, 0f); assertEquals(0.45f, GlideParams.forPitchDp(96f).lmMin, 0f); assertEquals(d.lengthExpect, a.lengthExpect, 0f); assertEquals(d.samples, a.samples)
     }
 
+    @Test fun whatWasLearnedReachesLessOnBigKeys() {
+        val d = GlideParams()
+        for (phone in listOf(25f, 30f, GlideParams.SMALL_PITCH_DP)) { val a = GlideParams.forPitchDp(phone); assertEquals("a phone keyboard is unchanged", d.patMaxGap, a.patMaxGap, 0f); assertEquals(d.confMaxGap, a.confMaxGap, 0f) }
+        var last = 1f
+        var p = GlideParams.SMALL_PITCH_DP
+        while (p <= 120f) { val r = GlideParams.learnedReach(p); assertTrue("never more as keys grow: $p", r <= last + 1e-6f); last = r; p += 1f }
+        val tablet = GlideParams.forPitchDp(92f)         // the owner's tablet in landscape
+        assertEquals(d.patMaxGap * 0.5f * (45f / 92f) * (45f / 92f), tablet.patMaxGap, 1e-5f)
+        assertEquals(d.confMaxGap * 0.5f * (45f / 92f) * (45f / 92f), tablet.confMaxGap, 1e-5f)
+        assertTrue("portrait (55 dp) sits between", GlideParams.forPitchDp(55f).patMaxGap in tablet.patMaxGap..d.patMaxGap)
+        assertEquals("only the learned reach changes", d.patGain, tablet.patGain, 0f); assertEquals(d.patCap, tablet.patCap, 0f); assertEquals(d.confCap, tablet.confCap, 0f)
+    }
+
     @Test fun keysKnowTheirPitchInDpAndDefaultToThePixelPitch() {
         val k = GlideEval.keysFor()
         assertEquals(k.pitch, k.pitchDp, 0f)
