@@ -282,6 +282,8 @@ class RealSwipeEval {
     }
 
     private fun variants(): List<Pair<String, GlideParams>> = listOf(
+        "R29 phone (shipped)" to GlideParams.forPitchDp(keys.pitch, letterW = 0f), "R29 phone letterW .25" to GlideParams.forPitchDp(keys.pitch, letterW = 0.25f),
+        "R29 phone letterW .5" to GlideParams.forPitchDp(keys.pitch, letterW = 0.5f), "R29 phone letterW 1" to GlideParams.forPitchDp(keys.pitch, letterW = 1f),
         "lmW .25" to GlideParams(lmW = 0.25f), "lmW 1.0" to GlideParams(lmW = 1.0f),
         "lmA 0.75" to GlideParams(lmA = 0.75f), "lmA 3.0" to GlideParams(lmA = 3.0f),
         "shapeW 1.0" to GlideParams(shapeW = 1.0f), "shapeW 4.0" to GlideParams(shapeW = 4.0f),
