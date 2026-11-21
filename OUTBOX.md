@@ -1616,3 +1616,7 @@
 ## 2026-11-21T21:21:00Z
 > Four more runs are going (two on head, two on tag `v0.9.14`) plus tag run #706 still finishing. I'll read all of them in about 11 minutes.
 <!-- sha:f1ec095bd07a -->
+
+## 2026-11-21T21:32:14Z
+> Tag run #706 had hung for over 25 minutes, so I cancelled it (its results block still prints). A helper is reading it and the four newer runs, and I'll decide once it reports.
+<!-- sha:b8cb469dc67f -->
