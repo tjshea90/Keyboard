@@ -22,7 +22,7 @@ class ShapeNetEvalTest {
     private val cand = System.getenv("R30_CAND")?.toIntOrNull() ?: 40
     private val areaW = 292f; private val areaH = 161f      // GlideEval.keysFor() defaults
 
-    class Row(val score: FloatArray, val hit: BooleanArray, val len: IntArray, val ctcA: FloatArray, val ctcB: FloatArray)
+    class Row(val score: FloatArray, val hit: BooleanArray, val len: IntArray, val ctcA: FloatArray, val ctcB: FloatArray, val meantLen: Int)
 
     private class Ctx(val net: ShapeNet, val dec: GlideDecoder)
 
@@ -49,7 +49,7 @@ class ShapeNetEvalTest {
                 val em = c.net.emissions(tr, if (mode == 0) kA else kB, 26)
                 for ((i, x) in cs.withIndex()) { val w = letters(x.text); if (w.isNotEmpty()) ctc[mode][i] = ShapeNet.ctcLogP(em, 26, w) }
             }
-            Row(FloatArray(cs.size) { i -> cs[i].score }, BooleanArray(cs.size) { i -> String(GlideLetters.keyOf(cs[i].text)) == item.key }, IntArray(cs.size) { i -> cs[i].text.length }, ctc[0], ctc[1])
+            Row(FloatArray(cs.size) { i -> cs[i].score }, BooleanArray(cs.size) { i -> String(GlideLetters.keyOf(cs[i].text)) == item.key }, IntArray(cs.size) { i -> cs[i].text.length }, ctc[0], ctc[1], item.word.length)
         }) }
         val out = jobs.map { it.get() }
         pool.shutdown()
@@ -78,13 +78,41 @@ class ShapeNetEvalTest {
         return c
     }
 
+    private fun best(r: Row, mode: Int, w: Float): Int {
+        val m = r.score.size
+        var bi = 0; var bs = Float.NEGATIVE_INFINITY
+        for (i in 0 until m) { val v = if (mode == 0) r.score[i] else r.score[i] + w * (if (mode == 1) r.ctcA[i] else r.ctcB[i]); if (v > bs) { bs = v; bi = i } }
+        return bi
+    }
+
+    /** First choice a word 2+ letters LONGER than the short (<= 4 letters) word meant: the owner's the -> there, and -> access, or -> our. */
+    private fun s2l(rs: List<Row?>, mode: Int, w: Float): Int { var n = 0; for (r in rs) { if (r == null || r.meantLen > 4) continue; val b = best(r, mode, w); if (!r.hit[b] && r.len[b] - r.meantLen >= 2) n++ }; return n }
+    private fun shortN(rs: List<Row?>) = rs.count { it != null && it.meantLen <= 4 }
+    private fun shortHit(rs: List<Row?>, mode: Int, w: Float) = rs.count { r -> r != null && r.meantLen <= 4 && r.hit[best(r, mode, w)] }
+
+    /** Shipped margin = best score minus second best (the shipped list is sorted best first). Use the net only where the shipped answer is NOT clearly ahead. */
+    private fun gate(label: String, rs: List<Row?>, w: Float) {
+        val ok = rs.filterNotNull().filter { it.score.size >= 2 }
+        val margins = ok.map { r -> val sorted = r.score.sortedDescending(); sorted[0] - sorted[1] }.sorted()
+        val sb = StringBuilder("R30 [$label] confidence gate (net only where shipped margin < threshold; w=$w, B form): ")
+        for (q in listOf(0.1, 0.25, 0.5, 0.75, 1.0)) {
+            val th = if (q >= 1.0) Float.MAX_VALUE else margins[((margins.size - 1) * q).toInt()]
+            var hit = 0
+            for (r in ok) { val sorted = r.score.sortedDescending(); val useNet = (sorted[0] - sorted[1]) < th; if (r.hit[best(r, if (useNet) 2 else 0, w)]) hit++ }
+            sb.append("| net on %.0f%% of swipes: top1 %.1f%% ".format(q * 100, 100.0 * hit / ok.size))
+        }
+        println(sb.toString())
+    }
+
     private fun fmt(c: Cnt) = "top1 %.1f%% top3 %.1f%%".format(100.0 * c.t1 / c.n, 100.0 * c.t3 / c.n)
 
-    private fun load(name: String, fileEnv: String, def: String, mb: Long, offsetMb: Long): List<RealSwipe.Swipe> {
+    private fun load(name: String, fileEnv: String, def: String, mb: Long, offsetMb: Long, url: String = RealSwipe.DEV_URL): List<RealSwipe.Swipe> {
         val f = File(System.getenv(fileEnv) ?: def)
-        if (!f.exists()) println("fetched " + RealSwipe.fetch(RealSwipe.DEV_URL, mb * 1_000_000, f, offsetMb * 1_000_000) + " bytes for $name")
+        if (!f.exists()) println("fetched " + RealSwipe.fetch(url, mb * 1_000_000, f, offsetMb * 1_000_000) + " bytes for $name")
         return RealSwipe.read(f, System.getenv("R30_MAXN")?.toIntOrNull() ?: Int.MAX_VALUE)
     }
+
+    private val chosenW = System.getenv("R30_W")?.toFloatOrNull() ?: 0.7f
 
     private fun report(label: String, rs: List<Row?>, grid: List<Float>) {
         val n = rs.count { it != null }
@@ -93,6 +121,10 @@ class ShapeNetEvalTest {
         println("R30 [$label] shipped                    ${fmt(rank(rs, 0, null, false))}")
         println("R30 [$label] net A alone (canvas)       ${fmt(rank(rs, 1, null, false))}   per letter ${fmt(rank(rs, 1, null, true))}")
         println("R30 [$label] net B alone (our area)     ${fmt(rank(rs, 2, null, false))}   per letter ${fmt(rank(rs, 2, null, true))}")
+        val sn = shortN(rs)
+        println("R30 [$label] CHOSEN w=$chosenW: shipped ${fmt(rank(rs, 0, null, false))} | hybrid A ${fmt(rank(rs, 1, chosenW, false))} | hybrid B (keyboard area) ${fmt(rank(rs, 2, chosenW, false))}")
+        println("R30 [$label] short words (<=4 letters, n=$sn): shipped hit %.1f%% s2l(short meant, 2+ longer chosen) %d | hybrid B hit %.1f%% s2l %d".format(100.0 * shortHit(rs, 0, 0f) / sn, s2l(rs, 0, 0f), 100.0 * shortHit(rs, 2, chosenW) / sn, s2l(rs, 2, chosenW)))
+        gate(label, rs, chosenW)
         for (w in grid) println("R30 [$label] hybrid w=%-5.2f  A: %s | B: %s | A/letter: %s | B/letter: %s".format(w, fmt(rank(rs, 1, w, false)), fmt(rank(rs, 2, w, false)), fmt(rank(rs, 1, w, true)), fmt(rank(rs, 2, w, true))))
     }
 
@@ -122,6 +154,15 @@ class ShapeNetEvalTest {
         }
         println("R30 warm forward on this JVM, one thread: %.1f ms per swipe (n=%d)".format(ms / cnt.coerceAtLeast(1), cnt))
 
+        if (System.getenv("R30_C") != "0") {
+            // the FUTO TEST split: the cleanest held-out (the network's checkpoint may have been picked on dev)
+            try {
+                val sc = load("slice C (test split)", "R30_C_FILE", "build/real-swipes-c.jsonl", 12, 0, System.getenv("R30_C_URL") ?: RealSwipe.DEV_URL.replace("dev.jsonl", "test.jsonl"))
+                val fitC = ev.calibrate(sc); val itsC = ev.items(sc, fitC)
+                println("R30 slice C (test split): ${sc.size} swipes read, ${itsC.size} in the word list")
+                report("C", rows(itsC, fitC, weights, "slice C"), grid)
+            } catch (e: Exception) { println("R30 slice C failed: $e") }
+        }
         if (System.getenv("R30_B") != "0") {
             val sb = load("slice B", "R30_B_FILE", "build/real-swipes-b.jsonl", 12, System.getenv("R30_B_OFFSET_MB")?.toLongOrNull() ?: 100L)
             val fitB = ev.calibrate(sb)
