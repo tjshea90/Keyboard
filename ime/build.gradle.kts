@@ -22,8 +22,8 @@ android {
         applicationId = "app.swoop.keyboard"
         minSdk = 29            // the tablet is Android 10 (API 29); anything newer must be guarded with Build.VERSION.SDK_INT
         targetSdk = 36         // also runs on the owner's Android 16 phone (edge-to-edge IME insets: KB-107)
-        versionCode = 19
-        versionName = "0.7.0-alpha8"
+        versionCode = 20
+        versionName = "0.7.0-alpha9"
     }
 
     signingConfigs {
