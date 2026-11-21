@@ -30,10 +30,10 @@ class ShapeRescorer(private val net: ShapeNet, keys: GlideKeys, private val weig
      * Re-rank [cands] (the shipped decoder's list, best first) with the path of [count] touch points [xs] / [ys] in view pixels and [ts] in milliseconds (any origin; only the differences count).
      * Returns [cands] unchanged (ran = false) when the shipped answer is clearly ahead, when there are fewer than two words, or when the path carries no usable timing.
      */
-    fun rescore(xs: FloatArray, ys: FloatArray, ts: FloatArray, count: Int, cands: List<GlideCandidate>): Outcome {
+    fun rescore(xs: FloatArray, ys: FloatArray, ts: FloatArray, count: Int, cands: List<GlideCandidate>, force: Boolean = false): Outcome {
         val none = Outcome(cands, false, false, 0L)
         if (cands.size < 2 || count < 4 || xs.size < count || ys.size < count || ts.size < count) return none
-        if (cands[0].score - cands[1].score >= gate) return none
+        if (!force && cands[0].score - cands[1].score >= gate) return none
         val t0 = System.nanoTime()
         val nx = FloatArray(count) { (xs[it] - left) / w }; val ny = FloatArray(count) { (ys[it] - top) / h }
         val tr = ShapeNet.trajectory(nx, ny, ts, count) ?: return none
@@ -45,6 +45,13 @@ class ShapeRescorer(private val net: ShapeNet, keys: GlideKeys, private val weig
         }
         val out = scored.sortedByDescending { it.score }                    // (stable: equal scores keep the shipped order)
         return Outcome(out, true, out[0].text != cands[0].text, (System.nanoTime() - t0) / 1_000_000)
+    }
+
+    /** Two passes over a made-up path (a stroke from the left to the right of the keys): the runtime compiles the network's loops on the first one. */
+    fun warmUp() {
+        val n = 24
+        val xs = FloatArray(n) { left + w * it / (n - 1) }; val ys = FloatArray(n) { top + h * (0.2f + 0.6f * it / (n - 1)) }; val ts = FloatArray(n) { it * 16f }
+        repeat(2) { rescore(xs, ys, ts, n, listOf(GlideCandidate("a", 1f, 0f, 0f), GlideCandidate("b", 0.9f, 0f, 0f)), force = true) }
     }
 
     private fun letters(t: String): IntArray {

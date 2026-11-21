@@ -313,6 +313,7 @@ class GlideTyping(
                 if (own != null) { ownRef = own; setOwn(own) } else rebuildUserLexicon()
                 ready = main != null
                 if (!warmed && ready) { warmed = true; warmUp(k) }
+                if (shapeModel && ready) { shapeFor(k)?.let { r -> try { r.warmUp() } catch (e: Exception) { } } }
             } catch (e: Exception) { loading = false; ready = false }
         }
     }
@@ -354,15 +355,25 @@ class GlideTyping(
     }
 
     /** Decode the path of [count] touch points; [done] is called on the executor's thread. */
-    fun decode(xs: FloatArray, ys: FloatArray, count: Int, prev: String?, prev2: String? = null, done: (GlideResult) -> Unit) {
+    fun decode(xs: FloatArray, ys: FloatArray, count: Int, prev: String?, prev2: String? = null, ts: FloatArray? = null, done: (GlideResult) -> Unit) {
         val px = xs.copyOf(count); val py = ys.copyOf(count)
+        val pt = if (ts != null && ts.size >= count) ts.copyOf(count) else null                  // R30: the touch times (ms), for the shape network
         executor.execute {
             val d = decoder; val m = main
             if (d == null || m == null) { done(GlideResult(emptyList(), 0, ready = false)); return@execute }
             val t0 = System.nanoTime()
             val lexicons = ArrayList<GlideLexicon>(2); lexicons.add(m); userLex?.let { lexicons.add(it) }
             val my = ++serial
-            val five = try { cleaned(d.decode(px, py, count, lexicons, prev, 5 + EXTRA_FOR_BLOCKED, prev2), 5) } catch (e: Exception) { emptyList() }
+            val net = if (shapeModel && pt != null) keys?.let { shapeFor(it) } else null
+            val five = try {
+                if (net == null) cleaned(d.decode(px, py, count, lexicons, prev, 5 + EXTRA_FOR_BLOCKED, prev2), 5)
+                else {
+                    // R30: the shipped decoder's best words, asked about again by the trained network where the shipped answer is not clearly ahead (it only truncates the list: asking for 40 costs nothing)
+                    val o = net.rescore(px, py, pt!!, count, d.decode(px, py, count, lexicons, prev, SHAPE_POOL + EXTRA_FOR_BLOCKED, prev2))
+                    stats.onShapeModel(o.ran, o.changedFirst, o.millis)
+                    cleaned(o.candidates, 5)
+                }
+            } catch (e: Exception) { emptyList() }
             val r = five.take(3)
             val lm = d.lastLm
             val ms = (System.nanoTime() - t0) / 1_000_000
@@ -392,6 +403,36 @@ class GlideTyping(
         val lexicons = ArrayList<GlideLexicon>(2); lexicons.add(m); userLex?.let { lexicons.add(it) }
         val out = FloatArray(cands.size) { d.nextLnProb(lexicons, cands[it], next, candPrev) }
         return if (out.any { it.isNaN() }) null else out
+    }
+
+    private var shapeNet: ShapeNet? = null
+
+    /** R30: the rescorer for [k] (built once per keyboard size; the weights are read and parsed on the first call: the executor's thread only). Null when the file is not shipped or damaged: glides then decode as before. */
+    private fun shapeFor(k: GlideKeys): ShapeRescorer? {
+        if (shapeLoadFailed) return null
+        val r = shapeRescorer
+        if (r != null && shapeKeys === k) return r
+        return try {
+            var net = shapeNet
+            if (net == null) {
+                val t0 = System.nanoTime()
+                val b = loadShape()
+                if (b == null) { shapeLoadFailed = true; return null }
+                net = ShapeNet.load(b); shapeNet = net
+                stats.onShapeLoaded((System.nanoTime() - t0) / 1_000_000)
+            }
+            ShapeRescorer(net, k).also { shapeRescorer = it; shapeKeys = k }
+        } catch (e: Exception) { shapeLoadFailed = true; null }
+    }
+
+    /** R30: load the shape network and run it twice on a made-up path, so the first real glide does not pay for the file or for the runtime's first (slow) passes. On the executor's thread; does nothing while the switch is off. */
+    fun warmShape() {
+        executor.execute {
+            if (!shapeModel) return@execute
+            val k = keys ?: return@execute
+            val r = shapeFor(k) ?: return@execute
+            try { r.warmUp() } catch (e: Exception) { /* a warm-up must never matter */ }
+        }
     }
 
     /**
@@ -688,6 +729,8 @@ class GlideTyping(
         private const val SAVE_EVERY_MS = 10_000L
         /** The engine is asked for this many more guesses than are shown, so that removing the words the person blocked still leaves a full strip. */
         private const val EXTRA_FOR_BLOCKED = 4
+        /** R30: how many of the shipped decoder's words the shape network may re-rank (measured with 40: the right word is among them in 97 % of real swipes). */
+        private const val SHAPE_POOL = 40
         /** A deleted glide can have meant the word typed in its place when the straight line through that word's letters is within this many key units of it (a careful glide is about 0.3 away, a sloppy one 0.6 to 0.9, another word more than 1.3). */
         const val FIT_D = 1.15f
     }
