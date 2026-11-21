@@ -128,6 +128,8 @@ class GlideParams(
     val letterW: Float = 0f,
 ) {
     companion object {
+        /** R29: the price per extra letter that [forPitchDp] gives the decoder (see [letterW]); measured in FocusWordsLabTest / GlideLengthEvalTest. */
+        const val DEFAULT_LETTER_W = 0f
         /** Key pitch (dp) up to which the decoder is tuned on REAL swipes; from [LARGE_PITCH_DP] up it keeps its earlier, simulator-tuned values. */
         const val SMALL_PITCH_DP = 45f
         const val LARGE_PITCH_DP = 70f
@@ -154,11 +156,11 @@ class GlideParams(
         /** The halving of the learned reach is complete this many dp above [SMALL_PITCH_DP] (the owner's tablet in portrait is at 55 dp, 10 above). */
         const val REACH_RAMP_DP = 10f
 
-        fun forPitchDp(pitchDp: Float, touchField: Boolean = true): GlideParams {
+        fun forPitchDp(pitchDp: Float, touchField: Boolean = true, letterW: Float = DEFAULT_LETTER_W): GlideParams {
             val t = ((pitchDp - SMALL_PITCH_DP) / (LARGE_PITCH_DP - SMALL_PITCH_DP)).coerceIn(0f, 1f)
             val d = GlideParams()
             val g = learnedReach(pitchDp)
-            return GlideParams(shapeW = 1.0f + t, visitCap = 5.0f - 2.0f * t, lmMin = 0.45f, touchField = touchField, patMaxGap = d.patMaxGap * g, confMaxGap = d.confMaxGap * g)      // (lmMin: the language keeps at least this weight on a CLEAN glide, where look-alike words fit equally well; +0.1 / +0.2 points first choice on both slices, fewer short-for-long slips)
+            return GlideParams(shapeW = 1.0f + t, visitCap = 5.0f - 2.0f * t, lmMin = 0.45f, touchField = touchField, letterW = letterW, patMaxGap = d.patMaxGap * g, confMaxGap = d.confMaxGap * g)      // (lmMin: the language keeps at least this weight on a CLEAN glide, where look-alike words fit equally well; +0.1 / +0.2 points first choice on both slices, fewer short-for-long slips)
         }
     }
 }

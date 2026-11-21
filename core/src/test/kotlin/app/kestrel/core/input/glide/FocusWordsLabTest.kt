@@ -21,7 +21,7 @@ class FocusWordsLabTest {
         val prevs = listOf<String?>(null, "you", "to")
         for ((name, wh) in geos) for (aim in listOf(8f, 12f)) {
             val keys = GlideEval.keysFor(wh.first, wh.second)
-            val dec = GlideDecoder(keys, GlideParams.forPitchDp(keys.pitch))
+            val dec = GlideDecoder(keys, GlideParams.forPitchDp(keys.pitch, letterW = System.getenv("LAB_LETTERW")?.toFloatOrNull() ?: GlideParams.DEFAULT_LETTER_W))
             val sim = GestureSim(keys, Random(5L + wh.first.toLong() + aim.toLong()))
             val noise = SimNoise.aim(aim)
             val sb = StringBuilder("FOCUS $name aim ${aim.toInt()} dp:")
