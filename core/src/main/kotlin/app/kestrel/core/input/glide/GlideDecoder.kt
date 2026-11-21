@@ -119,6 +119,13 @@ class GlideParams(
     val lengthSigmaLow: Float = 0.16f,
     val lengthSigmaHigh: Float = 0.30f,
     val lengthCap: Float = 4.0f,
+    /**
+     * Owner R29 (2026-11-21: "our or out when i try to type or", "fur when i glide the word for"). Every extra letter on a word's path is one more bend the straight lines between letters may take, so a word with
+     * an extra letter that lies ON the glide's line ("our", "out" for "or": o-u-r is one line) fits a wobbly path at least as well as the word the finger meant and often a little better, and the cost carries no
+     * price for that freedom. [letterW] cost units for each letter beyond the second (letters that repeat count once) is that price (the language then has the tie to settle, which it does well: "or" is commoner).
+     * 0 = no price (the earlier decoder).
+     */
+    val letterW: Float = 0f,
 ) {
     companion object {
         /** Key pitch (dp) up to which the decoder is tuned on REAL swipes; from [LARGE_PITCH_DP] up it keeps its earlier, simulator-tuned values. */
@@ -492,8 +499,11 @@ class GlideDecoder(private val keys: GlideKeys, private val p: GlideParams = Gli
         if (!loadLetters(lex, id)) return Float.MAX_VALUE / 8
         setWork(0f, 0f)
         val c = dp(mCount)
-        return if (c >= Float.MAX_VALUE / 8) c else c + lengthCost()
+        return if (c >= Float.MAX_VALUE / 8) c else c + lengthCost() + letterCost()
     }
+
+    /** R29: the price of the freedom of every letter beyond the second ([GlideParams.letterW]). Call after [loadLetters]. */
+    private fun letterCost(): Float = if (p.letterW > 0f && mCount > 2) p.letterW * (mCount - 2) else 0f
 
     /**
      * R23c: what the length of the gesture says against the length of the ideal path through the letters in [letters] (call after [loadLetters]): z squared / 2 of how far the ratio is from what a finger draws, priced by
@@ -517,7 +527,7 @@ class GlideDecoder(private val keys: GlideKeys, private val p: GlideParams = Gli
         val o = meanOffset(mCount)
         val mx = o[0] * p.biasGain; val my = o[1] * p.biasGain
         setWork(mx, my)
-        val c2 = dp(mCount) + p.biasW * (mx * mx + my * my) * mCount + lengthCost()
+        val c2 = dp(mCount) + p.biasW * (mx * mx + my * my) * mCount + lengthCost() + letterCost()
         return if (c2 < cost1) c2 else cost1
     }
 
