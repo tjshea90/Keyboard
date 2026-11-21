@@ -432,3 +432,8 @@ Finish research, then build and release all logical fixes improvements and featu
 ```
 The keyboard frequently incorrectly predicts large words for short glide words. For example, a lot of times when i try to glide type simple words like the or and , it predicts there or access. Also, sometimes the glide doesn't properly start. Make the glide sensitivity higher, so that as soon as i start moving my finger it recognizes that I'm glide typing 
 ```
+
+## 2026-11-21T21:50:17Z
+```
+Release linkmeter 
+```
