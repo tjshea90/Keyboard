@@ -12,6 +12,8 @@ object Prefs {
     const val SUGGEST = "suggestions"
     const val GLIDE_NEXT = "glide_next_word"
     const val REVISE_PREV = "revise_previous_word"
+    /** R30: the trained shape network re-ranks the glide guesses. */
+    const val SHAPE_MODEL = "shape_model"
     const val AUTOFIX = "auto_fix"
     const val CAPI = "capitalize_i"
     const val AUTOCAPS = "auto_caps"
@@ -65,6 +67,7 @@ class Settings(private val p: SharedPreferences) {
     /** Owner R20b: after a glide the middle box of the strip is the predicted next word (the sides are the other guesses of the glide). */
     val glideNextWord get() = b(Prefs.GLIDE_NEXT, true)
     val reviseBefore get() = b(Prefs.REVISE_PREV, true)
+    val shapeModel get() = b(Prefs.SHAPE_MODEL, true)
     val autoFix get() = b(Prefs.AUTOFIX, true)
     val capitalizeI get() = b(Prefs.CAPI, true)
     val autoCaps get() = b(Prefs.AUTOCAPS, true)

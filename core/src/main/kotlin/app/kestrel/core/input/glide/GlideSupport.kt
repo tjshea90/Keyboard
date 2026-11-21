@@ -15,7 +15,7 @@ class GlideStats {
     private var shapes = 0; private var shapeWords = 0; private var shapeLifts = 0; private var shapeFlips = 0
     private var previews = 0; private var previewMs = 0L; private var shown = 0; private var shownMs = 0L; private var shownMax = 0L
     private var retries = 0
-    private var shapeRuns = 0; private var shapeChanged = 0; private var shapeMs = 0L; private var shapeMsMax = 0L; private var shapeLoadMs = -1L; private var shapeSkipped = 0
+    private var shapeRuns = 0; private var shapeChanged = 0; private var shapeMs = 0L; private var shapeMsMax = 0L; private var shapeLoadMs = -1L; private var shapeSkipped = 0; private var shapeOffMs = -1L
     private var suggested = 0; private var suggestMs = 0L; private var suggestMax = 0L; private var suggPicked = 0; private var typedLearned = 0; private var autoFixed = 0; private var autoUndone = 0; private var retyped = 0
 
     @Synchronized fun onDecoded(millis: Long, found: Boolean) { glides++; if (!found) noMatch++; ms += millis; if (millis > msMax) msMax = millis; if (found) pending = true }
@@ -23,6 +23,7 @@ class GlideStats {
     /** R30: the trained shape network was asked about a glide ([ran]) or skipped because the shipped answer was clearly ahead; [changedFirst]: it put another word first; [millis]: its time. */
     @Synchronized fun onShapeModel(ran: Boolean, changedFirst: Boolean, millis: Long) { if (!ran) { shapeSkipped++; return }; shapeRuns++; if (changedFirst) shapeChanged++; shapeMs += millis; if (millis > shapeMsMax) shapeMsMax = millis }
     @Synchronized fun onShapeLoaded(millis: Long) { shapeLoadMs = millis }
+    @Synchronized fun onShapeAutoOff(millis: Long) { shapeOffMs = millis }
     @Synchronized fun onKept() { if (pending) { kept++; pending = false } }
     @Synchronized fun onPicked() { if (pending) { picked++; pending = false } }
     @Synchronized fun onUndone() { if (pending) { undone++; pending = false } }
@@ -79,7 +80,7 @@ class GlideStats {
             if (noMatch > 0) sb.append(", no word fitted $noMatch")
             sb.append("; decode avg ${ms / glides} ms, worst $msMax ms")
         }
-        if (shapeLoadMs >= 0) sb.append("; shape model loaded in $shapeLoadMs ms, asked about $shapeRuns glides (avg ${if (shapeRuns > 0) shapeMs / shapeRuns else 0} ms, worst $shapeMsMax ms), skipped $shapeSkipped (shipped answer clearly ahead), changed the first word $shapeChanged times")
+        if (shapeLoadMs >= 0) sb.append("; shape model loaded in $shapeLoadMs ms, asked about $shapeRuns glides (avg ${if (shapeRuns > 0) shapeMs / shapeRuns else 0} ms, worst $shapeMsMax ms), skipped $shapeSkipped (shipped answer clearly ahead), changed the first word $shapeChanged times" + (if (shapeOffMs >= 0) "; SWITCHED ITSELF OFF for this run: three passes in a row were slower than 700 ms (the last took $shapeOffMs ms)" else ""))
         if (shown > 0) sb.append("; word shown ${shownMs / shown} ms after the lift (worst $shownMax ms)")
         if (previews > 0) sb.append("; live preview $previews times, avg ${previewMs / previews} ms")
         if (loadMs >= 0) sb.append("; word list $loadWords words ready after $loadMs ms")
@@ -201,6 +202,10 @@ class GlideTyping(
     private var shapeRescorer: ShapeRescorer? = null
     private var shapeKeys: GlideKeys? = null
     private var shapeLoadFailed = false
+    private var shapeWarmed = false
+    private var shapeSlowStreak = 0
+    /** R30: the network took too long on this device three glides in a row: it is left alone for the rest of the run (Diagnostics says so). */
+    @Volatile var shapeAutoOff = false; private set
 
     /** The person's dictionary: words added (predicted when their pattern is glided) and words removed (never offered). Loaded on first use. */
     @Volatile var dictionary = UserDictionary(); private set
@@ -313,7 +318,7 @@ class GlideTyping(
                 if (own != null) { ownRef = own; setOwn(own) } else rebuildUserLexicon()
                 ready = main != null
                 if (!warmed && ready) { warmed = true; warmUp(k) }
-                if (shapeModel && ready) { shapeFor(k)?.let { r -> try { r.warmUp() } catch (e: Exception) { } } }
+                if (shapeModel && ready) warmShapeNow(k)
             } catch (e: Exception) { loading = false; ready = false }
         }
     }
@@ -364,13 +369,14 @@ class GlideTyping(
             val t0 = System.nanoTime()
             val lexicons = ArrayList<GlideLexicon>(2); lexicons.add(m); userLex?.let { lexicons.add(it) }
             val my = ++serial
-            val net = if (shapeModel && pt != null) keys?.let { shapeFor(it) } else null
+            val net = if (shapeModel && !shapeAutoOff && pt != null) keys?.let { shapeFor(it) } else null
             val five = try {
                 if (net == null) cleaned(d.decode(px, py, count, lexicons, prev, 5 + EXTRA_FOR_BLOCKED, prev2), 5)
                 else {
                     // R30: the shipped decoder's best words, asked about again by the trained network where the shipped answer is not clearly ahead (it only truncates the list: asking for 40 costs nothing)
                     val o = net.rescore(px, py, pt!!, count, d.decode(px, py, count, lexicons, prev, SHAPE_POOL + EXTRA_FOR_BLOCKED, prev2))
                     stats.onShapeModel(o.ran, o.changedFirst, o.millis)
+                    if (o.ran) { if (o.millis > SHAPE_BUDGET_MS) shapeSlowStreak++ else shapeSlowStreak = 0; if (shapeSlowStreak >= 3) { shapeAutoOff = true; stats.onShapeAutoOff(o.millis) } }
                     cleaned(o.candidates, 5)
                 }
             } catch (e: Exception) { emptyList() }
@@ -427,12 +433,13 @@ class GlideTyping(
 
     /** R30: load the shape network and run it twice on a made-up path, so the first real glide does not pay for the file or for the runtime's first (slow) passes. On the executor's thread; does nothing while the switch is off. */
     fun warmShape() {
-        executor.execute {
-            if (!shapeModel) return@execute
-            val k = keys ?: return@execute
-            val r = shapeFor(k) ?: return@execute
-            try { r.warmUp() } catch (e: Exception) { /* a warm-up must never matter */ }
-        }
+        executor.execute { if (shapeModel) keys?.let { warmShapeNow(it) } }
+    }
+
+    private fun warmShapeNow(k: GlideKeys) {
+        if (shapeWarmed || shapeAutoOff) return
+        val r = shapeFor(k) ?: return
+        try { r.warmUp(); shapeWarmed = true } catch (e: Exception) { /* a warm-up must never matter */ }
     }
 
     /**
@@ -731,6 +738,8 @@ class GlideTyping(
         private const val EXTRA_FOR_BLOCKED = 4
         /** R30: how many of the shipped decoder's words the shape network may re-rank (measured with 40: the right word is among them in 97 % of real swipes). */
         private const val SHAPE_POOL = 40
+        /** R30: a pass of the network slower than this (ms) three glides in a row switches it off for the run: a keyboard that is slow to answer is worse than one that is a little less exact. */
+        private const val SHAPE_BUDGET_MS = 700L
         /** A deleted glide can have meant the word typed in its place when the straight line through that word's letters is within this many key units of it (a careful glide is about 0.3 away, a sloppy one 0.6 to 0.9, another word more than 1.3). */
         const val FIT_D = 1.15f
     }

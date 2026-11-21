@@ -36,6 +36,7 @@ class GlideHost(
         saveOwn = { text -> saveOwn(text) },
         loadDictionary = { readWithBackup(dictFile) },
         saveDictionary = { text -> writeAtomically(dictFile, text) },
+        loadShape = { try { context.assets.open("glide/swipe_encoder.bin").use { it.readBytes() } } catch (e: Exception) { null } },
     )
 
     private var preparedFor = ""
