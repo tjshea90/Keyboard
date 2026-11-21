@@ -48,7 +48,9 @@ object RealSwipe {
                 val data = o["data"] as? List<Any?> ?: continue
                 if (data.size < 3) continue
                 val xs = FloatArray(data.size); val ys = FloatArray(data.size); val ts = FloatArray(data.size)
-                for ((i, p) in data.withIndex()) { val m = p as Map<String, Any?>; xs[i] = (m["x"] as Number).toFloat(); ys[i] = (m["y"] as Number).toFloat(); ts[i] = (m["t"] as Number).toFloat() }
+                // R30: the times are epoch milliseconds (1.7e12): as a Float they were quantised to 131 072 ms steps, so every earlier dwell / speed study (R24 7.2) read garbage. Subtract the first time in DOUBLE.
+                val t0 = ((data[0] as Map<String, Any?>)["t"] as Number).toDouble()
+                for ((i, p) in data.withIndex()) { val m = p as Map<String, Any?>; xs[i] = (m["x"] as Number).toFloat(); ys[i] = (m["y"] as Number).toFloat(); ts[i] = ((m["t"] as Number).toDouble() - t0).toFloat() }
                 out.add(Swipe(
                     (o["word"] as? String) ?: continue, (o["sentence"] as? String) ?: "", (o["word_idx"] as? Number)?.toInt() ?: -1,
                     (o["canvas_width"] as? Number)?.toFloat() ?: 0f, (o["canvas_height"] as? Number)?.toFloat() ?: 0f, (o["orientation"] as? String) ?: "", xs, ys, ts
