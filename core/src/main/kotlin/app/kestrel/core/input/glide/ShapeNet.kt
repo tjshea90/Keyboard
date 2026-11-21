@@ -50,7 +50,7 @@ class ShapeNet private constructor(private val w: Map<String, FloatArray>) {
             }
             for (name in listOf("savgol", "stem.w", "stem.b", "adapter.w", "adapter.b", "coeff.w", "coeff.b", "gate.w", "gate.b")) require(m.containsKey(name)) { "missing tensor $name" }
             for (i in 0 until BLOCKS) for (s in listOf("dw.w", "dw.b", "pw1.w", "pw1.b", "grn.g", "grn.b", "pw2.w", "pw2.b", "se1.w", "se1.b", "se2.w", "se2.b")) require(m.containsKey("b$i.$s")) { "missing tensor b$i.$s" }
-            require(m.getValue("coeff.w").size == N_COEFF * HEAD && m.getValue("pw1.w".let { "b0.$it" }).size == 4 * DIM * DIM) { "unexpected tensor sizes" }
+            require(m.getValue("coeff.w").size == N_COEFF * HEAD && m.getValue("b0.pw1.w").size == 4 * DIM * DIM) { "unexpected tensor sizes" }
             return ShapeNet(m)
         }
 
