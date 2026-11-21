@@ -2,7 +2,6 @@ package app.kestrel.core.input.glide
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
-import org.junit.Assume.assumeTrue
 import org.junit.Test
 import java.io.File
 import java.nio.ByteBuffer
@@ -11,12 +10,15 @@ import kotlin.math.abs
 
 /**
  * R30: the Kotlin forward pass against the PyTorch reference the upstream author checked in (`swipe_reference.bin`: xy, keys, features, log-emissions, gate from seed 0).
- * Needs core/build/r30/swipe_encoder.bin and swipe_reference.bin (R30_FETCH=1 ./gradlew :core:test --tests '*R30FetchTest*'); skipped when they are absent.
+ * Reads the weights that ship in the app and the committed reference numbers, so it runs in every build (a missing file FAILS: the shipped network must never go unchecked).
  */
 class ShapeNetParityTest {
+    /** The shipped weights (the app's assets) and the upstream reference numbers (test resources); core/build/r30 (R30FetchTest) is a fallback. */
+    private fun first(vararg names: String): File? = names.map { File(it) }.firstOrNull { it.isFile }
     private fun files(): Pair<File, File>? {
-        val w = File("build/r30/swipe_encoder.bin"); val r = File("build/r30/swipe_reference.bin")
-        return if (w.exists() && r.exists()) w to r else null
+        val w = first("../ime/src/main/assets/glide/swipe_encoder.bin", "ime/src/main/assets/glide/swipe_encoder.bin", "build/r30/swipe_encoder.bin")
+        val r = first("src/test/resources/swipe_reference.bin", "core/src/test/resources/swipe_reference.bin", "build/r30/swipe_reference.bin")
+        return if (w != null && r != null) w to r else null
     }
 
     private fun readRef(f: File): List<FloatArray> {
@@ -29,7 +31,7 @@ class ShapeNetParityTest {
     }
 
     @Test fun kotlinMatchesTorch() {
-        val (wf, rf) = files() ?: run { assumeTrue("run R30FetchTest first", false); return }
+        val (wf, rf) = files() ?: error("swipe_encoder.bin / swipe_reference.bin not found")
         val net = ShapeNet.load(wf.readBytes())
         val (xy, keys, feats, logp, gate) = readRef(rf).let { listOf(it[0], it[1], it[2], it[3], it[4]) }
         val f = net.features(xy)
