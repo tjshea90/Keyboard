@@ -48,6 +48,8 @@ class KeysView(context: Context) : View(context) {
         fun onTouchNote(kind: Int, a: Int = 0, b: Int = 0, c: Int = 0) {}
         /** A glide ended: the whole path (copied). The strip stays empty until the owner calls [showCandidates]. */
         fun onGlideEnd(xs: FloatArray, ys: FloatArray, count: Int) {}
+        /** The same glide with the time of each touch point in milliseconds since the first (R30: the shape network). Overridden by the presenter; the default is the untimed call. */
+        fun onGlideEnd(xs: FloatArray, ys: FloatArray, ts: FloatArray, count: Int) { onGlideEnd(xs, ys, count) }
         /** A guess in the strip was tapped. */
         fun onCandidate(word: String) {}
         /** Backspace has been held long enough that every repeat takes a whole word (owner R23a). */
@@ -169,7 +171,7 @@ class KeysView(context: Context) : View(context) {
     private var armed = false                   // the finger went down on a letter: it may turn into a glide
     private var gliding = false
     private var glideDown: KeySpec? = null
-    private var gx = FloatArray(256); private var gy = FloatArray(256); private var gn = 0
+    private var gx = FloatArray(256); private var gy = FloatArray(256); private var gt = LongArray(256); private var gn = 0       // (gt: when each point was touched, uptime ms: the shape network reads the timing of a glide)
     private var fadeStart = 0L
     private var lastPreviewAt = 0L; private var lastPreviewN = 0
     private var cands: List<String> = emptyList()
@@ -738,7 +740,7 @@ class KeysView(context: Context) : View(context) {
             }
             MotionEvent.ACTION_MOVE -> {
                 val i = e.findPointerIndex(activeId); if (i >= 0) pressMove(e, i)
-                if (waitId >= 0) { val j = e.findPointerIndex(waitId); if (j >= 0) { for (h in 0 until e.historySize) addWait(e.getHistoricalX(j, h), e.getHistoricalY(j, h)); addWait(e.getX(j), e.getY(j)) } }
+                if (waitId >= 0) { val j = e.findPointerIndex(waitId); if (j >= 0) { for (h in 0 until e.historySize) addWait(e.getHistoricalX(j, h), e.getHistoricalY(j, h), e.getHistoricalEventTime(h)); addWait(e.getX(j), e.getY(j), e.eventTime) } }
             }
             MotionEvent.ACTION_POINTER_UP -> {
                 val i = e.actionIndex; val id = e.getPointerId(i)
@@ -751,9 +753,9 @@ class KeysView(context: Context) : View(context) {
         return true
     }
 
-    private fun addWait(x: Float, y: Float) {
-        if (wtn == wtx.size) { if (wtn >= 1024) return; wtx = wtx.copyOf(wtn * 2); wty = wty.copyOf(wtn * 2) }
-        wtx[wtn] = x; wty[wtn] = y; wtn++
+    private fun addWait(x: Float, y: Float, t: Long) {
+        if (wtn == wtx.size) { if (wtn >= 1024) return; wtx = wtx.copyOf(wtn * 2); wty = wty.copyOf(wtn * 2); wtt = wtt.copyOf(wtn * 2) }
+        wtx[wtn] = x; wty[wtn] = y; wtt[wtn] = t; wtn++
     }
 
     /**
@@ -769,15 +771,15 @@ class KeysView(context: Context) : View(context) {
         for (k in 1 until n) { val dx = wtx[k] - wtx[0]; val dy = wty[k] - wty[0]; if (dx * dx + dy * dy > lim) { moved = true; break } }
         if (!moved || !isLetter(keyAt(wtx[0], wty[0]))) { listener?.onTouchNote(NOTE_RESTING_IGNORED); return }
         activeId = id
-        pressDown(wtx[0], wty[0], quiet = true)
+        pressDown(wtx[0], wty[0], quiet = true, at = wtt[0])
         if (!armed) { activeId = -1; return }
-        for (k in 1 until n) addPoint(wtx[k], wty[k])
-        addPoint(e.getX(j), e.getY(j))
+        for (k in 1 until n) addPoint(wtx[k], wty[k], wtt[k])
+        addPoint(e.getX(j), e.getY(j), e.eventTime)
         beginGlide(); dyn(); maybePreview()
         listener?.onTouchNote(NOTE_TAKEOVER)
     }
 
-    private fun pressDown(x: Float, y: Float, quiet: Boolean = false) {
+    private fun pressDown(x: Float, y: Float, quiet: Boolean = false, at: Long = SystemClock.uptimeMillis()) {
         handler.removeCallbacks(repeat); clearHold()
         armed = false; gliding = false; stripDown = -1
         if (inStrip(y)) {                                             // the strip was touched: a toolbar icon or a guess
@@ -797,7 +799,7 @@ class KeysView(context: Context) : View(context) {
         if (k?.key === Key.Backspace) { listener?.onKey(Key.Backspace); repeatStartAt = SystemClock.uptimeMillis(); handler.postDelayed(repeat, BackspaceRepeat.FIRST_MS) }
         downX = x; downY = y; downAt = SystemClock.uptimeMillis(); firstMoveAt = 0L
         if (glideEnabled && page == Page.LETTERS && pressedLetter != null) {
-            armed = true; glideDown = k; addPoint(x, y)
+            armed = true; glideDown = k; addPoint(x, y, at)
             if (y < stripPx() + pad) listener?.onTouchNote(NOTE_PADDING_START)       // (a touch that used to hit the strip's padding and do nothing)
         }
     }
@@ -807,8 +809,8 @@ class KeysView(context: Context) : View(context) {
         popup?.let { p -> val ns = popupSelect(p, x, y); if (ns != p.sel) { p.sel = ns; dyn() }; return }
         if (stripDown >= 0 || toolDown >= 0) return
         if (armed) {                                     // a letter: nothing happens until the finger leaves its key (a glide) or lifts (a tap)
-            for (h in 0 until e.historySize) addPoint(e.getHistoricalX(i, h), e.getHistoricalY(i, h))
-            addPoint(x, y)
+            for (h in 0 until e.historySize) addPoint(e.getHistoricalX(i, h), e.getHistoricalY(i, h), e.getHistoricalEventTime(h))
+            addPoint(x, y, e.eventTime)
             if (!gliding && movedFar(x, y)) beginGlide()          // a glide starts as soon as the finger has really moved: no waiting for the edge of the key
             if (gliding) { dyn(); maybePreview() }
             return
@@ -846,7 +848,7 @@ class KeysView(context: Context) : View(context) {
             else if (c == was && c in cands.indices) { if (clipChip && c == 0) listener?.onClipChip() else listener?.onCandidate(cands[c]) }
             return
         }
-        if (gliding) { for (h in 0 until e.historySize) addPoint(e.getHistoricalX(i, h), e.getHistoricalY(i, h)); addPoint(x, y); endGlide(); return }
+        if (gliding) { for (h in 0 until e.historySize) addPoint(e.getHistoricalX(i, h), e.getHistoricalY(i, h), e.getHistoricalEventTime(h)); addPoint(x, y, e.eventTime); endGlide(); return }
         armed = false
         handler.removeCallbacks(repeat)
         val alt = holdAlt; clearHold(); dyn()          // the bubble goes away BEFORE the key is sent to the app (which can take a moment)
@@ -878,9 +880,9 @@ class KeysView(context: Context) : View(context) {
     }
 
     // ---- glide
-    private fun addPoint(x: Float, y: Float) {
-        if (gn == gx.size) { if (gn >= MAX_TRAIL_POINTS) return; gx = gx.copyOf(gn * 2); gy = gy.copyOf(gn * 2) }
-        gx[gn] = x; gy[gn] = y; gn++
+    private fun addPoint(x: Float, y: Float, t: Long) {
+        if (gn == gx.size) { if (gn >= MAX_TRAIL_POINTS) return; gx = gx.copyOf(gn * 2); gy = gy.copyOf(gn * 2); gt = gt.copyOf(gn * 2) }
+        gx[gn] = x; gy[gn] = y; gt[gn] = t; gn++
     }
     private fun pitch(): Float = if (rects.isNotEmpty() && rects[0].size > 1) rects[0][1].centerX - rects[0][0].centerX else dp(29f)
     private fun movedFar(x: Float, y: Float): Boolean {
@@ -930,7 +932,8 @@ class KeysView(context: Context) : View(context) {
         val now = SystemClock.uptimeMillis()
         listener?.onTouchNote(NOTE_STROKE, gn, (now - downAt).toInt(), (firstMoveAt - downAt).toInt().coerceAtLeast(0))
         fadeStart = now; postOnAnimation(fadeStep)
-        listener?.onGlideEnd(gx.copyOf(gn), gy.copyOf(gn), gn)
+        val t0 = gt[0]
+        listener?.onGlideEnd(gx.copyOf(gn), gy.copyOf(gn), FloatArray(gn) { (gt[it] - t0).toFloat() }, gn)
     }
 
     /** Paging between letters and symbols is the view's own; everything else goes to the listener. */
