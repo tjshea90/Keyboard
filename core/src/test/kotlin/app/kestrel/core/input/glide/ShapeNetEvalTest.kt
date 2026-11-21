@@ -22,7 +22,7 @@ class ShapeNetEvalTest {
     private val cand = System.getenv("R30_CAND")?.toIntOrNull() ?: 40
     private val areaW = 292f; private val areaH = 161f      // GlideEval.keysFor() defaults
 
-    class Row(val score: FloatArray, val hit: BooleanArray, val len: IntArray, val ctcA: FloatArray, val ctcB: FloatArray, val meantLen: Int)
+    class Row(val score: FloatArray, val hit: BooleanArray, val len: IntArray, val ctcA: FloatArray, val ctcB: FloatArray, val meantLen: Int, val ctcC: FloatArray = FloatArray(0))
 
     private class Ctx(val net: ShapeNet, val dec: GlideDecoder)
 
@@ -33,23 +33,24 @@ class ShapeNetEvalTest {
         val pool = Executors.newFixedThreadPool(threads)
         val local = ThreadLocal.withInitial { Ctx(ShapeNet.load(weights), GlideDecoder(keys, GlideParams.forPitchDp(keys.pitchDp))) }
         // key centres in the two coordinate systems (x then y interleaved)
-        val kA = FloatArray(52); val kB = FloatArray(52)
-        for (k in 0 until 26) { kA[2 * k] = (keys.cx[k] - fit.bx) / fit.ax; kA[2 * k + 1] = (keys.cy[k] - fit.by) / fit.ay; kB[2 * k] = keys.cx[k] / areaW; kB[2 * k + 1] = keys.cy[k] / areaH }
+        val kA = FloatArray(52); val kB = FloatArray(52); val kC = FloatArray(52)
+        val aL = keys.cx.min() - keys.keyW / 2; val aR = keys.cx.max() + keys.keyW / 2; val aT = keys.cy.min() - keys.keyH / 2; val aB = keys.cy.max() + keys.keyH / 2      // the canvas = the box round the 26 letter keys (what GlideKeys alone can say)
+        for (k in 0 until 26) { kA[2 * k] = (keys.cx[k] - fit.bx) / fit.ax; kA[2 * k + 1] = (keys.cy[k] - fit.by) / fit.ay; kB[2 * k] = keys.cx[k] / areaW; kB[2 * k + 1] = keys.cy[k] / areaH; kC[2 * k] = (keys.cx[k] - aL) / (aR - aL); kC[2 * k + 1] = (keys.cy[k] - aT) / (aB - aT) }
         val t0 = System.nanoTime()
         val jobs = its.map { item -> pool.submit(Callable<Row?> {
             val c = local.get()
             val cs = c.dec.decode(item.xs, item.ys, item.xs.size, listOf(lex), item.prev, cand)
             if (cs.isEmpty() || item.ts.size < 2) return@Callable null
             val n = item.xs.size
-            val ctc = Array(2) { FloatArray(cs.size) { -1e9f } }
-            for (mode in 0..1) {
-                val xs = FloatArray(n) { i -> if (mode == 0) (item.xs[i] - fit.bx) / fit.ax else item.xs[i] / areaW }
-                val ys = FloatArray(n) { i -> if (mode == 0) (item.ys[i] - fit.by) / fit.ay else item.ys[i] / areaH }
+            val ctc = Array(3) { FloatArray(cs.size) { -1e9f } }
+            for (mode in 0..2) {
+                val xs = FloatArray(n) { i -> when (mode) { 0 -> (item.xs[i] - fit.bx) / fit.ax; 1 -> item.xs[i] / areaW; else -> (item.xs[i] - aL) / (aR - aL) } }
+                val ys = FloatArray(n) { i -> when (mode) { 0 -> (item.ys[i] - fit.by) / fit.ay; 1 -> item.ys[i] / areaH; else -> (item.ys[i] - aT) / (aB - aT) } }
                 val tr = ShapeNet.trajectory(xs, ys, item.ts, n) ?: continue
-                val em = c.net.emissions(tr, if (mode == 0) kA else kB, 26)
+                val em = c.net.emissions(tr, when (mode) { 0 -> kA; 1 -> kB; else -> kC }, 26)
                 for ((i, x) in cs.withIndex()) { val w = letters(x.text); if (w.isNotEmpty()) ctc[mode][i] = ShapeNet.ctcLogP(em, 26, w) }
             }
-            Row(FloatArray(cs.size) { i -> cs[i].score }, BooleanArray(cs.size) { i -> String(GlideLetters.keyOf(cs[i].text)) == item.key }, IntArray(cs.size) { i -> cs[i].text.length }, ctc[0], ctc[1], item.word.length)
+            Row(FloatArray(cs.size) { i -> cs[i].score }, BooleanArray(cs.size) { i -> String(GlideLetters.keyOf(cs[i].text)) == item.key }, IntArray(cs.size) { i -> cs[i].text.length }, ctc[0], ctc[1], item.word.length, ctc[2])
         }) }
         val out = jobs.map { it.get() }
         pool.shutdown()
@@ -67,7 +68,7 @@ class ShapeNetEvalTest {
             c.n++
             val m = r.score.size
             val s = FloatArray(m) { i ->
-                val l = if (mode == 1) r.ctcA[i] else if (mode == 2) r.ctcB[i] else 0f
+                val l = when (mode) { 1 -> r.ctcA[i]; 2 -> r.ctcB[i]; 3 -> r.ctcC[i]; else -> 0f }
                 val lp = if (perLetter) l / r.len[i].coerceAtLeast(1) else l
                 if (mode == 0) r.score[i] else if (w == null) lp else r.score[i] + w * lp
             }
@@ -81,7 +82,7 @@ class ShapeNetEvalTest {
     private fun best(r: Row, mode: Int, w: Float): Int {
         val m = r.score.size
         var bi = 0; var bs = Float.NEGATIVE_INFINITY
-        for (i in 0 until m) { val v = if (mode == 0) r.score[i] else r.score[i] + w * (if (mode == 1) r.ctcA[i] else r.ctcB[i]); if (v > bs) { bs = v; bi = i } }
+        for (i in 0 until m) { val v = if (mode == 0) r.score[i] else r.score[i] + w * (when (mode) { 1 -> r.ctcA[i]; 2 -> r.ctcB[i]; else -> r.ctcC[i] }); if (v > bs) { bs = v; bi = i } }
         return bi
     }
 
@@ -94,12 +95,12 @@ class ShapeNetEvalTest {
     private fun gate(label: String, rs: List<Row?>, w: Float) {
         val ok = rs.filterNotNull().filter { it.score.size >= 2 }
         val margins = ok.map { r -> val sorted = r.score.sortedDescending(); sorted[0] - sorted[1] }.sorted()
-        val sb = StringBuilder("R30 [$label] confidence gate (net only where shipped margin < threshold; w=$w, B form): ")
+        val sb = StringBuilder("R30 [$label] confidence gate (net only where shipped margin < threshold; w=$w, C form): ")
         for (q in listOf(0.1, 0.25, 0.5, 0.75, 1.0)) {
             val th = if (q >= 1.0) Float.MAX_VALUE else margins[((margins.size - 1) * q).toInt()]
             var hit = 0
-            for (r in ok) { val sorted = r.score.sortedDescending(); val useNet = (sorted[0] - sorted[1]) < th; if (r.hit[best(r, if (useNet) 2 else 0, w)]) hit++ }
-            sb.append("| net on %.0f%% of swipes: top1 %.1f%% ".format(q * 100, 100.0 * hit / ok.size))
+            for (r in ok) { val sorted = r.score.sortedDescending(); val useNet = (sorted[0] - sorted[1]) < th; if (r.hit[best(r, if (useNet) 3 else 0, w)]) hit++ }
+            sb.append("| net on %.0f%% (margin < %.2f): top1 %.1f%% ".format(q * 100, th, 100.0 * hit / ok.size))
         }
         println(sb.toString())
     }
@@ -120,10 +121,11 @@ class ShapeNetEvalTest {
         println("R30 [$label] n=$n  oracle recall of the top-$cand list %.1f%%".format(100.0 * oracle / n))
         println("R30 [$label] shipped                    ${fmt(rank(rs, 0, null, false))}")
         println("R30 [$label] net A alone (canvas)       ${fmt(rank(rs, 1, null, false))}   per letter ${fmt(rank(rs, 1, null, true))}")
+        println("R30 [$label] net C alone (letter box)   ${fmt(rank(rs, 3, null, false))}   per letter ${fmt(rank(rs, 3, null, true))}")
         println("R30 [$label] net B alone (our area)     ${fmt(rank(rs, 2, null, false))}   per letter ${fmt(rank(rs, 2, null, true))}")
         val sn = shortN(rs)
-        println("R30 [$label] CHOSEN w=$chosenW: shipped ${fmt(rank(rs, 0, null, false))} | hybrid A ${fmt(rank(rs, 1, chosenW, false))} | hybrid B (keyboard area) ${fmt(rank(rs, 2, chosenW, false))}")
-        println("R30 [$label] short words (<=4 letters, n=$sn): shipped hit %.1f%% s2l(short meant, 2+ longer chosen) %d | hybrid B hit %.1f%% s2l %d".format(100.0 * shortHit(rs, 0, 0f) / sn, s2l(rs, 0, 0f), 100.0 * shortHit(rs, 2, chosenW) / sn, s2l(rs, 2, chosenW)))
+        println("R30 [$label] CHOSEN w=$chosenW: shipped ${fmt(rank(rs, 0, null, false))} | hybrid A ${fmt(rank(rs, 1, chosenW, false))} | hybrid B (keyboard area) ${fmt(rank(rs, 2, chosenW, false))} | hybrid C (letter box) ${fmt(rank(rs, 3, chosenW, false))}")
+        println("R30 [$label] short words (<=4 letters, n=$sn): shipped hit %.1f%% s2l(short meant, 2+ longer chosen) %d | hybrid C hit %.1f%% s2l %d".format(100.0 * shortHit(rs, 0, 0f) / sn, s2l(rs, 0, 0f), 100.0 * shortHit(rs, 3, chosenW) / sn, s2l(rs, 3, chosenW)))
         gate(label, rs, chosenW)
         for (w in grid) println("R30 [$label] hybrid w=%-5.2f  A: %s | B: %s | A/letter: %s | B/letter: %s".format(w, fmt(rank(rs, 1, w, false)), fmt(rank(rs, 2, w, false)), fmt(rank(rs, 1, w, true)), fmt(rank(rs, 2, w, true))))
     }
