@@ -163,7 +163,7 @@ class KeysView(context: Context) : View(context) {
     // R28b: a second thumb that lands while the first one is still gliding (two-thumb typing: the next word's thumb is down before the last word's thumb is up). Its touch is recorded from the first moment and
     // takes over when the first thumb lifts, instead of being thrown away.
     private var waitId = -1
-    private var wtx = FloatArray(64); private var wty = FloatArray(64); private var wtn = 0
+    private var wtx = FloatArray(64); private var wty = FloatArray(64); private var wtt = LongArray(64); private var wtn = 0
 
     // ---- glide (KB-103)
     private var glideEnabled = false

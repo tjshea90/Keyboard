@@ -476,11 +476,13 @@ class KeyboardPresenter(
         glide.engine.preview(xs, ys, count, p1, p2) { res -> post(Runnable { if (view?.isGliding == true) session.onPreview(res) }) }
     }
 
-    override fun onGlideEnd(xs: FloatArray, ys: FloatArray, count: Int) {
+    override fun onGlideEnd(xs: FloatArray, ys: FloatArray, count: Int) = onGlideEnd(xs, ys, FloatArray(0), count)
+
+    override fun onGlideEnd(xs: FloatArray, ys: FloatArray, ts: FloatArray, count: Int) {
         if (!glideOn) return
         session.glideLifted()
         val (p2, p1) = session.context()
-        glide.engine.decode(xs, ys, count, p1, p2) { res: GlideResult -> post(Runnable { session.onDecoded(res, p1, p2); view?.setShift(controller.shift) }) }
+        glide.engine.decode(xs, ys, count, p1, p2, ts) { res: GlideResult -> post(Runnable { session.onDecoded(res, p1, p2); view?.setShift(controller.shift) }) }
     }
 
     override fun onCandidate(word: String) {
