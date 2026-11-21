@@ -728,7 +728,7 @@ class KeysView(context: Context) : View(context) {
     @SuppressLint("ClickableViewAccessibility") // KB-305 adds TalkBack key descriptions; this view is a keyboard, not a button
     override fun onTouchEvent(e: MotionEvent): Boolean {
         when (e.actionMasked) {
-            MotionEvent.ACTION_DOWN -> { requestUnbufferedDispatch(e); waitId = -1; wtn = 0; activeId = e.getPointerId(0); pressDown(e.getX(0), e.getY(0)) }   // unbuffered: every touch sample at once, not batched to the frame (a fast trail)
+            MotionEvent.ACTION_DOWN -> { requestUnbufferedDispatch(e); waitId = -1; wtn = 0; activeId = e.getPointerId(0); pressDown(e.getX(0), e.getY(0), at = e.eventTime) }   // unbuffered: every touch sample at once, not batched to the frame (a fast trail)
             MotionEvent.ACTION_POINTER_DOWN -> {
                 if (gliding) {                                    // a glide in progress is never cut short by a second touch (a resting palm); the new finger is only recorded, and takes over if it moves (R28b)
                     if (waitId < 0) { val i = e.actionIndex; waitId = e.getPointerId(i); wtn = 0; addWait(e.getX(i), e.getY(i), e.eventTime) }
@@ -736,7 +736,7 @@ class KeysView(context: Context) : View(context) {
                 }
                 // the second thumb: the letter the first one holds is typed NOW (in the order they were pressed), then the new finger is the tracked one
                 finishHeldLetter()
-                val i = e.actionIndex; activeId = e.getPointerId(i); pressDown(e.getX(i), e.getY(i))
+                val i = e.actionIndex; activeId = e.getPointerId(i); pressDown(e.getX(i), e.getY(i), at = e.eventTime)
             }
             MotionEvent.ACTION_MOVE -> {
                 val i = e.findPointerIndex(activeId); if (i >= 0) pressMove(e, i)
