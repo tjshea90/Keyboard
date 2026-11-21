@@ -36,20 +36,20 @@ class ShapeNetEvalTest {
         val kA = FloatArray(52); val kB = FloatArray(52)
         for (k in 0 until 26) { kA[2 * k] = (keys.cx[k] - fit.bx) / fit.ax; kA[2 * k + 1] = (keys.cy[k] - fit.by) / fit.ay; kB[2 * k] = keys.cx[k] / areaW; kB[2 * k + 1] = keys.cy[k] / areaH }
         val t0 = System.nanoTime()
-        val jobs = its.map { it -> pool.submit(Callable<Row?> {
+        val jobs = its.map { item -> pool.submit(Callable<Row?> {
             val c = local.get()
-            val cs = c.dec.decode(it.xs, it.ys, it.xs.size, listOf(lex), it.prev, cand)
-            if (cs.isEmpty() || it.ts.size < 2) return@Callable null
-            val n = it.xs.size
+            val cs = c.dec.decode(item.xs, item.ys, item.xs.size, listOf(lex), item.prev, cand)
+            if (cs.isEmpty() || item.ts.size < 2) return@Callable null
+            val n = item.xs.size
             val ctc = Array(2) { FloatArray(cs.size) { -1e9f } }
             for (mode in 0..1) {
-                val xs = FloatArray(n) { if (mode == 0) (it.xs[it] - fit.bx) / fit.ax else it.xs[it] / areaW }
-                val ys = FloatArray(n) { if (mode == 0) (it.ys[it] - fit.by) / fit.ay else it.ys[it] / areaH }
-                val tr = ShapeNet.trajectory(xs, ys, it.ts, n) ?: continue
+                val xs = FloatArray(n) { i -> if (mode == 0) (item.xs[i] - fit.bx) / fit.ax else item.xs[i] / areaW }
+                val ys = FloatArray(n) { i -> if (mode == 0) (item.ys[i] - fit.by) / fit.ay else item.ys[i] / areaH }
+                val tr = ShapeNet.trajectory(xs, ys, item.ts, n) ?: continue
                 val em = c.net.emissions(tr, if (mode == 0) kA else kB, 26)
                 for ((i, x) in cs.withIndex()) { val w = letters(x.text); if (w.isNotEmpty()) ctc[mode][i] = ShapeNet.ctcLogP(em, 26, w) }
             }
-            Row(FloatArray(cs.size) { cs[it].score }, BooleanArray(cs.size) { String(GlideLetters.keyOf(cs[it].text)) == it.key }, IntArray(cs.size) { cs[it].text.length }, ctc[0], ctc[1])
+            Row(FloatArray(cs.size) { i -> cs[i].score }, BooleanArray(cs.size) { i -> String(GlideLetters.keyOf(cs[i].text)) == item.key }, IntArray(cs.size) { i -> cs[i].text.length }, ctc[0], ctc[1])
         }) }
         val out = jobs.map { it.get() }
         pool.shutdown()
@@ -114,9 +114,9 @@ class ShapeNetEvalTest {
         val kA = FloatArray(52) { k -> if (k % 2 == 0) (keys.cx[k / 2] - fit.bx) / fit.ax else (keys.cy[k / 2] - fit.by) / fit.ay }
         val few = its.take(60)
         var ms = 0.0; var cnt = 0
-        for ((j, it) in few.withIndex()) {
-            val xs = FloatArray(it.xs.size) { i -> (it.xs[i] - fit.bx) / fit.ax }; val ys = FloatArray(it.xs.size) { i -> (it.ys[i] - fit.by) / fit.ay }
-            val tr = ShapeNet.trajectory(xs, ys, it.ts, it.xs.size) ?: continue
+        for ((j, item) in few.withIndex()) {
+            val xs = FloatArray(item.xs.size) { i -> (item.xs[i] - fit.bx) / fit.ax }; val ys = FloatArray(item.xs.size) { i -> (item.ys[i] - fit.by) / fit.ay }
+            val tr = ShapeNet.trajectory(xs, ys, item.ts, item.xs.size) ?: continue
             val t = System.nanoTime(); net.emissions(tr, kA, 26); val d = (System.nanoTime() - t) / 1e6
             if (j >= 10) { ms += d; cnt++ }
         }
