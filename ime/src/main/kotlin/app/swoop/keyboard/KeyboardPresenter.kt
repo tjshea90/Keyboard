@@ -224,7 +224,7 @@ class KeyboardPresenter(
         autoFixOn = suggestOn && st.autoFix && field.kind != FieldKind.OMNIBOX            // (never rewrite what is typed into an address box)
         capitalizeI = !safeMode && st.capitalizeI && field.composingAllowed && field.kind != FieldKind.OMNIBOX
         clipOn = !safeMode && st.suggestCopied; clipShown = null; glideNextOn = st.glideNextWord; session.reviseBefore = !safeMode && st.reviseBefore
-        glide.engine.shapeModel = !safeMode && st.shapeModel; if (glide.engine.shapeModel) glide.engine.warmShape()
+        if (!safeMode) { glide.engine.shapeModel = st.shapeModel; if (st.shapeModel) glide.engine.warmShape() }            // R30 (safe mode never creates the engine)
         controller.capitalizeI = !safeMode && st.capitalizeI && field.kind != FieldKind.OMNIBOX          // (R20c: also in boxes that show no composing text, for glided and strip words, and at Enter)
         properOn = !safeMode && st.autoCaps && field.composingAllowed && field.kind != FieldKind.OMNIBOX
         doubleSpaceOn = !safeMode && st.doubleSpace
