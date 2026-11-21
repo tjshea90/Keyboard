@@ -282,6 +282,8 @@ class KeysViewTest {
         override fun onKey(key: app.kestrel.core.input.Key) { keys.add(key) }
         override fun onCursor(steps: Int) {}
         override fun onGlideEnd(xs: FloatArray, ys: FloatArray, count: Int) { glides.add(count) }
+        val times = ArrayList<FloatArray>()
+        override fun onGlideEnd(xs: FloatArray, ys: FloatArray, ts: FloatArray, count: Int) { times.add(ts.copyOf(count)); super.onGlideEnd(xs, ys, ts, count) }
         override fun onToolbar(tool: Int) { tools.add(tool) }
         override fun onCandidate(word: String) { cands.add(word) }
         override fun onCandidateLong(word: String) { longs.add(word) }
@@ -295,6 +297,21 @@ class KeysViewTest {
         val (v, t) = glideView(); val (ax, ay) = at(v, "a"); val (sx, _) = at(v, "s")
         down(v, ax, ay); move(v, ax + (sx - ax) * 0.5f, ay); move(v, sx, ay); up(v, sx, ay)
         assertEquals("one glide", 1, t.glides.size); assertTrue("no single letter typed", t.keys.isEmpty())
+    }
+
+    @Test fun aGlideReportsWhenEachPointWasTouched() {                // R30: the shape network reads the timing of a glide
+        val (v, t) = glideView(); val (ax, ay) = at(v, "a"); val (sx, _) = at(v, "s"); val (dx, _) = at(v, "d")
+        v.dispatchTouchEvent(ev(MotionEvent.ACTION_DOWN, ax, ay, 5_000L))
+        v.dispatchTouchEvent(ev(MotionEvent.ACTION_MOVE, ax + (sx - ax) * 0.5f, ay, 5_030L))
+        v.dispatchTouchEvent(ev(MotionEvent.ACTION_MOVE, sx, ay, 5_060L))
+        v.dispatchTouchEvent(ev(MotionEvent.ACTION_MOVE, (sx + dx) / 2, ay, 5_090L))
+        v.dispatchTouchEvent(ev(MotionEvent.ACTION_UP, dx, ay, 5_120L))
+        assertEquals("one glide", 1, t.glides.size)
+        val ts = t.times[0]
+        assertEquals("one time per point", t.glides[0], ts.size)
+        assertEquals("milliseconds since the first touch", 0f, ts[0], 0f)
+        assertEquals(5_120f - 5_000f, ts.last(), 0f)
+        for (i in 1 until ts.size) assertTrue("never backwards at $i: ${ts.toList()}", ts[i] >= ts[i - 1])
     }
 
     @Test fun aTouchThatNeverLeavesItsKeyIsStillATap() {
