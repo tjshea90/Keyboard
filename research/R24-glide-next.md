@@ -147,3 +147,7 @@ letter: too few to say anything. R20's ceiling for a doubled-letter cue was 0.48
 ### 7.3 Language floor: adopted (small)
 `lmMin` 0.12 -> 0.45 in `GlideParams.forPitchDp` (the language keeps at least this weight on a CLEAN glide, exactly where look-alike words fit equally well): slice A +0.2 first / +0.4 everyday words, slice B (with the phone settings) +0.1 / +0.3, short-for-long slips 48 -> 47 and 20 -> 19.
 0.6 was worse on slice B. Small but the same sign on both slices.
+
+
+### 7.2 addendum (2026-11-21, R30): the dwell study was run on BROKEN times, and re-run on the right ones
+`RealSwipe.read` converted the epoch-millisecond timestamps (about 1.7e12) straight to Float, which can only hold steps of 131 072 ms there: every time difference in 7.2 was noise. Fixed (the first time is subtracted in double). Re-run (slice A, 1336 swipes with timing, 114 with a doubled letter): AUC doubled vs not, same number of distinct letters: pause share 0.448, slow points per point 0.423, milliseconds per pitch 0.417 (0.5 = nothing). Still no usable signal (if anything the other way round), so "NOT BUILT" stands. The shipped decoder did not use time at all, so no shipped number changed. The R30 shape network DOES read time (resampled in time, not length), see R30-trained-shape-model.md.
