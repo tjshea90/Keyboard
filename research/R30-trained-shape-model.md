@@ -59,3 +59,17 @@ Input forms: A = the corpus' own 0..1 canvas; B = THIS keyboard's area (x / 292 
 So: about +4 points first-choice and +1 point top-3 on BOTH slices, with the weight chosen on A alone, which is five times the best single change of the earlier rounds (+0.7). The network alone is only about as good as the shipped decoder: the gain comes from adding two DIFFERENT views of the same swipe (our geometric cost + language prior, its learned shape). The w curve is flat from 0.35 to 2 (92.1-92.5 on A and B), so the choice is not fragile.
 Cost on the sandbox JVM (x86): about 15-22 ms per forward pass warm (one thread), 104 ms the very first (cold JIT); the Cortex-A53 tablet will be several times slower (to be measured on the device; not run here).
 Not yet checked: the held-out TEST split, the short-word confusions the owner reported, a confidence gate to skip the network when the shipped answer is clearly right, and a tablet-shaped canvas.
+
+### 6b. Second run: short words, the confidence gate and the FUTO TEST split (same day)
+
+w = 0.7 (picked on slice A, inside the flat 0.35-2 region); keyboard-area form (what the IME can hand over) unless said.
+
+| | shipped top1 / top3 | hybrid top1 / top3 | short words (<= 4 letters) hit | "short meant, 2+ longer chosen" (the -> there, and -> access) |
+| :- | :- | :- | :- | :- |
+| slice A (dev, n 1338) | 87.9 / 94.7 | 91.7 / 95.9 | 90.2 -> 92.7 % | 11 -> 4 |
+| slice B (dev, other donors, n 1765) | 88.8 / 95.8 | 92.4 / 96.9 | 92.3 -> 94.5 % | 4 -> 0 |
+| slice C (TEST split, n 2281) | 90.6 / 96.1 | 94.3 / 97.6 | 94.6 -> 96.2 % | 3 -> 1 |
+
+So +3.8 / +3.6 / +3.7 points first choice on three disjoint real-swipe sets, including the FUTO test split the network was never tuned on, and the owner's kind of error (a short word read as a longer one) falls by about two thirds.
+Confidence gate (run the network only when the shipped first choice is NOT clearly ahead, margin = best score minus second best): the lowest-margin 25 % of swipes already give 91.4 / 91.9 / 94.2 against 91.8 / 92.4 / 94.3 for all swipes; 50 % gives 91.7 / 92.3 / 94.4. So the network needs to run on about a third of the glides to keep almost the whole gain: that is the latency answer for the tablet.
+Decision: ADOPT as a re-ranker of the shipped decoder's candidates (R30e).
