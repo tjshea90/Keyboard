@@ -15,10 +15,14 @@ class GlideStats {
     private var shapes = 0; private var shapeWords = 0; private var shapeLifts = 0; private var shapeFlips = 0
     private var previews = 0; private var previewMs = 0L; private var shown = 0; private var shownMs = 0L; private var shownMax = 0L
     private var retries = 0
+    private var shapeRuns = 0; private var shapeChanged = 0; private var shapeMs = 0L; private var shapeMsMax = 0L; private var shapeLoadMs = -1L; private var shapeSkipped = 0
     private var suggested = 0; private var suggestMs = 0L; private var suggestMax = 0L; private var suggPicked = 0; private var typedLearned = 0; private var autoFixed = 0; private var autoUndone = 0; private var retyped = 0
 
     @Synchronized fun onDecoded(millis: Long, found: Boolean) { glides++; if (!found) noMatch++; ms += millis; if (millis > msMax) msMax = millis; if (found) pending = true }
     /** Whatever the person did next that was not a correction: the word stays. */
+    /** R30: the trained shape network was asked about a glide ([ran]) or skipped because the shipped answer was clearly ahead; [changedFirst]: it put another word first; [millis]: its time. */
+    @Synchronized fun onShapeModel(ran: Boolean, changedFirst: Boolean, millis: Long) { if (!ran) { shapeSkipped++; return }; shapeRuns++; if (changedFirst) shapeChanged++; shapeMs += millis; if (millis > shapeMsMax) shapeMsMax = millis }
+    @Synchronized fun onShapeLoaded(millis: Long) { shapeLoadMs = millis }
     @Synchronized fun onKept() { if (pending) { kept++; pending = false } }
     @Synchronized fun onPicked() { if (pending) { picked++; pending = false } }
     @Synchronized fun onUndone() { if (pending) { undone++; pending = false } }
@@ -75,6 +79,7 @@ class GlideStats {
             if (noMatch > 0) sb.append(", no word fitted $noMatch")
             sb.append("; decode avg ${ms / glides} ms, worst $msMax ms")
         }
+        if (shapeLoadMs >= 0) sb.append("; shape model loaded in $shapeLoadMs ms, asked about $shapeRuns glides (avg ${if (shapeRuns > 0) shapeMs / shapeRuns else 0} ms, worst $shapeMsMax ms), skipped $shapeSkipped (shipped answer clearly ahead), changed the first word $shapeChanged times")
         if (shown > 0) sb.append("; word shown ${shownMs / shown} ms after the lift (worst $shownMax ms)")
         if (previews > 0) sb.append("; live preview $previews times, avg ${previewMs / previews} ms")
         if (loadMs >= 0) sb.append("; word list $loadWords words ready after $loadMs ms")
@@ -188,7 +193,15 @@ class GlideTyping(
     /** Reads / stores the person's dictionary (the text [UserDictionary.serialize] wrote). */
     private val loadDictionary: () -> String? = { null },
     private val saveDictionary: (String) -> Unit = {},
+    /** R30: the bytes of the trained shape network ([ShapeNet] weights file), read on the executor's thread when first needed; null = not shipped. */
+    private val loadShape: () -> ByteArray? = { null },
 ) {
+    /** R30: ask the trained shape network about glides (Settings > Typing). Read on the executor's thread; the network loads the first time it is needed, never on the UI thread. */
+    @Volatile var shapeModel = false
+    private var shapeRescorer: ShapeRescorer? = null
+    private var shapeKeys: GlideKeys? = null
+    private var shapeLoadFailed = false
+
     /** The person's dictionary: words added (predicted when their pattern is glided) and words removed (never offered). Loaded on first use. */
     @Volatile var dictionary = UserDictionary(); private set
     @Volatile private var dictionaryLoaded = false
