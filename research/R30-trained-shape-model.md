@@ -38,3 +38,24 @@ Step 0 done (this file, TASKS R30). Next: step 1 (fetch the weights file and the
 * **Cost:** about 35 M multiply-adds per swipe (per block ~6.4 M: pw1 4.2 M, pw2 2.1 M) -> plain Kotlin on a Cortex-A53 is probably 100-300 ms: MUST be measured/optimised (JVM here; tablet not measured), run off the UI thread, and the shipped decoder's answer is available at once while the net re-ranks.
 * **Golden vectors:** the upstream repo checks in a torch dump `app/src/test/resources/swipe_reference.bin` (magic `SWRF`, i32 1, then 5 arrays each [i32 n][f32 data]: xy(2x64), keys(26x2), feats(8x64), logp(32x27), gate(32)) from `torch.manual_seed(0)`; use it as the parity test without needing torch (fetch with R30FetchTest into core/build/r30).
 * **Upstream scoring (for reference):** trie-constrained CTC beam (width 100) + length term + log word frequency (`swipe_words.txt`, 150 289 words, score = round(log2(count)*10) 1..255). We will NOT use their beam; we rescore OUR decoder's candidates with the CTC log-likelihood and combine with our own prior.
+
+
+## 6. RESULT of step 3 (2026-11-21, `ShapeNetEvalTest`, REAL swipes through the REAL decoder; ts reader bug fixed first)
+
+Setup: shipped decoder (`GlideParams.forPitchDp`, with the word before as context) gives its top 40 words; the open network gives log P(word | path) (CTC forward sum over the word's letters); hybrid score = shipped score + w * log P. The data are real FUTO dev swipes, never committed (core/build only).
+Slice A = first 8 MB of dev.jsonl (1338 swipes whose word is in our list); slice B = bytes 100 MB.. of dev.jsonl (1765 swipes, other donors). w is meant to be tuned on A and only read on B.
+Input forms: A = the corpus' own 0..1 canvas; B = THIS keyboard's area (x / 292 dp, y / 161 dp, key centres likewise) = what the IME can do.
+
+| | slice A top1 / top3 | slice B top1 / top3 |
+| :- | :- | :- |
+| oracle recall of the 40 candidates | 96.6 % | 97.6 % |
+| shipped decoder | 87.9 / 94.7 % | 88.8 / 95.8 % |
+| network alone (rank the 40 by log P), canvas form | 88.5 / 95.5 % | 89.3 / 96.1 % |
+| network alone, keyboard-area form | 87.4 / 95.4 % | 88.6 / 95.7 % |
+| HYBRID w = 0.5, keyboard-area form | 91.9 / 95.7 % | 92.3 / 96.9 % |
+| HYBRID w = 1.0, keyboard-area form | 91.9 / 96.0 % | 92.4 / 96.9 % |
+| HYBRID w = 0.5, canvas form | 92.5 / 95.7 % | 92.5 / 96.9 % |
+
+So: about +4 points first-choice and +1 point top-3 on BOTH slices, with the weight chosen on A alone, which is five times the best single change of the earlier rounds (+0.7). The network alone is only about as good as the shipped decoder: the gain comes from adding two DIFFERENT views of the same swipe (our geometric cost + language prior, its learned shape). The w curve is flat from 0.35 to 2 (92.1-92.5 on A and B), so the choice is not fragile.
+Cost on the sandbox JVM (x86): about 15-22 ms per forward pass warm (one thread), 104 ms the very first (cold JIT); the Cortex-A53 tablet will be several times slower (to be measured on the device; not run here).
+Not yet checked: the held-out TEST split, the short-word confusions the owner reported, a confidence gate to skip the network when the shipped answer is clearly right, and a tablet-shaped canvas.
