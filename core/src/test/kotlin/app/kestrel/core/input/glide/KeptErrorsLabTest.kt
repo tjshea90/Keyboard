@@ -28,7 +28,8 @@ class KeptErrorsLabTest {
             if (only != null && only.none { name.contains(it) }) continue
             val keys = GlideEval.keysFor(wh.first, wh.second)
             val fp = GlideParams.forPitchDp(keys.pitch)
-            val params = GlideParams(shapeW = fp.shapeW, visitCap = fp.visitCap, lmMin = fp.lmMin)
+            val mod = variant.substringAfter(':', ""); val vname = variant.substringBefore(':')   // "ideal:nopat": the same run with ONE learning part switched off (to find which part costs accuracy)
+            val params = GlideParams(shapeW = fp.shapeW, visitCap = fp.visitCap, lmMin = fp.lmMin, patGain = if (mod == "nopat") 0f else 2.5f, confGain = if (mod == "noconf") 0f else 0.9f, touchField = mod != "nofield")
             val noise = SimNoise.aim(10f)
             val seed = 3L
             val rnd = Random(seed * 31 + 7)
@@ -37,9 +38,9 @@ class KeptErrorsLabTest {
             val dec = GlideDecoder(keys, params)
             val plain = GlideDecoder(keys, GlideParams(shapeW = fp.shapeW, visitCap = fp.visitCap, lmMin = 0.45f, patGain = 0f))
             val model = PersonalModel()
-            dec.personal = model; plain.personal = null
-            val pk = if (variant == "ideal") 0f else careless
-            val guard = variant.endsWith("+guard")
+            dec.personal = if (mod == "nopersonal") null else model; plain.personal = null
+            val pk = if (vname == "ideal") 0f else careless
+            val guard = vname.endsWith("+guard")
             val base = GlideEval.frequencyPick(lex, 4000, Random(seed * 13), 2).map { lex.text(it.id) }
             val lexicons = listOf<GlideLexicon>(lex)
             val seen = IntArray(blocks); val hitL = IntArray(blocks); val hitP = IntArray(blocks)
@@ -81,7 +82,7 @@ class KeptErrorsLabTest {
                         if (first || learnedWord != w) { model.patterns.add(learnedWord, print, weight); model.patterns.contradict(learnedWord, print, 0.7f) }
                         else if (inThree) { model.patterns.add(learnedWord, print, 3f); model.patterns.contradict(learnedWord, print, 2f) }
                     }
-                    if ((first || inThree || learnedWord != w) && habitOk) { val id = lex.idOf(learnedWord); if (id >= 0) dec.learnFrom(lex, id) }
+                    if ((first || inThree || learnedWord != w) && habitOk && mod != "nothumb") { val id = lex.idOf(learnedWord); if (id >= 0) dec.learnFrom(lex, id) }
                     prev2 = prev; prev = learnedWord; done++
                 }
             }
