@@ -37,7 +37,7 @@ class R30FetchTest {
     @Test fun fetchOpenEncoder() {
         assumeTrue("set R30_FETCH=1", System.getenv("R30_FETCH") == "1")
         val dir = File("build/r30")
-        val wanted = (System.getenv("R30_URLS") ?: "swipe_encoder.bin=${base}swipe_encoder.bin,swipe_words.txt=${base}swipe_words.txt").split(',')
+        val wanted = (System.getenv("R30_URLS") ?: "swipe_encoder.bin=${base}swipe_encoder.bin,swipe_words.txt=${base}swipe_words.txt,swipe_reference.bin=https://raw.githubusercontent.com/xxparthparekhxx/keyboard/master/app/src/test/resources/swipe_reference.bin").split(',')
         for (w in wanted) {
             val name = w.substringBefore('='); val url = w.substringAfter('=')
             val f = File(dir, name)
