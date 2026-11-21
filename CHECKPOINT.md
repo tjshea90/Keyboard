@@ -1,21 +1,22 @@
-# CHECKPOINT 932 — read me first, then TASKS.md
+# CHECKPOINT 942 — read me first, then TASKS.md
 
-**Written:** 2026-11-21T22:45:18Z · **tests:** all 1 fast checks green (gradle suite: see ship.sh)
-**Branch:** `claude/linkmeter-keyboard-launcher-fixes-fsk78t` · **builds on:** `6d8f4f9` (this checkpoint is the commit after it)
+**Written:** 2026-11-21T22:51:15Z · **tests:** all 1 fast checks green (gradle suite: see ship.sh)
+**Branch:** `claude/linkmeter-keyboard-launcher-fixes-fsk78t` · **builds on:** `39d6663` (this checkpoint is the commit after it)
 
 ## Just done
-R30 step 3c DONE: three disjoint real-swipe sets incl. FUTO TEST split: hybrid +3.8/+3.6/+3.7 pts top1 (A 87.9->91.7, B 88.8->92.4, C 90.6->94.3), short->longer errors 11->4, 4->0, 3->1; gate on lowest-margin 25-50% keeps the gain. DECISION: ADOPT. (research file 6b)
+R30 step 4a: :core ShapeRescorer (hybrid score+0.7*logP, gate 3.5, letter-box canvas) + GlideTyping.shapeModel/loadShape/warmShape/auto-off + KeysView touch times + presenter/Settings switch 'Smarter glide reading' + weights asset ime/assets/glide/swipe_encoder.bin + MIT notice; ShapeRescorerTest/ShapeNetParityTest pass
 
 ## Do this next
-step 4: integration. (1) read how the IME runs a glide decode (grep -rn 'decode(' ime/src core/src/main; GlideSession) (2) :core ShapeRescorer(net, lex candidates) with the gate + weights asset ime/src/main/assets/swipe_encoder.bin (check size budget, MIT NOTICE in assets/ + About/Diagnostics) (3) Settings switch (4) JVM tests (5) alpha10 release
+step 4b: run full :core:test + :ime:testDebugUnitTest + lint (bash ship.sh will); KeysViewTest for timed onGlideEnd; update Browser-link hash note; Diagnostics wording; tablet-speed unknown (auto-off at 700 ms x3); then bump ime/build.gradle.kts alpha10 + bash ship.sh + dispatch android.yml ONCE + record-release; write final plain answer
 
 *(resuming? CLAUDE.md's "FIRST ACTION OF EVERY SESSION" says how; the briefing is tools/resume.sh. Do that first, or autosave may stay off all session.)*
 
 ## Uncommitted right now
-     M research/R30-trained-shape-model.md
+    (nothing — the tree is clean as of this checkpoint)
 
 ## Last ten checkpoints
 ```
+  5bfe37a ckpt 932: R30 step 3c DONE: three disjoint real-swipe sets incl. FUTO TEST split: hybrid
   881fdb5 ckpt 930: R30 step 3 RESULT: hybrid (shipped score + 0.5*net log P over the top-40) = +4
   e9c055f ckpt 927: R30 step 3a: RealSwipe.read now keeps swipe times as ms since the first point 
   fa2d033 ckpt 925: R30 step 2 DONE: core/.../glide/ShapeNet.kt (pure Kotlin forward pass of the o
@@ -25,8 +26,7 @@ step 4: integration. (1) read how the IME runs a glide decode (grep -rn 'decode(
   fcbb1d3 ckpt 916: R30a/b DONE: research/R30-trained-shape-model.md (Gboard model not adoptable; 
   02d64f3 ckpt 915: R30 written into TASKS in the owner's words (adopt Gboard's trained shape mode
   79719b8 ckpt 901: ckpt: swoop-v0.7.0-alpha9 RELEASED AND RECORDED (android.yml run 44943874370 g
-  f3e4471 ckpt 899: swoop-v0.7.0-alpha9 (code 20) DISPATCHED ONCE: android.yml run 44943874370 (ru
 ```
 
-(1 automatic checkpoint(s) since the last deliberate one — the
+(9 automatic checkpoint(s) since the last deliberate one — the
 session was still mid-step. `git diff` against it shows what changed.)
