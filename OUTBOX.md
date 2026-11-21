@@ -1596,3 +1596,7 @@
 ## 2026-11-21T20:37:05Z
 > Waiting on the CI runs (`base,n` and `pm` on the fixed head); the timer will wake me when they should be done.
 <!-- sha:f54127edc905 -->
+
+## 2026-11-21T20:48:15Z
+> Both gate groups (`base,n,cu,pf,rb,last` and `lq,uf,cs,cs2,pk`) are running on the fixed head. I'll read the results when the 15-minute timer fires.
+<!-- sha:7aab91591113 -->
