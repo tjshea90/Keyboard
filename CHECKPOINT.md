@@ -1,21 +1,22 @@
-# CHECKPOINT 916 — read me first, then TASKS.md
+# CHECKPOINT 918 — read me first, then TASKS.md
 
-**Written:** 2026-11-21T22:11:05Z · **tests:** all 1 fast checks green (gradle suite: see ship.sh)
-**Branch:** `claude/linkmeter-keyboard-launcher-fixes-fsk78t` · **builds on:** `02d64f3` (this checkpoint is the commit after it)
+**Written:** 2026-11-21T22:12:43Z · **tests:** all 1 fast checks green (gradle suite: see ship.sh)
+**Branch:** `claude/linkmeter-keyboard-launcher-fixes-fsk78t` · **builds on:** `2b6f7cf` (this checkpoint is the commit after it)
 
 ## Just done
-R30a/b DONE: research/R30-trained-shape-model.md (Gboard model not adoptable; open MIT data + encoders found: FUTO swipe corpus 1.04M swipes, xxparthparekhxx swipe_encoder.bin 634K params layout-agnostic TCN+CTC, youcoded 529K, omniglide)
+R30c step 1a: R30FetchTest (test-side, R30_FETCH=1) downloaded swipe_encoder.bin (2529224 B, sha256 d569395f...) and swipe_words.txt (1721282 B) into core/build/r30 (git-ignored); waiting for the helper that saves the repo's ml/ source to scratchpad/r30
 
 ## Do this next
-R30c step 1: fetch swipe_encoder.bin (huggingface.co/xxparthparekhxx/compose-keyboard-swipe-encoder/resolve/main/swipe_encoder.bin) + repo ml/ code into core/build/r30/ via a JUnit-side fetch like RealSwipe.fetch (no curl); READ the LICENSE file of both repos first; then numpy reference forward in tools/r30/ and Kotlin port in core/.../glide/ShapeNet.kt
+read scratchpad r30 files: LICENSE first line, model def, features, export layout; then numpy reference forward tools/r30/ref_forward.py and golden vectors
 
 *(resuming? CLAUDE.md's "FIRST ACTION OF EVERY SESSION" says how; the briefing is tools/resume.sh. Do that first, or autosave may stay off all session.)*
 
 ## Uncommitted right now
-    ?? research/R30-trained-shape-model.md
+    (nothing — the tree is clean as of this checkpoint)
 
 ## Last ten checkpoints
 ```
+  fcbb1d3 ckpt 916: R30a/b DONE: research/R30-trained-shape-model.md (Gboard model not adoptable; 
   02d64f3 ckpt 915: R30 written into TASKS in the owner's words (adopt Gboard's trained shape mode
   79719b8 ckpt 901: ckpt: swoop-v0.7.0-alpha9 RELEASED AND RECORDED (android.yml run 44943874370 g
   f3e4471 ckpt 899: swoop-v0.7.0-alpha9 (code 20) DISPATCHED ONCE: android.yml run 44943874370 (ru
@@ -25,5 +26,7 @@ R30c step 1: fetch swipe_encoder.bin (huggingface.co/xxparthparekhxx/compose-key
   182d67f ckpt 873: swoop-v0.7.0-alpha8 (code 19) DISPATCHED ONCE: android.yml run 44698572358 on 
   c308df8 ckpt 872: gated swoop-v0.7.0-alpha8 (ime code 19) and pushed it: handoff self-test, unit
   e680385 ckpt 871: R28a+R28b DONE in code: learnedReach scaling (GlideParams), glide-start fixes,
-  4fbb3a2 ckpt 862: touch-stream Diagnostics numbers added (InputStats.touchLine, KeysView.onTouch
 ```
+
+(1 automatic checkpoint(s) since the last deliberate one — the
+session was still mid-step. `git diff` against it shows what changed.)
