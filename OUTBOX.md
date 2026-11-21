@@ -1592,3 +1592,7 @@
 > 💡 This chat is getting long. Consider `/amhandoff` at the next good stopping point.
 > 💡 The code word is off in this chat. Type `/amcodeword` and I'll start every reply with 'Yes Boss!', so you'll notice if I start losing track.
 <!-- sha:761ee11f22c0 -->
+
+## 2026-11-21T20:37:05Z
+> Waiting on the CI runs (`base,n` and `pm` on the fixed head); the timer will wake me when they should be done.
+<!-- sha:f54127edc905 -->
