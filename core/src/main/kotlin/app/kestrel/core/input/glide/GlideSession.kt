@@ -174,13 +174,17 @@ class GlideSession(
         val g = engine() ?: return
         g.stats.onKept()
         if (!pendingRevised && pendingWeight == 1f && !afterUndo) g.shadowFor(pendingSerial)?.let { if (it.plain != it.learned && it.learned == w) g.stats.onShadowLearnedKept() }
-        g.accepted(w) { h -> habitChanged(h) }
+        // R29: a wrong look-alike that was only KEPT must not feed itself (LearnGuard): learned lightly, no shape, no thumb habit
+        val sh = g.shadowFor(pendingSerial)
+        val verdict = LearnGuard.judge(sh?.plain, sh?.learned, sh?.gap ?: 0f, w, maxOf(pendingWeight, if (afterUndo) 3f else 1f), afterUndo, pendingRevised)
+        if (verdict.circular) g.stats.onGuarded()
+        if (verdict.habit) g.accepted(w) { h -> habitChanged(h) }
         if (learnAllowed()) {
             pendingShown?.let { g.learnCase(it) }
             if (pendingStart) g.learnStart(w)
             // kept: the keyboard hears it (a word the person chose, or one that replaced a deleted one, counts more); a correction remembers what it was picked over (a pick) or put in the place of (a deletion)
             val guessed = pendingGuessed ?: if (afterUndo) lastDeleted else null
-            g.learn(pendingPrev, w, maxOf(pendingWeight, if (afterUndo) 3f else 1f), pendingPrev2, guessed?.takeIf { it != w }, if (pendingGuessed != null) 1f else 0.5f, fromGlide = true, afterUndo = afterUndo)
+            g.learn(pendingPrev, w, verdict.weight, pendingPrev2, guessed?.takeIf { it != w }, if (pendingGuessed != null) 1f else 0.5f, fromGlide = verdict.shape, afterUndo = afterUndo)
         }
         pendingWeight = 1f; pendingGuessed = null; pendingShown = null; pendingStart = false
         afterUndo = false

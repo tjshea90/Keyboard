@@ -5,7 +5,7 @@ import java.util.concurrent.Executor
 /** What glide typing did, counted on the tablet itself (no words are kept) so a Diagnostics paste says how accurate it was in real use (AT1g). */
 class GlideStats {
     private var glides = 0; private var noMatch = 0; private var kept = 0; private var picked = 0; private var undone = 0; private var revised = 0
-    private var shadowDiffer = 0; private var shadowLearnedKept = 0; private var shadowPlainPicked = 0; private var planeDp = -1f
+    private var guarded = 0; private var shadowDiffer = 0; private var shadowLearnedKept = 0; private var shadowPlainPicked = 0; private var planeDp = -1f
     private var ms = 0L; private var msMax = 0L
     private var pending = false
     private var loadMs = -1L; private var loadWords = 0; private var warmMs = -1L
@@ -26,6 +26,8 @@ class GlideStats {
     @Synchronized fun onShadow(differ: Boolean) { if (differ) shadowDiffer++ }
     /** ... and the person then kept the word learning chose (a glide they did not change). */
     @Synchronized fun onShadowLearnedKept() { shadowLearnedKept++ }
+    /** R29: a kept glide whose word only learning had put in front of a much commoner one was learned lightly ([LearnGuard]). */
+    @Synchronized fun onGuarded() { guarded++ }
     /** ... and the person picked, in the strip, the word the plain decoder had given first. */
     @Synchronized fun onShadowPlainPicked() { shadowPlainPicked++ }
     /** How far the learned touch plane moves a touch somewhere on the keys, in dp (the largest of the four corners). */
@@ -69,6 +71,7 @@ class GlideStats {
             if (judged > 0) sb.append(": best word kept $kept (${100 * kept / judged} %), another candidate picked $picked, deleted right away $undone")
             if (revised > 0) sb.append(", word before fixed by the next word $revised times")
             if (shadowDiffer > 0) sb.append("; learning changed the first guess $shadowDiffer times (you kept the learned word $shadowLearnedKept times, you picked the plain decoder's word $shadowPlainPicked times)")
+            if (guarded > 0) sb.append(", kept glides learned lightly because only learning put a rarer word first $guarded times")
             if (noMatch > 0) sb.append(", no word fitted $noMatch")
             sb.append("; decode avg ${ms / glides} ms, worst $msMax ms")
         }
@@ -271,7 +274,7 @@ class GlideTyping(
     /** R27a: the same decoder with nothing learned (no habit, plane, own words, pairs or shapes): its first word is compared with the real one, after the real answer was handed out. */
     private var plainDecoder: GlideDecoder? = null
     private var serial = 0
-    class Shadow(val serial: Int, val plain: String?, val learned: String?)
+    class Shadow(val serial: Int, val plain: String?, val learned: String?, val gap: Float = 0f)
     @Volatile private var shadow: Shadow? = null
     /** The comparison for decode [serial], once it has run (null while it is still running, or when learning could not matter). */
     fun shadowFor(serial: Int): Shadow? = shadow?.takeIf { it.serial == serial }
@@ -360,7 +363,8 @@ class GlideTyping(
             if (pd != null && r.isNotEmpty() && (!personal.isEmpty || d.biasX != 0f || d.biasY != 0f || !d.field.isEmpty)) {
                 val plain = try { cleaned(pd.decode(px, py, count, lexicons, prev, 3 + EXTRA_FOR_BLOCKED, prev2), 3) } catch (e: Exception) { emptyList() }
                 val p0 = plain.firstOrNull()?.text
-                shadow = Shadow(my, p0, r[0].text)
+                val gap = if (p0 != null && p0 != r[0].text) d.staticLn(m, p0) - d.staticLn(m, r[0].text) else 0f   // R29: how much commoner the plain word is in the shipped list
+                shadow = Shadow(my, p0, r[0].text, gap)
                 stats.onShadow(p0 != null && p0 != r[0].text)
             }
         }

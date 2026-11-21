@@ -588,6 +588,9 @@ class GlideDecoder(private val keys: GlideKeys, private val p: GlideParams = Gli
         return ids
     }
 
+    /** R29: ln of [word]'s share in [lex] alone (no personal use, no pair); a word the list does not have counts as very rare (-20). */
+    fun staticLn(lex: GlideLexicon, word: String): Float { val id = lex.idOf(word); return if (id < 0) -20f else lex.logProb(id) }
+
     /**
      * R26a: ln P([next] | [cand] as the word before it), in the decoder's own terms (the word's share, the pair's share, the person's own pairs and the three-word phrase with [candPrev]
      * before [cand]). NaN when [next] is in none of the lists. Reads only the lists and the personal model: safe to call between decodes.
