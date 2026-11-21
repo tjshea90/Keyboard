@@ -29,7 +29,7 @@ class KeptErrorsLabTest {
             val keys = GlideEval.keysFor(wh.first, wh.second)
             val fp = GlideParams.forPitchDp(keys.pitch)
             val mod = variant.substringAfter(':', ""); val vname = variant.substringBefore(':')   // "ideal:nopat": the same run with ONE learning part switched off (to find which part costs accuracy)
-            val params = GlideParams(shapeW = fp.shapeW, visitCap = fp.visitCap, lmMin = fp.lmMin, patGain = if (mod == "nopat") 0f else if (mod.startsWith("pat=")) mod.substring(4).toFloat() else 2.5f, confGain = if (mod == "noconf") 0f else if (mod.startsWith("conf=")) mod.substring(5).toFloat() else 0.9f, touchField = mod != "nofield")
+            val params = GlideParams(shapeW = fp.shapeW, visitCap = fp.visitCap, lmMin = fp.lmMin, patGain = if (mod == "nopat") 0f else if (mod.startsWith("pat=")) mod.substring(4).toFloat() else 2.5f, confGain = if (mod == "noconf") 0f else if (mod.startsWith("conf=")) mod.substring(5).toFloat() else 0.9f, touchField = mod != "nofield", patMaxGap = fp.patMaxGap, confMaxGap = fp.confMaxGap)   // the reach the app really uses at this key size (R28a)
             val noise = SimNoise.aim(10f)
             val seed = 3L
             val rnd = Random(seed * 31 + 7)
