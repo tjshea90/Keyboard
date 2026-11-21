@@ -1,0 +1,33 @@
+Swoop trained swipe network (swipe_encoder.bin) - source, licence and notices
+
+swipe_encoder.bin holds the weights of a small neural network (633,697 numbers, about 2.5 MB) that reads the path and timing of a glide on the keyboard and says how likely each
+candidate word is. Swoop uses it as a second opinion on its own decoder (Settings > Typing > Smarter glide reading). It never leaves the device.
+
+* The weights were trained by Parth Parekh ("compose-keyboard-swipe-encoder", https://huggingface.co/xxparthparekhxx/compose-keyboard-swipe-encoder, code
+  https://github.com/xxparthparekhxx/keyboard), on the FUTO Swipe dataset (https://huggingface.co/datasets/futo-org/swipe.futo.org, MIT licence, about 900,000 real swipes).
+  Both are published under the MIT licence; the model card says "license: mit" and the repository's LICENSE is reproduced below. The file is used unchanged.
+* The network's design follows the FUTO Swipe paper (arXiv:2606.25247): a layout-agnostic temporal convolutional network whose output is a 2D pattern of 64 cosine coefficients read at each key.
+  Swoop's own code that runs it (ShapeNet.kt, ShapeRescorer.kt) is a fresh implementation in Kotlin, checked against the original's reference numbers (ShapeNetParityTest).
+* Swoop's tests use the 6 KB reference file swipe_reference.bin from the same repository (MIT).
+
+MIT License
+
+Copyright (c) 2026 Parth Parekh
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
