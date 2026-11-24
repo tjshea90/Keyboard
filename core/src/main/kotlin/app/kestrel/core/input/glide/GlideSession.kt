@@ -165,7 +165,7 @@ class GlideSession(
         if (!controller.replaceRecent(old, word)) return false
         val g = engine()
         if (g != null && learnAllowed()) {
-            g.unlearnWord(pendingPrev, old, 1f, pendingPrev2)
+            g.unlearnWord(pendingPrev, old, UNLEARN_WRONG, pendingPrev2)
             g.learn(pendingPrev, word, 3f, pendingPrev2, old, 1f)
         }
         g?.stats?.onPicked(); g?.stats?.onStripReplaced(fix = !viaGuess, rescued = true)
@@ -227,13 +227,21 @@ class GlideSession(
         val sh = g.shadowFor(pendingSerial)
         val verdict = LearnGuard.judge(sh?.plain, sh?.learned, sh?.gap ?: 0f, w, maxOf(pendingWeight, if (afterUndo) 3f else 1f), afterUndo, pendingRevised)
         if (verdict.circular) g.stats.onGuarded()
-        if (verdict.habit) g.accepted(w) { h -> habitChanged(h) }
+        // R33: a glide that was only KEPT (not picked, not retyped, not revised) is weak evidence: a rare word of the shipped list that merely stayed in the text teaches only a light lesson, no shape and no thumb habit,
+        // so a wrong look-alike (ave for and, fur for for) cannot grow into the first choice by being left alone or by a failed correction
+        val trusted = pendingWeight > 1f || afterUndo || pendingRevised
+        val trust = if (trusted) 1f else g.keepTrust(w)
+        val gentle = trust < 0.5f
+        if (gentle) g.stats.onRareKept()
+        if (verdict.habit && !gentle) g.accepted(w) { h -> habitChanged(h) }
         if (learnAllowed()) {
             pendingShown?.let { g.learnCase(it) }
             if (pendingStart) g.learnStart(w)
             // kept: the keyboard hears it (a word the person chose, or one that replaced a deleted one, counts more); a correction remembers what it was picked over (a pick) or put in the place of (a deletion)
             val guessed = pendingGuessed ?: if (afterUndo) lastDeleted else null
-            g.learn(pendingPrev, w, verdict.weight, pendingPrev2, guessed?.takeIf { it != w }, if (pendingGuessed != null) 1f else 0.5f, fromGlide = verdict.shape, afterUndo = afterUndo)
+            // R33: the person CHOSE another word over the first guess: that guess was wrong, not use: what it had earned goes
+            pendingGuessed?.let { wrong -> if (!wrong.equals(w, ignoreCase = true)) g.unlearnWord(pendingPrev, wrong, UNLEARN_WRONG, pendingPrev2) }
+            g.learn(pendingPrev, w, verdict.weight * trust, pendingPrev2, guessed?.takeIf { it != w }, if (pendingGuessed != null) 1f else 0.5f, fromGlide = verdict.shape && !gentle, afterUndo = afterUndo)
         }
         pendingWeight = 1f; pendingGuessed = null; pendingShown = null; pendingStart = false
         afterUndo = false
@@ -260,6 +268,8 @@ class GlideSession(
         const val RESCUE_MS = 20_000L
         /** R33: the tapped word must be at least this many nats (ln, about 55 times) more likely than the glided word, in this context, to be taken as its correction when the decoder did not list it. */
         const val FIX_GAP = 4f
+        /** R33: what a wrong first guess had earned is taken back, this many uses, when the person picks another word over it. */
+        const val UNLEARN_WRONG = 2f
         /** A candidate must beat the first choice by this many cost units (nats of the language score) with the next word counted. Measured: 1.0 = +0.8 points first choice, 8 words fixed for each one spoiled. */
         const val REVISE_MARGIN = 1.0f
     }

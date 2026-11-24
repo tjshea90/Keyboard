@@ -766,6 +766,10 @@ class GlideTyping(
     }
 
     companion object {
+        /** R33: the list's own ln of a word at or below which a kept glide teaches only [KEEP_MIN] of a normal lesson, and at or above which all of it (linear in between): ave -11.2 and fur -11.3 get 0.1, access -8.9 about 0.87. */
+        const val KEEP_LOW = -11.5f
+        const val KEEP_HIGH = -8.5f
+        const val KEEP_MIN = 0.1f
         private const val SAVE_EVERY_MS = 10_000L
         /** The engine is asked for this many more guesses than are shown, so that removing the words the person blocked still leaves a full strip. */
         private const val EXTRA_FOR_BLOCKED = 4
