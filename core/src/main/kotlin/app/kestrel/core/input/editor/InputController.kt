@@ -328,6 +328,18 @@ class InputController(editor: EditorBridge, val stats: InputStats = InputStats()
             ensureWindow()
             return
         }
+        val sw = swapAt; swapAt = -1
+        if (sw >= 0 && sw == selStart && selStart == selEnd && composing == null && swapKey.isNotEmpty() && before.endsWith(swapKey) && verifyBefore(swapKey)) {      // R32a: the mark that took the space's place goes, and the space is back
+            val s0 = selStart; val e0 = selEnd
+            beginBatch()
+            var ok = ed.deleteSurrounding(swapKey.length, 0)
+            if (ok) { before = before.dropLast(swapKey.length); moveSel(-swapKey.length); ok = commit(" ") }
+            endBatch(s0, e0)
+            lastGlide = null
+            if (!ok) { resync(); return }
+            ensureWindow()
+            return
+        }
         val c = composing
         if (c != null) {
             val shorter = dropLastCodePoint(c)
