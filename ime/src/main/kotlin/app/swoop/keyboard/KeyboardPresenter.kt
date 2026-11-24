@@ -488,12 +488,14 @@ class KeyboardPresenter(
 
     override fun onCandidate(word: String) {
         if (word.isEmpty()) return
-        if (word in glideNextShown && controller.lastGlide != null) { pickNextAfterGlide(word); return }
+        if (word in glideNextShown && controller.lastGlide != null && !session.isGlideGuess(glideRaw[word] ?: word)) { pickNextAfterGlide(word); return }
         if (editWord != null && controller.lastGlide == null && editRaw.containsKey(word)) { replaceTappedWord(word); return }
         userMoved = false
         if (EmojiMap.isEmoji(word)) { chooseEmoji(word); return }
         if (controller.lastGlide != null || session.hasCandidates()) session.pick(glideRaw[word] ?: word)        // (the strip still shows a glide's guesses even when an app rewrote the field)
         else if (suggestOn) {
+            // R32d: the keyboard lost track of the glide (an app or a late report), the strip shows the next words, and the person taps one of that glide's own guesses: it replaces the glided word
+            if (session.replaceLookalike(glideRaw[word] ?: word)) { latest = null; literalShown = null; suggestSeq++; noFixFor = null; view?.setShift(controller.shift); refreshSuggestions(); return }
             val typed = controller.wordBeforeCursor()
             val w = if (word == literalShown && typed != null) typed else word      // the typed word in quotes: keep it as it is (and learn it)
             session.settle()
@@ -516,6 +518,7 @@ class KeyboardPresenter(
      */
     private var glideBest: String = ""
     private var glideAlts: List<String> = emptyList()
+    private var glideMore: List<String> = emptyList()
     private var glideNext: List<String> = emptyList()
     private var glideNextWaiting = false
     /** The next words the glide layout shows (the middle box, and a side box that has no other guess to hold): a tap on exactly one of them is "this word comes next", not a replacement of the glided word. */
@@ -524,26 +527,33 @@ class KeyboardPresenter(
     override fun showCandidates(words: List<String>) {
         val cased = if (properOn) words.map { w -> glide.engine.caseFormOf(w.lowercase(), controller.previousWord())?.takeIf { it.lowercase() == w.lowercase() } ?: w } else words
         val shown = if (controller.capitalizeI) cased.map { InputController.pronounI(it) } else cased                  // (R20c: the strip shows I'm, as the text will)
-        glideRaw = if (properOn || controller.capitalizeI) words.indices.filter { shown[it] != words[it] }.associate { shown[it] to words[it] } else emptyMap()
+        // R32d: the decoder's 4th and 5th guesses are written the same way, so a tap on one maps back to the word itself
+        val more = session.moreGuesses().let { m -> val c = if (properOn) m.map { w -> glide.engine.caseFormOf(w.lowercase(), controller.previousWord())?.takeIf { it.lowercase() == w.lowercase() } ?: w } else m; if (controller.capitalizeI) c.map { InputController.pronounI(it) } else c }
+        val moreRaw = session.moreGuesses()
+        glideRaw = if (properOn || controller.capitalizeI) (words.indices.filter { shown[it] != words[it] }.associate { shown[it] to words[it] } + moreRaw.indices.filter { more[it] != moreRaw[it] }.associate { more[it] to moreRaw[it] }) else emptyMap()
         glideNextShown = emptySet()
         if (view?.isGliding == true || controller.lastGlide == null || !suggestOn || !glideNextOn || shown.isEmpty()) { view?.showCandidates(withEmoji(shown, words.firstOrNull())); return }     // (the live guess while the finger is down, or no suggestions: the plain list)
-        glideBest = shown[0]; glideAlts = shown.drop(1).take(2); glideNext = emptyList(); glideNextWaiting = true
+        glideBest = shown[0]; glideAlts = shown.drop(1).take(2); glideMore = more; glideNext = emptyList(); glideNextWaiting = true
         renderGlideStrip()
         val (p2, p1) = controller.previousTwo()
         val my = ++suggestSeq
         glide.engine.suggest("", p1, p2, 4) { res -> post(Runnable { if (my == suggestSeq && controller.lastGlide != null) { glideNext = res.words; glideNextWaiting = false; renderGlideStrip() } }) }
     }
 
+    /**
+     * R32d (owner 2026-11-24: "when i press the word and in the recommendations to fix it, sometimes it keeps ave and just adds and behind it"): a box that REPLACES the glided word and a box that ADDS the next word must never
+     * be mixed up. The middle box is the only one that adds, and it never holds a word the decoder itself guessed for this glide (any of its five): such a word is what the finger may have meant, so it goes to a side box
+     * and a tap replaces. A word the language also expects next AND the shape fits is the best replacement there is, so it goes first. The side boxes never hold a filler "next word": an empty side box stays empty.
+     */
     private fun renderGlideStrip() {
-        val taken = (listOf(glideBest) + glideAlts).map { it.lowercase() }
-        val next = glideNext.filter { it.lowercase() !in taken }
-        if (next.isEmpty() && !glideNextWaiting) { glideNextShown = emptySet(); view?.showCandidates(listOf(glideBest) + glideAlts); return }          // no prediction: the plain guesses
-        val fill = next.drop(1).iterator()
-        val left = glideAlts.getOrNull(0) ?: (if (fill.hasNext()) fill.next() else "")
-        val right = glideAlts.getOrNull(1) ?: (if (fill.hasNext()) fill.next() else "")
+        val guesses = (listOf(glideBest) + glideAlts + glideMore).map { it.lowercase() }.toSet()
+        val agreeing = glideMore.filter { m -> glideNext.any { it.equals(m, ignoreCase = true) } }
+        val sides = (agreeing + glideAlts + glideMore.filter { it !in agreeing }).take(2)
+        val next = glideNext.filter { it.lowercase() !in guesses }
+        if (next.isEmpty() && !glideNextWaiting) { glideNextShown = emptySet(); view?.showCandidates(listOf(glideBest) + (agreeing + glideAlts).take(2)); return }          // no prediction: the plain guesses
         val mid = next.firstOrNull() ?: ""
-        glideNextShown = next.take(3).toSet()
-        view?.showCandidates(listOf(left, mid, right), accent = 1)                                   // the middle box carries the accent outline: it is the one that adds a word
+        glideNextShown = if (mid.isEmpty()) emptySet() else setOf(mid)
+        view?.showCandidates(listOf(sides.getOrElse(0) { "" }, mid, sides.getOrElse(1) { "" }), accent = 1)                                   // the middle box carries the accent outline: it is the one that adds a word
     }
 
     /** The middle box was tapped: the glided word stays (and is learned), the predicted word goes in after it, with its space, and counts double like any word taken from the strip. */
