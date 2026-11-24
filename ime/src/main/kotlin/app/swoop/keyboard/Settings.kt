@@ -29,6 +29,8 @@ object Prefs {
     const val FLOAT_H = "float_h_x100"
     // learning
     const val LEARN = "learn_typing"
+    /** R32c: remember the e-mail addresses typed and offer them in e-mail boxes. */
+    const val EMAIL_SUGGEST = "email_suggestions"
     // look
     const val NUMBERROW = "number_row"
     const val HIDE_LETTERS = "hide_letters"
@@ -75,6 +77,8 @@ class Settings(private val p: SharedPreferences) {
     val doubleSpace get() = b(Prefs.DOUBLESPACE, true)
     val spaceSlide get() = b(Prefs.SPACESLIDE, true)
     val learn get() = b(Prefs.LEARN, true)
+    /** R32c (owner 2026-11-24): the e-mail addresses you type are remembered on this device and offered as the suggestions of an e-mail box. */
+    val emailSuggestions get() = b(Prefs.EMAIL_SUGGEST, true)
     /** Off by default (the photo): the digits are the small hints on the top row, and a held top-row key types its digit. */
     val numberRow get() = b(Prefs.NUMBERROW, false)
     /** Letters are not drawn (a blank panel that still types the letters under it). */

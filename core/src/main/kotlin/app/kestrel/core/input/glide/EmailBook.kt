@@ -2,7 +2,7 @@ package app.kestrel.core.input.glide
 
 /**
  * R32c (owner 2026-11-24: "Learn the email addresses i use and include them as suggested words at the top of the keyboard whenever i press an email field"). The e-mail addresses this person TYPES, kept on the device
- * only (never exported, never logged), best first: the ones used most, then the newest. At most [cap]; the one used least goes first when the book is full. Pure Kotlin, one thread (the keyboard's UI thread).
+ * only (never exported, never logged), best first: the ones used most, then the newest. At most [cap]; the one used least goes first when the book is full. Pure Kotlin, the methods are synchronized (the keyboard's UI thread reads it, the settings screen may clear it).
  *
  * What gets in is decided by the callers (only an address typed key by key, never from the clipboard, an autofill or a paste; nothing in password boxes or where the app asked for no personalised learning).
  * Addresses are kept in lower case (domains are case-blind and nobody relies on a capital in the part before the @).
@@ -13,13 +13,13 @@ class EmailBook(private val cap: Int = CAP) {
     /** A logical clock: every use is "later" than the one before (no wall clock, so the order is the same in tests and on the phone). */
     private var clock = 0L
     /** Set whenever the book changed since the last [serialize]. */
-    var dirty = false; private set
+    @Volatile var dirty = false; private set
 
-    val size: Int get() = items.size
-    val isEmpty: Boolean get() = items.isEmpty()
+    val size: Int @Synchronized get() = items.size
+    val isEmpty: Boolean @Synchronized get() = items.isEmpty()
 
     /** One more use of [address] (a typed or picked address). False (nothing stored) when it is not a plain address. */
-    fun learn(address: String, uses: Int = 1): Boolean {
+    @Synchronized fun learn(address: String, uses: Int = 1): Boolean {
         val a = address.trim().lowercase()
         if (!isAddress(a)) return false
         val e = items[a]
@@ -33,13 +33,13 @@ class EmailBook(private val cap: Int = CAP) {
     }
 
     /** The person removed [address] (Settings): it is gone and will be learned again only if it is typed again. */
-    fun forget(address: String): Boolean { val r = items.remove(address.trim().lowercase()) != null; if (r) dirty = true; return r }
+    @Synchronized fun forget(address: String): Boolean { val r = items.remove(address.trim().lowercase()) != null; if (r) dirty = true; return r }
 
     /** Every address is gone. */
-    fun clear() { if (items.isNotEmpty()) dirty = true; items.clear() }
+    @Synchronized fun clear() { if (items.isNotEmpty()) dirty = true; items.clear() }
 
     /** Every address, best first. */
-    fun addresses(): List<String> = ranked().map { it.address }
+    @Synchronized fun addresses(): List<String> = ranked().map { it.address }
 
     private fun ranked(): List<Entry> = items.values.sortedWith(compareByDescending<Entry> { it.uses }.thenByDescending { it.last })
 
@@ -47,7 +47,7 @@ class EmailBook(private val cap: Int = CAP) {
      * What to offer for the text [typed] so far in an e-mail box (up to [max], best first): the addresses that start with it (all of them when nothing is typed yet); and once an "@" is there, the part before it with the
      * domains this person uses behind it ("bob@" gives bob@gmail.com and bob@work.example when those are the domains seen). An address that is already typed in full is not offered again.
      */
-    fun suggest(typed: String, max: Int = 3): List<String> {
+    @Synchronized fun suggest(typed: String, max: Int = 3): List<String> {
         val t = typed.trim().lowercase()
         if (t.length > MAX_LEN) return emptyList()
         val out = ArrayList<String>(max)
@@ -69,7 +69,7 @@ class EmailBook(private val cap: Int = CAP) {
     }
 
     /** One line per address: the address, how often it was used, when (the logical clock), tab separated. */
-    fun serialize(): String { dirty = false; return ranked().joinToString("\n") { "${it.address}\t${it.uses}\t${it.last}" } }
+    @Synchronized fun serialize(): String { dirty = false; return ranked().joinToString("\n") { "${it.address}\t${it.uses}\t${it.last}" } }
 
     companion object {
         const val CAP = 40

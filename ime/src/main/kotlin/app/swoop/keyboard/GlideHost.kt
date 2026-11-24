@@ -26,6 +26,7 @@ class GlideHost(
     private val habitFile = File(context.filesDir, "glide_habit.txt")
     private val ownFile = File(context.filesDir, "own_words.txt")
     private val dictFile = File(context.filesDir, "user_dictionary.txt")
+    private val emailFile = File(context.filesDir, "email_addresses.txt")
 
     val engine: GlideTyping = GlideTyping(
         loadMain = loadMain ?: { try { context.assets.open("glide/en.klx").use { it.readBytes() } } catch (e: Exception) { null } },
@@ -50,9 +51,20 @@ class GlideHost(
         return "${n.format(m.wordCount)} of your words and ${n.format(m.pairCount)} word pairs" + (if (c > 0) ", and ${n.format(c)} corrections you made" else "") + "."
     }
 
-    /** Settings > Forget: the learned words, pairs, corrections, own words and thumb habit are gone (any thread). */
+    /**
+     * R32c: the e-mail addresses this person typed (kept on this device only, never exported or logged), loaded on first use. The keyboard reads and changes it on the UI thread; every method of the book is synchronized.
+     */
+    val emails: app.kestrel.core.input.glide.EmailBook by lazy { try { app.kestrel.core.input.glide.EmailBook.parse(readWithBackup(emailFile)) } catch (e: Exception) { app.kestrel.core.input.glide.EmailBook() } }
+
+    /** Writes the e-mail addresses when they changed (cheap when nothing did; the write runs off the UI thread). */
+    fun saveEmails() { val b = emails; if (!b.dirty) return; val text = b.serialize(); Io.exec { writeAtomically(emailFile, text) } }
+
+    /** Settings > Forget my e-mail addresses (any thread). */
+    fun forgetEmails() { emails.clear(); emails.serialize(); Io.exec { writeAtomically(emailFile, "") } }
+
+    /** Settings > Forget: the learned words, pairs, corrections, own words, e-mail addresses and thumb habit are gone (any thread). */
     fun forgetEverything(done: () -> Unit = {}) {
-        engine.forgetAll { own.clear(); try { ownFile.delete(); habitFile.delete() } catch (_: Exception) { }; done() }
+        engine.forgetAll { own.clear(); forgetEmails(); try { ownFile.delete(); habitFile.delete() } catch (_: Exception) { }; done() }
     }
 
     /** Settings > Forget where my thumb lands (R27a): the thumb habit and the touch plane are gone, every learned word stays (any thread). */
