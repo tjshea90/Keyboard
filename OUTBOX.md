@@ -1816,3 +1816,7 @@
 >
 > After the run I'll re-prove the new tests go red without the fix, run lint, then build alpha12.
 <!-- sha:663acf830af6 -->
+
+## 2026-11-24T20:25:06Z
+> The final full run (core, ime and lint) is going. If it's green, I'll tick R33, bump to alpha12, and release it through GitHub the same way as before.
+<!-- sha:903180e998f0 -->
