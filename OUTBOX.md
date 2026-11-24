@@ -1870,3 +1870,29 @@
 ## 2026-11-24T20:55:02Z
 > Alpha12's tests passed on GitHub and the signed build is running. I'll check it in about three minutes and give you the link as soon as it's published.
 <!-- sha:8621e9fe7ede -->
+
+## 2026-11-24T20:58:56Z
+> Yes, it's done. Alpha12 is built, signed and released, with the fix for "ave" winning and for "and" being added behind it. I haven't tried it on a tablet or phone.
+>
+> Download (open on the device, tap the APK):
+> https://github.com/tjshea90/Keyboard/releases/tag/swoop-v0.7.0-alpha12
+>
+> It installs over alpha11 because it's signed with the same key. Tests and lint passed here, and GitHub's own test, build and certificate check passed too.
+>
+> **What was wrong (two causes; alpha11 only fixed part of the first):**
+> 1. **Tapping "and" added it behind "ave".** Alpha11 only handled the case where "and" was one of the keyboard's own guesses for the swipe. Often it isn't, and "and" is the most common next word, so it sat in the middle "next word" box. Now a word on the strip that is spelled like the swiped word and far more likely, like "and" for "ave" or "for" for "fur", counts as a correction. It goes in a side box, and tapping it replaces the word from any box. A normal next word, like "and" after "are", is still added. I reproduced your exact symptom in a test, and it fails without the fix.
+> 2. **Why "ave" kept winning.** The keyboard counted every swiped word you left in the text as a real use of that word. One kept "ave" made it about as likely as the 10,000th most common word. In a test with the real word list, a swipe halfway between "and" and "ave" flipped to "ave" after a single kept one. Your failed corrections counted as more kept "ave"s, so it fed itself. Now a kept swipe of a rare word teaches only lightly, and picking the right word takes the wrong one back.
+>
+> **Old damage on your tablet isn't wiped automatically.** Each fix now removes part of it, and about five fixes should clear a typical amount. If "ave" is still frequent after that, use Settings > "Forget what it learned" once. That clears all your learned words, not just "ave".
+>
+> **Two corrections to what I said earlier:**
+> - At one point I told you a test run had stopped. It hadn't. It was still running and finished fine, and my check was wrong.
+> - I tried a hard limit on how much a rare word can gain from learning. It also held back rare words you genuinely type, so I removed it.
+>
+> **Open items, waiting on you:**
+> - Glide "and" about a dozen times. When "ave" comes up, tap "and" on the strip. The word should be replaced, not "ave and". Do that three or four times and "ave" should stop returning.
+> - If it doesn't, send me the line starting "Glide typing:" from Diagnostics. It now counts how many strip taps replaced the swiped word, how many of those were treated as a correction, and how many added a next word.
+> - Not done: updating the Kestrel browser's copy of the keyboard (you didn't ask), and the next-word prediction idea (R31).
+>
+> Details are in `research/R32-punctuation-suggestions.md`, section 7.
+<!-- sha:e57b653ae974 -->
