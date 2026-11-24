@@ -431,8 +431,9 @@ class KeyboardPresenterTest {
 
     @Test fun aLookAlikeThatIsAlsoTheLikelyNextWordIsAReplacementNotTheNextWord() {
         val w = fourthOrFifthGuess()
-        val r = Rig(suggest = true, words = lexOf(listOf(LexiconFile.Pair("for", w, 900L)))); r.glide("for")
+        val r = Rig(suggest = true, words = lexOf(listOf(LexiconFile.Pair("for", w, 900L), LexiconFile.Pair("for", "world", 300L)))); r.glide("for")
         val c = r.view.candidatesForTest()
+        assertEquals("world is the next word, in the middle: $c", "world", c[1])
         assertTrue("$w stands in a side box (a replacement), not in the middle (the next word): $c", w == c[0] || w == c[2])
         assertTrue("the middle box is a different word: $c", c[1] != w)
         r.tapChip(c.indexOf(w))
