@@ -99,7 +99,7 @@ class SetupActivity : Activity() {
             typing.row(switchRow("Capital I", "Types i, i'm and i'll as I, I'm and I'll.", st.capitalizeI) { change(Prefs.CAPI, it) })
             typing.row(switchRow("Capital letters", "The first letter after a full stop, ? or ! is a capital, and so is the first letter of a sentence where the app asks for it.", st.autoCaps) { change(Prefs.AUTOCAPS, it) })
             typing.row(switchRow("Emoji in the suggestions", "When you type a word that has an emoji, such as clown, the emoji shows among the suggested words. Tap it to swap the word for the emoji.", st.emojiSuggestions) { change(Prefs.EMOJI_SUGGEST, it) })
-            typing.row(switchRow("Space after punctuation", "Adds the space for you when a letter follows a comma, full stop, ? or !. Not in addresses, numbers or abbreviations.", st.autoSpace) { change(Prefs.AUTOSPACE, it) })
+            typing.row(switchRow("Space after punctuation", "Adds the space for you when a letter follows a comma, full stop, ? or !, and takes back a space you typed just before a comma, full stop, ? or !. Not in addresses, numbers or abbreviations.", st.autoSpace) { change(Prefs.AUTOSPACE, it) })
             typing.row(switchRow("Double space for a full stop", "Press space twice to end a sentence with a full stop.", st.doubleSpace) { change(Prefs.DOUBLESPACE, it) })
             typing.row(switchRow("Slide on the space bar", "Move the text cursor by sliding your finger along the space bar.", st.spaceSlide) { change(Prefs.SPACESLIDE, it) })
         }

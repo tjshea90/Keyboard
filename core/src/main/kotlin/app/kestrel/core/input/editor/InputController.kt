@@ -230,7 +230,10 @@ class InputController(editor: EditorBridge, val stats: InputStats = InputStats()
             commit(t)
             endBatch(s0, e0)
             if (!ok) resync()
-            else if (key in SWAP_AFTER_SPACE && selStart >= 0) { swapAt = selStart; swapKey = t }                  // (one Backspace right after puts the space back)
+            else {
+                if (typedTail.endsWith(" $t")) typedTail = typedTail.dropLast(t.length + 1) + t                    // (what was typed is what the text now says)
+                if (key in SWAP_AFTER_SPACE && selStart >= 0) { swapAt = selStart; swapKey = t }                  // (one Backspace right after puts the space back)
+            }
         } else commit(t)
         lastGlide = null; autoTrailAt = -1
         if (shift == ShiftState.ONCE) shift = ShiftState.OFF
