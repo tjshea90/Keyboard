@@ -480,6 +480,7 @@ class InputController(editor: EditorBridge, val stats: InputStats = InputStats()
     fun pickWord(word: String): Boolean {
         if (word.isEmpty() || (selStart >= 0 && selStart != selEnd)) return false
         settle()
+        swapAt = -1
         val c = composing
         val stem = wordBeforeCursor() ?: ""
         var w = word
