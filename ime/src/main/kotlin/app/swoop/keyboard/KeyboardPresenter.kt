@@ -62,6 +62,12 @@ class KeyboardPresenter(
     private var properOn = false
     private var lastSpaceAt = Long.MIN_VALUE / 2
     private val learner = TypingLearner(controller, { if (learnOn && !safeMode) glide.engine else null }, now)
+    // ---- R32c: the e-mail addresses typed are remembered and offered in e-mail boxes
+    private var emailOn = false
+    private val emailLearner = app.kestrel.core.input.glide.EmailLearner(controller) { if (emailOn && !safeMode) glide.emails else null }
+    /** The addresses on the strip now (an e-mail box only): a tap on one replaces what was typed of the address. */
+    private var emailShown: List<String> = emptyList()
+    private fun saveEmailsIfChanged() { if (emailOn && !safeMode) try { glide.saveEmails() } catch (_: Exception) { } }
     /** Bumped for every request to the engine: an answer for an older one is dropped. */
     private var suggestSeq = 0
     /** The engine's latest answer for the word being tapped (so a space can apply its automatic fix) and the typed word shown in quotes in the strip, when it is. */
@@ -234,6 +240,7 @@ class KeyboardPresenter(
         controller.caseForm = { w, prev -> if (properOn) glide.engine.caseFormOf(w, prev) else null }
         latest = null; literalShown = null; noFixFor = null; suggestSeq++
         userMoved = false; editWord = null; editRaw = emptyMap()
+        emailOn = !safeMode && st.emailSuggestions; emailLearner.reset(); emailShown = emptyList()
         flow.leaveField(); translator?.cancel(); translateAllowed = !safeMode && field.kind != FieldKind.PASSWORD && field.kind != FieldKind.OMNIBOX && st.translateEnabled
         if (safeMode || !st.translateEnabled) flow.setOn(false, clock())      // (R24c: the feature switched off in Settings is OFF, not just hidden)
         else flow.tick(clock())                                               // (the inactivity timer may have switched it off meanwhile)
@@ -244,14 +251,14 @@ class KeyboardPresenter(
             it.translateOn = flow.isOn()                      // (R24c: the key always shows the real state, also after the keyboard view was rebuilt)
             it.setField(field.kind, ImeLayout.actionLabel(field.imeAction, field.noEnterAction), field.pad)
             it.setGlideEnabled(glideOn)
-            it.setSuggestionsEnabled(suggestOn)
+            it.setSuggestionsEnabled(suggestOn || (emailOn && field.kind == FieldKind.EMAIL))
             it.setShift(controller.shift)
         }
         prepareGlide()
         refreshSuggestions()
     }
 
-    fun finishInput() { session.settle(); learner.settle(); suggestSeq++; controller.finishInput(); if (!safeMode) glide.engine.saveLearned() }
+    fun finishInput() { session.settle(); learner.settle(); suggestSeq++; emailLearner.finishField(); saveEmailsIfChanged(); controller.finishInput(); if (!safeMode) glide.engine.saveLearned() }
 
     /** Writes what was learned (cheap when nothing changed). */
     fun saveLearned() { if (!safeMode) try { glide.engine.saveLearned() } catch (_: Exception) { } }
@@ -289,6 +296,7 @@ class KeyboardPresenter(
         val fix = autoFixFor(key)
         if (Diag.enabled && key is Key.Ch) traceKey(key, fix != null, "before")
         learner.beforeKey(key, fix)
+        emailLearner.beforeKey(key)
         when (key) {
             is Key.Ch -> if (fix != null) controller.typeCorrected(fix, key.text) else if (key.text == " " && doubleSpaceOn && clock() - lastSpaceAt < DOUBLE_SPACE_MS && controller.doubleSpace()) { /* ". " is in */ } else controller.type(key.text)
             Key.Backspace -> if (deleteWordPending) controller.deleteWord() else controller.backspace()
@@ -305,6 +313,7 @@ class KeyboardPresenter(
         if (Diag.enabled && key is Key.Ch) traceKey(key, fix != null, "after")
         session.afterKey(key)
         learner.afterKey()
+        emailLearner.afterKey(); saveEmailsIfChanged()
         controller.revertedCorrection?.let { noFixFor = it.typed }
         view?.setShift(controller.shift)
         refreshSuggestions()
@@ -340,6 +349,7 @@ class KeyboardPresenter(
     private fun refreshSuggestions() {
         if (safeMode) return
         if (controller.lastGlide != null || view?.isGliding == true) return          // the strip shows a glide's other guesses
+        if (emailBoxStrip()) return
         if (!suggestOn) { showClipOnly(); return }
         if (offerOtherWords()) return
         editWord = null
@@ -350,6 +360,33 @@ class KeyboardPresenter(
         val (p2, p1) = if (typed != null) controller.contextBefore(typed) else controller.previousTwo()
         val my = ++suggestSeq
         glide.engine.suggest(typed ?: "", p1, p2, 3) { res -> post(Runnable { if (my == suggestSeq) applySuggestions(res) }) }
+    }
+
+    // ------------------------------------------------------------------ R32c: the e-mail addresses in an e-mail box
+
+    /**
+     * An e-mail box shows the addresses the person types, best first: all of them while the box is empty, then only those that start with what was typed (and the domains seen behind an @). True when the strip was taken.
+     * A password box or an app that asked for no personalised learning still gets the saved addresses (nothing is learned there).
+     */
+    private fun emailBoxStrip(): Boolean {
+        val had = emailShown.isNotEmpty()
+        if (!emailOn || controller.field.kind != FieldKind.EMAIL || controller.selStart != controller.selEnd) { emailShown = emptyList(); return false }
+        val list = glide.emails.suggest(controller.addressPrefix(), 3)
+        emailShown = list
+        if (list.isEmpty()) { if (had) view?.clearCandidates(); return false }
+        clipShown = null
+        view?.showCandidates(list)
+        return true
+    }
+
+    /** An address of the strip was tapped in an e-mail box: it takes the place of what was typed of it. */
+    private fun pickEmail(address: String) {
+        val n = controller.addressPrefix().length
+        session.settle(); learner.settle()
+        if (controller.pickAddress(n, address)) { emailLearner.picked(address); saveEmailsIfChanged() }
+        emailShown = emptyList()
+        view?.setShift(controller.shift)
+        refreshSuggestions()
     }
 
     // ------------------------------------------------------------------ R18a: tap a word that is already there, get other words for it
@@ -488,6 +525,7 @@ class KeyboardPresenter(
 
     override fun onCandidate(word: String) {
         if (word.isEmpty()) return
+        if (emailShown.isNotEmpty() && word in emailShown) { pickEmail(word); return }
         if (word in glideNextShown && controller.lastGlide != null && !session.isGlideGuess(glideRaw[word] ?: word)) { pickNextAfterGlide(word); return }
         if (editWord != null && controller.lastGlide == null && editRaw.containsKey(word)) { replaceTappedWord(word); return }
         userMoved = false
