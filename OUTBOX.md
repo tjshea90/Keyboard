@@ -1733,3 +1733,16 @@
 >
 > <amcheckpoint>health: green; R30 shipped as alpha10 (run #24 green, recorded in BUILDLOG); open: R30f tablet/phone check by the owner, R31 next-word idea not started; resume: bash tools/resume.sh, CHECKPOINT "Do this next"</amcheckpoint>
 <!-- sha:de2854973085 -->
+
+## 2026-11-24T07:53:06Z
+> I'm waiting on the full test run, which should finish in a few minutes. Done so far:
+> - **Built and tested:** all five parts of the request, plus the research note and docs.
+> - **Checkpointed and pushed:** everything is on the session branch.
+>
+> Still ahead:
+> - the held-out check of the rare-word guard
+> - lint
+> - ticking the tasks
+> - bumping to alpha11
+> - shipping through GitHub Actions
+<!-- sha:eff4d0e56f07 -->
