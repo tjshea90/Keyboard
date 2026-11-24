@@ -28,7 +28,8 @@ class CommonGuardTest {
 
     @Test fun nothingChangesWhenTheDifferenceInCommonnessIsSmall() {
         val l = listOf(c("make", -10f, -6.7f), c("made", -10.5f, -5.5f), c("fur", -10.2f, -11f))
-        assertSame("a gap of 1.2 nats is no reason: both are ordinary words", l, CommonGuard.apply(listOf(l[0], l[1])))
+        val two = listOf(l[0], l[1])
+        assertSame("a gap of 1.2 nats is no reason: both are ordinary words", two, CommonGuard.apply(two))
         assertEquals("make", CommonGuard.apply(l)[0].text)
     }
 
