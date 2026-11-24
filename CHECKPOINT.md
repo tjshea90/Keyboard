@@ -1,13 +1,13 @@
-# CHECKPOINT 1048 — read me first, then TASKS.md
+# CHECKPOINT 1054 — read me first, then TASKS.md
 
-**Written:** 2026-11-24T20:41:31Z · **tests:** all 1 fast checks green (gradle suite: see ship.sh)
-**Branch:** `claude/bold-euler-w64u7s` · **builds on:** `441d4b0` (this checkpoint is the commit after it)
+**Written:** 2026-11-24T20:58:43Z · **tests:** all 1 fast checks green (gradle suite: see ship.sh)
+**Branch:** `claude/bold-euler-w64u7s` · **builds on:** `09e6166` (this checkpoint is the commit after it)
 
 ## Just done
-alpha12 (ime code 23, swoop-v0.7.0-alpha12) gated and pushed; android.yml DISPATCHED ONCE on claude/bold-euler-w64u7s at 20:41Z; R33 ticked; full suites core 653 + ime 312 green, lint green
+R33 DONE: swoop-v0.7.0-alpha12 released (https://github.com/tjshea90/Keyboard/releases/tag/swoop-v0.7.0-alpha12), run #26 id 45483349410 green (check, test-jvm, build; APK cert pin verified), BUILDLOG recorded, TASKS R33 ticked, R33f waits on the owner
 
 ## Do this next
-find the run id (mcp__github__actions_list list_workflow_runs android.yml); NEVER dispatch again for this tag; when green and the Release shows the APK: bash tools/record-release.sh swoop-v0.7.0-alpha12 with the SAME note as ship.sh; then give the owner the Release link and the R33f check; if red read get_job_logs, fix, bump to code 24
+nothing running. Waiting on the owner (R33f): alpha12 on tablet + phone: glide 'and' a dozen times, tap 'and' when 'ave' comes up (must REPLACE), do it 3-4 times; if ave persists use Settings > Forget what it learned once and send the Diagnostics 'Glide typing:' line. Not synced to the Kestrel browser. R31 neural next-word idea not started. Final plain answer to the owner is the last thing to send
 
 *(resuming? CLAUDE.md's "FIRST ACTION OF EVERY SESSION" says how; the briefing is tools/resume.sh. Do that first, or autosave may stay off all session.)*
 
@@ -16,6 +16,7 @@ find the run id (mcp__github__actions_list list_workflow_runs android.yml); NEVE
 
 ## Last ten checkpoints
 ```
+  3a86baf ckpt 1048: alpha12 (ime code 23, swoop-v0.7.0-alpha12) gated and pushed; android.yml DIS
   441d4b0 ckpt 1047: gated swoop-v0.7.0-alpha12 (ime code 23) and pushed it: handoff self-test, un
   f9936c8 ckpt 1046: pre-ship: R33: a word on the strip that is spelled like the glided word and f
   a20ef6e ckpt 1036: R33 code: look-alike-fix rule (GlideSession.looksLikeFix + SpellingNear + eng
@@ -25,5 +26,7 @@ find the run id (mcp__github__actions_list list_workflow_runs android.yml); NEVE
   10618d9 ckpt 1014: gated swoop-v0.7.0-alpha11 (ime code 22) and pushed it: handoff self-test, un
   9a86224 ckpt 1013: pre-ship: R32: punctuation swap (space before , . ! ? taken back, Backspace r
   ab28919 ckpt 1000: R32e CommonGuard (gap 5 nats, margin 3, measured on real swipes: +8 all / +11
-  5fd5f44 ckpt 992: R32b digit long-press row (ImeLayout.digitHolds, KeysView.openDigitPopup, 7 vi
 ```
+
+(4 automatic checkpoint(s) since the last deliberate one — the
+session was still mid-step. `git diff` against it shows what changed.)
