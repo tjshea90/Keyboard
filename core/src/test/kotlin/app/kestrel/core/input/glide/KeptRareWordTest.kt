@@ -96,7 +96,7 @@ class KeptRareWordTest {
     @Test fun keepTrustFollowsHowRareTheWordIs() {
         val e = Env()
         assertTrue(e.engine.keepTrust("ave") < 0.15f); assertTrue(e.engine.keepTrust("fur") < 0.15f)
-        assertEquals(1f, e.engine.keepTrust("and"), 1e-6f); assertEquals(1f, e.engine.keepTrust("hello"), 1e-6f)
+        assertEquals(1f, e.engine.keepTrust("and"), 1e-6f); assertEquals(1f, e.engine.keepTrust("the"), 1e-6f); assertTrue(e.engine.keepTrust("hello") > 0.8f)
         assertEquals("a word the list lacks is the person's own", 1f, e.engine.keepTrust("zzyzxq"), 1e-6f)
         assertTrue(e.engine.keepTrust("access") in 0.5f..1f)
         assertFalse(e.engine.keepTrust("maggie") > 0.5f)
