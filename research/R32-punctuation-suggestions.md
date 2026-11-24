@@ -53,5 +53,51 @@ Gboard shows corrections for the word just typed or swiped and next-word guesses
 
 Fix: a word the decoder guessed is never offered as "the next word"; it goes to a side box (first when the language also expects it next); side boxes never hold fillers; and within 20 s of a glide a tap on one of its own five guesses replaces the glided word even if the bookkeeping was lost (verified against the editor first). Tests: `KeyboardPresenterTest` (3 new, the rescue one proven red with the fix switched off).
 
-## 4. Digit long-press (R32b), 5. E-mail suggestions (R32c), 6. Rare words (R32e)
-(filled in below as each lands)
+## 4. Digit long-press (R32b)
+
+Gboard: hold a digit key and a row of special characters opens above it; slide to one and let go. Swoop now does this (`KeysView.openDigitPopup`, `ImeLayout.digitHolds`, 7 view tests):
+
+| digit | row after the digit itself |
+|---|---|
+| 1 | ¹ ½ ⅓ ¼ ⅛ |
+| 2 | ² ⅔ |
+| 3 | ³ ¾ ⅜ |
+| 4 | ⁴ |
+| 5 | ⁵ ⅝ |
+| 6 | ⁶ |
+| 7 | ⁷ ⅞ |
+| 8 | ⁸ |
+| 9 | ⁹ |
+| 0 | ⁰ ⁿ ∅ ° |
+
+* Where: the number row (Settings > Layout > Number row), the digits of the symbols page, and a held top-row letter when the number row is off (the digit bubble stays; the row opens with it).
+* The digit itself is the first cell (lit); lifting the finger without choosing, or anywhere outside the row, types the digit, exactly as a hold did before. Sliding onto a cell lights it; lifting types it.
+* Not on a number pad (phone / number / date fields): a digit there stays a digit.
+* The table is Gboard as it is commonly seen, not copied from a file: the exact tables of AOSP LatinIME / HeliBoard could not be fetched (see section 1).
+
+## 5. E-mail addresses (R32c)
+
+* `EmailBook` (:core, 11 tests): up to 40 addresses, ranked by use then newest, kept lower case, only plain addresses (`isAddress`), saved as `email_addresses.txt` in the app's private folder with the same atomic write + `.bak` as the other learned files. **Not part of the export file** and never logged.
+* What is learned (`EmailLearner`, 10 tests): only an address TYPED key by key (`InputController.typedEmail`: the whole token is the end of what was typed; a paste, an autofill, a strip pick, a glide or a cursor move breaks it). In a text box it counts when a space, comma, semicolon or Enter ends it; in an e-mail box when the box is left or its action key is pressed. A strip pick adds one use. Nothing in password boxes or where the app asked for no personalised learning; Settings has a switch (default on) and "Forget my e-mail addresses"; "Forget what it learned" also clears them.
+* What is shown: in an e-mail box (`TYPE_TEXT_VARIATION_EMAIL_ADDRESS` / `WEB_EMAIL_ADDRESS`) the strip lists the best three addresses the moment the box gets the focus, narrowing as letters are typed (`jo` -> `john@gmail.com`); after an "@" it offers the typed part with the domains this person uses. A tap replaces what was typed of the address (nothing is added behind it: the box takes no space). A saved address is also offered in a box that asked for no learning (nothing is learned there).
+* NOT run on a phone or tablet; Android's own autofill, if the app offers one, is separate.
+
+## 6. Rare words beating common ones (R32e)
+
+**Measured first, on real swipes** (FUTO dev slice A, 6 054 usable swipes; `RealSwipeEval` with `REAL_RARE=1`): on phone-sized real thumbs the owner's words are read right: **and 96.0 %, for 96.4 %, the 99.3 %**; the wrong answers are anna, flute, threw... never "ave" or "fur". The same finding as R27a / R28a / R29: whatever makes "and" -> "ave" and "for" -> "fur" on his tablet is not in the shape of ordinary swipes, so it cannot be cured by tuning shape alone. The ln priors in the shipped list: and -3.7, for -4.5, the -3.0, **ave -11.2, fur -11.3**, access -8.9, fir -12.7: "ave" and "fur" are about 7 nats (1 000 times) rarer than the words meant.
+
+**What was built:** `CommonGuard`, the last step of the glide pipeline (after the decoder and the trained shape network): when the first guess is at least **5 nats** (about 150 times) less probable than another of the five guesses and that guess trails by **at most 3 score units**, the common word goes first. "Rare" is judged on the contextual prior the decoder already computed, which includes what this person typed and glided (a rare word they really use is not rare); the rare word stays in the strip. Diagnostics shows "a much commoner word put before a rare first guess N times".
+
+**Why these numbers** (the whole shipped pipeline, 6 053 swipes, slice A): first choice 92.57 % (all words) / 94.54 % (everyday words, the 5 000 commonest). Flips / mended / spoiled for the grid:
+
+| gap G, margin M | all words: flips +mended -spoiled (net) | everyday words |
+|---|---|---|
+| 5, 2 | 10 +8 -2 (**+6**) | 10 +8 -1 (+7) |
+| **5, 3 (chosen)** | 21 +13 -5 (**+8**) | 17 +13 -2 (**+11**) |
+| 5, 5 | 41 +14 -19 (-5) | 25 +14 -7 (+7) |
+| 6, 3 | 11 +7 -3 (+4) | 8 +7 -1 (+6) |
+| 4, 3 | 36 +15 -10 (+5) | 26 +15 -5 (+10) |
+
+A bigger margin spoils words that really are rare (the corpus is encyclopaedia text full of names: Maggie, Anna), a smaller one does nothing. 5 / 3 is the point where both the all-words and the everyday-words net are positive and largest. "and": 96.7 -> 97.4 % first choice. Held-out check on another slice: see the end of this section.
+
+**Honest limits:** the effect on phone swipes is small (+0.1 to +0.2 points) because the pipeline is already good there; the guard is insurance for the case the owner reports (a tablet where the shape fits a look-alike about as well as the real word). It cannot help when the shape alone puts the rare word clearly ahead (more than 3 units), and it needs his next Diagnostics line to be judged on the device. The tap path already prices rare words (`Suggester.RARE_W`, `DEEP_TAIL`); nothing changed there.
