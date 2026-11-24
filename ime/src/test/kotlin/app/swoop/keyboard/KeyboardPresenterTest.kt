@@ -508,9 +508,9 @@ class KeyboardPresenterTest {
     // ------------------------------------------------------------------ R33 (owner 2026-11-24, after alpha11): "it is still typing ave instead of and ... when i press and in the suggestions to fix it, it just adds and after ave"
 
     /** "ave" is a rare word, "and" the commonest; seven other words share the a-?-e path so that "and" is NOT among the decoder's five readings of an "ave" glide. */
-    /** Counts in the proportions of the real list (its total is about a billion): "and" about 1 in 30 words, "ave" about 1 in 70 000. */
-    private val aveWords = listOf("the" to 800_000_000L, "and" to 33_000_000L, "ave" to 15_000L, "ace" to 5_000L, "age" to 5_000L, "axe" to 5_000L, "are" to 5_000L, "ape" to 5_000L, "ate" to 5_000L, "awe" to 5_000L, "avid" to 5_000L)
-    private fun aveLex(next: Boolean = true) = LexiconFile.build(aveWords.map { LexiconFile.Entry(it.first, it.second) }, if (next) listOf(LexiconFile.Pair("ave", "and", 900L), LexiconFile.Pair("ave", "are", 300L)) else emptyList())
+    /** Counts in the proportions of the real list (its total is about 3e11, which is the scale the personal boost is calibrated to): "and" about 1 in 30 words, "ave" about 1 in 70 000. */
+    private val aveWords = listOf("the" to 240_000_000_000L, "and" to 10_000_000_000L, "ave" to 4_000_000L, "ace" to 1_500_000L, "age" to 1_500_000L, "axe" to 1_500_000L, "are" to 1_500_000L, "ape" to 1_500_000L, "ate" to 1_500_000L, "awe" to 1_500_000L, "avid" to 1_500_000L)
+    private fun aveLex(next: Boolean = true) = LexiconFile.build(aveWords.map { LexiconFile.Entry(it.first, it.second) }, if (next) listOf(LexiconFile.Pair("ave", "and", 900_000L), LexiconFile.Pair("ave", "are", 300_000L)) else emptyList())
 
     private fun aveGlide(): Rig {
         val r = Rig(suggest = true, words = aveLex()); r.glide("ave")
@@ -542,7 +542,7 @@ class KeyboardPresenterTest {
     }
 
     @Test fun aGenuineNextWordStillGetsAddedBehindTheGlidedWord() {
-        val common = LexiconFile.build(listOf("the" to 800_000_000L, "and" to 33_000_000L, "are" to 20_000_000L, "ave" to 15_000L, "ace" to 5_000L, "age" to 5_000L, "axe" to 5_000L).map { LexiconFile.Entry(it.first, it.second) }, listOf(LexiconFile.Pair("are", "and", 900L)))
+        val common = LexiconFile.build(listOf("the" to 240_000_000_000L, "and" to 10_000_000_000L, "are" to 6_000_000_000L, "ave" to 4_000_000L, "ace" to 1_500_000L, "age" to 1_500_000L, "axe" to 1_500_000L).map { LexiconFile.Entry(it.first, it.second) }, listOf(LexiconFile.Pair("are", "and", 900_000_000L)))
         val r = Rig(suggest = true, words = common); r.glide("are")
         assertEquals("precondition: the glide gives are", "are ", r.text)
         r.presenter.onCandidate("and")        // "are" is a common word itself, so "and" is no correction of it: it is the next word

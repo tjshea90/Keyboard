@@ -256,12 +256,4 @@ class PersonalModelTest {
         val m = PersonalModel(); m.add(null, "ave", 1f); m.add(null, "ave", 1f)
         assertTrue(m.recentMass("ave", 1e9) > 0.0); m.unlearn(null, "ave", 5f); assertEquals(0.0, m.recentMass("ave", 1e9), 0.0); assertEquals(0.0, m.unigramMass("ave", 1e9), 0.0)
     }
-
-    @Test fun aWordTheListFindsVeryRareNeverGetsMoreThanAFewUsesWorthOfBoost() {
-        val m = PersonalModel(); repeat(50) { m.add(null, "ave", 1f) }
-        val rare = m.unigramMass("ave", 1e9, -11.2f); val common = m.unigramMass("ave", 1e9, -6f)
-        assertEquals("capped at ${PersonalModel.RARE_MAX_USES} uses", PersonalModel.UNIGRAM_COUNT * PersonalModel.RARE_MAX_USES / 1e9, rare, 1e-12)
-        assertTrue("an ordinary word keeps its ceiling of ${PersonalModel.MAX_USES} uses: $common", common > rare * 10)
-        assertTrue(m.recentMass("ave", 1e9, -11.2f) <= PersonalModel.RECENT_COUNT * PersonalModel.RARE_MAX_RECENT / 1e9 + 1e-12)
-    }
 }

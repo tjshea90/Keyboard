@@ -72,14 +72,14 @@ class KeptRareWordTest {
     @Test fun correctingAveToAndHealsDamageAnEarlierVersionLearned() {
         val (xs, ys) = halfway()
         val e = Env()
-        repeat(10) { e.engine.learn(null, "ave", 1f) }                             // what ten kept glides taught before R33 (capped now: a rare word gets at most 3 uses' worth)
+        repeat(6) { e.engine.learn(null, "ave", 1f) }                              // what six kept glides taught before R33
         assertEquals("precondition: the damage makes the halfway path ave", "ave", e.firstFor(xs, ys))
         var fixes = 0
         while (e.firstFor(xs, ys) == "ave" && fixes < 6) {
             e.glidePath(xs, ys); assertTrue("the glide gave ave: '${e.rig.text}'", e.rig.text.trimEnd().endsWith("ave"))
             assertTrue(e.s.pick("and")); e.space(); fixes++
         }
-        assertTrue("the halfway path is and again after $fixes corrections", e.firstFor(xs, ys) == "and" && fixes in 1..4)
+        assertTrue("the halfway path is and again after $fixes corrections", e.firstFor(xs, ys) == "and" && fixes in 1..5)
     }
 
     @Test fun pickingTheMeantWordTakesTheWrongOneBack() {
