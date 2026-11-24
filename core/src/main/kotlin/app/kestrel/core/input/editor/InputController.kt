@@ -211,8 +211,11 @@ class InputController(editor: EditorBridge, val stats: InputStats = InputStats()
         val ownTrail = glideTrail || (autoTrailAt >= 0 && autoTrailAt == selStart)
         // owner R21: a closing quote also takes away the space our own glide or strip word left behind it ("this" and not "this ")
         val closingQuote = ownTrail && ((key == "\"" && insideQuotes(false)) || (key == "\u201D" && insideQuotes(true)))
-        // right after a glide, ".", ",", "/", ".com" ... close the word instead of standing after the space the glide added ("hello" ".com" = "hello.com")
-        if (((glideTrail && key in CLOSES_WORD) || closingQuote) && before.endsWith(" ") && selStart == selEnd) {
+        // R32a: the space after a word is a WEAK space (AOSP LatinIME / HeliBoard, which Gboard descends from): "," "." "!" "?" typed on it take its place, whoever put the space there: a glide, a strip word, an automatic
+        // fix or the person's own thumb ("hello " "," = "hello,"). Smileys (":" ";" ")") on a space the person typed keep it. Only when the text still shows a word and ONE space.
+        val swapManual = !ownTrail && autoSpace && key in SWAP_AFTER_SPACE && weakSpaceBefore()
+        // right after a glide or a strip word, ".", ",", "/", ".com" ... close the word instead of standing after the space that was added ("hello" ".com" = "hello.com")
+        if (((ownTrail && key in CLOSES_WORD) || closingQuote || swapManual) && before.endsWith(" ") && selStart == selEnd) {
             val s0 = selStart; val e0 = selEnd
             beginBatch()
             val ok = ed.deleteSurrounding(1, 0)
@@ -220,6 +223,7 @@ class InputController(editor: EditorBridge, val stats: InputStats = InputStats()
             commit(t)
             endBatch(s0, e0)
             if (!ok) resync()
+            else if (key in SWAP_AFTER_SPACE && selStart >= 0) { swapAt = selStart; swapKey = t }                  // (one Backspace right after puts the space back)
         } else commit(t)
         lastGlide = null; autoTrailAt = -1
         if (shift == ShiftState.ONCE) shift = ShiftState.OFF
