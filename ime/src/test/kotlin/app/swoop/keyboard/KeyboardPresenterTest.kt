@@ -509,6 +509,14 @@ class KeyboardPresenterTest {
     private val aveWords = listOf("and" to 100_000L, "ave" to 20L, "ace" to 3_000L, "age" to 3_000L, "axe" to 3_000L, "are" to 3_000L, "ape" to 3_000L, "ate" to 3_000L, "awe" to 3_000L, "avid" to 500L)
     private fun aveLex(next: Boolean = true) = LexiconFile.build(aveWords.map { LexiconFile.Entry(it.first, it.second) }, if (next) listOf(LexiconFile.Pair("ave", "and", 900L), LexiconFile.Pair("ave", "are", 300L)) else emptyList())
 
+    @Test fun scratchAve() {
+        for (variant in 0..2) {
+            val words = when (variant) { 0 -> aveWords; 1 -> aveWords.map { (w, c) -> if (w == "ave") w to 1_500L else if (w == "and") w to c else if (w == "avid") w to c else w to 100L }; else -> aveWords.map { (w, c) -> if (w == "ave") w to 3_000L else if (w == "and") w to 200_000L else if (w == "avid") w to c else w to 50L } }
+            val lex = LexiconFile.build(words.map { LexiconFile.Entry(it.first, it.second) }, listOf(LexiconFile.Pair("ave", "and", 900L), LexiconFile.Pair("ave", "are", 300L)))
+            for (g in listOf("ave", "are", "and")) { val r = Rig(suggest = true, words = lex); r.glide(g); println("SCRATCH variant=$variant glide=$g text='${r.text}' strip=${r.view.candidatesForTest()} more=${r.presenter.glideMoreForTest()}") }
+        }
+    }
+
     private fun aveGlide(): Rig {
         val r = Rig(suggest = true, words = aveLex()); r.glide("ave")
         assertEquals("precondition: the glide gives ave", "ave ", r.text)
