@@ -39,9 +39,10 @@ class PunctuationSwapTest {
     }
 
     @Test fun theSpaceIsTakenEvenWhenTheKeyboardLostTrackOfItsOwnGlide() {
-        // an app rewrote the text or the reports got out of step: the keyboard no longer knows the glide, but the text still says "word ,"
-        val r = rig(); r.act { commitGlide("hello") }; r.ed.userInsert(""); r.sync()
+        // an app rewrote the text or the reports got out of step: the keyboard no longer knows the glide (or never saw this text), but the text still says "word ,"
         val s = rig("see you "); s.act { type(",") }; assertEquals("see you,", s.text)
+        val r = rig(); r.act { commitGlide("hello") }; r.ed.userMove(r.ed.text.length); r.ed.userInsert(" "); r.sync()     // the app added a second space: two spaces are the person's, not ours
+        r.act { type(",") }; assertEquals("hello  ,", r.text)
     }
 
     @Test fun anAutomaticFixThenSpaceThenCommaIsTidyToo() {
