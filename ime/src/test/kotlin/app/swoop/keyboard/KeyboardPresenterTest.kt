@@ -503,6 +503,54 @@ class KeyboardPresenterTest {
         assertTrue(r.host.emails.isEmpty); r.presenter.startInput(r.info); assertTrue(r.view.candidatesForTest().isEmpty())
     }
 
+    // ------------------------------------------------------------------ R33 (owner 2026-11-24, after alpha11): "it is still typing ave instead of and ... when i press and in the suggestions to fix it, it just adds and after ave"
+
+    /** "ave" is a rare word, "and" the commonest; seven other words share the a-?-e path so that "and" is NOT among the decoder's five readings of an "ave" glide. */
+    private val aveWords = listOf("and" to 100_000L, "ave" to 20L, "ace" to 3_000L, "age" to 3_000L, "axe" to 3_000L, "are" to 3_000L, "ape" to 3_000L, "ate" to 3_000L, "awe" to 3_000L, "avid" to 500L)
+    private fun aveLex(next: Boolean = true) = LexiconFile.build(aveWords.map { LexiconFile.Entry(it.first, it.second) }, if (next) listOf(LexiconFile.Pair("ave", "and", 900L), LexiconFile.Pair("ave", "are", 300L)) else emptyList())
+
+    private fun aveGlide(): Rig {
+        val r = Rig(suggest = true, words = aveLex()); r.glide("ave")
+        assertEquals("precondition: the glide gives ave", "ave ", r.text)
+        return r
+    }
+
+    @Test fun aWordThatIsNotAmongTheDecodersReadingsButLooksLikeTheGlidedWordAndIsFarMoreLikelyReplacesIt() {
+        val r = aveGlide()
+        assertFalse("precondition: and is not one of the decoder's own five readings", "and" in r.presenter.glideMoreForTest() + r.view.candidatesForTest().filter { it != "and" })
+        val c = r.view.candidatesForTest(); assertTrue("and is offered: $c", c.contains("and"))
+        assertTrue("it is offered among the replacements (a side box), not as the next word in the middle: $c", c.indexOf("and") != 1)
+        r.tapChip(c.indexOf("and"))
+        assertEquals("ave is replaced, and is not added behind it", "and ", r.text)
+    }
+
+    @Test fun evenIfItStandsInTheMiddleBoxATapOnSuchAWordReplaces() {
+        val r = aveGlide(); r.presenter.onCandidate("and")
+        assertEquals("and ", r.text)
+    }
+
+    @Test fun whenTheKeyboardLostTrackOfTheGlideTheSameTapStillReplaces() {
+        val r = aveGlide()
+        r.et.setSelection(0); r.report(); r.et.setSelection(r.text.length); r.report()
+        assertNull("precondition: the glide is forgotten", r.presenter.controller.lastGlide)
+        val c = r.view.candidatesForTest(); assertTrue("precondition: and is on the strip: $c", c.contains("and"))
+        r.tapChip(c.indexOf("and"))
+        assertEquals("and ", r.text)
+    }
+
+    @Test fun aGenuineNextWordStillGetsAddedBehindTheGlidedWord() {
+        val r = Rig(suggest = true, words = aveLex()); r.glide("are")
+        val c = r.view.candidatesForTest(); assertTrue("precondition: a next-word box exists: $c", c.size == 3)
+        r.presenter.onCandidate("and")        // "are" is a common word and "and" is no look-alike of it: it is the next word
+        assertEquals("are and ", r.text)
+    }
+
+    @Test fun theKeyboardLearnsFromThatFixSoAveStopsComingBack() {
+        val r = aveGlide(); r.presenter.onCandidate("and"); r.presenter.finishInput()
+        val memory = r.memory()
+        assertTrue("the meant word is learned: $memory", memory.contains("and"))
+    }
+
     // ------------------------------------------------------------------ R20a (owner 2026-11-18): what was just copied is the first box of the strip
 
     private fun Rig.copied(text: String, at: Long = 1_000L, sensitive: Boolean = false) { presenter.clipChipSource = { ClipOffer(text, at, sensitive) }; presenter.onClipboardChanged() }
