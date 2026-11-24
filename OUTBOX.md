@@ -1839,3 +1839,10 @@
 >
 > **Open items:** full test run, release of alpha12, and then your check on the tablet.
 <!-- sha:ce4ceda1d096 -->
+
+## 2026-11-24T20:38:41Z
+> Status so you have it straight:
+> - **Tests:** the full run on the final code passed, with no failures and clean lint.
+> - **Release gates:** the alpha12 gates are running now, and the GitHub build comes after them.
+> - **Not released yet:** nothing is installable until the build finishes, and I haven't tested any of this on a real tablet or phone.
+<!-- sha:858aba75bd87 -->
