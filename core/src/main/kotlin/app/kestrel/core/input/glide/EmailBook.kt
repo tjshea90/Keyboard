@@ -1,0 +1,108 @@
+package app.kestrel.core.input.glide
+
+/**
+ * R32c (owner 2026-11-24: "Learn the email addresses i use and include them as suggested words at the top of the keyboard whenever i press an email field"). The e-mail addresses this person TYPES, kept on the device
+ * only (never exported, never logged), best first: the ones used most, then the newest. At most [cap]; the one used least goes first when the book is full. Pure Kotlin, one thread (the keyboard's UI thread).
+ *
+ * What gets in is decided by the callers (only an address typed key by key, never from the clipboard, an autofill or a paste; nothing in password boxes or where the app asked for no personalised learning).
+ * Addresses are kept in lower case (domains are case-blind and nobody relies on a capital in the part before the @).
+ */
+class EmailBook(private val cap: Int = CAP) {
+    private class Entry(val address: String, var uses: Int, var last: Long)
+    private val items = LinkedHashMap<String, Entry>()
+    /** A logical clock: every use is "later" than the one before (no wall clock, so the order is the same in tests and on the phone). */
+    private var clock = 0L
+    /** Set whenever the book changed since the last [serialize]. */
+    var dirty = false; private set
+
+    val size: Int get() = items.size
+    val isEmpty: Boolean get() = items.isEmpty()
+
+    /** One more use of [address] (a typed or picked address). False (nothing stored) when it is not a plain address. */
+    fun learn(address: String, uses: Int = 1): Boolean {
+        val a = address.trim().lowercase()
+        if (!isAddress(a)) return false
+        val e = items[a]
+        if (e != null) { e.uses += uses; e.last = ++clock }
+        else {
+            if (items.size >= cap) { val worst = items.values.minWithOrNull(compareBy<Entry> { it.uses }.thenBy { it.last }); if (worst != null) items.remove(worst.address) }
+            items[a] = Entry(a, uses, ++clock)
+        }
+        dirty = true
+        return true
+    }
+
+    /** The person removed [address] (Settings): it is gone and will be learned again only if it is typed again. */
+    fun forget(address: String): Boolean { val r = items.remove(address.trim().lowercase()) != null; if (r) dirty = true; return r }
+
+    /** Every address is gone. */
+    fun clear() { if (items.isNotEmpty()) dirty = true; items.clear() }
+
+    /** Every address, best first. */
+    fun addresses(): List<String> = ranked().map { it.address }
+
+    private fun ranked(): List<Entry> = items.values.sortedWith(compareByDescending<Entry> { it.uses }.thenByDescending { it.last })
+
+    /**
+     * What to offer for the text [typed] so far in an e-mail box (up to [max], best first): the addresses that start with it (all of them when nothing is typed yet); and once an "@" is there, the part before it with the
+     * domains this person uses behind it ("bob@" gives bob@gmail.com and bob@work.example when those are the domains seen). An address that is already typed in full is not offered again.
+     */
+    fun suggest(typed: String, max: Int = 3): List<String> {
+        val t = typed.trim().lowercase()
+        if (t.length > MAX_LEN) return emptyList()
+        val out = ArrayList<String>(max)
+        for (e in ranked()) { if (out.size >= max) break; if (e.address != t && e.address.startsWith(t)) out.add(e.address) }
+        val at = t.indexOf('@')
+        if (out.size < max && at > 0 && t.indexOf('@', at + 1) < 0) {
+            val local = t.substring(0, at); val domPart = t.substring(at + 1)
+            if (LOCAL.matches(local)) {
+                val dom = LinkedHashMap<String, Int>()
+                for (e in ranked()) { val d = e.address.substringAfter('@'); dom[d] = (dom[d] ?: 0) + e.uses }
+                for ((d, _) in dom.entries.sortedByDescending { it.value }) {
+                    if (out.size >= max) break
+                    val cand = "$local@$d"
+                    if (d.startsWith(domPart) && cand != t && cand !in out) out.add(cand)
+                }
+            }
+        }
+        return out
+    }
+
+    /** One line per address: the address, how often it was used, when (the logical clock), tab separated. */
+    fun serialize(): String { dirty = false; return ranked().joinToString("\n") { "${it.address}\t${it.uses}\t${it.last}" } }
+
+    companion object {
+        const val CAP = 40
+        /** An address longer than this is not kept (the keyboard only reads 64 characters before the cursor). */
+        const val MAX_LEN = 60
+        private val LOCAL = Regex("[a-z0-9._%+-]{1,40}")
+        private val ADDRESS = Regex("[a-z0-9._%+-]{1,40}@[a-z0-9-]+(\\.[a-z0-9-]+)*\\.[a-z]{2,24}")
+
+        /** [s] (already lower case) is a plain address: letters, digits and ._%+- before the @, a dotted domain with a top level of 2 to 24 letters after it, no dot at either end of the part before the @ and no two dots in a row. */
+        fun isAddress(s: String): Boolean {
+            if (s.length < 6 || s.length > MAX_LEN) return false
+            if (!ADDRESS.matches(s)) return false
+            val local = s.substringBefore('@')
+            if (local.startsWith('.') || local.endsWith('.') || s.contains("..")) return false
+            return true
+        }
+
+        /** The book saved by [serialize]; lines that make no sense are dropped, a damaged text gives an empty or shorter book. */
+        fun parse(text: String?, cap: Int = CAP): EmailBook {
+            val b = EmailBook(cap)
+            if (text.isNullOrBlank()) return b
+            val rows = ArrayList<Entry>()
+            for (line in text.lineSequence()) {
+                val p = line.split('\t')
+                val a = p.getOrNull(0)?.trim()?.lowercase() ?: continue
+                if (!isAddress(a)) continue
+                val uses = p.getOrNull(1)?.toIntOrNull()?.coerceIn(1, 1_000_000) ?: 1
+                val last = p.getOrNull(2)?.toLongOrNull() ?: 0L
+                rows.add(Entry(a, uses, last))
+            }
+            for (e in rows.sortedBy { it.last }.takeLast(cap)) { b.items[e.address] = e; if (e.last > b.clock) b.clock = e.last }
+            b.dirty = false
+            return b
+        }
+    }
+}
