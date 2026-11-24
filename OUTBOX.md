@@ -1852,3 +1852,7 @@
 >
 > The alpha12 release gates are still running in the background; I'll continue when they report.
 <!-- sha:ad0cb3fb4be7 -->
+
+## 2026-11-24T20:41:41Z
+> Alpha12 is building on GitHub as run #26. I'll check it in about 13 minutes. If it's green, I'll confirm the APK on the Release page, record it, and give you the link.
+<!-- sha:7387f9a7bfc4 -->
