@@ -1,13 +1,13 @@
-# CHECKPOINT 1036 — read me first, then TASKS.md
+# CHECKPOINT 1046 — read me first, then TASKS.md
 
-**Written:** 2026-11-24T20:07:45Z · **tests:** all 1 fast checks green (gradle suite: see ship.sh)
-**Branch:** `claude/bold-euler-w64u7s` · **builds on:** `3ccc5e0` (this checkpoint is the commit after it)
+**Written:** 2026-11-24T20:39:00Z · **tests:** all 1 fast checks green (gradle suite: see ship.sh)
+**Branch:** `claude/bold-euler-w64u7s` · **builds on:** `9096db2` (this checkpoint is the commit after it)
 
 ## Just done
-R33 code: look-alike-fix rule (GlideSession.looksLikeFix + SpellingNear + engine.contextLn; strip shows such a next word among the replacements; lost-glide rescue extended), kept rare glides learn lightly (keepTrust), recent boost scales with weight, correction unlearns the wrong word (2 uses), rare-word boost capped at 3 uses (PersonalModel.RARE_*); Diagnostics counters; tests KeptRareWordTest + R33 presenter tests + PersonalModelTest; FULL SUITES NOT YET RUN
+pre-ship: R33: a word on the strip that is spelled like the glided word and far likelier (and for ave, for for fur) now REPLACES it from any box; a glided rare word that is only kept teaches the keyboard only lightly, and picking the right word takes the wrong one back, so ave stops feeding itself
 
 ## Do this next
-run ./gradlew :core:test :ime:testDebugUnitTest in ONE background run (no overlap), fix red; run :ime:lintDebug; prove the R33 presenter tests red by switching SpellingNear rule off once; run RareGuardEvalTest on slice A (REAL_SWIPES=1 REAL_RARE=1, file core/build/real-swipes-A.jsonl) to check no regression from the personal-model change (it has no personal model: should be unchanged); then bump to code 23 / 0.7.0-alpha12, ship.sh, dispatch android.yml once, record-release
+ship.sh gates and releases this (ime)
 
 *(resuming? CLAUDE.md's "FIRST ACTION OF EVERY SESSION" says how; the briefing is tools/resume.sh. Do that first, or autosave may stay off all session.)*
 
@@ -16,6 +16,7 @@ run ./gradlew :core:test :ime:testDebugUnitTest in ONE background run (no overla
 
 ## Last ten checkpoints
 ```
+  a20ef6e ckpt 1036: R33 code: look-alike-fix rule (GlideSession.looksLikeFix + SpellingNear + eng
   00d6ec0 ckpt 1022: R33 written into TASKS.md (owner: ave still wins over and, tapping and adds i
   aed8fb7 ckpt 1019: R32 DONE: swoop-v0.7.0-alpha11 released (https://github.com/tjshea90/Keyboard
   ac950c8 ckpt 1015: alpha11 (ime code 22, swoop-v0.7.0-alpha11) gated and pushed; android.yml DIS
@@ -25,8 +26,7 @@ run ./gradlew :core:test :ime:testDebugUnitTest in ONE background run (no overla
   5fd5f44 ckpt 992: R32b digit long-press row (ImeLayout.digitHolds, KeysView.openDigitPopup, 7 vi
   90d27ce ckpt 978: R32a core: weak-space swap (typed/strip/glide space + , . ! ? takes the space,
   6f8e218 ckpt 956: R32 written into TASKS.md (a-e) in the owner's words; session branch claude/bo
-  991a420 ckpt 953: R30 DONE: alpha10 released (https://github.com/tjshea90/Keyboard/releases/tag/
 ```
 
-(13 automatic checkpoint(s) since the last deliberate one — the
+(9 automatic checkpoint(s) since the last deliberate one — the
 session was still mid-step. `git diff` against it shows what changed.)
