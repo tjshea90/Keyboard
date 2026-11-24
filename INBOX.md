@@ -540,3 +540,8 @@ Figure out how popular keyboards like gboard handle punctuation logic and what t
 ```
 Try again
 ```
+
+## 2026-11-24T19:54:36Z
+```
+It is still typing ave instead of and a lot. When i press the word "and" in the suggestions to fix it, it just adds the word and after the word ave.
+```
