@@ -435,6 +435,7 @@ class InputController(editor: EditorBridge, val stats: InputStats = InputStats()
         if (word.isEmpty()) return
         settle()
         endComposing()
+        swapAt = -1
         val form = caseForm(word, previousWord())
         val lead = leadForNewWord()
         val w = written(when (shiftWithLead(lead)) { ShiftState.LOCK -> word.uppercase(); ShiftState.ONCE -> if (form != null && form.first().isUpperCase()) form else (form ?: word).replaceFirstChar { it.uppercase() }; ShiftState.OFF -> form ?: word })
