@@ -1,13 +1,13 @@
-# CHECKPOINT 953 — read me first, then TASKS.md
+# CHECKPOINT 956 — read me first, then TASKS.md
 
-**Written:** 2026-11-21T23:19:35Z · **tests:** all 1 fast checks green (gradle suite: see ship.sh)
-**Branch:** `claude/linkmeter-keyboard-launcher-fixes-fsk78t` · **builds on:** `efc71c9` (this checkpoint is the commit after it)
+**Written:** 2026-11-24T07:08:49Z · **tests:** all 1 fast checks green (gradle suite: see ship.sh)
+**Branch:** `claude/bold-euler-w64u7s` · **builds on:** `12dccf4` (this checkpoint is the commit after it)
 
 ## Just done
-R30 DONE: alpha10 released (https://github.com/tjshea90/Keyboard/releases/tag/swoop-v0.7.0-alpha10), run #24 id 44960077318 green (check, test-jvm, build), BUILDLOG recorded, TASKS R30c-e ticked
+R32 written into TASKS.md (a-e) in the owner's words; session branch claude/bold-euler-w64u7s; no code yet
 
 ## Do this next
-nothing running. Waiting on the owner (R30f): alpha10 on tablet + phone, Diagnostics 'Glide typing:' line (shape model avg/worst ms, SWITCHED ITSELF OFF if too slow). Idea R31 neural next-word model not started. Final plain answer to the owner is the last thing to send
+R32d first (strip replace bug): read ime KeyboardPresenter/InputController suggestion pick path, write a red test, fix; then R32a punctuation, R32b number long-press, R32e rare words, R32c email suggestions
 
 *(resuming? CLAUDE.md's "FIRST ACTION OF EVERY SESSION" says how; the briefing is tools/resume.sh. Do that first, or autosave may stay off all session.)*
 
@@ -16,6 +16,7 @@ nothing running. Waiting on the owner (R30f): alpha10 on tablet + phone, Diagnos
 
 ## Last ten checkpoints
 ```
+  991a420 ckpt 953: R30 DONE: alpha10 released (https://github.com/tjshea90/Keyboard/releases/tag/
   a40cab1 ckpt 951: R30 alpha10 shipped to GitHub: ship.sh green (handoff test, 290 ime + core tes
   e13f2a7 ckpt 950: gated swoop-v0.7.0-alpha10 (ime code 21) and pushed it: handoff self-test, uni
   cc1cf34 ckpt 947: R30 step 4b: ime tests 290 green (KeysViewTest timed-glide test, safe-mode eng
@@ -25,5 +26,7 @@ nothing running. Waiting on the owner (R30f): alpha10 on tablet + phone, Diagnos
   e9c055f ckpt 927: R30 step 3a: RealSwipe.read now keeps swipe times as ms since the first point 
   fa2d033 ckpt 925: R30 step 2 DONE: core/.../glide/ShapeNet.kt (pure Kotlin forward pass of the o
   f635ef6 ckpt 921: R30 step 1c: the open encoder is fully specified in research/R30-trained-shape
-  e074535 ckpt 920: R30 step 1b: helper saved the open encoder's source (MIT, Copyright 2026 Parth
 ```
+
+(2 automatic checkpoint(s) since the last deliberate one — the
+session was still mid-step. `git diff` against it shows what changed.)
