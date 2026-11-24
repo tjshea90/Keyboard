@@ -457,6 +457,52 @@ class KeyboardPresenterTest {
         assertEquals("replaced, not added", "$w ", r.text)
     }
 
+    // ------------------------------------------------------------------ R32c (owner 2026-11-24): the e-mail addresses typed are offered at the top of an e-mail box
+
+    private val emailType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS
+    private fun Rig.seedAddresses() { host.emails.learn("john@gmail.com"); host.emails.learn("john@gmail.com"); host.emails.learn("alice@work.example"); presenter.startInput(info) }
+
+    @Test fun anEmailBoxOffersTheSavedAddressesAndATapPutsOneInWhole() {
+        val r = Rig(inputType = emailType); r.seedAddresses()
+        assertEquals("the most used first", listOf("john@gmail.com", "alice@work.example"), r.view.candidatesForTest())
+        r.tapChip(1); assertEquals("alice@work.example", r.text)
+    }
+
+    @Test fun whatIsTypedNarrowsTheAddressesAndATapReplacesWhatWasTyped() {
+        val r = Rig(inputType = emailType); r.seedAddresses()
+        r.tapLetter("j"); r.tapLetter("o")
+        assertEquals(listOf("john@gmail.com"), r.view.candidatesForTest()); r.tapChip(0)
+        assertEquals("john@gmail.com", r.text); assertTrue("an address typed in full is not offered again", r.view.candidatesForTest().isEmpty())
+    }
+
+    @Test fun aNormalTextBoxHasNoAddressesInItsStrip() {
+        val r = Rig(suggest = true); r.seedAddresses(); assertTrue(r.view.candidatesForTest().none { it.contains("@") })
+    }
+
+    @Test fun anAddressTypedInAnEmailBoxIsLearnedWhenTheBoxIsLeft() {
+        val r = Rig(inputType = emailType); r.tapLetter("m"); r.tapLetter("e"); r.tap("@"); r.tapLetter("x"); r.tap(".com")
+        assertEquals("me@x.com", r.text); assertTrue("not yet: the box is still open", r.host.emails.isEmpty)
+        r.presenter.finishInput(); assertEquals(listOf("me@x.com"), r.host.emails.addresses())
+    }
+
+    @Test fun nothingIsLearnedOrOfferedInAPasswordBoxOrWithTheSwitchOff() {
+        val p = Rig(inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD); for (c in "me") p.tapLetter(c.toString()); p.tap("@"); p.tapLetter("x"); p.tap(".com"); p.presenter.finishInput()
+        assertTrue(p.host.emails.isEmpty)
+        val off = Rig(inputType = emailType, extra = { it.putBoolean(Prefs.EMAIL_SUGGEST, false) }); off.seedAddresses()
+        assertTrue("switched off: no addresses offered", off.view.candidatesForTest().isEmpty())
+        off.tapLetter("m"); off.tap("@"); off.tapLetter("x"); off.tap(".com"); off.presenter.finishInput(); assertEquals("and none learned", 2, off.host.emails.size)
+    }
+
+    @Test fun anAddressPickedFromTheStripCountsOneUseButIsNotLearnedAsTyped() {
+        val r = Rig(inputType = emailType); r.seedAddresses(); r.tapChip(0); r.presenter.finishInput()
+        assertEquals("john@gmail.com", r.host.emails.addresses().first()); assertEquals(2, r.host.emails.size)
+    }
+
+    @Test fun forgettingTheAddressesEmptiesTheBookAndTheFile() {
+        val r = Rig(inputType = emailType); r.seedAddresses(); r.host.forgetEmails()
+        assertTrue(r.host.emails.isEmpty); r.presenter.startInput(r.info); assertTrue(r.view.candidatesForTest().isEmpty())
+    }
+
     // ------------------------------------------------------------------ R20a (owner 2026-11-18): what was just copied is the first box of the strip
 
     private fun Rig.copied(text: String, at: Long = 1_000L, sensitive: Boolean = false) { presenter.clipChipSource = { ClipOffer(text, at, sensitive) }; presenter.onClipboardChanged() }
