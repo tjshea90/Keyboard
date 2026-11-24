@@ -5,6 +5,7 @@ import java.util.concurrent.Executor
 /** What glide typing did, counted on the tablet itself (no words are kept) so a Diagnostics paste says how accurate it was in real use (AT1g). */
 class GlideStats {
     private var glides = 0; private var noMatch = 0; private var kept = 0; private var picked = 0; private var undone = 0; private var revised = 0
+    private var commonFirst = 0
     private var guarded = 0; private var shadowDiffer = 0; private var shadowLearnedKept = 0; private var shadowPlainPicked = 0; private var planeDp = -1f
     private var ms = 0L; private var msMax = 0L
     private var pending = false
@@ -33,6 +34,8 @@ class GlideStats {
     @Synchronized fun onShadowLearnedKept() { shadowLearnedKept++ }
     /** R29: a kept glide whose word only learning had put in front of a much commoner one was learned lightly ([LearnGuard]). */
     @Synchronized fun onGuarded() { guarded++ }
+    /** R32e: the common-word guard put a much commoner guess in front of a rare first guess. */
+    @Synchronized fun onCommonFirst() { commonFirst++ }
     /** ... and the person picked, in the strip, the word the plain decoder had given first. */
     @Synchronized fun onShadowPlainPicked() { shadowPlainPicked++ }
     /** How far the learned touch plane moves a touch somewhere on the keys, in dp (the largest of the four corners). */
@@ -76,6 +79,7 @@ class GlideStats {
             if (judged > 0) sb.append(": best word kept $kept (${100 * kept / judged} %), another candidate picked $picked, deleted right away $undone")
             if (revised > 0) sb.append(", word before fixed by the next word $revised times")
             if (shadowDiffer > 0) sb.append("; learning changed the first guess $shadowDiffer times (you kept the learned word $shadowLearnedKept times, you picked the plain decoder's word $shadowPlainPicked times)")
+            if (commonFirst > 0) sb.append(", a much commoner word put before a rare first guess $commonFirst times")
             if (guarded > 0) sb.append(", kept glides learned lightly because only learning put a rarer word first $guarded times")
             if (noMatch > 0) sb.append(", no word fitted $noMatch")
             sb.append("; decode avg ${ms / glides} ms, worst $msMax ms")
@@ -380,14 +384,16 @@ class GlideTyping(
                     cleaned(o.candidates, 5)
                 }
             } catch (e: Exception) { emptyList() }
-            val r = five.take(3)
+            val ordered = CommonGuard.apply(five)                                                        // R32e: a rare first guess gives way to a much commoner one that fits almost as well
+            if (ordered !== five) stats.onCommonFirst()
+            val r = ordered.take(3)
             val lm = d.lastLm
             val ms = (System.nanoTime() - t0) / 1_000_000
             stats.onDecoded(ms, r.isNotEmpty())
             if (r.isNotEmpty() && personal.weightOf(r[0].text) > 0f) stats.onLearnedTop()
             lastPrint = d.lastPrint
             if (d.lastPatternLifted) stats.onShape(d.lastPatternFlipped)
-            done(GlideResult(r, ms, true, lm, five.drop(3), my))
+            done(GlideResult(r, ms, true, lm, ordered.drop(3), my))
             // R27a: AFTER the answer is out (no added delay), the same glide through a decoder that has learned nothing: how often does learning change the first word?
             val pd = plainDecoder
             if (pd != null && r.isNotEmpty() && (!personal.isEmpty || d.biasX != 0f || d.biasY != 0f || !d.field.isEmpty)) {
