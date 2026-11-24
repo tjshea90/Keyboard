@@ -121,7 +121,7 @@ class InputController(editor: EditorBridge, val stats: InputStats = InputStats()
     /** A new field got the focus (onStartInput / onStartInputView). Forgets everything about the previous one. */
     fun startInput(info: FieldInfo) {
         field = info
-        composing = null; lastGlide = null; shift = ShiftState.OFF; composingUnknown = true; adopt = 0; keepTight = -1; autoTrailAt = -1; typedTail = ""; pastedTails.clear()
+        composing = null; lastGlide = null; shift = ShiftState.OFF; composingUnknown = true; adopt = 0; keepTight = -1; autoTrailAt = -1; swapAt = -1; typedTail = ""; pastedTails.clear()
         clearPending("c1"); early.clear(); inlineEditor = false
         selStart = info.initialSelStart; selEnd = info.initialSelEnd
         refresh()
