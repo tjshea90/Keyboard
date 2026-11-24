@@ -1846,3 +1846,9 @@
 > - **Release gates:** the alpha12 gates are running now, and the GitHub build comes after them.
 > - **Not released yet:** nothing is installable until the build finishes, and I haven't tested any of this on a real tablet or phone.
 <!-- sha:858aba75bd87 -->
+
+## 2026-11-24T20:38:53Z
+> The working tree is clean and in sync with the remote. The auto-checkpointing had already committed and pushed everything, including the version bump and the R33 tick, so the hook's warning was stale.
+>
+> The alpha12 release gates are still running in the background; I'll continue when they report.
+<!-- sha:ad0cb3fb4be7 -->
