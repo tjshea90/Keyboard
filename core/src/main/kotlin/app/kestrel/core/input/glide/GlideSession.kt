@@ -138,19 +138,38 @@ class GlideSession(
     fun isGlideGuess(word: String): Boolean = prevAll.any { it.text.equals(word, ignoreCase = true) }
 
     /**
+     * R33 (owner 2026-11-24, still after alpha11: "when i press the word and in the suggestions to fix it, it just adds the word and after the word ave"): a word tapped on the strip is meant as a CORRECTION of the word the
+     * last glide put in when (1) the decoder itself offered it as a reading of that glide, or (2) it is spelled like the glided word ([SpellingNear]: ave / and, fur / for) and the glided word is far less likely in this context
+     * ([FIX_GAP] nats, about 55 times). Then a tap replaces, in whatever box it stands, even when the decoder did not list it (the sloppy glide that gives "ave" may not list "and" at all, and "and" is the commonest next
+     * word, so it stands in the next-word box). Only within [RESCUE_MS] of the glide and while the glided word is still the last thing in the text (the callers verify that against the editor).
+     */
+    fun looksLikeFix(word: String): Boolean {
+        val old = glidedNow ?: return false
+        if (now() - glidedAt > RESCUE_MS || word.equals(old, ignoreCase = true)) return false
+        if (isGlideGuess(word)) return true
+        if (!SpellingNear.near(old, word)) return false
+        val g = engine() ?: return false
+        val a = g.contextLn(old, pendingPrev, pendingPrev2) ?: return false
+        val b = g.contextLn(word, pendingPrev, pendingPrev2) ?: return false
+        return b - a >= FIX_GAP
+    }
+
+    /**
      * R32d: the safety net for when the keyboard lost track of its own glide (an app or a late selection report made it forget) but the text still ends with the glided word, the glide was a moment ago and the person
      * taps one of that glide's own guesses: the word is replaced, never added behind ("ave" stays no more when "and" is tapped). Verified against the editor like every replacement. False (nothing changed) otherwise.
      */
     fun replaceLookalike(word: String): Boolean {
         val old = glidedNow ?: return false
-        if (now() - glidedAt > RESCUE_MS || !isGlideGuess(word) || word.equals(old, ignoreCase = true)) return false
+        if (!looksLikeFix(word)) return false
+        val viaGuess = isGlideGuess(word)
         if (!controller.replaceRecent(old, word)) return false
         val g = engine()
         if (g != null && learnAllowed()) {
             g.unlearnWord(pendingPrev, old, 1f, pendingPrev2)
             g.learn(pendingPrev, word, 3f, pendingPrev2, old, 1f)
         }
-        g?.stats?.onPicked()
+        g?.stats?.onPicked(); g?.stats?.onStripReplaced(fix = !viaGuess, rescued = true)
+        g?.accepted(word) { h -> habitChanged(h) }
         glidedNow = word; glidedAt = now()
         return true
     }
@@ -158,6 +177,7 @@ class GlideSession(
     /** A candidate in the strip was tapped: it replaces the word the glide put in. */
     fun pick(word: String): Boolean {
         val was = pendingWord ?: topGuess
+        val isGuess = isGlideGuess(word)
         // the glide's own bookkeeping first; when the app rewrote the field and it was lost, the word that was put in is replaced by what the text before the cursor still shows (verified)
         if (!controller.swapGlide(word) && !(was != null && controller.replaceRecent(was, word))) return false
         glidedNow = word
@@ -166,7 +186,7 @@ class GlideSession(
         pendingGuessed = topGuess?.takeIf { it != word }                 // ... and the keyboard remembers it guessed the other one
         afterUndo = false
         val g = engine()
-        g?.stats?.onPicked()
+        g?.stats?.onPicked(); g?.stats?.onStripReplaced(fix = !isGuess, rescued = false)
         g?.shadowFor(pendingSerial)?.let { if (!pendingRevised && it.plain == word && it.learned != word) g.stats.onShadowPlainPicked() }
         g?.accepted(word) { h -> habitChanged(h) }
         show(listOf(word) + shown.filter { it != word }.take(2))
@@ -238,6 +258,8 @@ class GlideSession(
         const val RETRY_GAP = 1.5f
         /** R32d: a tap on one of a glide's own guesses still replaces the glided word this long after the glide, even when the keyboard lost track of it. */
         const val RESCUE_MS = 20_000L
+        /** R33: the tapped word must be at least this many nats (ln, about 55 times) more likely than the glided word, in this context, to be taken as its correction when the decoder did not list it. */
+        const val FIX_GAP = 4f
         /** A candidate must beat the first choice by this many cost units (nats of the language score) with the next word counted. Measured: 1.0 = +0.8 points first choice, 8 words fixed for each one spoiled. */
         const val REVISE_MARGIN = 1.0f
     }

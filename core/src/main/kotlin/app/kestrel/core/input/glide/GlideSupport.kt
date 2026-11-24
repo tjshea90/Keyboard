@@ -6,6 +6,7 @@ import java.util.concurrent.Executor
 class GlideStats {
     private var glides = 0; private var noMatch = 0; private var kept = 0; private var picked = 0; private var undone = 0; private var revised = 0
     private var commonFirst = 0
+    private var stripReplaced = 0; private var stripFix = 0; private var stripRescued = 0; private var stripAdded = 0
     private var guarded = 0; private var shadowDiffer = 0; private var shadowLearnedKept = 0; private var shadowPlainPicked = 0; private var planeDp = -1f
     private var ms = 0L; private var msMax = 0L
     private var pending = false
@@ -34,6 +35,9 @@ class GlideStats {
     @Synchronized fun onShadowLearnedKept() { shadowLearnedKept++ }
     /** R29: a kept glide whose word only learning had put in front of a much commoner one was learned lightly ([LearnGuard]). */
     @Synchronized fun onGuarded() { guarded++ }
+    /** R33: a tap on the strip after a glide: it replaced the glided word ([fix]: the tapped word was taken as a correction because it is spelled like the glided one and far likelier; [rescued]: the keyboard had lost the glide), or added the next word. */
+    @Synchronized fun onStripReplaced(fix: Boolean, rescued: Boolean) { stripReplaced++; if (fix) stripFix++; if (rescued) stripRescued++ }
+    @Synchronized fun onStripAdded() { stripAdded++ }
     /** R32e: the common-word guard put a much commoner guess in front of a rare first guess. */
     @Synchronized fun onCommonFirst() { commonFirst++ }
     /** ... and the person picked, in the strip, the word the plain decoder had given first. */
@@ -79,6 +83,7 @@ class GlideStats {
             if (judged > 0) sb.append(": best word kept $kept (${100 * kept / judged} %), another candidate picked $picked, deleted right away $undone")
             if (revised > 0) sb.append(", word before fixed by the next word $revised times")
             if (shadowDiffer > 0) sb.append("; learning changed the first guess $shadowDiffer times (you kept the learned word $shadowLearnedKept times, you picked the plain decoder's word $shadowPlainPicked times)")
+            if (stripReplaced > 0 || stripAdded > 0) sb.append(", strip taps after a glide: replaced the glided word $stripReplaced times ($stripFix of them because the tapped word looked like it and was far likelier, $stripRescued after the keyboard lost the glide), added a next word $stripAdded times")
             if (commonFirst > 0) sb.append(", a much commoner word put before a rare first guess $commonFirst times")
             if (guarded > 0) sb.append(", kept glides learned lightly because only learning put a rarer word first $guarded times")
             if (noMatch > 0) sb.append(", no word fitted $noMatch")
@@ -404,6 +409,15 @@ class GlideTyping(
                 stats.onShadow(p0 != null && p0 != r[0].text)
             }
         }
+    }
+
+    /**
+     * R33: ln P([word] | the words before it) as the strip scores it (the person's own use and the price of a rare word included); null while the word list is not loaded. Plain table look-ups: cheap, and safe on the UI
+     * thread (the shipped list never changes after it is loaded; the personal model's methods are synchronized).
+     */
+    fun contextLn(word: String, prev: String?, prev2: String?): Float? {
+        val m = main ?: return null
+        return try { Suggester.contextLogP(m, personal, word.lowercase(), prev, prev2) } catch (e: Exception) { null }
     }
 
     /**
