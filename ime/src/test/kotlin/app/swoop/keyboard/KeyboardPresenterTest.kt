@@ -486,7 +486,7 @@ class KeyboardPresenterTest {
     }
 
     @Test fun nothingIsLearnedOrOfferedInAPasswordBoxOrWithTheSwitchOff() {
-        val p = Rig(inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD); for (c in "me") p.tapLetter(c.toString()); p.tap("@"); p.tapLetter("x"); p.tap(".com"); p.presenter.finishInput()
+        val p = Rig(inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD); for (c in "me") p.tapLetter(c.toString()); p.presenter.onKey(Key.Ch("@")); p.tapLetter("x"); p.presenter.onKey(Key.Ch(".com")); assertEquals("me@x.com", p.text); p.presenter.finishInput()
         assertTrue(p.host.emails.isEmpty)
         val off = Rig(inputType = emailType, extra = { it.putBoolean(Prefs.EMAIL_SUGGEST, false) }); off.seedAddresses()
         assertTrue("switched off: no addresses offered", off.view.candidatesForTest().isEmpty())
