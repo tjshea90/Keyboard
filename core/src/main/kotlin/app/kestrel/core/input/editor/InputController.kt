@@ -419,7 +419,7 @@ class InputController(editor: EditorBridge, val stats: InputStats = InputStats()
     fun enter() {
         settle()
         stats.enters++
-        endComposing(); lastGlide = null; keepTight = -1; autoTrailAt = -1; typedTail = ""
+        endComposing(); lastGlide = null; keepTight = -1; autoTrailAt = -1; swapAt = -1; typedTail = ""
         fixLoneI()
         val a = field.imeAction
         val useAction = !field.noEnterAction && a != ImeActions.UNSPECIFIED && a != ImeActions.NONE
