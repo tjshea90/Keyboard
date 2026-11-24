@@ -234,6 +234,59 @@ class KeysViewTest {
         assertEquals(listOf("h"), r.keys)
     }
 
+    // ------------------------------------------------------------------ R32b (owner 2026-11-24): hold a digit, get its fractions and superscripts, like Gboard
+
+    @Test fun holdingADigitOnTheNumberRowOpensItsSpecialCharactersAndSlidingToOneTypesIt() {
+        val (v, r) = view(); v.numberRow = true; relayout(v)
+        val (x, y) = at(v, "1"); down(v, x, y); assertFalse(v.popupOpenForTest()); advance(KeysView.HOLD_MS + 40); assertTrue("the row is open", v.popupOpenForTest())
+        for (c in listOf("1", "\u00B9", "\u00BD", "\u2153", "\u00BC", "\u215B")) assertNotNull("'$c' is in the row of the 1", v.popupCellCenterForTest(c))
+        val (sx, sy) = v.popupCellCenterForTest("\u00BD")!!; move(v, sx, sy); up(v, sx, sy)
+        assertEquals(listOf("\u00BD"), r.keys); assertFalse(v.popupOpenForTest())
+    }
+
+    @Test fun holdingADigitAndLiftingWithoutChoosingTypesTheDigit() {
+        val (v, r) = view(); v.numberRow = true; relayout(v)
+        val (x, y) = at(v, "7"); down(v, x, y); advance(KeysView.HOLD_MS + 40); assertTrue(v.popupOpenForTest()); up(v, x, y)
+        assertEquals(listOf("7"), r.keys); assertFalse(v.popupOpenForTest())
+    }
+
+    @Test fun aQuickTapOnADigitTypesItAndOpensNoRow() {
+        val (v, r) = view(); v.numberRow = true; relayout(v); val (x, y) = at(v, "2"); down(v, x, y); advance(100); assertFalse(v.popupOpenForTest()); up(v, x, y); assertEquals(listOf("2"), r.keys)
+    }
+
+    @Test fun everyDigitHasAtLeastOneSpecialCharacterAndTheListMatchesGboard() {
+        assertEquals(setOf("0", "1", "2", "3", "4", "5", "6", "7", "8", "9"), ImeLayout.digitHolds.keys)
+        assertEquals(listOf("\u00B9", "\u00BD", "\u2153", "\u00BC", "\u215B"), ImeLayout.digitHolds["1"])
+        assertEquals(listOf("\u00B2", "\u2154"), ImeLayout.digitHolds["2"]); assertEquals(listOf("\u00B3", "\u00BE", "\u215C"), ImeLayout.digitHolds["3"])
+        assertTrue(ImeLayout.digitHolds.values.all { it.isNotEmpty() && it.size == it.toSet().size })
+        val (v, r) = view(); v.numberRow = true; relayout(v)
+        for (d in "0123456789") {
+            val (x, y) = at(v, d.toString()); down(v, x, y); advance(KeysView.HOLD_MS + 40); assertTrue("row for $d", v.popupOpenForTest())
+            for (c in ImeLayout.digitHolds[d.toString()]!!) assertNotNull("'$c' in the row of $d", v.popupCellCenterForTest(c))
+            up(v, x, y)
+        }
+        assertEquals("1234567890".let { "0123456789" }, r.keys.joinToString(""))
+    }
+
+    @Test fun theDigitsOfTheSymbolsPageHaveTheirRowsToo() {
+        val (v, r) = view(); tap(v, at(v, "?123")); relayout(v)
+        val (x, y) = at(v, "3"); down(v, x, y); advance(KeysView.HOLD_MS + 40); assertTrue(v.popupOpenForTest())
+        val (sx, sy) = v.popupCellCenterForTest("\u00BE")!!; move(v, sx, sy); up(v, sx, sy)
+        assertEquals(listOf("\u00BE"), r.keys.takeLast(1))
+    }
+
+    @Test fun withoutTheNumberRowAHeldTopRowLetterAlsoOffersTheSpecialCharactersAndTypesItsDigitOnLift() {
+        val (v, r) = view(); v.numberRow = false; relayout(v)
+        val (x, y) = at(v, "q"); down(v, x, y); advance(KeysView.HOLD_MS + 40)
+        assertEquals("the bubble still names the digit", "1", v.bubbleTextForTest()); assertTrue(v.popupOpenForTest())
+        val (sx, sy) = v.popupCellCenterForTest("\u00BC")!!; move(v, sx, sy); up(v, sx, sy); assertEquals(listOf("\u00BC"), r.keys)
+        val (x2, y2) = at(v, "w"); down(v, x2, y2); advance(KeysView.HOLD_MS + 40); up(v, x2 + 6 * dp, y2); assertEquals("a lift a little off the key still types the digit, as before", listOf("\u00BC", "2"), r.keys)
+    }
+
+    @Test fun aNumberPadHasNoRows() {
+        val (v, r) = view(kind = FieldKind.NUMBER); val (x, y) = at(v, "5"); down(v, x, y); advance(KeysView.HOLD_MS + 40); assertFalse(v.popupOpenForTest()); up(v, x, y); assertEquals(listOf("5"), r.keys)
+    }
+
     @Test fun theOptionsCanSwitchTheBubbleAndHapticsOff() { val (v, _) = view(); v.keyPreview = false; v.hapticsOn = false; val (x, y) = at(v, "h"); down(v, x, y); up(v, x, y) }
     @Test fun aQuickTapOnATopRowLetterIsTheLetter() { val (v, r) = view(); tap(v, at(v, "e")); advance(600); assertEquals(listOf("e"), r.keys) }
     @Test fun holdingAMiddleRowLetterDoesNothingSpecial() { val (v, r) = view(); val (x, y) = at(v, "g"); down(v, x, y); advance(900); up(v, x, y); assertEquals(listOf("g"), r.keys) }

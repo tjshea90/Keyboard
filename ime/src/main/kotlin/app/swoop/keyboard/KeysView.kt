@@ -743,7 +743,7 @@ class KeysView(context: Context) : View(context) {
         if (isDigitKey(k0)) { openDigitPopup(k0, (k0.key as Key.Ch).text); return }          // R32b
         val k = k0
         val alt = altOf(k) ?: return
-        holdAlt = alt; bubbleKey = k; bubbleText = alt; haptic()
+        holdAlt = alt; bubbleKey = k; bubbleText = alt
         openDigitPopup(k, alt)                                                                 // R32b: a held top-row letter shows its digit AND the digit's special characters; lifting types the digit as before
     }
 
