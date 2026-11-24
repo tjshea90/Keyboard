@@ -1746,3 +1746,12 @@
 > - bumping to alpha11
 > - shipping through GitHub Actions
 <!-- sha:eff4d0e56f07 -->
+
+## 2026-11-24T08:03:12Z
+> I've started the release. The gates are running:
+> - the handoff self-test
+> - the version check
+> - both full unit suites
+>
+> If they pass, I dispatch the GitHub build. I'll continue when the gates report.
+<!-- sha:8781c9330f96 -->
