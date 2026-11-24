@@ -61,6 +61,11 @@ class PunctuationSwapTest {
         assertEquals("hello,", r.text)                       // (the second Backspace after the letter was removed deletes only the space the keyboard added, not the comma's swap)
     }
 
+    @Test fun theRecordOfWhatWasTypedFollowsTheTextAfterTheSwap() {
+        val r = rig(); r.typeAll("hello "); r.act { type(",") }; r.typeAll("world")
+        assertEquals("hello, world", r.text); assertEquals("a word typed after a swap still counts as typed", "world", r.c.typedWord())
+    }
+
     // ------------------------------------------------------------------ what must NOT change
 
     @Test fun smileysAndSemicolonsKeepTheirSpace() {
