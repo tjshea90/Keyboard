@@ -80,6 +80,12 @@ class InputController(editor: EditorBridge, val stats: InputStats = InputStats()
      */
     private var autoTrailAt = -1
     /**
+     * R32a: the cursor offset right after a "," "." "!" "?" that took the place of the space before it ([swapKey] is that mark), until anything else is done. One Backspace exactly here deletes the mark and puts the space
+     * back (what AOSP calls reverting the swap); every other edit or move forgets it. -1 = none.
+     */
+    private var swapAt = -1
+    private var swapKey = ""
+    /**
      * Owner R23b (2026-11-18): "never at any time allow the keyboard to learn and save anything from the clipboard. Just because i copy and paste something doesn't mean it is a word to learn." The end of the text before the
      * cursor that was TYPED on this keyboard by key presses, key by key (Backspace takes from its end; a paste, an app, a glide, a strip word, a cursor move or a new field empty it). Only a word that lies wholly inside it is ever
      * learned from tapping ([typedWord]).
