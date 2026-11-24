@@ -1866,3 +1866,7 @@
 >
 > So the earliest you'll have a link is roughly 5 to 8 minutes from now. Until then alpha11 is the newest installable version, and it still has the "ave and" problem. I'll send you the alpha12 link the moment it's published.
 <!-- sha:715c1699dcee -->
+
+## 2026-11-24T20:55:02Z
+> Alpha12's tests passed on GitHub and the signed build is running. I'll check it in about three minutes and give you the link as soon as it's published.
+<!-- sha:8621e9fe7ede -->
