@@ -177,7 +177,7 @@ object Suggester {
     private fun logP(main: BinaryLexicon, pm: PersonalModel?, id: Int, own: String?, prevId: Int, prev: String?, prev2: String?, total: Double): Float {
         val text = (if (id >= 0) main.text(id) else own ?: return -30f).lowercase()
         var pu = if (id >= 0) Math.exp(main.logProb(id).toDouble()) else 0.0
-        if (pm != null) pu += pm.unigramMass(text, total) + pm.recentMass(text, total)
+        if (pm != null) { val lln = if (id >= 0) main.logProb(id) else 0f; pu += pm.unigramMass(text, total, lln) + pm.recentMass(text, total, lln) }
         var pb = 0.0
         var known = false
         if (prevId >= 0 && id >= 0) { known = true; val b = main.bigramLogProb(prevId, id); if (!b.isNaN()) pb = Math.exp(b.toDouble()) }

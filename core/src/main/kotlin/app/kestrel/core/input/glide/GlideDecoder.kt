@@ -623,7 +623,7 @@ class GlideDecoder(private val keys: GlideKeys, private val p: GlideParams = Gli
         val pm = personal?.takeIf { !it.isEmpty }
         var pu = Math.exp(lex.logProb(id).toDouble())
         var text: String? = null
-        if (pm != null) { text = lex.text(id); pu += pm.unigramMass(text, lex.totalCount()) + pm.recentMass(text, lex.totalCount()) }
+        if (pm != null) { text = lex.text(id); val lln = lex.logProb(id); pu += pm.unigramMass(text, lex.totalCount(), lln) + pm.recentMass(text, lex.totalCount(), lln) }
         var pb = 0.0
         var known = false
         if (prevId >= 0) {

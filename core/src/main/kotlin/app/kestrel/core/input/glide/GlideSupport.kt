@@ -6,7 +6,7 @@ import java.util.concurrent.Executor
 class GlideStats {
     private var glides = 0; private var noMatch = 0; private var kept = 0; private var picked = 0; private var undone = 0; private var revised = 0
     private var commonFirst = 0
-    private var stripReplaced = 0; private var stripFix = 0; private var stripRescued = 0; private var stripAdded = 0
+    private var rareKept = 0; private var stripReplaced = 0; private var stripFix = 0; private var stripRescued = 0; private var stripAdded = 0
     private var guarded = 0; private var shadowDiffer = 0; private var shadowLearnedKept = 0; private var shadowPlainPicked = 0; private var planeDp = -1f
     private var ms = 0L; private var msMax = 0L
     private var pending = false
@@ -38,6 +38,8 @@ class GlideStats {
     /** R33: a tap on the strip after a glide: it replaced the glided word ([fix]: the tapped word was taken as a correction because it is spelled like the glided one and far likelier; [rescued]: the keyboard had lost the glide), or added the next word. */
     @Synchronized fun onStripReplaced(fix: Boolean, rescued: Boolean) { stripReplaced++; if (fix) stripFix++; if (rescued) stripRescued++ }
     @Synchronized fun onStripAdded() { stripAdded++ }
+    /** R33: a kept glide of a rare word was learned only lightly. */
+    @Synchronized fun onRareKept() { rareKept++ }
     /** R32e: the common-word guard put a much commoner guess in front of a rare first guess. */
     @Synchronized fun onCommonFirst() { commonFirst++ }
     /** ... and the person picked, in the strip, the word the plain decoder had given first. */
@@ -84,6 +86,7 @@ class GlideStats {
             if (revised > 0) sb.append(", word before fixed by the next word $revised times")
             if (shadowDiffer > 0) sb.append("; learning changed the first guess $shadowDiffer times (you kept the learned word $shadowLearnedKept times, you picked the plain decoder's word $shadowPlainPicked times)")
             if (stripReplaced > 0 || stripAdded > 0) sb.append(", strip taps after a glide: replaced the glided word $stripReplaced times ($stripFix of them because the tapped word looked like it and was far likelier, $stripRescued after the keyboard lost the glide), added a next word $stripAdded times")
+            if (rareKept > 0) sb.append(", kept glides of rare words learned only lightly $rareKept times")
             if (commonFirst > 0) sb.append(", a much commoner word put before a rare first guess $commonFirst times")
             if (guarded > 0) sb.append(", kept glides learned lightly because only learning put a rarer word first $guarded times")
             if (noMatch > 0) sb.append(", no word fitted $noMatch")
@@ -409,6 +412,16 @@ class GlideTyping(
                 stats.onShadow(p0 != null && p0 != r[0].text)
             }
         }
+    }
+
+    /**
+     * R33: how much a glide that was only KEPT (not picked, not retyped) teaches about [word]: the rarer the shipped list finds it, the less ([KEEP_LOW] and below: [KEEP_MIN], [KEEP_HIGH] and above: all). A kept
+     * glide is weak evidence (the decoder chose the word, not the person) and a rare look-alike that was kept used to feed itself; a word the list lacks is the person's own and counts in full.
+     */
+    fun keepTrust(word: String): Float {
+        val m = main ?: return 1f
+        val id = m.idOf(word.lowercase()); if (id < 0) return 1f
+        return ((m.logProb(id) - KEEP_LOW) / (KEEP_HIGH - KEEP_LOW)).coerceIn(KEEP_MIN, 1f)
     }
 
     /**

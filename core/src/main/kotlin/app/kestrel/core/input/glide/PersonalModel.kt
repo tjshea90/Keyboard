@@ -51,7 +51,7 @@ class PersonalModel(private val capWords: Int = 6000, private val capPairs: Int 
         if (recency) { // the short memory: everything fades, this word was just used
             val it = recent.entries.iterator()
             while (it.hasNext()) { val e = it.next(); e.setValue(e.value * RECENT_FADE); if (e.value < 0.02f) it.remove() }
-            recent[w] = (recent[w] ?: 0f) + 1f
+            recent[w] = (recent[w] ?: 0f) + Math.min(1f, weight)          // (R33: a light lesson is a light recent use too)
         }
         if (words.size > capWords || pairs.size > capPairs || triples.size > capTriples) trim()
         if (total > DECAY_AT) decay()
@@ -63,6 +63,7 @@ class PersonalModel(private val capWords: Int = 6000, private val capPairs: Int 
     @Synchronized fun unlearn(prev: String?, word: String, weight: Float = 1f, prev2: String? = null) {
         val w = norm(word) ?: return
         if (weight <= 0f) return
+        recent.remove(w)                                                  // (R33: taken back: its short-term boost goes with it)
         val have = words[w] ?: return
         val take = Math.min(weight, have)
         if (have - take < 0.05f) words.remove(w) else words[w] = have - take
@@ -228,15 +229,15 @@ class PersonalModel(private val capWords: Int = 6000, private val capPairs: Int 
      * Extra probability for [word] on the scale of a list whose counts add up to [listTotal]: every use is worth [UNIGRAM_COUNT] occurrences of that list, up to [MAX_USES] uses.
      * (A word used once is about as likely as the 10 000th most common one; ten uses, the 1 500th; a hundred, the 150th.)
      */
-    @Synchronized fun unigramMass(word: String, listTotal: Double): Double {
+    @Synchronized fun unigramMass(word: String, listTotal: Double, listLn: Float = 0f): Double {
         val w = words[word] ?: return 0.0
-        return UNIGRAM_COUNT * Math.min(w, MAX_USES).toDouble() / listTotal
+        return UNIGRAM_COUNT * Math.min(w, if (listLn < RARE_LIST_LN) RARE_MAX_USES else MAX_USES).toDouble() / listTotal
     }
 
     /** Extra probability for a word used lately, on the same scale as [unigramMass]: a few uses in the last hundred words are worth about as much as one long-term use. */
-    @Synchronized fun recentMass(word: String, listTotal: Double): Double {
+    @Synchronized fun recentMass(word: String, listTotal: Double, listLn: Float = 0f): Double {
         val r = recent[word] ?: return 0.0
-        return RECENT_COUNT * Math.min(r, MAX_RECENT).toDouble() / listTotal
+        return RECENT_COUNT * Math.min(r, if (listLn < RARE_LIST_LN) RARE_MAX_RECENT else MAX_RECENT).toDouble() / listTotal
     }
 
     /** The share of what the person wrote after the two words [prev2] [prev] that was [word] (0 when never seen). */
@@ -333,6 +334,14 @@ class PersonalModel(private val capWords: Int = 6000, private val capPairs: Int 
     companion object {
         /** One use is worth this many occurrences on the shipped list's scale. */
         const val UNIGRAM_COUNT = 2.0e7
+        /**
+         * R33 (owner 2026-11-24: "it is still typing ave instead of and a lot"): a word the shipped list itself finds this unlikely (ln, about 1 in 36 000 words: ave -11.2, fur -11.3, maggie -11.4) never gets more than
+         * [RARE_MAX_USES] uses' worth of boost, whatever was learned (a kept look-alike fed itself: one use is worth the 10 000th commonest word, and a path halfway between "and" and "ave" flipped to "ave" after ONE kept use).
+         * This also bounds what an earlier version already learned. A word the list lacks (the person's own) is not capped.
+         */
+        const val RARE_LIST_LN = -10.5f
+        const val RARE_MAX_USES = 3f
+        const val RARE_MAX_RECENT = 2f
         /** Uses beyond this do not count any more (the boost has a ceiling). */
         const val MAX_USES = 200f
         const val MAX_PAIR_TRUST = 0.7f
