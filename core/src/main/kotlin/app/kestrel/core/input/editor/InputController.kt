@@ -993,6 +993,8 @@ class InputController(editor: EditorBridge, val stats: InputStats = InputStats()
         /** Punctuation after which the next word needs a space (when [autoSpace] is on). */
         const val AUTO_SPACE_AFTER = ".,!?;:"
         val CLOSES_WORD: Set<String> = setOf(".", ",", "?", "!", ":", ";", "/", ".com", ")", "'", "-", "_", "@", "%")
+        /** R32a: the marks that take the place of ANY single space after a word, even one the person typed (the smileys ":" ";" ")" keep a typed space). */
+        val SWAP_AFTER_SPACE: Set<String> = setOf(",", ".", "!", "?")
         /** A glide right after one of these starts the word without a space before it. */
         const val NO_SPACE_AFTER = "([{“‘/@#"
 
