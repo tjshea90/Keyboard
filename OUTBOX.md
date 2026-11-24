@@ -1808,3 +1808,11 @@
 > - If "ave" or "fur" still win, hold the wrong word in the strip and confirm Remove, so it is never offered again. Then send me the Diagnostics line starting "Glide typing:".
 > - Details are in `research/R32-punctuation-suggestions.md`, and progress is saved to GitHub.
 <!-- sha:7f225a8b28b9 -->
+
+## 2026-11-24T20:08:24Z
+> I'm waiting on the full test run. The code for R33 is written, with two parts:
+> - **Strip:** a look-alike like "and" is treated as a correction of "ave" wherever it appears on the strip.
+> - **Learning:** kept rare words teach only lightly, and a correction unlearns the wrong word.
+>
+> After the run I'll re-prove the new tests go red without the fix, run lint, then build alpha12.
+<!-- sha:663acf830af6 -->
