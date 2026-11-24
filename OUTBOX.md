@@ -1763,3 +1763,48 @@
 ## 2026-11-24T08:26:27Z
 > Waiting on the remaining GitHub jobs (unit tests and lint, then the signed build). I'll re-check the run when this wait ends.
 <!-- sha:af039c8be306 -->
+
+## 2026-11-24T08:31:53Z
+> All five things you asked for are built and released as Swoop 0.7.0-alpha11. I haven't been able to try it on a tablet or phone, so none of it has been checked on a real keyboard. The automated tests passed, and GitHub built and signed the APK.
+>
+> **Download (open on the device, tap the APK):**
+> https://github.com/tjshea90/Keyboard/releases/tag/swoop-v0.7.0-alpha11
+>
+> 1. **Spaces before commas and periods.** I read how the open-source keyboard Gboard descends from (AOSP LatinIME and its fork HeliBoard) treats spaces and punctuation. Swoop only fixed this after its own glided words. A word taken from the strip, a next-word pick, or a space your thumb typed all still left "word ,". Now a comma, period, `!` or `?` typed right after a word and one space takes that space's place, whoever added it. Backspace right afterwards puts the space back. Smileys like `:)` keep their space, and address, e-mail, password and number boxes are left alone. The space after the mark and the capital after a period still come from the next word, as before. The exact punctuation character lists in those keyboards weren't retrievable, so the list of marks and exceptions is my own safe choice. I haven't checked how Gboard itself behaves.
+>
+> 2. **Long-press on numbers.** Holding a digit opens a row, the way Gboard does:
+>    - 1 shows ¹ ½ ⅓ ¼ ⅛.
+>    - 2 shows ² ⅔, and 3 shows ³ ¾ ⅜.
+>    - 5 shows ⁵ ⅝, and 7 shows ⁷ ⅞.
+>    - 4, 6, 8 and 9 show their superscripts.
+>    - 0 shows ⁰ ⁿ ∅ °.
+>
+>    Slide to one and let go. Letting go without choosing types the digit, as before. It works on the number row, on the symbols page, and on a held top-row letter when the number row is off. Number pads are unchanged. I wrote this table from how Gboard commonly looks, not from a copied file.
+>
+> 3. **E-mail addresses.** The keyboard now remembers addresses you type by hand. It never learns pasted, autofilled or password-box text. In an e-mail box the top of the keyboard shows your best three addresses as soon as you tap in, narrowing as you type. After an `@` it offers your usual domains. A tap puts the address in whole. They stay on the device only and aren't in the export file. In Settings, "E-mail addresses" turns the feature off, and "Forget my e-mail addresses" deletes them.
+>
+> 4. **"ave" kept and "and" added behind it.** The cause was a mix-up between two kinds of box above the keys.
+>    - **What caused it:**
+>      - The middle box adds the next word, and the side boxes replace the glided word.
+>      - The keyboard guesses five words for each glide but showed only three. A fourth or fifth guess like "and" is also the commonest next word, so it appeared in the middle box and a tap added it.
+>      - Side boxes with nothing to show were also filled with next-word guesses.
+>    - **What changed:**
+>      - A word the keyboard itself guessed for that glide is never offered as the next word. It goes in a side box, where a tap replaces.
+>      - Empty side boxes now stay empty.
+>      - If the keyboard loses track of the gl
+> [... 594 characters omitted ...]
+>  tap away.
+>    - **How it did:** on real swipes it helped slightly and did not hurt everyday words, on both the data I tuned on and a separate set from other people.
+>    - **Tablet check:** Diagnostics now counts how often it acts.
+>
+> **Not done:** the Kestrel browser copy of the keyboard was not updated, because you didn't ask for it this time. Next-word prediction (R31) is still not started.
+>
+> **Open items**
+> - **R32f, waiting on you.** Please try alpha11 on the tablet and phone:
+>   - type "word" then space then a comma or period
+>   - hold a 1
+>   - open an e-mail box a few times
+>   - glide "and" and "for", then tap the word you meant
+> - If "ave" or "fur" still win, hold the wrong word in the strip and confirm Remove, so it is never offered again. Then send me the Diagnostics line starting "Glide typing:".
+> - Details are in `research/R32-punctuation-suggestions.md`, and progress is saved to GitHub.
+<!-- sha:7f225a8b28b9 -->
