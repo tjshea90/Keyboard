@@ -514,6 +514,9 @@ class KeyboardPresenterTest {
         r.et.setSelection(0); r.report(); println("SCRATCH after move to 0: strip=${r.view.candidatesForTest()} lastGlide=${r.presenter.controller.lastGlide != null}")
         r.et.setSelection(r.text.length); r.report()
         println("SCRATCH after back: strip=${r.view.candidatesForTest()} lastGlide=${r.presenter.controller.lastGlide != null} before='${r.presenter.controller.before}' composing=${r.presenter.controller.composing}")
+        val f = r.presenter.javaClass.getDeclaredField("session"); f.isAccessible = true; val sess = f.get(r.presenter) as app.kestrel.core.input.glide.GlideSession
+        println("SCRATCH looksLikeFix(and)=${sess.looksLikeFix("and")} hasCandidates=${sess.hasCandidates()} isGuess=${sess.isGlideGuess("and")}")
+        val g = r.host.engine; println("SCRATCH ln ave=${g.contextLn("ave", null, null)} and=${g.contextLn("and", null, null)} near=${app.kestrel.core.input.glide.SpellingNear.near("ave", "and")}")
         r.presenter.onCandidate("and"); println("SCRATCH text now='${r.text}'")
     }
 
