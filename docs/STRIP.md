@@ -21,6 +21,10 @@ Research: `research/R20-clipboard-and-strip.md` (what Gboard, SwiftKey, HeliBoar
 * **Safety net:** if the keyboard lost track of its glide (a late or odd selection report from the app, so the strip changed to next-word guesses) a tap on one of that glide's own five guesses within 20 s still replaces the glided word, after checking the text before the cursor is still that word (`GlideSession.replaceLookalike`).
 * Tests: `KeyboardPresenterTest` R32d block (the rescue test is proven red with the fix switched off). Research: `research/R32-punctuation-suggestions.md` section 3.
 
+## R33: a look-alike is a correction (owner 2026-11-24, after alpha11)
+* A tapped word replaces the glided word when the decoder listed it OR when it is spelled like it (`SpellingNear`) and at least 4 nats (about 55 times) likelier in context (`GlideSession.looksLikeFix`): "and" for "ave", "for" for "fur". It is shown in a side box, not as the next word, and a tap on it replaces from any box and after the keyboard lost the glide (within 20 s). "are" -> "and" is not a correction ("are" is common): the next word is added.
+* Learning from a fix: the meant word counts three times, the wrong first guess loses 2 uses and its recent boost, and a kept glide of a rare word no longer teaches the keyboard (research note section 7).
+
 ## E-mail boxes (R32c)
 In an e-mail box (not in any other box) the strip lists the saved e-mail addresses instead of words: the best three while the box is empty, narrowing as letters are typed; a tap replaces what was typed of the address. See `research/R32-punctuation-suggestions.md` section 5.
 
