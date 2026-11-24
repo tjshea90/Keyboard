@@ -245,7 +245,7 @@ class InputController(editor: EditorBridge, val stats: InputStats = InputStats()
         if (text.isEmpty()) return false
         settle()
         endComposing()
-        lastGlide = null; keepTight = -1; autoTrailAt = -1; typedTail = ""
+        lastGlide = null; keepTight = -1; autoTrailAt = -1; swapAt = -1; typedTail = ""
         text.takeLast(PASTE_TAIL).takeIf { it.isNotBlank() }?.let { pastedTails.add(it); while (pastedTails.size > 3) pastedTails.removeAt(0) }       // (R23b: nothing before this counts as context)
         val ok = commit(text)
         ensureWindow()
