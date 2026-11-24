@@ -559,7 +559,7 @@ class InputController(editor: EditorBridge, val stats: InputStats = InputStats()
         if (delta == 0) return
         settle()
         stats.cursorMoves++
-        endComposing(); lastGlide = null; keepTight = -1; autoTrailAt = -1; typedTail = ""
+        endComposing(); lastGlide = null; keepTight = -1; autoTrailAt = -1; swapAt = -1; typedTail = ""
         val left = delta < 0
         val steps = minOf(Math.abs(delta), 64)
         var predicted = selStart >= 0 && selStart == selEnd   // a selection collapses to one end and the selected text joins the window: re-read instead of predicting
