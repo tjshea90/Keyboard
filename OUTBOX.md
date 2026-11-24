@@ -1755,3 +1755,7 @@
 >
 > If they pass, I dispatch the GitHub build. I'll continue when the gates report.
 <!-- sha:8781c9330f96 -->
+
+## 2026-11-24T08:16:10Z
+> The GitHub build for alpha11 is running as run #25. I'll check its result in about ten minutes, then confirm the Release shows the APK and record it.
+<!-- sha:3a5e3e322cc9 -->
