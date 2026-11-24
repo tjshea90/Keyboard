@@ -696,6 +696,42 @@ class InputController(editor: EditorBridge, val stats: InputStats = InputStats()
         return if (typedTail.endsWith(w)) w else null
     }
 
+    /**
+     * R32c: the e-mail address that ends the text before the cursor, when ALL of it was typed on this keyboard key by key (null when any of it came from elsewhere: a paste, autofill, a strip word, a glide, a cursor move,
+     * or when it is no plain address). A full stop, comma or other mark that ends a sentence right behind it is not part of it. This is the only kind of address that is ever learned.
+     */
+    fun typedEmail(): String? {
+        if (selStart >= 0 && selStart != selEnd) return null
+        val raw = before.takeLastWhile { !it.isWhitespace() && it !in ADDRESS_STOPS }
+        val tok = raw.trimEnd('.', ',', ';', ':', '!', '?')
+        if (!tok.contains('@') || tok.length > app.kestrel.core.input.glide.EmailBook.MAX_LEN) return null
+        if (!app.kestrel.core.input.glide.EmailBook.isAddress(tok.lowercase())) return null
+        val tail = typedTail.dropLast(raw.length - tok.length)
+        return if (tail.endsWith(tok)) tok else null
+    }
+
+    /** R32c: what has been typed of an address so far: the characters before the cursor back to the last space, comma, semicolon or bracket (not checked to be an address). */
+    fun addressPrefix(): String = if (selStart >= 0 && selStart != selEnd) "" else before.takeLastWhile { !it.isWhitespace() && it !in ADDRESS_STOPS }.takeLast(app.kestrel.core.input.glide.EmailBook.MAX_LEN + 1)
+
+    /**
+     * R32c: [address] goes in the place of the [typedLen] characters of an address typed so far (nothing is added behind it: an e-mail box takes no space). Verified against the editor first; false (nothing changed) when the text
+     * before the cursor is not what was expected, something is selected, or the editor refused.
+     */
+    fun pickAddress(typedLen: Int, address: String): Boolean {
+        if (address.isEmpty() || typedLen < 0 || typedLen > before.length || (selStart >= 0 && selStart != selEnd)) return false
+        settle(); endComposing(); swapAt = -1
+        if (typedLen > 0 && !verifyBefore(before.takeLast(typedLen))) return false
+        val s0 = selStart; val e0 = selEnd
+        beginBatch()
+        var ok = typedLen == 0 || ed.deleteSurrounding(typedLen, 0)
+        if (ok) { before = before.dropLast(typedLen); moveSel(-typedLen); ok = commit(address) }
+        endBatch(s0, e0)
+        lastGlide = null; autoTrailAt = -1; typedTail = ""
+        if (!ok) { resync(); return false }
+        ensureWindow()
+        return true
+    }
+
     /** R23b: [word] stands inside one of the last pastes (so a correction of it is a correction of the clipboard's text, which teaches nothing). */
     fun wasPasted(word: String): Boolean = word.isNotEmpty() && pastedTails.any { it.contains(word, ignoreCase = true) }
 
@@ -993,6 +1029,8 @@ class InputController(editor: EditorBridge, val stats: InputStats = InputStats()
         /** Punctuation after which the next word needs a space (when [autoSpace] is on). */
         const val AUTO_SPACE_AFTER = ".,!?;:"
         val CLOSES_WORD: Set<String> = setOf(".", ",", "?", "!", ":", ";", "/", ".com", ")", "'", "-", "_", "@", "%")
+        /** The characters that end an address typed so far (besides white space): a comma or semicolon between addresses, a bracket or quote around one. */
+        private const val ADDRESS_STOPS = ",;<>()[]\"'"
         /** R32a: the marks that take the place of ANY single space after a word, even one the person typed (the smileys ":" ";" ")" keep a typed space). */
         val SWAP_AFTER_SPACE: Set<String> = setOf(",", ".", "!", "?")
         /** A glide right after one of these starts the word without a space before it. */
