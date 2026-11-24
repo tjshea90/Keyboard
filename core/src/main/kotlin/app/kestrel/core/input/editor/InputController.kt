@@ -182,7 +182,7 @@ class InputController(editor: EditorBridge, val stats: InputStats = InputStats()
         if (composing != null) ed.finishComposing()
         stats.foreignReports++
         val glide = lastGlide; val wasAt = selStart
-        composing = null; lastGlide = null; keepTight = -1; autoTrailAt = -1; typedTail = ""
+        composing = null; lastGlide = null; keepTight = -1; autoTrailAt = -1; swapAt = -1; typedTail = ""
         clearPending("c3")
         selStart = newSelStart; selEnd = newSelEnd
         refresh()
