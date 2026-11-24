@@ -29,7 +29,7 @@ class EmailLearner(private val controller: InputController, private val book: ()
     /** Call AFTER the controller handled the key: in an e-mail box the address typed so far is remembered until the box is left. */
     fun afterKey() {
         if (controller.field.kind != FieldKind.EMAIL || !allowed()) { waiting = null; return }
-        waiting = controller.typedEmail() ?: waiting?.takeIf { controller.addressPrefix().isNotEmpty() && controller.addressPrefix().equals(it, ignoreCase = true) }
+        waiting = controller.typedEmail()
     }
 
     /** The box was left (focus lost): an address typed by hand in an e-mail box is learned now. */
