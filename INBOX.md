@@ -444,3 +444,8 @@ Why Gboard is better: it has a trained shape model and a neural next-word model 
 
 Make the keyboard either adopt gboard's trained shape model if possible, or build one from the internet 
 ```
+
+## 2026-11-24T07:07:43Z
+```
+Figure out how popular keyboards like gboard handle punctuation logic and what to do after periods and commas, etc. Because this keyboard doesn't handle it well and keeps spaces after a word preceding a comma. Fix it to follow how popular keyboards work. Add the long press on numbers to bring up special characters just like gboard, for example, fractions if i long press the number 1. Learn the email addresses i use and include them as suggested words at the top of the keyboard whenever i press an email field to type in. Figure out how major keyboards like gboard handle word corrections using the recommended words above the keys. For example, it often types the word ave when I'm trying to type the word and. When i press the word "and" in the recommendations to fix it , sometimes it keeps the word ave and just adds the word and behind it. Also, make it better at not predicting rare words such as fur or ave when I'm typing common words like for and  and
+```
