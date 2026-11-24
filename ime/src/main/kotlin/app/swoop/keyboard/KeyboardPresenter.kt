@@ -519,6 +519,7 @@ class KeyboardPresenter(
     private var glideBest: String = ""
     private var glideAlts: List<String> = emptyList()
     private var glideMore: List<String> = emptyList()
+    internal fun glideMoreForTest(): List<String> = glideMore
     private var glideNext: List<String> = emptyList()
     private var glideNextWaiting = false
     /** The next words the glide layout shows (the middle box, and a side box that has no other guess to hold): a tap on exactly one of them is "this word comes next", not a replacement of the glided word. */
@@ -533,7 +534,7 @@ class KeyboardPresenter(
         glideRaw = if (properOn || controller.capitalizeI) (words.indices.filter { shown[it] != words[it] }.associate { shown[it] to words[it] } + moreRaw.indices.filter { more[it] != moreRaw[it] }.associate { more[it] to moreRaw[it] }) else emptyMap()
         glideNextShown = emptySet()
         if (view?.isGliding == true || controller.lastGlide == null || !suggestOn || !glideNextOn || shown.isEmpty()) { view?.showCandidates(withEmoji(shown, words.firstOrNull())); return }     // (the live guess while the finger is down, or no suggestions: the plain list)
-        glideBest = shown[0]; glideAlts = shown.drop(1).take(2); glideMore = more; glideNext = emptyList(); glideNextWaiting = true
+        glideBest = shown[0]; glideAlts = shown.drop(1).take(2); glideMore = more.filter { m -> shown.none { it.equals(m, ignoreCase = true) } }; glideNext = emptyList(); glideNextWaiting = true
         renderGlideStrip()
         val (p2, p1) = controller.previousTwo()
         val my = ++suggestSeq

@@ -398,10 +398,12 @@ class KeyboardPresenterTest {
         assertNull("the glide is confirmed, nothing is left to replace", r.presenter.controller.lastGlide)
     }
 
-    @Test fun aSideBoxThatHoldsAnotherNextWordPutsItInInsteadOfReplacingTheGlidedWord() {
-        val r = Rig(suggest = true, words = pairedList); r.glide("hello")      // (R24b: "for" now has two look-alike guesses of its own, so a glide with none shows the case)
-        assertEquals("you", r.view.candidatesForTest()[2]); r.tapChip(2)
-        assertEquals("hello you ", r.text)
+    @Test fun aSideBoxNeverHoldsAFillerNextWord() {
+        // R32d: a side box that has no other guess of the glide stays empty; it used to be filled with another NEXT word, and a tap on it added the word instead of replacing the glided one
+        val r = Rig(suggest = true, words = pairedList); r.glide("hello")
+        val c = r.view.candidatesForTest()
+        assertEquals("only the middle box may hold a next word: $c", "world", c[1])
+        assertTrue("no filler next word in a side box: $c", c[0] !in listOf("world", "there", "you") && c[2] !in listOf("world", "there", "you"))
     }
 
     @Test fun withNoPredictionTheStripIsTheOldListOfGuesses() {
@@ -417,6 +419,41 @@ class KeyboardPresenterTest {
     @Test fun withSuggestionsOffTheStripAfterAGlideIsTheOldList() {
         val r = Rig(suggest = false, words = pairedList); r.glide("hello")
         assertEquals("hello", r.view.candidatesForTest().first())
+    }
+
+    // ------------------------------------------------------------------ R32d (owner 2026-11-24): a tap on the word he meant REPLACES the glided word, never adds it behind
+
+    private val lookalikes = listOf("for" to 900L, "fir" to 300L, "fur" to 100L, "fog" to 80L, "foe" to 70L, "fit" to 60L, "fry" to 50L, "ftr" to 40L, "world" to 800L, "there" to 700L)
+    private fun lexOf(extra: List<LexiconFile.Pair> = emptyList()) = LexiconFile.build(lookalikes.map { LexiconFile.Entry(it.first, it.second) }, extra)
+
+    /** A word the decoder gives as its 4th or 5th guess for a glide of "for" in [lookalikes]. */
+    private fun fourthOrFifthGuess(): String { val r = Rig(suggest = true, words = lexOf()); r.glide("for"); return r.presenter.glideMoreForTest().firstOrNull() ?: error("the decoder gave no 4th guess") }
+
+    @Test fun aLookAlikeThatIsAlsoTheLikelyNextWordIsAReplacementNotTheNextWord() {
+        val w = fourthOrFifthGuess()
+        val r = Rig(suggest = true, words = lexOf(listOf(LexiconFile.Pair("for", w, 900L)))); r.glide("for")
+        val c = r.view.candidatesForTest()
+        assertTrue("$w stands in a side box (a replacement), not in the middle (the next word): $c", w == c[0] || w == c[2])
+        assertTrue("the middle box is a different word: $c", c[1] != w)
+        r.tapChip(c.indexOf(w))
+        assertEquals("the glided word is replaced, not kept with $w added behind it", "$w ", r.text)
+    }
+
+    @Test fun tappingTheNextWordStillAddsItAfterTheGlidedWord() {
+        val r = Rig(suggest = true, words = lexOf(listOf(LexiconFile.Pair("for", "world", 900L)))); r.glide("for")
+        val c = r.view.candidatesForTest(); assertEquals("world", c[1]); r.tapChip(1)
+        assertEquals("for world ", r.text)
+    }
+
+    @Test fun whenTheKeyboardLostTrackOfTheGlideATapOnOneOfItsGuessesStillReplacesTheWord() {
+        val w = fourthOrFifthGuess()
+        val r = Rig(suggest = true, words = lexOf(listOf(LexiconFile.Pair("for", w, 900L)))); r.glide("for")
+        // something moves the cursor away and back (an app, a late report): the keyboard forgets the glide, and the strip now shows the NEXT words
+        r.et.setSelection(0); r.report(); r.et.setSelection(r.text.length); r.report()
+        assertNull("the glide is forgotten", r.presenter.controller.lastGlide)
+        val c = r.view.candidatesForTest(); assertTrue("$w is offered: $c", c.contains(w))
+        r.tapChip(c.indexOf(w))
+        assertEquals("replaced, not added", "$w ", r.text)
     }
 
     // ------------------------------------------------------------------ R20a (owner 2026-11-18): what was just copied is the first box of the strip
