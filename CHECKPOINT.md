@@ -1,13 +1,13 @@
-# CHECKPOINT 978 — read me first, then TASKS.md
+# CHECKPOINT 992 — read me first, then TASKS.md
 
-**Written:** 2026-11-24T07:24:08Z · **tests:** all 1 fast checks green (gradle suite: see ship.sh)
-**Branch:** `claude/bold-euler-w64u7s` · **builds on:** `5498808` (this checkpoint is the commit after it)
+**Written:** 2026-11-24T07:43:45Z · **tests:** all 1 fast checks green (gradle suite: see ship.sh)
+**Branch:** `claude/bold-euler-w64u7s` · **builds on:** `b69ba38` (this checkpoint is the commit after it)
 
 ## Just done
-R32a core: weak-space swap (typed/strip/glide space + , . ! ? takes the space, smileys keep it, Backspace restores) with 17 tests; R32d: strip never mixes replace/add (rank 4-5 guesses go to a side box, no filler next words, lost-glide rescue replaceLookalike) with 3 tests + proof red when fix is off. Full suites not yet run
+R32b digit long-press row (ImeLayout.digitHolds, KeysView.openDigitPopup, 7 view tests); R32c EmailBook + EmailLearner + typedEmail/pickAddress + presenter strip + Settings switch/forget (core 636 tests green, ime presenter+view 145 green)
 
 ## Do this next
-run ./gradlew :core:test :ime:testDebugUnitTest (no --offline for :ime) and fix any red; then R32b digit long-press popup in ime KeysView (openPopup/holdFired/altOf), R32c EmailBook, R32e rare words; write research/R32-punctuation-suggestions.md
+R32e rare words: check how to get the real-swipe corpus (research/R24-glide-next.md, REAL_SWIPES=1 harness; huggingface fetch may be blocked), measure ave/fur vs and/for on tap path (Suggester) and glide path (GlideDecoder rarity), then tick R32a-d in TASKS via tools/claim.sh and run lint (:ime:lintDebug) before ship
 
 *(resuming? CLAUDE.md's "FIRST ACTION OF EVERY SESSION" says how; the briefing is tools/resume.sh. Do that first, or autosave may stay off all session.)*
 
@@ -16,6 +16,7 @@ run ./gradlew :core:test :ime:testDebugUnitTest (no --offline for :ime) and fix 
 
 ## Last ten checkpoints
 ```
+  90d27ce ckpt 978: R32a core: weak-space swap (typed/strip/glide space + , . ! ? takes the space,
   6f8e218 ckpt 956: R32 written into TASKS.md (a-e) in the owner's words; session branch claude/bo
   991a420 ckpt 953: R30 DONE: alpha10 released (https://github.com/tjshea90/Keyboard/releases/tag/
   a40cab1 ckpt 951: R30 alpha10 shipped to GitHub: ship.sh green (handoff test, 290 ime + core tes
@@ -25,8 +26,7 @@ run ./gradlew :core:test :ime:testDebugUnitTest (no --offline for :ime) and fix 
   5bfe37a ckpt 932: R30 step 3c DONE: three disjoint real-swipe sets incl. FUTO TEST split: hybrid
   881fdb5 ckpt 930: R30 step 3 RESULT: hybrid (shipped score + 0.5*net log P over the top-40) = +4
   e9c055f ckpt 927: R30 step 3a: RealSwipe.read now keeps swipe times as ms since the first point 
-  fa2d033 ckpt 925: R30 step 2 DONE: core/.../glide/ShapeNet.kt (pure Kotlin forward pass of the o
 ```
 
-(21 automatic checkpoint(s) since the last deliberate one — the
+(13 automatic checkpoint(s) since the last deliberate one — the
 session was still mid-step. `git diff` against it shows what changed.)
