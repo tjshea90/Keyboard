@@ -253,6 +253,20 @@ class InputController(editor: EditorBridge, val stats: InputStats = InputStats()
         return ok
     }
 
+    /**
+     * R32a: the text before the cursor ends in a word (or a number, or a closing bracket) and ONE space, in a plain text box with nothing selected and no word being tapped: a "," "." "!" "?" typed now takes the
+     * place of that space. Two spaces, a space after punctuation, a space at the start of the text and address, password and number boxes are left as typed.
+     */
+    private fun weakSpaceBefore(): Boolean {
+        if (selStart >= 0 && selStart != selEnd) return false
+        if (composing != null) return false
+        if (field.kind != FieldKind.TEXT && field.kind != FieldKind.SEARCH) return false
+        val n = before.length
+        if (n < 2 || before[n - 1] != ' ') return false
+        val q = before[n - 2]
+        return q.isLetterOrDigit() || q in ")]}”’"
+    }
+
     /** The previous character is sentence punctuation that touches a word or a number, and the word is not part of an address, an abbreviation or a number: a space belongs after it. */
     private fun needsAutoSpace(): Boolean {
         if (selStart >= 0 && selStart != selEnd) return false
