@@ -48,6 +48,9 @@ class GlideSession(
     private var prevCtx: String? = null                          // the word before that glided word
     private var pendingSerial = 0                                // which decode gave the pending word (R27a shadow comparison)
     private var pendingRevised = false
+    /** R32d: the word the last glide left in the text (changed by a pick or a revision) and when the glide ended: what a strip tap may still replace after the bookkeeping was lost. */
+    private var glidedNow: String? = null
+    private var glidedAt = 0L
 
     private var shown: List<String> = emptyList()
     private fun show(words: List<String>) { shown = words; ui?.showCandidates(words) }
@@ -97,6 +100,7 @@ class GlideSession(
         topGuess = best.text
         pendingPrev = prev; pendingPrev2 = prev2
         prevAll = cands + res.more; prevLm = res.lm; prevCtx = prev; pendingSerial = res.serial; pendingRevised = false
+        glidedNow = best.text; glidedAt = now()
         show(cands.map { it.text })
     }
 
@@ -119,7 +123,7 @@ class GlideSession(
         if (best == 0 || bestTotal - first <= REVISE_MARGIN) return
         val w = all[best].text
         if (!controller.swapGlide(w)) return
-        pendingWord = w; pendingGuessed = null; topGuess = w; pendingRevised = true
+        pendingWord = w; pendingGuessed = null; topGuess = w; pendingRevised = true; glidedNow = w
         pendingShown = if (pendingShown != null) controller.lastGlide?.word else null
         g.stats.onRevised()
     }
@@ -127,11 +131,36 @@ class GlideSession(
     /** True while the strip shows the guesses of a glide (a tap on one replaces the glided word). */
     fun hasCandidates(): Boolean = shown.isNotEmpty()
 
+    /** R32d: the decoder's 4th and 5th guesses of the glide that is on screen (the strip has room for three; a word the language also expects next is shown among the replacements, never as "the next word"). */
+    fun moreGuesses(): List<String> = prevAll.drop(3).map { it.text }
+
+    /** R32d: [word] is one of the five guesses the decoder gave for the glide on screen (so a tap on it means "this is what I meant", whichever box it stands in). */
+    fun isGlideGuess(word: String): Boolean = prevAll.any { it.text.equals(word, ignoreCase = true) }
+
+    /**
+     * R32d: the safety net for when the keyboard lost track of its own glide (an app or a late selection report made it forget) but the text still ends with the glided word, the glide was a moment ago and the person
+     * taps one of that glide's own guesses: the word is replaced, never added behind ("ave" stays no more when "and" is tapped). Verified against the editor like every replacement. False (nothing changed) otherwise.
+     */
+    fun replaceLookalike(word: String): Boolean {
+        val old = glidedNow ?: return false
+        if (now() - glidedAt > RESCUE_MS || !isGlideGuess(word) || word.equals(old, ignoreCase = true)) return false
+        if (!controller.replaceRecent(old, word)) return false
+        val g = engine()
+        if (g != null && learnAllowed()) {
+            g.unlearnWord(pendingPrev, old, 1f, pendingPrev2)
+            g.learn(pendingPrev, word, 3f, pendingPrev2, old, 1f)
+        }
+        g?.stats?.onPicked()
+        glidedNow = word; glidedAt = now()
+        return true
+    }
+
     /** A candidate in the strip was tapped: it replaces the word the glide put in. */
     fun pick(word: String): Boolean {
         val was = pendingWord ?: topGuess
         // the glide's own bookkeeping first; when the app rewrote the field and it was lost, the word that was put in is replaced by what the text before the cursor still shows (verified)
         if (!controller.swapGlide(word) && !(was != null && controller.replaceRecent(was, word))) return false
+        glidedNow = word
         pendingWord = word; pendingWeight = 3f                           // the person CHOSE this word over the first guess: it counts three times, once it is kept
         pendingShown = if (pendingShown != null) controller.lastGlide?.word else null
         pendingGuessed = topGuess?.takeIf { it != word }                 // ... and the keyboard remembers it guessed the other one
@@ -207,6 +236,8 @@ class GlideSession(
         /** A word typed letter by letter this soon after a glided word was deleted is taken as what the deleted glide meant. */
         const val RETYPE_MS = 30_000L
         const val RETRY_GAP = 1.5f
+        /** R32d: a tap on one of a glide's own guesses still replaces the glided word this long after the glide, even when the keyboard lost track of it. */
+        const val RESCUE_MS = 20_000L
         /** A candidate must beat the first choice by this many cost units (nats of the language score) with the next word counted. Measured: 1.0 = +0.8 points first choice, 8 words fixed for each one spoiled. */
         const val REVISE_MARGIN = 1.0f
     }
