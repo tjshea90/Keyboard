@@ -24,7 +24,7 @@ class RareGuardEvalTest {
         val f = File(System.getenv("REAL_SWIPES_FILE") ?: "build/real-swipes-A.jsonl")
         val sw = RealSwipe.read(f, System.getenv("REAL_SWIPES_N")?.toIntOrNull() ?: Int.MAX_VALUE)
         val fit = ev.calibrate(sw); val its = ev.items(sw, fit)
-        val weights = File("../ime/assets/glide/swipe_encoder.bin").readBytes()
+        val weights = File("../ime/src/main/assets/glide/swipe_encoder.bin").readBytes()
         val net = ShapeNet.load(weights)
         val top = (0 until lex.size).sortedByDescending { lex.logProb(it) }.take(5000).toHashSet()
         val threads = (System.getenv("REAL_THREADS")?.toIntOrNull() ?: Runtime.getRuntime().availableProcessors()).coerceAtLeast(1)
