@@ -1820,3 +1820,22 @@
 ## 2026-11-24T20:25:06Z
 > The final full run (core, ime and lint) is going. If it's green, I'll tick R33, bump to alpha12, and release it through GitHub the same way as before.
 <!-- sha:903180e998f0 -->
+
+## 2026-11-24T20:37:56Z
+> Where things stand, plainly:
+>
+> **Not done yet.** Alpha11 is still the newest version you can install, and it still has the "ave and" problem. Alpha12, with the fix, isn't built or released.
+>
+> **What I found.** Two separate causes. Alpha11 only fixed one of them.
+>
+> 1. **Tapping "and" adds it behind "ave".** Alpha11 only handled the case where "and" was one of the keyboard's own guesses for your swipe. Often it isn't listed, and "and" is the most common next word, so it sat in the middle "next word" box. Now a word spelled like the swiped word and far more likely, like "and" for "ave" or "for" for "fur", counts as a correction. It shows in a side box and replaces the word wherever you tap it. I reproduced your exact symptom in a test and confirmed the test fails without the fix.
+>
+> 2. **Why "ave" keeps winning.** The keyboard's learning treated every swiped word you left in the text as a use of that word. One kept "ave" made it about as likely as the 10,000th most common word. In a test with the real word list, a swipe halfway between "and" and "ave" flipped to "ave" after a single kept one. Your failed corrections counted as more kept "ave"s, so it fed itself.
+>    - A kept swipe of a rare word now teaches only lightly.
+>    - Picking the right word now also takes back what the wrong word had earned.
+>    - Old damage on your tablet isn't wiped automatically. Each correction removes part of it, and Settings > "Forget what it learned" clears it all at once.
+>
+> **Still to do:** the full test run (restarted, about 12 minutes), then alpha12 built and signed on GitHub, and a link for you. I haven't tried any of this on a real tablet or phone. I can't reproduce your tablet's exact swipes here, so I can't promise "ave" is gone, only that these two causes are fixed.
+>
+> **Open items:** full test run, release of alpha12, and then your check on the tablet.
+<!-- sha:ce4ceda1d096 -->
