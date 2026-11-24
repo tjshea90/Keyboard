@@ -509,6 +509,14 @@ class KeyboardPresenterTest {
     private val aveWords = listOf("and" to 200_000L, "ave" to 100L, "ace" to 50L, "age" to 50L, "axe" to 50L, "are" to 50L, "ape" to 50L, "ate" to 50L, "awe" to 50L, "avid" to 50L)
     private fun aveLex(next: Boolean = true) = LexiconFile.build(aveWords.map { LexiconFile.Entry(it.first, it.second) }, if (next) listOf(LexiconFile.Pair("ave", "and", 900L), LexiconFile.Pair("ave", "are", 300L)) else emptyList())
 
+    @Test fun scratchLost() {
+        val r = aveGlide()
+        r.et.setSelection(0); r.report(); println("SCRATCH after move to 0: strip=${r.view.candidatesForTest()} lastGlide=${r.presenter.controller.lastGlide != null}")
+        r.et.setSelection(r.text.length); r.report()
+        println("SCRATCH after back: strip=${r.view.candidatesForTest()} lastGlide=${r.presenter.controller.lastGlide != null} before='${r.presenter.controller.before}' composing=${r.presenter.controller.composing}")
+        r.presenter.onCandidate("and"); println("SCRATCH text now='${r.text}'")
+    }
+
     private fun aveGlide(): Rig {
         val r = Rig(suggest = true, words = aveLex()); r.glide("ave")
         assertEquals("precondition: the glide gives ave", "ave ", r.text)
