@@ -508,19 +508,9 @@ class KeyboardPresenterTest {
     // ------------------------------------------------------------------ R33 (owner 2026-11-24, after alpha11): "it is still typing ave instead of and ... when i press and in the suggestions to fix it, it just adds and after ave"
 
     /** "ave" is a rare word, "and" the commonest; seven other words share the a-?-e path so that "and" is NOT among the decoder's five readings of an "ave" glide. */
-    private val aveWords = listOf("and" to 200_000L, "ave" to 100L, "ace" to 50L, "age" to 50L, "axe" to 50L, "are" to 50L, "ape" to 50L, "ate" to 50L, "awe" to 50L, "avid" to 50L)
+    /** Counts in the proportions of the real list (its total is about a billion): "and" about 1 in 30 words, "ave" about 1 in 70 000. */
+    private val aveWords = listOf("the" to 800_000_000L, "and" to 33_000_000L, "ave" to 15_000L, "ace" to 5_000L, "age" to 5_000L, "axe" to 5_000L, "are" to 5_000L, "ape" to 5_000L, "ate" to 5_000L, "awe" to 5_000L, "avid" to 5_000L)
     private fun aveLex(next: Boolean = true) = LexiconFile.build(aveWords.map { LexiconFile.Entry(it.first, it.second) }, if (next) listOf(LexiconFile.Pair("ave", "and", 900L), LexiconFile.Pair("ave", "are", 300L)) else emptyList())
-
-    @Test fun scratchLost() {
-        val r = aveGlide()
-        r.et.setSelection(0); r.report(); println("SCRATCH after move to 0: strip=${r.view.candidatesForTest()} lastGlide=${r.presenter.controller.lastGlide != null}")
-        r.et.setSelection(r.text.length); r.report()
-        println("SCRATCH after back: strip=${r.view.candidatesForTest()} lastGlide=${r.presenter.controller.lastGlide != null} before='${r.presenter.controller.before}' composing=${r.presenter.controller.composing}")
-        val f = r.presenter.javaClass.getDeclaredField("session"); f.isAccessible = true; val sess = f.get(r.presenter) as GlideSession
-        println("SCRATCH looksLikeFix(and)=${sess.looksLikeFix("and")} hasCandidates=${sess.hasCandidates()} isGuess=${sess.isGlideGuess("and")}")
-        val g = r.host.engine; println("SCRATCH ln ave=${g.contextLn("ave", null, null)} and=${g.contextLn("and", null, null)} near=${SpellingNear.near("ave", "and")}")
-        r.presenter.onCandidate("and"); println("SCRATCH text now='${r.text}'")
-    }
 
     private fun aveGlide(): Rig {
         val r = Rig(suggest = true, words = aveLex()); r.glide("ave")
@@ -552,7 +542,7 @@ class KeyboardPresenterTest {
     }
 
     @Test fun aGenuineNextWordStillGetsAddedBehindTheGlidedWord() {
-        val common = LexiconFile.build(listOf("and" to 200_000L, "are" to 150_000L, "ave" to 100L, "ace" to 50L, "age" to 50L, "axe" to 50L).map { LexiconFile.Entry(it.first, it.second) }, listOf(LexiconFile.Pair("are", "and", 900L)))
+        val common = LexiconFile.build(listOf("the" to 800_000_000L, "and" to 33_000_000L, "are" to 20_000_000L, "ave" to 15_000L, "ace" to 5_000L, "age" to 5_000L, "axe" to 5_000L).map { LexiconFile.Entry(it.first, it.second) }, listOf(LexiconFile.Pair("are", "and", 900L)))
         val r = Rig(suggest = true, words = common); r.glide("are")
         assertEquals("precondition: the glide gives are", "are ", r.text)
         r.presenter.onCandidate("and")        // "are" is a common word itself, so "and" is no correction of it: it is the next word
