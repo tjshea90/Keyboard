@@ -265,7 +265,7 @@ class KeysViewTest {
             for (c in ImeLayout.digitHolds[d.toString()]!!) assertNotNull("'$c' in the row of $d", v.popupCellCenterForTest(c))
             up(v, x, y)
         }
-        assertEquals("1234567890".let { "0123456789" }, r.keys.joinToString(""))
+        assertEquals("0123456789", r.keys.joinToString(""))
     }
 
     @Test fun theDigitsOfTheSymbolsPageHaveTheirRowsToo() {
