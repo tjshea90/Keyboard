@@ -506,16 +506,8 @@ class KeyboardPresenterTest {
     // ------------------------------------------------------------------ R33 (owner 2026-11-24, after alpha11): "it is still typing ave instead of and ... when i press and in the suggestions to fix it, it just adds and after ave"
 
     /** "ave" is a rare word, "and" the commonest; seven other words share the a-?-e path so that "and" is NOT among the decoder's five readings of an "ave" glide. */
-    private val aveWords = listOf("and" to 100_000L, "ave" to 20L, "ace" to 3_000L, "age" to 3_000L, "axe" to 3_000L, "are" to 3_000L, "ape" to 3_000L, "ate" to 3_000L, "awe" to 3_000L, "avid" to 500L)
+    private val aveWords = listOf("and" to 200_000L, "ave" to 100L, "ace" to 50L, "age" to 50L, "axe" to 50L, "are" to 50L, "ape" to 50L, "ate" to 50L, "awe" to 50L, "avid" to 50L)
     private fun aveLex(next: Boolean = true) = LexiconFile.build(aveWords.map { LexiconFile.Entry(it.first, it.second) }, if (next) listOf(LexiconFile.Pair("ave", "and", 900L), LexiconFile.Pair("ave", "are", 300L)) else emptyList())
-
-    @Test fun scratchAve() {
-        for (variant in 0..2) {
-            val words = when (variant) { 0 -> aveWords; 1 -> aveWords.map { (w, c) -> if (w == "ave") w to 1_500L else if (w == "and") w to c else if (w == "avid") w to c else w to 100L }; else -> aveWords.map { (w, c) -> if (w == "ave") w to 3_000L else if (w == "and") w to 200_000L else if (w == "avid") w to c else w to 50L } }
-            val lex = LexiconFile.build(words.map { LexiconFile.Entry(it.first, it.second) }, listOf(LexiconFile.Pair("ave", "and", 900L), LexiconFile.Pair("ave", "are", 300L)))
-            for (g in listOf("ave", "are", "and")) { val r = Rig(suggest = true, words = lex); r.glide(g); println("SCRATCH variant=$variant glide=$g text='${r.text}' strip=${r.view.candidatesForTest()} more=${r.presenter.glideMoreForTest()}") }
-        }
-    }
 
     private fun aveGlide(): Rig {
         val r = Rig(suggest = true, words = aveLex()); r.glide("ave")
@@ -525,8 +517,8 @@ class KeyboardPresenterTest {
 
     @Test fun aWordThatIsNotAmongTheDecodersReadingsButLooksLikeTheGlidedWordAndIsFarMoreLikelyReplacesIt() {
         val r = aveGlide()
-        assertFalse("precondition: and is not one of the decoder's own five readings", "and" in r.presenter.glideMoreForTest() + r.view.candidatesForTest().filter { it != "and" })
         val c = r.view.candidatesForTest(); assertTrue("and is offered: $c", c.contains("and"))
+        assertFalse("precondition: and is not one of the decoder's own readings of this glide: ${r.presenter.glideMoreForTest()}", "and" in r.presenter.glideMoreForTest())
         assertTrue("it is offered among the replacements (a side box), not as the next word in the middle: $c", c.indexOf("and") != 1)
         r.tapChip(c.indexOf("and"))
         assertEquals("ave is replaced, and is not added behind it", "and ", r.text)
@@ -547,9 +539,10 @@ class KeyboardPresenterTest {
     }
 
     @Test fun aGenuineNextWordStillGetsAddedBehindTheGlidedWord() {
-        val r = Rig(suggest = true, words = aveLex()); r.glide("are")
-        val c = r.view.candidatesForTest(); assertTrue("precondition: a next-word box exists: $c", c.size == 3)
-        r.presenter.onCandidate("and")        // "are" is a common word and "and" is no look-alike of it: it is the next word
+        val common = LexiconFile.build(listOf("and" to 200_000L, "are" to 150_000L, "ave" to 100L, "ace" to 50L, "age" to 50L, "axe" to 50L).map { LexiconFile.Entry(it.first, it.second) }, listOf(LexiconFile.Pair("are", "and", 900L)))
+        val r = Rig(suggest = true, words = common); r.glide("are")
+        assertEquals("precondition: the glide gives are", "are ", r.text)
+        r.presenter.onCandidate("and")        // "are" is a common word itself, so "and" is no correction of it: it is the next word
         assertEquals("are and ", r.text)
     }
 

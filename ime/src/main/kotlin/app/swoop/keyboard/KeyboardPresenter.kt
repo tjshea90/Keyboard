@@ -526,7 +526,7 @@ class KeyboardPresenter(
     override fun onCandidate(word: String) {
         if (word.isEmpty()) return
         if (emailShown.isNotEmpty() && word in emailShown) { pickEmail(word); return }
-        if (word in glideNextShown && controller.lastGlide != null && !session.isGlideGuess(glideRaw[word] ?: word)) { pickNextAfterGlide(word); return }
+        if (word in glideNextShown && controller.lastGlide != null && !session.looksLikeFix(glideRaw[word] ?: word)) { pickNextAfterGlide(word); return }
         if (editWord != null && controller.lastGlide == null && editRaw.containsKey(word)) { replaceTappedWord(word); return }
         userMoved = false
         if (EmojiMap.isEmoji(word)) { chooseEmoji(word); return }
@@ -586,10 +586,12 @@ class KeyboardPresenter(
      */
     private fun renderGlideStrip() {
         val guesses = (listOf(glideBest) + glideAlts + glideMore).map { it.lowercase() }.toSet()
-        val agreeing = glideMore.filter { m -> glideNext.any { it.equals(m, ignoreCase = true) } }
-        val sides = (agreeing + glideAlts + glideMore.filter { it !in agreeing }).take(2)
-        val next = glideNext.filter { it.lowercase() !in guesses }
-        if (next.isEmpty() && !glideNextWaiting) { glideNextShown = emptySet(); view?.showCandidates(listOf(glideBest) + (agreeing + glideAlts).take(2)); return }          // no prediction: the plain guesses
+        // R33: a predicted next word that is spelled like the glided word and far likelier ("and" after the glide "ave") is what the finger probably meant: it stands among the replacements, never as "the next word"
+        val fixes = glideNext.filter { it.lowercase() !in guesses && session.looksLikeFix(glideRaw[it] ?: it) }
+        val agreeing = (fixes + glideMore.filter { m -> glideNext.any { it.equals(m, ignoreCase = true) } }).distinct()
+        val sides = (agreeing + glideAlts + glideMore.filter { it !in agreeing }).distinct().take(2)
+        val next = glideNext.filter { it.lowercase() !in guesses && it !in fixes }
+        if (next.isEmpty() && !glideNextWaiting) { glideNextShown = emptySet(); view?.showCandidates(listOf(glideBest) + sides); return }          // no prediction: the plain guesses
         val mid = next.firstOrNull() ?: ""
         glideNextShown = if (mid.isEmpty()) emptySet() else setOf(mid)
         view?.showCandidates(listOf(sides.getOrElse(0) { "" }, mid, sides.getOrElse(1) { "" }), accent = 1)                                   // the middle box carries the accent outline: it is the one that adds a word
@@ -600,6 +602,7 @@ class KeyboardPresenter(
         userMoved = false
         session.settle()
         latest = null; literalShown = null; suggestSeq++; glideNextShown = emptySet()
+        glide.engine.stats.onStripAdded()
         learner.pick(word)
         noFixFor = null
         view?.setShift(controller.shift)
