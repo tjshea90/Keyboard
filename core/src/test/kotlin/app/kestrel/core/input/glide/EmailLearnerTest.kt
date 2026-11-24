@@ -39,7 +39,7 @@ class EmailLearnerTest {
     }
 
     @Test fun anAddressThatWasPastedIsNeverLearned() {
-        val s = Setup(FieldKind.TEXT); s.l.beforeKey(Key.Ch(" ")); s.r.act { paste("pasted@clip.com") }; s.key(" "); assertTrue(s.book.isEmpty)
+        val s = Setup(FieldKind.TEXT); s.r.act { paste("pasted@clip.com") }; s.key(" "); assertTrue(s.book.isEmpty)
         val e = Setup(); e.r.act { paste("auto@fill.com") }; e.l.afterKey(); e.l.finishField(); assertTrue(e.book.isEmpty)
     }
 
@@ -56,14 +56,13 @@ class EmailLearnerTest {
 
     @Test fun movingTheCursorOrDeletingBreaksTheTypedAddress() {
         val s = Setup(); s.typeAll("john@gmail.com"); s.r.act { moveCursor(-3) }; s.l.afterKey(); s.l.finishField(); assertTrue(s.book.isEmpty)
-        val t = Setup(); t.typeAll("john@gmail.comx"); t.key("\u0008".let { "x" }); // (a plain letter on top: not an address)
-        t.r.act { backspace() }; t.r.act { backspace() }; t.l.afterKey(); t.l.finishField(); assertTrue(t.book.isEmpty)
+        val t = Setup(); t.typeAll("john@gmail.com"); repeat(4) { t.r.act { backspace() }; t.l.afterKey() }; t.l.finishField(); assertTrue("john@gmail is no address any more", t.book.isEmpty)
     }
 
     @Test fun typedEmailAndPickAddressWorkOnTheText() {
         val s = Setup(); s.typeAll("jo"); assertEquals("jo", s.r.c.addressPrefix()); assertNull(s.r.c.typedEmail())
         assertTrue(s.r.c.pickAddress(2, "john@gmail.com")); s.r.sync(); s.r.check(); assertEquals("john@gmail.com", s.r.text)
-        assertFalse("the text before the cursor is not what was expected", s.r.c.pickAddress(5, "x@y.com").let { it && s.r.text != "john@gmail.com" })
+        assertFalse("more characters than there are before the cursor", s.r.c.pickAddress(50, "x@y.com")); assertEquals("john@gmail.com", s.r.text)
     }
 
     @Test fun anAddressAfterTextIsReplacedOnlyFromItsStart() {
