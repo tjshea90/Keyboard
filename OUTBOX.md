@@ -1856,3 +1856,13 @@
 ## 2026-11-24T20:41:41Z
 > Alpha12 is building on GitHub as run #26. I'll check it in about 13 minutes. If it's green, I'll confirm the APK on the Release page, record it, and give you the link.
 <!-- sha:7387f9a7bfc4 -->
+
+## 2026-11-24T20:50:39Z
+> Not done yet, but it's progressing.
+>
+> - **Passed:** the first GitHub check, which verifies the signing key and the version number.
+> - **Running now:** GitHub's own full test and lint pass. It started at 20:41 and should take about 11 minutes.
+> - **Still to come:** the build, signing and publish step, which took about 2½ minutes last time. After that I confirm the APK is on the Release page and record it.
+>
+> So the earliest you'll have a link is roughly 5 to 8 minutes from now. Until then alpha11 is the newest installable version, and it still has the "ave and" problem. I'll send you the alpha12 link the moment it's published.
+<!-- sha:715c1699dcee -->
