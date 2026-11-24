@@ -107,6 +107,7 @@ class RealSwipeEval {
         if (System.getenv("REAL_POST") == "1") postCorrection(sw, fit)
         if (System.getenv("REAL_DWELL") == "1") dwellStudy(its)
         if (System.getenv("REAL_CLASS") == "1") classStudy(its)
+        if (System.getenv("REAL_RARE") == "1") rareStudy(its)
         // the same swipes, only the words people use every day (the 5000 commonest of the list): what texting looks like (the corpus itself is encyclopaedia text full of names)
         val ranked = (0 until lex.size).sortedByDescending { lex.logProb(it) }.take(5000).toHashSet()
         val common = its.filter { it.lexId in ranked }
@@ -316,6 +317,44 @@ class RealSwipeEval {
         "shape.75 visit5 len1.09" to GlideParams(shapeW = 0.75f, visitCap = 5f, lengthExpect = 1.09f, lengthSigmaLow = 0.13f, lengthSigmaHigh = 0.20f),
         "shape1 visit5 len1.09 end2" to GlideParams(shapeW = 1f, visitCap = 5f, endW = 2f, lengthExpect = 1.09f, lengthSigmaLow = 0.13f, lengthSigmaHigh = 0.20f)
     )
+
+    /**
+     * R32e (owner 2026-11-24: "make it better at not predicting rare words such as fur or ave when I'm typing common words like for and and"). What the shipped decoder does with real swipes when its first choice is much RARER (in the
+     * contextual prior the decoder itself uses) than another of its three guesses, and what "prefer the common word when the scores are close" would do: for each rule (the first choice is at least G nats less probable than a
+     * guess whose score is within M cost units) how many glides flip, how many of them were mended (the common guess is what was meant) and how many spoiled (the rare first choice was right). Also the confusions of the owner's words.
+     */
+    private fun rareStudy(its: List<Item>) {
+        val dec = GlideDecoder(keys, GlideParams.forPitchDp(keys.pitchDp))
+        class Row(val word: String, val key: String, val c: List<GlideCandidate>, val everyday: Boolean)
+        val top = (0 until lex.size).sortedByDescending { lex.logProb(it) }.take(5000).toHashSet()
+        val rows = ArrayList<Row>()
+        for (it in its) { val c = dec.decode(it.xs, it.ys, it.xs.size, listOf(lex), it.prev, 3); if (c.isNotEmpty()) rows.add(Row(it.word, it.key, c, it.lexId in top)) }
+        fun ok(c: GlideCandidate, r: Row) = String(GlideLetters.keyOf(c.text)) == r.key
+        println("RARE rows=${rows.size} everyday=${rows.count { it.everyday }} top1=%.1f%% top3=%.1f%%".format(100.0 * rows.count { ok(it.c[0], it) } / rows.size, 100.0 * rows.count { r -> r.c.any { ok(it, r) } } / rows.size))
+        for (scope in listOf("all", "everyday")) {
+            val rs = if (scope == "all") rows else rows.filter { it.everyday }
+            for (g in listOf(2f, 3f, 4f, 6f)) {
+                val line = StringBuilder("RARE $scope G=$g n=${rs.size}:")
+                for (m in listOf(0.5f, 1f, 2f, 3f, 5f, 8f)) {
+                    var mended = 0; var spoiled = 0; var flips = 0
+                    for (r in rs) {
+                        val c0 = r.c[0]; var pick = 0
+                        for (j in 1 until r.c.size) { val cj = r.c[j]; if (cj.prior - r.c[pick].prior >= g && c0.score - cj.score <= m) pick = j }
+                        if (pick != 0) { flips++; val cp = r.c[pick]; if (ok(cp, r)) { if (!ok(c0, r)) mended++ } else if (ok(c0, r)) spoiled++ }
+                    }
+                    line.append("  M=$m flips=$flips +$mended -$spoiled (net ${mended - spoiled})")
+                }
+                println(line)
+            }
+        }
+        val mine = listOf("and", "for", "the", "or", "to", "of", "in", "it", "is", "that", "you", "was")
+        for (w in mine) {
+            val rs = rows.filter { it.word == w }; if (rs.isEmpty()) continue
+            val wrong = rs.filter { !ok(it.c[0], it) }.groupingBy { it.c[0].text }.eachCount().entries.sortedByDescending { it.value }.take(6)
+            println("RARE word '$w': n=${rs.size} first=%.1f%% top3=%.1f%%; first choice wrong -> ".format(100.0 * rs.count { ok(it.c[0], it) } / rs.size, 100.0 * rs.count { r -> r.c.any { ok(it, r) } } / rs.size) + wrong.joinToString(" ") { it.key + ":" + it.value })
+        }
+        println("RARE ln prior of owner's words in this list: " + listOf("and", "for", "ave", "fur", "fir", "access", "the", "there", "or", "our", "out", "make", "maggie").joinToString("  ") { w -> w + "=" + lex.idOf(w).let { id -> if (id < 0) "n/a" else "%.1f".format(lex.logProb(id)) } })
+    }
 
     /** Where the real misses come from: words the list lacks, candidate recall, ranking misses (more / less common than the word meant), examples. */
     private fun diagnose(sw: List<RealSwipe.Swipe>, its: List<Item>) {
