@@ -45,24 +45,41 @@ class KeptRareWordTest {
             engine.decode(p.xs, p.ys, p.xs.size, prev, prev2) { res = it }
             s.onDecoded(res!!, prev, prev2); rig.sync(); rig.check()
         }
+        fun glidePath(xs: FloatArray, ys: FloatArray) {
+            val (prev2, prev) = s.context(); s.glideLifted(); s.beforeKey(Key.Ch("~glide"))
+            var res: GlideResult? = null
+            engine.decode(xs, ys, xs.size, prev, prev2) { res = it }
+            s.onDecoded(res!!, prev, prev2); rig.sync(); rig.check()
+        }
         fun space() { s.beforeKey(Key.Ch(" ")); rig.c.type(" "); rig.sync(); s.afterKey(Key.Ch(" ")); rig.check() }
         fun firstFor(xs: FloatArray, ys: FloatArray): String { var r: GlideResult? = null; engine.decode(xs, ys, xs.size, null, null) { r = it }; return r!!.candidates.first().text }
     }
 
-    @Test fun theOldLessonWouldHaveFlippedThePathToAveAndTheNewOneDoesNot() {
+    @Test fun theOldLessonFlippedThePathToAveAndOneKeptGlideNowDoesNot() {
         val (xs, ys) = halfway()
-        // the old teaching, exactly: every kept "ave" was one full use
         val lex = GlideEval.loadLexicon()
-        val old = PersonalModel(); old.add(null, "ave", 1f)
+        val old = PersonalModel(); old.add(null, "ave", 1f)                       // the old teaching, exactly: a kept "ave" was one full use
         val dec = GlideDecoder(keys, GlideParams.forPitchDp(keys.pitch)); dec.personal = null
         assertEquals("nothing learned: the language decides", "and", dec.decode(xs, ys, xs.size, listOf<GlideLexicon>(lex), null, 3)[0].text)
         dec.personal = old
         assertEquals("one full use of ave (the old lesson) flips it: this is the loop", "ave", dec.decode(xs, ys, xs.size, listOf<GlideLexicon>(lex), null, 3)[0].text)
-        // the new way: the same ten kept glides of "ave" through the real session
         val e = Env()
         assertEquals("and", e.firstFor(xs, ys))
-        repeat(10) { e.glide("ave"); assertTrue("the glide of ave gives ave: '${e.rig.text}'", e.rig.text.trimEnd().endsWith("ave")); e.space() }
-        assertEquals("ten kept ave glides later the halfway path is still and", "and", e.firstFor(xs, ys))
+        e.glide("ave"); e.space()                                                  // one ave glide that is only kept
+        assertEquals("a kept glide of a rare word teaches only a light lesson: the halfway path is still and", "and", e.firstFor(xs, ys))
+    }
+
+    @Test fun correctingAveToAndHealsDamageAnEarlierVersionLearned() {
+        val (xs, ys) = halfway()
+        val e = Env()
+        repeat(10) { e.engine.learn(null, "ave", 1f) }                             // what ten kept glides taught before R33 (capped now: a rare word gets at most 3 uses' worth)
+        assertEquals("precondition: the damage makes the halfway path ave", "ave", e.firstFor(xs, ys))
+        var fixes = 0
+        while (e.firstFor(xs, ys) == "ave" && fixes < 6) {
+            e.glidePath(xs, ys); assertTrue("the glide gave ave: '${e.rig.text}'", e.rig.text.trimEnd().endsWith("ave"))
+            assertTrue(e.s.pick("and")); e.space(); fixes++
+        }
+        assertTrue("the halfway path is and again after $fixes corrections", e.firstFor(xs, ys) == "and" && fixes in 1..4)
     }
 
     @Test fun pickingTheMeantWordTakesTheWrongOneBack() {
@@ -78,12 +95,11 @@ class KeptRareWordTest {
 
     @Test fun keepTrustFollowsHowRareTheWordIs() {
         val e = Env()
-        assertEquals(KEEP_MIN, e.engine.keepTrust("ave"), 1e-6f); assertEquals(KEEP_MIN, e.engine.keepTrust("fur"), 1e-6f)
+        assertTrue(e.engine.keepTrust("ave") < 0.15f); assertTrue(e.engine.keepTrust("fur") < 0.15f)
         assertEquals(1f, e.engine.keepTrust("and"), 1e-6f); assertEquals(1f, e.engine.keepTrust("hello"), 1e-6f)
         assertEquals("a word the list lacks is the person's own", 1f, e.engine.keepTrust("zzyzxq"), 1e-6f)
         assertTrue(e.engine.keepTrust("access") in 0.5f..1f)
         assertFalse(e.engine.keepTrust("maggie") > 0.5f)
     }
 
-    private val KEEP_MIN = GlideTyping.KEEP_MIN
 }
