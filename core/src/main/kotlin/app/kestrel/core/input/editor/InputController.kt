@@ -204,6 +204,7 @@ class InputController(editor: EditorBridge, val stats: InputStats = InputStats()
         if (key.isEmpty()) return
         stats.keys++
         settle()
+        swapAt = -1
         if (autoSpace && composing == null && isLetter(key) && needsAutoSpace() && commit(" ")) { lastGlide = null; autoCaps() }   // "hello." "w" -> "hello. w", and the new sentence starts with a capital
         if (composing == null && key.length == 1 && (key[0] == ' ' || key[0] in PRONOUN_BOUNDARY)) fixLoneI()
         val t = if (shift != ShiftState.OFF && isSingleCodePoint(key)) key.uppercase() else key
