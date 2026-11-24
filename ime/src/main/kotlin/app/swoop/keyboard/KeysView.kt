@@ -358,7 +358,7 @@ class KeysView(context: Context) : View(context) {
         val lit = litKey
         if (lit != null && !blankSlate()) { val kb = boxOf(lit); if (kb != null) drawKey(c, lit, kb, true, rows[0].contains(lit)) }
         drawStrip(c)
-        if (!gliding && keyPreview && !hideLetters) drawBubble(c)
+        if (!gliding && keyPreview && !hideLetters && popup == null) drawBubble(c)
         if (trailOn) drawTrail(c)
         drawPopup(c)
     }
@@ -673,7 +673,8 @@ class KeysView(context: Context) : View(context) {
     private fun click() { if (soundOn) try { (context.getSystemService(Context.AUDIO_SERVICE) as android.media.AudioManager).playSoundEffect(android.media.AudioManager.FX_KEYPRESS_STANDARD) } catch (_: Exception) { } }
     private fun clearHold() { handler.removeCallbacks(hold); holdAlt = null; bubbleKey = null }
     // ---- the symbols grid: HOLD the full stop or the comma (the 123 key is gone: owner, 2026-11-17)
-    private class SymbolPopup(val owner: KeySpec, val chars: List<String>, val cells: List<RectF>, val panel: RectF) { var sel = -1 }
+    /** [own] is what lifting the finger without choosing a cell types, and [forgiving] says a lift anywhere outside the cells types it (a held digit: it used to type the digit wherever the finger lifted); [sel] is the cell lit now. */
+    private class SymbolPopup(val owner: KeySpec, val chars: List<String>, val cells: List<RectF>, val panel: RectF, val own: Key? = null, val forgiving: Boolean = false) { var sel = if (forgiving) 0 else -1 }
     private var popup: SymbolPopup? = null
 
     private fun isSymbolKey(k: KeySpec?): Boolean {
@@ -695,6 +696,25 @@ class KeysView(context: Context) : View(context) {
         }
         popup = SymbolPopup(k, chars, cells, RectF(left, top, left + pw, top + ph))
         bubbleKey = null; holdAlt = null
+        haptic(); dyn()
+    }
+
+    /** A digit key (the number row, or the digits of the symbols page): holding it opens the row of special characters of that digit. Never on a number pad (a phone or number field wants the plain digit). */
+    private fun isDigitKey(k: KeySpec?): Boolean { val t = (k?.key as? Key.Ch)?.text ?: return false; return t.length == 1 && t[0] in '0'..'9' && numberPad == Pad.NONE }
+
+    /**
+     * R32b: the row of a held digit: the digit itself first (lifting without choosing types it), then its superscript and fractions ([ImeLayout.digitHolds]). Opens above the key like the symbols grid. [own] is the key a lift
+     * outside the row types.
+     */
+    private fun openDigitPopup(k: KeySpec, digit: String) {
+        val kb = boxOf(k) ?: return
+        val chars = listOf(digit) + (ImeLayout.digitHolds[digit] ?: emptyList())
+        val cw = minOf(dp(46f), (width - 2 * pad) / chars.size.toFloat()); val chh = dp(48f); val m = dp(6f)
+        val pw = cw * chars.size + 2 * m; val ph = chh + 2 * m
+        val left = (kb.centerX - pw / 2f).coerceIn(0f, maxOf(0f, width - pw)); val top = maxOf(0f, kb.top - ph - dp(6f))
+        val cells = ArrayList<RectF>()
+        for (c in chars.indices) cells.add(RectF(left + m + c * cw, top + m, left + m + (c + 1) * cw, top + m + chh))
+        popup = SymbolPopup(k, chars, cells, RectF(left, top, left + pw, top + ph), own = Key.Ch(digit), forgiving = true)
         haptic(); dyn()
     }
 
@@ -720,9 +740,11 @@ class KeysView(context: Context) : View(context) {
     private fun holdFired() {
         val k0 = pressedLetter ?: down ?: return
         if (isSymbolKey(k0)) { openPopup(k0); return }
+        if (isDigitKey(k0)) { openDigitPopup(k0, (k0.key as Key.Ch).text); return }          // R32b
         val k = k0
         val alt = altOf(k) ?: return
-        holdAlt = alt; bubbleKey = k; bubbleText = alt; dyn(); haptic()
+        holdAlt = alt; bubbleKey = k; bubbleText = alt; haptic()
+        openDigitPopup(k, alt)                                                                 // R32b: a held top-row letter shows its digit AND the digit's special characters; lifting types the digit as before
     }
 
     @SuppressLint("ClickableViewAccessibility") // KB-305 adds TalkBack key descriptions; this view is a keyboard, not a button
@@ -795,7 +817,7 @@ class KeysView(context: Context) : View(context) {
         if (isBubbleKey(k)) { bubbleKey = k; bubbleText = k!!.label }
         spaceIsDown = (k?.key as? Key.Ch)?.text == " "; spaceHeld = false
         if (spaceIsDown) handler.postDelayed(spaceHold, SPACE_HOLD_MS)
-        if (k != null) { if (!quiet) { haptic(); click() }; if (altOf(k) != null || isSymbolKey(k)) handler.postDelayed(hold, HOLD_MS) }
+        if (k != null) { if (!quiet) { haptic(); click() }; if (altOf(k) != null || isSymbolKey(k) || isDigitKey(k)) handler.postDelayed(hold, HOLD_MS) }
         if (k?.key === Key.Backspace) { listener?.onKey(Key.Backspace); repeatStartAt = SystemClock.uptimeMillis(); handler.postDelayed(repeat, BackspaceRepeat.FIRST_MS) }
         downX = x; downY = y; downAt = SystemClock.uptimeMillis(); firstMoveAt = 0L
         if (glideEnabled && page == Page.LETTERS && pressedLetter != null) {
@@ -806,7 +828,7 @@ class KeysView(context: Context) : View(context) {
 
     private fun pressMove(e: MotionEvent, i: Int) {
         val x = e.getX(i); val y = e.getY(i)
-        popup?.let { p -> val ns = popupSelect(p, x, y); if (ns != p.sel) { p.sel = ns; dyn() }; return }
+        popup?.let { p -> val ns = popupSelect(p, x, y).let { if (it < 0 && p.forgiving) 0 else it }; if (ns != p.sel) { p.sel = ns; dyn() }; return }
         if (stripDown >= 0 || toolDown >= 0) return
         if (armed) {                                     // a letter: nothing happens until the finger leaves its key (a glide) or lifts (a tap)
             for (h in 0 until e.historySize) addPoint(e.getHistoricalX(i, h), e.getHistoricalY(i, h), e.getHistoricalEventTime(h))
@@ -833,7 +855,7 @@ class KeysView(context: Context) : View(context) {
         handler.removeCallbacks(spaceHold)
         popup?.let { p ->                                  // the symbols grid is open: the cell under the finger is typed; lifting on the held key itself types that key; anywhere else types nothing
             val sel = popupSelect(p, x, y); popup = null; clearHold(); down = null; pressedLetter = null; litKey = null; spaceDown = false; dyn()
-            if (sel >= 0) emit(Key.Ch(p.chars[sel])) else if (keyAt(x, y) === p.owner) emit(p.owner.key!!)
+            if (sel >= 0) emit(Key.Ch(p.chars[sel])) else if (p.forgiving && p.own != null) emit(p.own) else if (keyAt(x, y) === p.owner) emit(p.owner.key!!)
             return
         }
         if (spaceHeld) { spaceHeld = false; spaceIsDown = false; spaceDown = false; sliding = false; down = null; litKey = null; dyn(); return }    // the picker was opened: no space is typed
@@ -874,7 +896,7 @@ class KeysView(context: Context) : View(context) {
     private fun finishHeldLetter() {
         val l = pressedLetter ?: return
         handler.removeCallbacks(repeat)
-        val alt = holdAlt; clearHold()
+        val alt = holdAlt; clearHold(); popup = null
         pressedLetter = null; down = null; armed = false; gliding = false; gn = 0
         light(l); emit(if (alt != null) Key.Ch(alt) else l.key!!)
     }

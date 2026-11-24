@@ -58,6 +58,24 @@ object ImeLayout {
     private const val SYMBOL_ROW_3 = "<>[]{}\\|€£¥"
     val symbolRows: List<List<String>> = listOf("@#$%&-+()/", "*\"':;!?_=~", SYMBOL_ROW_3).map { r -> r.map { it.toString() } }
 
+    /**
+     * R32b (owner 2026-11-24: "long press on numbers to bring up special characters just like gboard, for example fractions if i long press the number 1"): what a held digit key offers besides the digit itself, in Gboard's
+     * order: the superscript digit first, then the fractions that start with that digit (the zero also gets the degree sign, the empty set and the superscript n). Only the characters of Gboard's own digit popups;
+     * the exact table of the open-source keyboards could not be fetched, so this is Gboard as it is commonly seen (research/R32-punctuation-suggestions.md).
+     */
+    val digitHolds: Map<String, List<String>> = mapOf(
+        "1" to listOf("\u00B9", "\u00BD", "\u2153", "\u00BC", "\u215B"),    // ¹ ½ ⅓ ¼ ⅛
+        "2" to listOf("\u00B2", "\u2154"),                                // ² ⅔
+        "3" to listOf("\u00B3", "\u00BE", "\u215C"),                     // ³ ¾ ⅜
+        "4" to listOf("\u2074"),                                           // ⁴
+        "5" to listOf("\u2075", "\u215D"),                                // ⁵ ⅝
+        "6" to listOf("\u2076"),                                           // ⁶
+        "7" to listOf("\u2077", "\u215E"),                                // ⁷ ⅞
+        "8" to listOf("\u2078"),                                           // ⁸
+        "9" to listOf("\u2079"),                                           // ⁹
+        "0" to listOf("\u2070", "\u207F", "\u2205", "\u00B0"),          // ⁰ ⁿ ∅ °
+    )
+
     /** The key on the first symbols page that opens the second one (Gboard writes it "=\<"). On the second page the same key (labelled ?123) goes back. Both carry [Key.ToSymbols]: the view cycles the symbols pages. */
     const val MORE_SYMBOLS = "=\\<"
 
