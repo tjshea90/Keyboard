@@ -14,8 +14,18 @@ package app.kestrel.core.input.glide
  * Pure Kotlin; the same code runs in the keyboard ([GlideTyping.teach]) and in the tuning lab (TrainingLabTest).
  */
 object GlideTeaching {
-    /** Which lessons a taught glide gives (the lab switches them one by one; the keyboard uses all three). */
-    class Parts(val thumb: Boolean = true, val shape: Boolean = true, val confusion: Boolean = true)
+    /**
+     * Which lessons a taught glide gives. MEASURED (TrainingLabTest, a made-up hand with a thumb offset and its own habit for every word, the real training script, then 1 500 to 2 000 everyday words that were not
+     * asked for; research/R36-glide-training.md): the THUMB lesson helps everywhere (phone +1.5 points of first choices, tablet +0.3 to +0.6); the SHAPE lesson is level on a phone (+0.2 overall, +1.8 on the practised
+     * words) and costs a little on the tablet's big keys (-0.1 portrait, -1.0 landscape: the learned reach is deliberately short there); the CONFUSION lesson ("it typed A, I meant B") is level on a phone and clearly
+     * bad on a tablet (-2.1 portrait, -5.1 landscape: every miss of a 97 % keyboard becomes a lift for the wrong competitor of the right words). So the keyboard uses [forPitchDp]; the lab still switches each one.
+     */
+    class Parts(val thumb: Boolean = true, val shape: Boolean = false, val confusion: Boolean = false) {
+        companion object {
+            /** The lessons the keyboard gives on keys [pitchDp] apart: the thumb always, the word shapes only on phone-sized keys, the confusions never. */
+            fun forPitchDp(pitchDp: Float): Parts = Parts(thumb = true, shape = pitchDp <= GlideParams.SMALL_PITCH_DP, confusion = false)
+        }
+    }
 
     /** What a taught glide changed: the thumb habit moved, a shape was remembered, a confusion was counted, or the glide was too wild to be remembered as this word's shape. */
     class Lesson(val thumb: Boolean, val shape: Boolean, val confusion: Boolean, val wild: Boolean) {

@@ -798,7 +798,7 @@ class GlideTyping(
         val mi = m.idOf(word)
         if (mi >= 0) { lex = m; id = mi } else { val ui = u?.idOf(word) ?: -1; if (u != null && ui >= 0) { lex = u; id = ui } }
         if (lex == null) return null                                                            // a word the list lacks cannot be put among a glide's guesses: nothing to teach
-        val lesson = GlideTeaching.teach(d, lex, id, personal, keys, word, guessed, lastPrint)
+        val lesson = GlideTeaching.teach(d, lex, id, personal, keys, word, guessed, lastPrint, keys?.let { GlideTeaching.Parts.forPitchDp(it.pitchDp) } ?: GlideTeaching.Parts())
         if (lesson.thumb) thumbMoved(d, habit)
         if (lesson.any) {
             personalDirty = true

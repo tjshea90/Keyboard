@@ -26,9 +26,11 @@ class TrainingLabTest {
 
     private class Result(val trainThirds: List<Double>, val learned: Double, val plain: Double, val spoiled: Int, val fixed: Int, val scriptLearned: Double, val scriptPlain: Double, val taughtGlides: Int, val habitDp: Float, val planeDp: Float)
 
-    private fun parts(v: String): GlideTeaching.Parts? = when (v) {
+    private fun parts(v: String, pitch: Float): GlideTeaching.Parts? = when (v) {
         "none" -> null
-        "all" -> GlideTeaching.Parts()
+        "all" -> GlideTeaching.Parts(thumb = true, shape = true, confusion = true)
+        "shipped" -> GlideTeaching.Parts.forPitchDp(pitch)
+        "thumbshape" -> GlideTeaching.Parts(thumb = true, shape = true, confusion = false)
         "thumb" -> GlideTeaching.Parts(thumb = true, shape = false, confusion = false)
         "shape" -> GlideTeaching.Parts(thumb = false, shape = true, confusion = false)
         "confusion" -> GlideTeaching.Parts(thumb = false, shape = false, confusion = true)
@@ -48,7 +50,7 @@ class TrainingLabTest {
         val dec = GlideDecoder(keys, params); val model = PersonalModel(); dec.personal = model
         val plain = GlideDecoder(keys, GlideParams.forPitchDp(pitchForParams, touchField = false).let { GlideParams(shapeW = it.shapeW, visitCap = it.visitCap, lmMin = it.lmMin, patGain = 0f, touchField = false, letterW = it.letterW) })
         val lexicons = listOf<GlideLexicon>(lex)
-        val p = parts(variant)
+        val p = parts(variant, keys.pitchDp)
         // ---- the training pass: the real script, glided in order, taught after every glide
         val hits = ArrayList<Boolean>()
         var taught = 0

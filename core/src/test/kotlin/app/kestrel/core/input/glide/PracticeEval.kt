@@ -50,7 +50,7 @@ class PracticeEval {
          * Glide training screen does), against one that learns nothing. Reports first-choice rates per quarter, the thumb habit and the touch plane that were learned, and the words whose answer changed either way.
          * With a file of distinct words only the thumb lessons can carry over to the next glide; a training file repeats words and the shape lessons show too.
          */
-        fun replay(parsed: GlidePractice.Parsed, lex: BinaryLexicon, say: (String) -> Unit, parts: GlideTeaching.Parts = GlideTeaching.Parts()): Pair<Int, Int> {
+        fun replay(parsed: GlidePractice.Parsed, lex: BinaryLexicon, say: (String) -> Unit, parts: GlideTeaching.Parts = GlideTeaching.Parts.forPitchDp(parsed.keys.pitchDp)): Pair<Int, Int> {
             val keys = parsed.keys
             val cases = parsed.entries.filter { it.xs.size >= 2 }
             if (cases.isEmpty()) return 0 to 0

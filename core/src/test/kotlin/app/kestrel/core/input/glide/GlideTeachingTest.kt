@@ -12,9 +12,10 @@ import org.junit.Test
  */
 class GlideTeachingTest {
     private val lex = GlideEval.loadLexicon()
+    private val ALL = GlideTeaching.Parts(thumb = true, shape = true, confusion = true)
 
     /** [n] glides of [word] by [hand]; after every one the decoder is taught (when [teach]) the way the training screen teaches it. Returns what came first each time. */
-    private fun repeat(keys: GlideKeys, hand: GlideHabitEval.Hand, word: String, n: Int, teach: Boolean, model: PersonalModel = PersonalModel(), parts: GlideTeaching.Parts = GlideTeaching.Parts()): List<String> {
+    private fun repeat(keys: GlideKeys, hand: GlideHabitEval.Hand, word: String, n: Int, teach: Boolean, model: PersonalModel = PersonalModel(), parts: GlideTeaching.Parts = ALL): List<String> {
         val dec = GlideDecoder(keys, GlideParams.forPitchDp(keys.pitchDp))
         dec.personal = model
         val out = ArrayList<String>()
@@ -72,7 +73,7 @@ class GlideTeachingTest {
         val sim = GestureSim(keys, java.util.Random(1))
         val p = sim.path("access", SimNoise.CALM)!!
         dec.decode(p.xs, p.ys, p.xs.size, listOf(lex), null, 3)
-        val l = GlideTeaching.teach(dec, lex, lex.idOf("the"), model, keys, "the", "access", dec.lastPrint)
+        val l = GlideTeaching.teach(dec, lex, lex.idOf("the"), model, keys, "the", "access", dec.lastPrint, ALL)
         assertTrue("too wild to keep as the shape of 'the'", l.wild)
         assertFalse(l.shape)
         assertEquals(0, model.patterns.patternCount)
@@ -97,8 +98,16 @@ class GlideTeachingTest {
         val dec = GlideDecoder(keys, GlideParams.forPitchDp(keys.pitchDp)); val model = PersonalModel(); dec.personal = model
         val p = GestureSim(keys, java.util.Random(2)).path("there", SimNoise.CALM)!!
         dec.decode(p.xs, p.ys, p.xs.size, listOf(lex), null, 3)
-        val l = GlideTeaching.teach(dec, null, -1, model, keys, "there", "the", dec.lastPrint)
+        val l = GlideTeaching.teach(dec, null, -1, model, keys, "there", "the", dec.lastPrint, ALL)
         assertFalse(l.thumb)
         assertNotNull(l)
+    }
+
+    @Test fun theKeyboardGivesTheThumbLessonEverywhereTheShapeLessonOnlyOnPhoneKeysAndNeverTheConfusionLesson() {
+        val phone = GlideTeaching.Parts.forPitchDp(29f); val tablet = GlideTeaching.Parts.forPitchDp(55f); val landscape = GlideTeaching.Parts.forPitchDp(90f)
+        assertTrue(phone.thumb && phone.shape && !phone.confusion)
+        assertTrue(tablet.thumb && !tablet.shape && !tablet.confusion)
+        assertTrue(landscape.thumb && !landscape.shape && !landscape.confusion)
+        val d = GlideTeaching.Parts(); assertTrue("the plain default is the thumb only", d.thumb && !d.shape && !d.confusion)
     }
 }
