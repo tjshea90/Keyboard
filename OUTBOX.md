@@ -1896,3 +1896,47 @@
 >
 > Details are in `research/R32-punctuation-suggestions.md`, section 7.
 <!-- sha:e57b653ae974 -->
+
+## 2026-11-26T21:12:31Z
+> Here is the prompt you asked for. Nothing has been changed yet.
+>
+> **What it changes.** Your "Default" environment is personal, so a saved edit applies to every future session that uses it, not just one. The setup script today is one line: it downloads `tools/setup-android.sh` from your `novig` repo and runs it. That is what installs the Android SDK and warms Gradle for novig.
+>
+> A setup script runs as root each time a fresh container is built, after the repos are cloned and before Claude starts. It can't read your saved variables or secrets. If it fails, the session doesn't start. A saved change only shows up in the next new session, not in a running one.
+>
+> **What I put in it.** The block keeps your line and adds a part that only acts when the Keyboard repo is in the session:
+> - It fills the Gradle and Robolectric caches. This session's first test run had to download them, and `--offline` failed until it did.
+> - It puts the glide network weights where the lab reads them.
+>
+> I ran that block here and it worked (18 seconds with warm caches). I could not try a brand-new container, so the first cold run will take a few minutes.
+>
+> ```text
+> Permanently change the setup script of my "Default" cloud environment (it is personal, so the change applies to all my future sessions).
+>
+> Do exactly this, in order:
+> 1. Call get_environment and read the CURRENT setup script from it (do not rely on memory). Tell me in one line what it does.
+> 2. Keep the existing first line exactly as it is. Add the block below after it, unchanged. (If I wrote a different change under "MY CHANGE" at the end of this message, make that change instead and ignore the block.)
+> 3. Before you propose anything, run the new block yourself from the folder that holds the repository checkouts (the parent of your working directory) and show me that every step worked. Use only commands you saw work.
+> 4. Rules for the script: plain Unix text, at most 100 lines of at most 200 bytes each, no secrets (it cannot read my saved variables or secrets anyway), idempotent and non-interactive, skip a repository's steps when its folder is not there, and make every optional step non-fatal, because a failing setup script stops every new session from starting.
+> 5. Then call update_environment with environment_name "Default", applies_to "my personal environment: all of my future sessions that use it, not only this one", the WHOLE new script in setup_script, script_change "replaces the existing setup script" and a one-line reason. I will approve the card.
+> 6. Afterwards call get_environment again, confirm the saved script matches, and tell me it takes effect the next time a container is built fresh (a NEW session), not in the running one.
+>
+> The block to add after the existing line:
+>
+> # the Swoop keyboard (tjshea90/Keyboard), only when it is one of the session's repositories: fill the Gradle and Robolectric caches (the first test run of a session
+> # otherwise downloads them, and "./gradlew --offline" on the ime tests fails) and put the open swipe network where the glide lab reads it. Never stops a session from starting.
+> if [ -d Keyboard ]; then
+>   export ANDROID_HOME="${ANDROID_HOME:-/opt/android-sdk}"
+>   mkdir -p Keyboard/core/build/r30
+>   cp -n Keyboard/ime/src/main/assets/glide/swipe_encoder.bin Keyboard/core/build/r30/swipe_encoder.bin 2>/dev/null || true
+>   ( cd Keyboard && ./gradlew --no-daemon -q :core:compileTestKotlin :ime:testDebugUnitTest --tests 'app.swoop.keyboard.KeysServiceTest' > /tmp/keyboard-prewarm.log 2>&1 ) \
+>     || echo "keyboard prewarm failed (see /tmp/keyboard-prewarm.log): sessions still start, the first test run downloads what is missing"
+> fi
+>
+> MY CHANGE (leave empty to use the block above):
+> ```
+>
+> You can also edit it yourself, without any prompt. Open the cloud environment menu in a session's title bar, tap Edit, then Setup script. Or tell me "do it" and I'll propose that edit here; you approve it on a card.
+>
+> I'm adding this request to TASKS.md, then going back to the alpha14 build.
+<!-- sha:b6228e3cee69 -->
