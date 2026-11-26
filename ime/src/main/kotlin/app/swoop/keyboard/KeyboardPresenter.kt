@@ -181,6 +181,13 @@ class KeyboardPresenter(
         view?.translateOn = false
     }
     private var translateAllowed = true
+    /** R34e: the box translating was switched on in (its app and its own facts), whether the keyboard has been off the screen since, and whether the person is told that translating switched itself off. */
+    private var translateBox: String? = null
+    private var viewLeft = false
+    private var autoOffNotice = false
+    /** Who a text box is: the app and what the box says about itself. Not its action key or flags (apps change those while typing); a new app, tab or field gives a new key. */
+    private fun boxKeyOf(i: EditorInfo): String =
+        "${i.packageName}|${i.fieldId}|${i.inputType and (android.text.InputType.TYPE_MASK_CLASS or android.text.InputType.TYPE_MASK_VARIATION)}|${i.fieldName}|${i.hintText}|${i.label}|${i.privateImeOptions}"
 
     /** Enter with translating on. True when the flow took the key (translating, or a message shown); false means "do the normal Enter". */
     private fun translateEnter(): Boolean {
@@ -217,8 +224,15 @@ class KeyboardPresenter(
 
     // ------------------------------------------------------------------ lifecycle (the service forwards these)
 
-    fun startInput(info: EditorInfo) {
+    fun startInput(info: EditorInfo, restarting: Boolean = false) {
         val field = FieldInfos.from(info)
+        // R34e (owner 2026-11-26: "if i have translation feature on, then switch apps or tabs, automatically turn translation off. It should only stay on if I'm actively using it"): translating belongs to the box it was switched on in
+        val box = boxKeyOf(info)
+        val sameBox = restarting && box == translateBox && !viewLeft
+        val wasOn = flow.isOn()
+        if (wasOn && !sameBox) turnTranslateOff()
+        val offNotice = (wasOn && !sameBox) || autoOffNotice
+        translateBox = box; viewLeft = false; autoOffNotice = false
         if (Diag.enabled) Diag.d("startInput kind=${field.kind} noLearn=${field.noPersonalizedLearning} noSuggest=${field.noSuggestions} caps=${field.capsFlags} action=${field.imeAction} pkgIsKestrel=${info.packageName?.startsWith("app.kestrel.browser") == true} omnibox=${FieldInfos.hasOmniboxOption(info.privateImeOptions)}")     // (debug builds: facts only, never text)
         session.settle(); learner.settle()
         val st = Settings(context)
@@ -256,9 +270,14 @@ class KeyboardPresenter(
         }
         prepareGlide()
         refreshSuggestions()
+        if (offNotice && !safeMode) onTranslateMessage(context.getString(R.string.translate_auto_off))
     }
 
-    fun finishInput() { session.settle(); learner.settle(); suggestSeq++; emailLearner.finishField(); saveEmailsIfChanged(); controller.finishInput(); if (!safeMode) glide.engine.saveLearned() }
+    fun finishInput() { translateLeft(); session.settle(); learner.settle(); suggestSeq++; emailLearner.finishField(); saveEmailsIfChanged(); controller.finishInput(); if (!safeMode) glide.engine.saveLearned() }
+
+    /** The keyboard went off the screen (Back, another app or tab, the screen turned off, a rotation): R34e, translating that was on is over; the strip says so the next time the keyboard shows. */
+    fun inputViewFinished() { translateLeft(); viewLeft = true }
+    private fun translateLeft() { if (flow.isOn()) { turnTranslateOff(); autoOffNotice = true } }
 
     /** Writes what was learned (cheap when nothing changed). */
     fun saveLearned() { if (!safeMode) try { glide.engine.saveLearned() } catch (_: Exception) { } }
