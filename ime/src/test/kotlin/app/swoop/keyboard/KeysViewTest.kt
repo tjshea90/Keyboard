@@ -497,6 +497,36 @@ class KeysViewTest {
         assertEquals(listOf("t"), t.typed()); assertEquals("and the glide is read", 1, t.glides.size)
     }
 
+    // ---- R34d, second half: on BIG keys "a tap that rolled" and "a stroke too short to be a glide" were measured in key widths, so they grew with the keys (on a landscape tablet 0.45 pitch is 41 dp, Android's own tap slop is 8 dp)
+
+    private fun glideViewWidth(w: Int): Pair<KeysView, Tools> { val (v, _) = view(w); val t = Tools(); v.listener = t; v.setGlideEnabled(true); v.measure(View.MeasureSpec.makeMeasureSpec((w * dp).toInt(), View.MeasureSpec.EXACTLY), View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED)); v.layout(0, 0, v.measuredWidth, v.measuredHeight); return v to t }
+
+    @Test fun aShortFlickToTheNextKeyOnBigKeysIsAGlideNotTheLetterItBeganOn() {
+        val (v, t) = glideViewWidth(900); val (ax, ay) = at(v, "a"); val pitchDp = v.glideKeys()!!.pitch / dp
+        val flick = 0.42f * pitchDp + 12f                                    // a little past the key's edge plus a thumb's roll (8 dp): well inside the old limit of 0.22 key widths
+        assertTrue("big keys: $pitchDp dp", pitchDp > 80f)
+        down(v, ax, ay); move(v, ax + 4 * dp, ay); move(v, ax + flick * dp, ay); up(v, ax + flick * dp, ay)
+        assertEquals("a glide", 1, t.glides.size); assertTrue("not a letter: ${t.typed()}", t.keys.isEmpty())
+    }
+
+    @Test fun aThumbThatRollsAFewDpOnBigKeysIsStillATapAndAnEdgeTapToo() {
+        val (v, t) = glideViewWidth(900); val (ax, ay) = at(v, "a"); val pitchDp = v.glideKeys()!!.pitch / dp
+        down(v, ax, ay); move(v, ax + 6 * dp, ay + 3 * dp); up(v, ax + 7 * dp, ay + 3 * dp)
+        assertEquals(listOf("a"), t.typed()); assertTrue(t.glides.isEmpty())
+        val edge = 0.40f * pitchDp * dp                                      // a tap near the right edge of the key that rolls 6 dp out of it: shorter than a glide can be
+        down(v, ax + edge, ay); move(v, ax + edge + 3 * dp, ay); up(v, ax + edge + 6 * dp, ay)
+        assertEquals("the same letter again, no glide: ${t.typed()}", listOf("a", "a"), t.typed()); assertTrue(t.glides.isEmpty())
+    }
+
+    @Test fun onPhoneSizedKeysTheLimitsAreExactlyAsBefore() {
+        val (v, t) = glideViewWidth(360); val (ax, ay) = at(v, "a"); val pitchPx = v.glideKeys()!!.pitch
+        assertTrue("phone keys under 40 dp", pitchPx / dp < 40f)
+        down(v, ax, ay); move(v, ax + 0.3f * pitchPx, ay); up(v, ax + 0.6f * pitchPx, ay)                       // inside the box plus 0.22 key widths: a tap (unchanged)
+        assertEquals(listOf("a"), t.typed()); assertTrue(t.glides.isEmpty())
+        down(v, ax, ay); move(v, ax + 0.4f * pitchPx, ay); move(v, ax + 0.8f * pitchPx, ay); up(v, ax + 0.8f * pitchPx, ay)
+        assertEquals("farther than that: a glide", 1, t.glides.size)
+    }
+
     @Test fun theViewReportsOnlyNumbersAboutAGlideStrokeAndAHandOver() {
         val (v, t) = glideView(); val (ax, ay) = at(v, "a"); val (dx, dy) = at(v, "d"); val (hx, hy) = at(v, "h"); val (kx, ky) = at(v, "k")
         touch(v, MotionEvent.ACTION_DOWN, 0, Triple(0, ax, ay))
