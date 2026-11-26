@@ -1,21 +1,24 @@
-# CHECKPOINT 1172 — read me first, then TASKS.md
+# CHECKPOINT 1173 — read me first, then TASKS.md
 
-**Written:** 2026-11-26T22:42:46Z · **tests:** all 1 fast checks green (gradle suite: see ship.sh)
-**Branch:** `claude/awesome-bell-gmcf0i` · **builds on:** `84bc199` (this checkpoint is the commit after it)
+**Written:** 2026-11-26T22:52:29Z · **tests:** all 1 fast checks green (gradle suite: see ship.sh)
+**Branch:** `claude/awesome-bell-gmcf0i` · **builds on:** `047ef15` (this checkpoint is the commit after it)
 
 ## Just done
-pre-ship: Glide training (Settings > Help): glide 8 everyday paragraphs and look-alike word lists several times, the keyboard learns where your thumb lands, one file to attach; boxes that learn nothing no longer move the thumb habit
+gated swoop-v0.7.0-alpha16 (ime code 27) and pushed it: handoff self-test, unit suites and the versionCode check passed here. NOT yet built - GitHub has not been asked.
 
 ## Do this next
-ship.sh gates and releases this (ime)
+TRIGGER THE BUILD: mcp__github__actions_run_trigger, method run_workflow, workflow_id android.yml, ref claude/awesome-bell-gmcf0i, inputs {"full_build":"true","note":"Glide training (Settings > Help): glide 8 everyday paragraphs and look-alike word lists several times, the keyboard learns where your thumb lands, one file to attach; boxes that learn nothing no longer move the thumb habit"}.
+When the run is green, confirm the Release shows the APK (mcp__github__get_release_by_tag swoop-v0.7.0-alpha16), then:  bash tools/record-release.sh swoop-v0.7.0-alpha16 "Glide training (Settings > Help): glide 8 everyday paragraphs and look-alike word lists several times, the keyboard learns where your thumb lands, one file to attach; boxes that learn nothing no longer move the thumb habit"
+NEVER ship swoop-v0.7.0-alpha16 twice (check BUILDLOG.md and the Releases first).
 
 *(resuming? CLAUDE.md's "FIRST ACTION OF EVERY SESSION" says how; the briefing is tools/resume.sh. Do that first, or autosave may stay off all session.)*
 
 ## Uncommitted right now
-     M ime/build.gradle.kts
+    (nothing — the tree is clean as of this checkpoint)
 
 ## Last ten checkpoints
 ```
+  047ef15 ckpt 1172: pre-ship: Glide training (Settings > Help): glide 8 everyday paragraphs and l
   369bf17 ckpt 1167: R36 lab result: TrainingLabTest (made-up hand, real script, hold-out of unask
   1ce6bc8 ckpt 1163: R36b+c: GlideTraining (core script: 8 paragraphs, 3 look-alike drills x4, own
   8d6e357 ckpt 1148: R36a: GlideTeaching (core, pure: thumb + shape + confusion lessons from a KNO
@@ -25,8 +28,4 @@ ship.sh gates and releases this (ime)
   72e6f77 ckpt 1125: alpha14 RELEASED and recorded (run 45895826479 green); emulator smoke API 29 
   d3e7cf9 ckpt 1124: gated swoop-v0.7.0-alpha15 (ime code 26) and pushed it: handoff self-test, un
   c332c24 ckpt 1123: pre-ship: R34d (second half): on big keys (the tablet) a short flick to the n
-  2a86173 ckpt 1118: alpha15 candidate lint green; emulator smoke (API 29) dispatched on HEAD 744b
 ```
-
-(4 automatic checkpoint(s) since the last deliberate one — the
-session was still mid-step. `git diff` against it shows what changed.)
