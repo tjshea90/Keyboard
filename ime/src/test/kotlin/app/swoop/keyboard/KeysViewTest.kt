@@ -346,6 +346,9 @@ class KeysViewTest {
     }
     private fun glideView(): Pair<KeysView, Tools> { val (v, _) = view(); val t = Tools(); v.listener = t; v.setGlideEnabled(true); v.measure(View.MeasureSpec.makeMeasureSpec((564 * dp).toInt(), View.MeasureSpec.EXACTLY), View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED)); v.layout(0, 0, v.measuredWidth, v.measuredHeight); return v to t }
 
+    /** What the view typed, as plain text (a letter key is its letter). */
+    private fun Tools.typed(): List<String> = keys.map { (it as? app.kestrel.core.input.Key.Ch)?.text ?: it.toString() }
+
     @Test fun aQuickSwipeToTheNextKeyIsAGlideNotASingleLetter() {
         val (v, t) = glideView(); val (ax, ay) = at(v, "a"); val (sx, _) = at(v, "s")
         down(v, ax, ay); move(v, ax + (sx - ax) * 0.5f, ay); move(v, sx, ay); up(v, sx, ay)
@@ -440,7 +443,7 @@ class KeysViewTest {
         touch(v, MotionEvent.ACTION_MOVE, 0, Triple(0, zx, zy), Triple(1, (ax + dx) / 2f, ay))
         touch(v, MotionEvent.ACTION_MOVE, 0, Triple(0, zx, zy), Triple(1, dx, dy))
         touch(v, MotionEvent.ACTION_POINTER_UP, 1, Triple(0, zx, zy), Triple(1, dx, dy))
-        assertEquals("the glide went through", 1, t.glides.size); assertTrue("the resting thumb's key is not typed: ${t.keys}", t.keys.isEmpty())
+        assertEquals("the glide went through", 1, t.glides.size); assertTrue("the resting thumb's key is not typed: ${t.typed()}", t.keys.isEmpty())
         touch(v, MotionEvent.ACTION_UP, 0, Triple(0, zx, zy))
         assertTrue("nor when that thumb lifts", t.keys.isEmpty()); assertEquals(1, t.glides.size)
     }
@@ -451,7 +454,7 @@ class KeysViewTest {
         touch(v, MotionEvent.ACTION_POINTER_DOWN, 1, Triple(0, zx, zy), Triple(1, kx, ky))
         touch(v, MotionEvent.ACTION_POINTER_UP, 1, Triple(0, zx, zy), Triple(1, kx, ky))
         touch(v, MotionEvent.ACTION_UP, 0, Triple(0, zx, zy))
-        assertEquals(listOf("k"), t.keys)
+        assertEquals(listOf("k"), t.typed())
     }
 
     @Test fun aSecondFingerThatTouchesTheScreenJustBeforeAGlideStartsDoesNotCostTheGlide() {
@@ -461,7 +464,7 @@ class KeysViewTest {
         touch(v, MotionEvent.ACTION_MOVE, 0, Triple(0, (ax + dx) / 2f, ay), Triple(1, px, py)); touch(v, MotionEvent.ACTION_MOVE, 0, Triple(0, dx, dy), Triple(1, px, py))
         touch(v, MotionEvent.ACTION_POINTER_UP, 1, Triple(0, dx, dy), Triple(1, px, py))
         touch(v, MotionEvent.ACTION_UP, 0, Triple(0, dx, dy))
-        assertEquals("the glide went through", 1, t.glides.size); assertTrue("no stray letter: ${t.keys}", t.keys.isEmpty())
+        assertEquals("the glide went through", 1, t.glides.size); assertTrue("no stray letter: ${t.typed()}", t.keys.isEmpty())
     }
 
     @Test fun twoThumbsThatOverlapKeepTheOrderOfTheirTapsWithGlideTypingOn() {
@@ -470,7 +473,7 @@ class KeysViewTest {
         touch(v, MotionEvent.ACTION_POINTER_DOWN, 1, Triple(0, tx, ty), Triple(1, hx, hy)); advance(40)
         touch(v, MotionEvent.ACTION_POINTER_UP, 0, Triple(0, tx, ty), Triple(1, hx, hy))          // the first thumb lifts: the letter it pressed
         touch(v, MotionEvent.ACTION_UP, 0, Triple(1, hx, hy))
-        assertEquals(listOf("t", "h"), t.keys); assertTrue(t.glides.isEmpty())
+        assertEquals(listOf("t", "h"), t.typed()); assertTrue(t.glides.isEmpty())
     }
 
     @Test fun aSecondThumbThatTapsAndLiftsFirstIsTypedAfterTheFirstThumbsLetter() {
@@ -479,7 +482,7 @@ class KeysViewTest {
         touch(v, MotionEvent.ACTION_POINTER_DOWN, 1, Triple(0, tx, ty), Triple(1, hx, hy)); advance(40)
         touch(v, MotionEvent.ACTION_POINTER_UP, 1, Triple(0, tx, ty), Triple(1, hx, hy))          // the newer thumb lifts first
         touch(v, MotionEvent.ACTION_UP, 0, Triple(0, tx, ty))
-        assertEquals("pressed order", listOf("t", "h"), t.keys)
+        assertEquals("pressed order", listOf("t", "h"), t.typed())
     }
 
     @Test fun aSecondThumbThatMovesWhileTheFirstOnlyJustLandedIsTheGlideAndTheLetterBeforeItIsTyped() {
@@ -487,11 +490,11 @@ class KeysViewTest {
         touch(v, MotionEvent.ACTION_DOWN, 0, Triple(0, tx, ty)); advance(30)
         touch(v, MotionEvent.ACTION_POINTER_DOWN, 1, Triple(0, tx, ty), Triple(1, gx, gy))
         touch(v, MotionEvent.ACTION_MOVE, 0, Triple(0, tx, ty), Triple(1, (gx + hx) / 2f, gy))
-        assertEquals("the first thumb's letter is typed when the other one turns out to glide", listOf("t"), t.keys)
+        assertEquals("the first thumb's letter is typed when the other one turns out to glide", listOf("t"), t.typed())
         touch(v, MotionEvent.ACTION_MOVE, 0, Triple(0, tx, ty), Triple(1, jx, jy))
         touch(v, MotionEvent.ACTION_POINTER_UP, 1, Triple(0, tx, ty), Triple(1, jx, jy))
         touch(v, MotionEvent.ACTION_UP, 0, Triple(0, tx, ty))
-        assertEquals(listOf("t"), t.keys); assertEquals("and the glide is read", 1, t.glides.size)
+        assertEquals(listOf("t"), t.typed()); assertEquals("and the glide is read", 1, t.glides.size)
     }
 
     @Test fun theViewReportsOnlyNumbersAboutAGlideStrokeAndAHandOver() {
