@@ -162,9 +162,9 @@ class TrainingActivity : Activity(), Practice.Sink {
             val own = LinearLayout(this@TrainingActivity).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(16f), dp(12f), dp(16f), dp(12f)) }
             own.addView(label(getString(R.string.training_own_title), 16f, text, true))
             val et = EditText(this@TrainingActivity).apply {
-                hint = getString(R.string.training_own_hint); setSingleLine(); setText(ownWords); setTextColor(text); setHintTextColor(muted); textSize = 16f
+                hint = getString(R.string.training_own_hint); setSingleLine(); setText(ownWords); setTextColor(u.text); setHintTextColor(u.muted); textSize = 16f
                 inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS
-                background = shape(this@with.card, 10f, stroke, 1f); setPadding(dp(12f), dp(8f), dp(12f), dp(8f))
+                background = u.shape(u.card, 10f, u.stroke, 1f); setPadding(u.dp(12f), u.dp(8f), u.dp(12f), u.dp(8f))
                 addTextChangedListener(object : TextWatcher {
                     override fun beforeTextChanged(s: CharSequence?, a: Int, b: Int, c: Int) {}
                     override fun onTextChanged(s: CharSequence?, a: Int, b: Int, c: Int) {}
@@ -193,7 +193,7 @@ class TrainingActivity : Activity(), Practice.Sink {
         body.addView(progress); body.addView(wordLine)
         val card = u.card()
         pageText = TextView(this).apply { textSize = 20f; setLineSpacing(u.dp(4f).toFloat(), 1f); setTextColor(u.text); setPadding(u.dp(16f), u.dp(14f), u.dp(16f), u.dp(14f)) }
-        card.row(pageText!!, divider = false)
+        with(u) { card.row(pageText!!, divider = false) }
         body.addView(card)
         body.addView(input, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply { topMargin = u.dp(12f) })
         input.visibility = View.VISIBLE
@@ -212,7 +212,7 @@ class TrainingActivity : Activity(), Practice.Sink {
         progress?.text = getString(R.string.training_page, t.pageIndex + 1, t.pageCount, pg.title)
         wordLine?.text = getString(R.string.training_word, t.pagePos + 1, pg.prompts, t.answered)
         val sb = SpannableStringBuilder()
-        var curStart = -1; var curEnd = -1
+        var curStart = -1
         val good = if (u.dark) 0xFF81C784.toInt() else 0xFF2E7D32.toInt()
         val bad = if (u.dark) 0xFFEF9A9A.toInt() else 0xFFC62828.toInt()
         val near = if (u.dark) 0xFFFFB74D.toInt() else 0xFFEF6C00.toInt()
@@ -227,7 +227,7 @@ class TrainingActivity : Activity(), Practice.Sink {
                 else -> u.text
             }
             if (i == t.tokenIndex) {
-                curStart = s; curEnd = e
+                curStart = s
                 sb.setSpan(BackgroundColorSpan(u.accent), s, e, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
                 sb.setSpan(ForegroundColorSpan(u.onAccent), s, e, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
                 sb.setSpan(StyleSpan(android.graphics.Typeface.BOLD), s, e, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
@@ -244,7 +244,6 @@ class TrainingActivity : Activity(), Practice.Sink {
             val line = l.getLineForOffset(curStart)
             tv.requestRectangleOnScreen(Rect(0, l.getLineTop(line) - u.dp(24f), tv.width, l.getLineBottom(line) + u.dp(72f)), false)
         }
-        if (curEnd < 0) return
     }
 
     private fun scoreLine(right: Int, n: Int, three: Int, page: Boolean): String =
