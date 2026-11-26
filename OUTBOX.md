@@ -1998,3 +1998,47 @@
 >
 > Still open from before: install alpha15 and run Glide practice.
 <!-- sha:4a94df7da94e -->
+
+## 2026-11-26T23:05:59Z
+> The Glide training is built and released as alpha16. It is a measurement tool first and a learning tool second, and on your tablet it will probably change little.
+>
+> **Your practice file**
+> - The keyboard put the right word first 39 of 40 times (97.5%), and the right word was always among the first three.
+> - The only miss was "our" typed as "or". On the keyboard those two are the same straight line, because o to r passes over u. Only the words around them can tell them apart.
+> - Your thumb lands almost exactly on the keys, about 2 dp off (roughly a third of a millimetre). So isolated words are not your tablet's problem.
+>
+> **Would a longer training work?**
+> - **As a measurement, yes.** The 40 words had no sentences around them, and your wrong words (ave, fur, there) happen inside sentences. The new training uses whole paragraphs, so the keyboard sees the words before each glide, as in a real message.
+> - **As learning, only one thing helps: where your thumb lands.** I tested this on a simulated hand: the real training script, then 1,500 to 2,000 fresh words it was never asked for.
+>   - Phone-sized keys gained about 1.5 points, and tablet keys 0.3 to 0.6. It was never worse.
+>   - Your thumb is already on target, so don't expect your wrong words to disappear because of the training.
+> - **I switched off two kinds of learning**, because the simulation showed they make the tablet worse:
+>   - Remembering "it typed A, I meant B" cost 2 to 5 points on tablet keys.
+>   - Remembering how you draw each word cost 0.1 to 1 point on big keys. It stays on for phone-sized keys.
+> - The training never counts the paragraph words as your own writing, so it can't bend your suggestions.
+>
+> **What is new: Settings → Help → Glide training**
+> - It is about 400 glides, 10 to 20 minutes, and you can stop after any page.
+> - It has 8 everyday paragraphs. Three more pages have look-alike words (the/there/they, for/or/our, it/is/in and so on), each glided four times, never twice in a row.
+> - You can add your own trouble words, and the last page repeats the words that went wrong together with what the keyboard typed instead.
+> - The box keeps the words you have written so far, so each glide is decoded with real context. Each page shows its score.
+> - A switch turns learning off if you only want it to measure.
+> - Please glide at your normal speed and don't be careful. Careful glides say little about everyday ones.
+> - At the end, tap "Save the file" and attach the file to the chat. Don't paste it.
+> - Boxes that learn nothing (passwords, practice, training) used to move the thumb habit anyway. They no longer do.
+>
+> **What I checked**
+> - All tests and lint pass.
+> - GitHub built and signed alpha16 (build log recorded).
+> - The keyboard passed the emulator checks on Android 10 and Android 16.
+> - I did **not** run it on your tablet.
+> - The training screen itself was only checked by automatic tests, not on a real or emulated screen.
+> - The "would it work" numbers come from a simulated hand, not yours.
+>
+> https://github.com/tjshea90/Keyboard/releases/tag/swoop-v0.7.0-alpha16
+>
+> **Still open**
+> - **You, now:** install alpha16, run Glide training, and attach the saved file (R36f). I will then split your misses into "the finger path doesn't show the word" and "the word order or language picked wrong", and fix whichever it is.
+> - **You, from before:** R34f (translation turns itself off, glides starting on the top-row keys, e-mail addresses learned in login boxes, domains after @), R33f (glide "and" a dozen times and tap "and" if "ave" appears), R32f and R30f.
+> - **Me:** the next-word suggestion model is not started, and it is your call. The Kestrel browser's copy of the keyboard is not updated. For the setup-script change, say "do it" and I will make it.
+<!-- sha:54afc7a56147 -->
