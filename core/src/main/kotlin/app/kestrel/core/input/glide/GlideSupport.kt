@@ -17,6 +17,7 @@ class GlideStats {
     private var shapes = 0; private var shapeWords = 0; private var shapeLifts = 0; private var shapeFlips = 0
     private var previews = 0; private var previewMs = 0L; private var shown = 0; private var shownMs = 0L; private var shownMax = 0L
     private var retries = 0
+    private var taught = 0; private var taughtWild = 0
     private var shapeRuns = 0; private var shapeChanged = 0; private var shapeMs = 0L; private var shapeMsMax = 0L; private var shapeLoadMs = -1L; private var shapeSkipped = 0; private var shapeOffMs = -1L
     private var suggested = 0; private var suggestMs = 0L; private var suggestMax = 0L; private var suggPicked = 0; private var typedLearned = 0; private var autoFixed = 0; private var autoUndone = 0; private var retyped = 0
 
@@ -74,6 +75,8 @@ class GlideStats {
     @Synchronized fun onAutoCorrectUndone() { autoUndone++ }
     /** A word was erased and another typed in its place (the new one was meant). */
     @Synchronized fun onRetyped() { retyped++ }
+    /** R36: the Glide training screen taught the keyboard a glide of a known word ([GlideTeaching]); [GlideTeaching.Lesson.wild]: it was too far from the word's letters to be remembered as its shape. */
+    @Synchronized fun onTaught(lesson: GlideTeaching.Lesson) { taught++; if (lesson.wild) taughtWild++ }
 
     @Synchronized fun line(): String {
         if (loadMs < 0 && glides == 0 && typedLearned == 0 && suggested == 0) return "Glide typing: not used yet this run"
@@ -103,6 +106,7 @@ class GlideStats {
         if (learnedWords > 0 || learnedTop > 0) sb.append("; learned $learnedWords words and $learnedPairs word pairs from your typing, a learned word was the first guess $learnedTop times")
         if (learnedCorrections > 0 || learnedTriples > 0) sb.append("; $learnedCorrections corrections and $learnedTriples three-word phrases remembered")
         if (shapes > 0 || shapeLifts > 0) sb.append("; $shapes glide shapes of $shapeWords words remembered, a remembered shape helped $shapeLifts times and changed the first guess $shapeFlips times")
+        if (taught > 0) sb.append("; Glide training taught $taught glides ($taughtWild too far off their word to keep as its shape)")
         if (typedLearned > 0 || suggested > 0) sb.append("; tap typing: $typedLearned words learned, suggestions made $suggested times (avg ${if (suggested > 0) suggestMs / suggested else 0} ms, worst $suggestMax ms), $suggPicked picked from the strip, $retyped erased and retyped")
         if (autoFixed > 0) sb.append("; automatic fixes $autoFixed, taken back $autoUndone")
         if (retries > 0) sb.append("; a deleted word came up first again and went to second place $retries times")
