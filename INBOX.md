@@ -574,3 +574,8 @@ Give me a prompt to permanently change the setup script for this claude account
 ```
 What is a neural next word model
 ```
+
+## 2026-11-26T22:05:02Z
+```
+@"/root/.claude/uploads/6b745898-fab9-531b-9e27-c84d56b04344/e9b93cb5-Swoop_glide_practice_2026-11-26_1702.txt" I did the glide practice and it is attached. Can you make a much longer glide training that i can glide full paragraphs and problematic words several times and the keyboard learns how i glide? Would this work,?
+```
