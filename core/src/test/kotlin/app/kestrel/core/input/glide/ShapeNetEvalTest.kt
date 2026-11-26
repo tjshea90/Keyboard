@@ -22,7 +22,7 @@ class ShapeNetEvalTest {
     private val cand = System.getenv("R30_CAND")?.toIntOrNull() ?: 40
     private val areaW = 292f; private val areaH = 161f      // GlideEval.keysFor() defaults
 
-    class Row(val score: FloatArray, val hit: BooleanArray, val len: IntArray, val ctcA: FloatArray, val ctcB: FloatArray, val meantLen: Int, val ctcC: FloatArray = FloatArray(0))
+    class Row(val score: FloatArray, val hit: BooleanArray, val len: IntArray, val ctcA: FloatArray, val ctcB: FloatArray, val meantLen: Int, val ctcC: FloatArray = FloatArray(0), val texts: List<String> = emptyList(), val meant: String = "", val prev: String? = null)
 
     private class Ctx(val net: ShapeNet, val dec: GlideDecoder)
 
@@ -50,7 +50,7 @@ class ShapeNetEvalTest {
                 val em = c.net.emissions(tr, when (mode) { 0 -> kA; 1 -> kB; else -> kC }, 26)
                 for ((i, x) in cs.withIndex()) { val w = letters(x.text); if (w.isNotEmpty()) ctc[mode][i] = ShapeNet.ctcLogP(em, 26, w) }
             }
-            Row(FloatArray(cs.size) { i -> cs[i].score }, BooleanArray(cs.size) { i -> String(GlideLetters.keyOf(cs[i].text)) == item.key }, IntArray(cs.size) { i -> cs[i].text.length }, ctc[0], ctc[1], item.word.length, ctc[2])
+            Row(FloatArray(cs.size) { i -> cs[i].score }, BooleanArray(cs.size) { i -> String(GlideLetters.keyOf(cs[i].text)) == item.key }, IntArray(cs.size) { i -> cs[i].text.length }, ctc[0], ctc[1], item.word.length, ctc[2], cs.map { it.text }, item.word, item.prev)
         }) }
         val out = jobs.map { it.get() }
         pool.shutdown()
@@ -105,6 +105,38 @@ class ShapeNetEvalTest {
         println(sb.toString())
     }
 
+    /** R34a: what the hybrid still gets wrong (R34_MISSES=n prints the first n misses of each slice: the word meant, the word chosen, the word before, where the meant word stands, and how the score splits into the shipped part and the network's). Words only, from public text. */
+    private fun dumpMisses(label: String, rs: List<Row?>, w: Float, max: Int) {
+        var shown = 0; var inList = 0; var missAll = 0
+        val classes = java.util.TreeMap<String, Int>()
+        for (r in rs) {
+            if (r == null || r.texts.isEmpty()) continue
+            val b = best(r, 3, w)
+            if (r.hit[b]) continue
+            missAll++
+            val meantIdx = r.hit.indexOfFirst { it }
+            if (meantIdx >= 0) inList++
+            val ch = r.texts[b]; val me = r.meant
+            val cls = when {
+                meantIdx < 0 -> "meant word not among the candidates"
+                ch.length >= me.length + 2 -> "chosen is 2+ letters longer"
+                me.length >= ch.length + 2 -> "chosen is 2+ letters shorter"
+                ch.first() == me.first() && ch.last() == me.last() -> "look-alike (same first and last letter)"
+                else -> "other"
+            }
+            classes.merge(cls, 1, Int::plus)
+            if (shown < max) {
+                shown++
+                val order = (0 until r.score.size).sortedByDescending { r.score[it] + w * r.ctcC[it] }
+                val rank = if (meantIdx >= 0) order.indexOf(meantIdx) + 1 else -1
+                val sh = if (meantIdx >= 0) "shipped gap %.1f, net gap %.1f".format(r.score[b] - r.score[meantIdx], w * (r.ctcC[b] - r.ctcC[meantIdx])) else ""
+                println("R34 [$label] miss: meant '${me}' chosen '${ch}' after '${r.prev ?: "-"}' rank ${rank} ${sh}")
+            }
+        }
+        println("R34 [$label] misses $missAll (meant word in the list of ${r0(rs)}: $inList): " + classes.entries.joinToString("; ") { "${it.key} ${it.value}" })
+    }
+    private fun r0(rs: List<Row?>) = rs.firstOrNull { it != null }?.score?.size ?: 0
+
     private fun fmt(c: Cnt) = "top1 %.1f%% top3 %.1f%%".format(100.0 * c.t1 / c.n, 100.0 * c.t3 / c.n)
 
     private fun load(name: String, fileEnv: String, def: String, mb: Long, offsetMb: Long, url: String = RealSwipe.DEV_URL): List<RealSwipe.Swipe> {
@@ -127,6 +159,7 @@ class ShapeNetEvalTest {
         println("R30 [$label] CHOSEN w=$chosenW: shipped ${fmt(rank(rs, 0, null, false))} | hybrid A ${fmt(rank(rs, 1, chosenW, false))} | hybrid B (keyboard area) ${fmt(rank(rs, 2, chosenW, false))} | hybrid C (letter box) ${fmt(rank(rs, 3, chosenW, false))}")
         println("R30 [$label] short words (<=4 letters, n=$sn): shipped hit %.1f%% s2l(short meant, 2+ longer chosen) %d | hybrid C hit %.1f%% s2l %d".format(100.0 * shortHit(rs, 0, 0f) / sn, s2l(rs, 0, 0f), 100.0 * shortHit(rs, 3, chosenW) / sn, s2l(rs, 3, chosenW)))
         gate(label, rs, chosenW)
+        System.getenv("R34_MISSES")?.toIntOrNull()?.let { dumpMisses(label, rs, chosenW, it) }
         for (w in grid) println("R30 [$label] hybrid w=%-5.2f  A: %s | B: %s | A/letter: %s | B/letter: %s".format(w, fmt(rank(rs, 1, w, false)), fmt(rank(rs, 2, w, false)), fmt(rank(rs, 1, w, true)), fmt(rank(rs, 2, w, true))))
     }
 
