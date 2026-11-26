@@ -67,6 +67,10 @@ class KeyboardPresenter(
     private val emailLearner = app.kestrel.core.input.glide.EmailLearner(controller) { if (emailOn && !safeMode) glide.emails else null }
     /** The addresses on the strip now (an e-mail box only): a tap on one replaces what was typed of the address. */
     private var emailShown: List<String> = emptyList()
+    /** R34c: what each chip of the address strip shows (a domain only, once the part before the @ is typed) -> the whole address a tap puts in. */
+    private var emailLabels: Map<String, String> = emptyMap()
+    /** R34a2: the box is the glide practice screen's (its private option) and the screen is open: every glide in it is handed over, in no other box. */
+    private var practiceBox = false
     private fun saveEmailsIfChanged() { if (emailOn && !safeMode) try { glide.saveEmails() } catch (_: Exception) { } }
     /** Bumped for every request to the engine: an answer for an older one is dropped. */
     private var suggestSeq = 0
@@ -118,7 +122,7 @@ class KeyboardPresenter(
     }
 
     override fun onCandidateLong(word: String) {
-        if (EmojiMap.isEmoji(word) || word == literalShown) return
+        if (EmojiMap.isEmoji(word) || word == literalShown || emailLabels.containsKey(word)) return          // (an e-mail address or a domain is no word of the dictionary: nothing to remove)
         view?.confirmWord = word
     }
 
@@ -181,6 +185,13 @@ class KeyboardPresenter(
         view?.translateOn = false
     }
     private var translateAllowed = true
+    /** R34e: the box translating was switched on in (its app and its own facts), whether the keyboard has been off the screen since, and whether the person is told that translating switched itself off. */
+    private var translateBox: String? = null
+    private var viewLeft = false
+    private var autoOffNotice = false
+    /** Who a text box is: the app and what the box says about itself. Not its action key or flags (apps change those while typing); a new app, tab or field gives a new key. */
+    private fun boxKeyOf(i: EditorInfo): String =
+        "${i.packageName}|${i.fieldId}|${i.inputType and (android.text.InputType.TYPE_MASK_CLASS or android.text.InputType.TYPE_MASK_VARIATION)}|${i.fieldName}|${i.hintText}|${i.label}|${i.privateImeOptions}"
 
     /** Enter with translating on. True when the flow took the key (translating, or a message shown); false means "do the normal Enter". */
     private fun translateEnter(): Boolean {
@@ -217,8 +228,17 @@ class KeyboardPresenter(
 
     // ------------------------------------------------------------------ lifecycle (the service forwards these)
 
-    fun startInput(info: EditorInfo) {
+    fun startInput(info: EditorInfo, restarting: Boolean = false) {
         val field = FieldInfos.from(info)
+        // R34b: a focus that moves to the next box of the same window (a login page: e-mail box, then password box) never "finishes" the old box: its typed address is learned HERE, before the new box starts (it was lost before)
+        emailLearner.finishField(); saveEmailsIfChanged()
+        // R34e (owner 2026-11-26: "if i have translation feature on, then switch apps or tabs, automatically turn translation off. It should only stay on if I'm actively using it"): translating belongs to the box it was switched on in
+        val box = boxKeyOf(info)
+        val sameBox = restarting && box == translateBox && !viewLeft
+        val wasOn = flow.isOn()
+        if (wasOn && !sameBox) turnTranslateOff()
+        val offNotice = (wasOn && !sameBox) || autoOffNotice
+        translateBox = box; viewLeft = false; autoOffNotice = false
         if (Diag.enabled) Diag.d("startInput kind=${field.kind} noLearn=${field.noPersonalizedLearning} noSuggest=${field.noSuggestions} caps=${field.capsFlags} action=${field.imeAction} pkgIsKestrel=${info.packageName?.startsWith("app.kestrel.browser") == true} omnibox=${FieldInfos.hasOmniboxOption(info.privateImeOptions)}")     // (debug builds: facts only, never text)
         session.settle(); learner.settle()
         val st = Settings(context)
@@ -240,7 +260,8 @@ class KeyboardPresenter(
         controller.caseForm = { w, prev -> if (properOn) glide.engine.caseFormOf(w, prev) else null }
         latest = null; literalShown = null; noFixFor = null; suggestSeq++
         userMoved = false; editWord = null; editRaw = emptyMap()
-        emailOn = !safeMode && st.emailSuggestions; emailLearner.reset(); emailShown = emptyList()
+        emailOn = !safeMode && st.emailSuggestions; emailLearner.reset(); emailShown = emptyList(); emailLabels = emptyMap()
+        practiceBox = !safeMode && Practice.sink != null && Practice.isPracticeBox(info.privateImeOptions)
         flow.leaveField(); translator?.cancel(); translateAllowed = !safeMode && field.kind != FieldKind.PASSWORD && field.kind != FieldKind.OMNIBOX && st.translateEnabled
         if (safeMode || !st.translateEnabled) flow.setOn(false, clock())      // (R24c: the feature switched off in Settings is OFF, not just hidden)
         else flow.tick(clock())                                               // (the inactivity timer may have switched it off meanwhile)
@@ -256,9 +277,14 @@ class KeyboardPresenter(
         }
         prepareGlide()
         refreshSuggestions()
+        if (offNotice && !safeMode) onTranslateMessage(context.getString(R.string.translate_auto_off))
     }
 
-    fun finishInput() { session.settle(); learner.settle(); suggestSeq++; emailLearner.finishField(); saveEmailsIfChanged(); controller.finishInput(); if (!safeMode) glide.engine.saveLearned() }
+    fun finishInput() { translateLeft(); session.settle(); learner.settle(); suggestSeq++; emailLearner.finishField(); saveEmailsIfChanged(); controller.finishInput(); if (!safeMode) glide.engine.saveLearned() }
+
+    /** The keyboard went off the screen (Back, another app or tab, the screen turned off, a rotation): R34e, translating that was on is over; the strip says so the next time the keyboard shows. */
+    fun inputViewFinished() { translateLeft(); viewLeft = true }
+    private fun translateLeft() { if (flow.isOn()) { turnTranslateOff(); autoOffNotice = true } }
 
     /** Writes what was learned (cheap when nothing changed). */
     fun saveLearned() { if (!safeMode) try { glide.engine.saveLearned() } catch (_: Exception) { } }
@@ -365,17 +391,31 @@ class KeyboardPresenter(
     // ------------------------------------------------------------------ R32c: the e-mail addresses in an e-mail box
 
     /**
-     * An e-mail box shows the addresses the person types, best first: all of them while the box is empty, then only those that start with what was typed (and the domains seen behind an @). True when the strip was taken.
+     * An e-mail box shows the addresses the person types, best first: all of them while the box is empty, then only those that start with what was typed (and the domains seen behind an @). R34c (owner 2026-11-26): once "name@" is
+     * typed, the strip offers the domains: the ones this person uses, then outlook.com, gmail.com, proton.me and the other popular ones, filtered by what is typed of the domain; one tap finishes the address. The same in an ordinary
+     * text box as soon as an @ stands inside the word being typed (an address typed into a chat or a note). True when the strip was taken.
      * A password box or an app that asked for no personalised learning still gets the saved addresses (nothing is learned there).
      */
     private fun emailBoxStrip(): Boolean {
         val had = emailShown.isNotEmpty()
-        if (!emailOn || controller.field.kind != FieldKind.EMAIL || controller.selStart != controller.selEnd) { emailShown = emptyList(); return false }
-        val list = glide.emails.suggest(controller.addressPrefix(), 3)
+        val kind = controller.field.kind
+        val here = emailOn && controller.selStart == controller.selEnd && when (kind) {
+            FieldKind.EMAIL -> true
+            FieldKind.TEXT, FieldKind.SEARCH -> controller.atSignNear()
+            else -> false
+        }
+        if (!here) { emailShown = emptyList(); emailLabels = emptyMap(); if (had) view?.clearCandidates(); return false }
+        val prefix = controller.addressPrefix()
+        val list = glide.emails.suggest(prefix, 3)
         emailShown = list
+        val at = prefix.indexOf('@')
+        val labels = LinkedHashMap<String, String>()
+        for (a in list) labels[if (at > 0 && a.length > at + 1 && a.regionMatches(0, prefix, 0, at + 1, ignoreCase = true)) a.substring(at + 1) else a] = a
+        emailLabels = labels
         if (list.isEmpty()) { if (had) view?.clearCandidates(); return false }
+        suggestSeq++                                       // (a word suggestion still on its way for what was typed before the @ must not replace the domains)
         clipShown = null
-        view?.showCandidates(list)
+        view?.showCandidates(labels.keys.toList())
         return true
     }
 
@@ -384,7 +424,7 @@ class KeyboardPresenter(
         val n = controller.addressPrefix().length
         session.settle(); learner.settle()
         if (controller.pickAddress(n, address)) { emailLearner.picked(address); saveEmailsIfChanged() }
-        emailShown = emptyList()
+        emailShown = emptyList(); emailLabels = emptyMap()
         view?.setShift(controller.shift)
         refreshSuggestions()
     }
@@ -520,12 +560,20 @@ class KeyboardPresenter(
         if (!glideOn) return
         session.glideLifted()
         val (p2, p1) = session.context()
-        glide.engine.decode(xs, ys, count, p1, p2, ts) { res: GlideResult -> post(Runnable { session.onDecoded(res, p1, p2); view?.setShift(controller.shift) }) }
+        val practice = practiceBox
+        glide.engine.decode(xs, ys, count, p1, p2, ts) { res: GlideResult -> post(Runnable {
+            session.onDecoded(res, p1, p2); view?.setShift(controller.shift)
+            if (practice) {                                                                                          // (R34a2: the prompted word's glide, nothing else)
+                val offered = res.candidates.take(3).map { it.text }
+                val asked = Practice.sink?.glide(xs, ys, ts, count, offered, view?.glideKeys(), view?.width ?: 0, view?.height ?: 0, p1, p2)
+                if (asked != null && !safeMode) glide.engine.teach(asked, offered.firstOrNull(), res.serial, { h -> glide.saveHabit(h) })   // R36: the Glide training lets the keyboard learn this hand from a word it asked for
+            }
+        }) }
     }
 
     override fun onCandidate(word: String) {
         if (word.isEmpty()) return
-        if (emailShown.isNotEmpty() && word in emailShown) { pickEmail(word); return }
+        emailLabels[word]?.let { if (emailShown.isNotEmpty()) { pickEmail(it); return } }
         if (word in glideNextShown && controller.lastGlide != null && !session.looksLikeFix(glideRaw[word] ?: word)) { pickNextAfterGlide(word); return }
         if (editWord != null && controller.lastGlide == null && editRaw.containsKey(word)) { replaceTappedWord(word); return }
         userMoved = false

@@ -43,6 +43,7 @@ sys.stdout.write(p)
 # replaced by a note; a message over 20 KB (a log, a paste) is replaced by a note plus its first 200 characters. Files are ATTACHED, not pasted.
 case "$PROMPT" in
   *KESTREL-KEYBOARD-LEARNING*) PROMPT="[this message contained a keyboard learning export (private typing data): NOT saved here on purpose, plan 11.6]" ;;
+  *"SWOOP-GLIDE-PRACTICE "[0-9]*) PROMPT="[this message contained a Swoop glide practice file (the owner's real swipes): NOT saved here on purpose, R34a2]" ;;
 esac
 if [ "${#PROMPT}" -gt 20000 ]; then
   PROMPT="[message of ${#PROMPT} characters: over 20 KB is not copied into the repo (plan 11.6). It starts: $(printf '%s' "$PROMPT" | head -c 200 | tr '\n' ' ')]"

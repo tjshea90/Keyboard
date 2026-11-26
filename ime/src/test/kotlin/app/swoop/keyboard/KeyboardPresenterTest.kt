@@ -821,15 +821,14 @@ class KeyboardPresenterTest {
     private fun passwordInfo() = EditorInfo().apply { inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD }
     private fun tool(r: Rig) = r.presenter.onToolbar(KeysView.TOOL_TRANSLATE)
 
-    @Test fun translatingCanAlwaysBeTurnedOffEvenInABoxWhereItCannotBeTurnedOn() {
+    @Test fun translatingCanAlwaysBeTurnedOffAndOnlyOnInABoxWhereItWorks() {
         val r = Rig(); val msgs = ArrayList<String>(); r.presenter.onTranslateMessage = { msgs.add(it) }
         tool(r); assertTrue("on in an ordinary box", r.view.translateOn)
-        r.presenter.startInput(passwordInfo())                       // the person goes on to a login box: the key still tells the truth ...
-        assertTrue(r.view.translateOn)
-        tool(r)                                                      // ... and ONE tap there turns it off (it used to answer "not available in this box" and stay on)
-        assertFalse("off after one tap in a password box", r.view.translateOn)
-        assertEquals(app.getString(R.string.translate_off), msgs.last())
-        tool(r); assertFalse("it cannot be turned ON there", r.view.translateOn); assertEquals(app.getString(R.string.translate_not_here), msgs.last())
+        tool(r); assertFalse("off after one tap", r.view.translateOn); assertEquals(app.getString(R.string.translate_off), msgs.last())
+        tool(r); assertTrue("on again", r.view.translateOn)
+        r.presenter.startInput(passwordInfo())                       // the person goes on to a login box: R34e, translating switches itself off there
+        assertFalse("off by itself in the login box", r.view.translateOn)
+        tool(r); assertFalse("it cannot be turned ON in a password box", r.view.translateOn); assertEquals(app.getString(R.string.translate_not_here), msgs.last())
         r.presenter.startInput(r.info); assertFalse("and it stays off in the next ordinary box", r.view.translateOn)
         tool(r); assertTrue("on again in an ordinary box", r.view.translateOn)
         tool(r); assertFalse("off again with one tap", r.view.translateOn)
@@ -838,7 +837,7 @@ class KeyboardPresenterTest {
     @Test fun enterNeverTranslatesInAPasswordBoxAndNeverWithTheSettingOff() {
         val r = Rig(); val msgs = ArrayList<String>(); r.presenter.onTranslateMessage = { msgs.add(it) }
         tool(r); assertTrue(r.view.translateOn)
-        // a login box while the toggle is still on: Enter is the normal Enter (digits: they are never "words", so this makes no request even if the guard were missing)
+        // a login box after the toggle was on (R34e: it has switched itself off by now; the guard behind it, "never translate in a password box", stays): Enter is the normal Enter (digits are never "words", so no request either way)
         r.presenter.startInput(passwordInfo()); r.et.setText("123456")
         val before = Engine.inputStats.enters
         r.presenter.onKey(Key.Go)
@@ -860,5 +859,198 @@ class KeyboardPresenterTest {
         assertTrue("a new keys view starts in the real state, not unlit", v2.translateOn)
         tool(r); assertFalse(v2.translateOn)
         val v3 = KeysView(app); r.presenter.view = v3; assertFalse(v3.translateOn)
+    }
+
+    // ---- R34e (2026-11-26): "if i have translation feature on, then switch apps or tabs, automatically turn translation off. It should only stay on if I'm actively using it"
+
+    private fun boxInfo(pkg: String? = "com.example.chat", fieldId: Int = 7, inputType: Int = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_MULTI_LINE, imeOptions: Int = 0, hint: CharSequence? = null) =
+        EditorInfo().apply { packageName = pkg; this.fieldId = fieldId; this.inputType = inputType; this.imeOptions = imeOptions; hintText = hint }
+
+    @Test fun translatingSwitchesItselfOffWhenAnotherAppTakesTheKeyboard() {
+        val r = Rig(); val msgs = ArrayList<String>(); r.presenter.onTranslateMessage = { msgs.add(it) }
+        r.presenter.startInput(boxInfo("com.example.chat"))
+        tool(r); assertTrue(r.view.translateOn)
+        r.presenter.startInput(boxInfo("com.example.mail"))                              // another app: a new input session
+        assertFalse("off in the other app", r.view.translateOn); assertEquals("and the person is told", app.getString(R.string.translate_auto_off), msgs.last())
+        r.presenter.startInput(boxInfo("com.example.chat"))
+        assertFalse("and it does not come back when the first app is used again", r.view.translateOn)
+    }
+
+    @Test fun aNewInputSessionInTheSameBoxIsAlsoOverBecauseTheAppWasLeftInBetween() {
+        val r = Rig(); r.presenter.startInput(boxInfo())
+        tool(r); assertTrue(r.view.translateOn)
+        r.presenter.startInput(boxInfo(), restarting = false)                            // Android starts the box afresh (after another app, a lock screen, Recents)
+        assertFalse(r.view.translateOn)
+    }
+
+    @Test fun translatingStaysOnWhileTheSameBoxKeepsTheKeyboard() {
+        val r = Rig(); r.presenter.startInput(boxInfo())
+        tool(r); assertTrue(r.view.translateOn)
+        r.presenter.startInput(boxInfo(imeOptions = EditorInfo.IME_ACTION_SEND), restarting = true)        // the app restarts the box (after Send, a changed action key): still the same box
+        assertTrue("still on", r.view.translateOn)
+        r.presenter.startInput(boxInfo(inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_CAP_SENTENCES), restarting = true)
+        assertTrue("capital letter flags are no new box", r.view.translateOn)
+    }
+
+    @Test fun translatingSwitchesOffWhenAnotherBoxGetsTheFocusLikeAnotherTab() {
+        val r = Rig(); r.presenter.startInput(boxInfo(fieldId = 7))
+        tool(r); assertTrue(r.view.translateOn)
+        r.presenter.startInput(boxInfo(fieldId = 8), restarting = true)                  // another field of the same app (a tab, the next box)
+        assertFalse(r.view.translateOn)
+        tool(r); assertTrue(r.view.translateOn)
+        r.presenter.startInput(boxInfo(fieldId = 8, hint = "Search"), restarting = true)  // a tab of a browser that keeps one view: the box describes itself differently
+        assertFalse(r.view.translateOn)
+        tool(r); assertTrue(r.view.translateOn)
+        r.presenter.startInput(boxInfo(fieldId = 8, hint = "Search", inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_URI), restarting = true)
+        assertFalse("a different kind of box is another box", r.view.translateOn)
+    }
+
+    @Test fun translatingSwitchesOffWhenTheKeyboardGoesAwayAndStaysOffWhenItComesBack() {
+        val r = Rig(); val msgs = ArrayList<String>(); r.presenter.onTranslateMessage = { msgs.add(it) }
+        r.presenter.startInput(boxInfo())
+        tool(r); assertTrue(r.view.translateOn)
+        r.presenter.inputViewFinished()                                                  // Back, the screen turned off, the browser's tab switcher
+        assertFalse("off the moment the keyboard is gone", r.view.translateOn)
+        r.presenter.startInput(boxInfo(), restarting = true)                             // the same box takes the keyboard again
+        assertFalse("and still off", r.view.translateOn); assertEquals("with a word to say why", app.getString(R.string.translate_auto_off), msgs.last())
+        msgs.clear(); r.presenter.startInput(boxInfo(), restarting = true)
+        assertTrue("the word is said once", msgs.none { it == app.getString(R.string.translate_auto_off) })
+    }
+
+    @Test fun leavingABoxWithTranslatingOffSaysNothing() {
+        val r = Rig(); val msgs = ArrayList<String>(); r.presenter.onTranslateMessage = { msgs.add(it) }
+        r.presenter.startInput(boxInfo()); r.presenter.inputViewFinished(); r.presenter.startInput(boxInfo("com.example.mail"))
+        assertTrue(msgs.none { it == app.getString(R.string.translate_auto_off) })
+        assertFalse(r.view.translateOn)
+    }
+
+    @Test fun translatingTurnedOnAgainInTheNewBoxWorksAsBefore() {
+        val r = Rig(); r.presenter.startInput(boxInfo("com.example.chat")); tool(r)
+        r.presenter.startInput(boxInfo("com.example.mail")); assertFalse(r.view.translateOn)
+        tool(r); assertTrue("one tap turns it on in the new app", r.view.translateOn)
+        r.presenter.startInput(boxInfo("com.example.mail"), restarting = true); assertTrue("and it stays while that box is used", r.view.translateOn)
+    }
+
+    // ---- R34b / R34c (owner 2026-11-26): "it still isn't recognizing email fields" and "after the @ sign, suggest popular email domains such as outlook.com, gmail.com and proton.me"
+
+    private fun Rig.typeKeys(text: String) { for (c in text) presenter.onKey(Key.Ch(c.toString())) }
+
+    @Test fun afterTheAtSignAnEmailBoxOffersOutlookGmailAndProtonAndATapFinishesTheAddress() {
+        val r = Rig(inputType = emailType); r.typeKeys("tj@")
+        assertEquals(listOf("outlook.com", "gmail.com", "proton.me"), r.view.candidatesForTest())
+        r.tapChip(1); assertEquals("tj@gmail.com", r.text); assertTrue("finished: nothing more to offer", r.view.candidatesForTest().isEmpty())
+    }
+
+    @Test fun theDomainsNarrowWhileTheDomainIsTyped() {
+        val r = Rig(inputType = emailType); r.typeKeys("tj@pr")
+        assertEquals(listOf("proton.me", "protonmail.com"), r.view.candidatesForTest()); r.tapChip(0); assertEquals("tj@proton.me", r.text)
+    }
+
+    @Test fun theDomainsThePersonUsesComeFirstAndAPickedAddressIsRemembered() {
+        val r = Rig(inputType = emailType); r.host.emails.learn("me@proton.me"); r.host.emails.learn("me@proton.me"); r.presenter.startInput(r.info)
+        r.typeKeys("tj@"); assertEquals(listOf("proton.me", "outlook.com", "gmail.com"), r.view.candidatesForTest())
+        r.tapChip(1); assertEquals("tj@outlook.com", r.text); assertTrue("the picked address is in the book now", "tj@outlook.com" in r.host.emails.addresses())
+    }
+
+    @Test fun anAddressTypedInAnOrdinaryTextBoxGetsItsDomainsToo() {
+        val r = Rig(suggest = true); r.typeKeys("mail me at tj@")
+        assertEquals(listOf("outlook.com", "gmail.com", "proton.me"), r.view.candidatesForTest())
+        r.tapChip(0); assertEquals("mail me at tj@outlook.com", r.text)
+    }
+
+    @Test fun anAtMentionInAnOrdinaryBoxGetsNoDomainsAndNeitherDoesPlainTyping() {
+        val r = Rig(suggest = true); r.typeKeys("hi @bo"); assertTrue(r.view.candidatesForTest().none { it.contains(".com") || it.endsWith(".me") })
+        val q = Rig(suggest = true); q.typeKeys("hello wor"); assertTrue(q.view.candidatesForTest().none { it.contains(".com") })
+    }
+
+    @Test fun withTheSwitchOffNoDomainsAreOffered() {
+        val r = Rig(inputType = emailType, extra = { it.putBoolean(Prefs.EMAIL_SUGGEST, false) }); r.typeKeys("tj@"); assertTrue(r.view.candidatesForTest().isEmpty())
+        val t = Rig(suggest = true, extra = { it.putBoolean(Prefs.EMAIL_SUGGEST, false) }); t.typeKeys("tj@"); assertTrue(t.view.candidatesForTest().none { it.endsWith(".com") })
+    }
+
+    @Test fun anAddressTypedInTheLoginBoxIsLearnedWhenTheFocusMovesOnWithoutTheBoxBeingFinished() {
+        val r = Rig(inputType = emailType); r.typeKeys("me@x.com")
+        assertTrue("the box is still open", r.host.emails.isEmpty)
+        r.presenter.startInput(passwordInfo(), restarting = true)                    // a login page: the next box (the password) takes the focus, the old one is never "finished"
+        assertEquals(listOf("me@x.com"), r.host.emails.addresses())
+    }
+
+    @Test fun anAddressTypedInAPlainTextBoxIsLearnedWhenTheBoxIsLeft() {
+        val r = Rig(suggest = true); r.typeKeys("tj@outlook.com"); r.presenter.finishInput()
+        assertEquals(listOf("tj@outlook.com"), r.host.emails.addresses())
+    }
+
+    @Test fun aTextBoxThatSaysEmailInItsHintIsAnEmailBoxAndGetsTheSavedAddresses() {
+        val r = Rig(); r.host.emails.learn("john@gmail.com"); r.host.emails.learn("john@gmail.com")
+        r.presenter.startInput(EditorInfo().apply { inputType = InputType.TYPE_CLASS_TEXT; hintText = "Email address" })
+        assertEquals(listOf("john@gmail.com"), r.view.candidatesForTest())
+        r.presenter.startInput(EditorInfo().apply { inputType = InputType.TYPE_CLASS_TEXT; hintText = "Your name" })
+        assertTrue("another hint: no addresses", r.view.candidatesForTest().none { it.contains("@") })
+    }
+
+    // ---- R34a2 (owner 2026-11-26): the glide practice screen gets the glides of ITS box, and nothing else
+
+    @Test fun aGlideInThePracticeBoxIsHandedOverWithItsPathAndTheWordsOffered() {
+        val r = Rig(); val got = ArrayList<List<String>>(); var points = 0; var withKeys = false; var lastTime = -1f
+        Practice.sink = Practice.Sink { _, _, ts, n, offered, keys, w, h, _, _ -> got.add(offered); points = n; withKeys = keys != null && w > 0 && h > 0; lastTime = ts[n - 1]; null }
+        try {
+            r.info.privateImeOptions = Practice.OPTION; r.presenter.startInput(r.info)
+            r.glide("hello")
+            assertEquals(1, got.size); assertEquals("hello", got[0][0]); assertTrue("a few touch points", points > 3); assertTrue("the key positions and the view size come with it", withKeys); assertTrue("times are milliseconds from the first touch", lastTime >= 0f)
+        } finally { Practice.sink = null }
+    }
+
+    @Test fun aGlideInAnyOtherBoxOrWithTheScreenClosedIsNeverHandedOver() {
+        var calls = 0
+        Practice.sink = Practice.Sink { _, _, _, _, _, _, _, _, _, _ -> calls++; null }
+        try {
+            val r = Rig(); r.glide("hello"); r.glide("world")
+            assertEquals("an ordinary box", 0, calls)
+            r.info.privateImeOptions = "app.other=1,app.swoop.practice=2"; r.presenter.startInput(r.info); r.glide("there")
+            assertEquals("a look-alike option", 0, calls)
+        } finally { Practice.sink = null }
+        val r2 = Rig(); r2.info.privateImeOptions = Practice.OPTION; r2.presenter.startInput(r2.info); r2.glide("hello")
+        assertEquals("the screen is closed: no sink, nothing kept", 0, calls)
+    }
+
+    // ---- R36 (owner 2026-11-26: "make a much longer glide training ... and the keyboard learns how I glide")
+
+    @Test fun aGlideTheTrainingScreenAsksTheKeyboardToLearnTeachesTheHandButNeverTheWords() {
+        val r = Rig(); val seen = ArrayList<Pair<String?, String?>>()
+        Practice.sink = Practice.Sink { _, _, _, _, _, _, _, _, prev, prev2 -> seen.add(prev to prev2); "hello" }
+        try {
+            r.info.privateImeOptions = Practice.OPTION; r.info.imeOptions = r.info.imeOptions or EditorInfo.IME_FLAG_NO_PERSONALIZED_LEARNING; r.presenter.startInput(r.info)
+            r.glide("hello")
+            assertEquals("the screen was asked once and was told which words the keyboard decoded with", 1, seen.size)
+            val line = r.host.engine.stats.line()
+            assertTrue("Diagnostics counts the lesson: $line", line.contains("Glide training taught 1 glides"))
+            assertFalse("a training text is not what the person writes: no word counts, no pairs: $line", line.contains("word pairs from your typing"))
+        } finally { Practice.sink = null }
+    }
+
+    @Test fun aScreenThatOnlyMeasuresTeachesNothing() {
+        val r = Rig()
+        Practice.sink = Practice.Sink { _, _, _, _, _, _, _, _, _, _ -> null }
+        try {
+            r.info.privateImeOptions = Practice.OPTION; r.info.imeOptions = r.info.imeOptions or EditorInfo.IME_FLAG_NO_PERSONALIZED_LEARNING; r.presenter.startInput(r.info)
+            r.glide("hello")
+            assertFalse(r.host.engine.stats.line().contains("Glide training taught"))
+        } finally { Practice.sink = null }
+    }
+
+    @Test fun theWordsBeforeAreWhatTheScreenSeesAsTheContextOfTheGlide() {
+        val r = Rig(); var last: Pair<String?, String?>? = null
+        Practice.sink = Practice.Sink { _, _, _, _, _, _, _, _, prev, prev2 -> last = prev to prev2; null }
+        try {
+            r.info.privateImeOptions = Practice.OPTION; r.presenter.startInput(r.info)
+            r.glide("hello"); r.glide("world")
+            assertEquals("the word before the second glide is the first one", "hello", last?.first)
+        } finally { Practice.sink = null }
+    }
+
+    @Test fun holdingADomainOrAnAddressOnTheStripAsksNothingBecauseItIsNoWordOfTheDictionary() {
+        val r = Rig(inputType = emailType); r.typeKeys("tj@")
+        assertEquals(listOf("outlook.com", "gmail.com", "proton.me"), r.view.candidatesForTest())
+        r.presenter.onCandidateLong("gmail.com"); assertNull("no 'remove this word' question", r.view.confirmWord)
     }
 }

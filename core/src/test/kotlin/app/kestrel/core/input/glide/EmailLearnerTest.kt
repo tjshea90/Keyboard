@@ -69,4 +69,26 @@ class EmailLearnerTest {
         val s = Setup(FieldKind.TEXT); s.typeAll("to: bob@w"); assertEquals("bob@w", s.r.c.addressPrefix())
         assertTrue(s.r.c.pickAddress(5, "bob@work.example")); s.r.sync(); assertEquals("to: bob@work.example", s.r.text)
     }
+
+    // ---- R34b (owner 2026-11-26: "it still isn't recognizing email fields"): in an ordinary box too, when the box is left
+
+    @Test fun anAddressTypedInAnOrdinaryBoxIsLearnedWhenTheBoxIsLeft() {
+        val s = Setup(FieldKind.TEXT); s.typeAll("john@gmail.com")
+        assertTrue("not yet: nothing ended it", s.book.isEmpty); s.l.finishField()
+        assertEquals(listOf("john@gmail.com"), s.book.addresses())
+    }
+
+    @Test fun aSearchBoxCountsTooAndAnAddressBarOrANumberBoxDoesNot() {
+        val q = Setup(FieldKind.SEARCH); q.typeAll("bob@work.example"); q.l.finishField(); assertEquals(listOf("bob@work.example"), q.book.addresses())
+        for (k in listOf(FieldKind.URL, FieldKind.OMNIBOX, FieldKind.NUMBER, FieldKind.PHONE)) { val s = Setup(k); s.typeAll("john@gmail.com"); s.l.finishField(); assertTrue("$k learns no address", s.book.isEmpty) }
+    }
+
+    @Test fun anAtMentionWithNothingBeforeItIsNoAddress() {
+        val s = Setup(FieldKind.TEXT); s.typeAll("hello @bob how are you"); s.l.finishField(); assertTrue(s.book.isEmpty)
+    }
+
+    @Test fun finishingTheBoxTwiceLearnsItOnce() {
+        val s = Setup(FieldKind.TEXT); s.typeAll("john@gmail.com"); s.l.finishField(); s.l.finishField(); assertEquals(1, s.book.suggest("").size)
+        assertEquals("one use only", listOf("john@gmail.com"), s.book.addresses())
+    }
 }
