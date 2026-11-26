@@ -1940,3 +1940,44 @@
 >
 > I'm adding this request to TASKS.md, then going back to the alpha14 build.
 <!-- sha:b6228e3cee69 -->
+
+## 2026-11-26T21:54:03Z
+> Alpha15 is out and has everything from this session (alpha13 and alpha14 are inside it). Install this one:
+>
+> https://github.com/tjshea90/Keyboard/releases/tag/swoop-v0.7.0-alpha15
+>
+> **1. Glide predictions.** I tested the engine on about 5,400 real swipes with phone-sized keys. The first word is right 92–94% of the time, and the right word is in the first three about 97%. Nearly all the misses are twin words one key apart (is/us, in/on, it/or). I tried a much bigger word-pair model built from 490 million words of web text. It did not help gliding and was worse on everyday sentences, so I didn't ship it. Re-balancing the neural check against the language model also gained nothing.
+>
+> What can still help is real glides from your tablet. The new Settings > Help > Glide practice shows 40 words (about 3 minutes). Glide each one, tap Save the file, and attach the file here. It keeps only those glides and nothing else you type.
+>
+> I did not read, decompile or copy any Gboard code or models. This repo is public, so anything taken from Google's closed files would be published to everyone, and I can't verify the permission. Google's published papers and the open network already in your keyboard cover the same ideas.
+>
+> **2. Email fields.** There were three reasons it failed:
+> - An address typed in a login box was thrown away when you tapped the next box.
+> - Only boxes the app marked as email were handled.
+> - A new install knew no addresses.
+>
+> All three are fixed. A box that says "email" in its hint now counts as an email box. Settings > Learning > My e-mail addresses lets you type yours once.
+>
+> **3. Domains after the @.** Typing `name@` now offers outlook.com, gmail.com and proton.me, with your own domains first, then hotmail, yahoo and icloud. One tap finishes the address. It works in email boxes and ordinary text boxes, but not for @mentions.
+>
+> **4. Glide start.** A stray first letter could appear in four ways:
+> - A second finger or palm touching before your glide had moved.
+> - A thumb resting on a key.
+> - A very fast flick.
+> - On big keys, a short flick counted as a tap. On your tablet in landscape, a "tap" could be 4 mm long.
+>
+> All four are fixed.
+>
+> **5. Translation.** It switches itself off when you change app, tab or text box, or when the keyboard goes away, and the strip says so once. It stays on while you keep typing in the same box.
+>
+> **6. Setup-script prompt.** It's in my earlier message above. Nothing has been changed yet; say "do it" and I'll apply it.
+>
+> **What I haven't tested.** None of this has run on your tablet or phone. The automated tests pass, and an Android 10 and an Android 16 emulator typed and glided fine. The two-finger fixes are covered only by the automated tests. The Kestrel browser's copy of the keyboard code is not updated; that repo isn't attached to this session.
+>
+> **Open items**
+> - Install alpha15 and try: translation on then switch apps; glides starting on top-row keys; an address typed in a login box before tapping the password box; typing `tj@`.
+> - Run Glide practice and attach the file.
+> - Still waiting from before: the ave/and check. If "ave" keeps coming, use Settings > Forget what it learned once, then send the "Glide typing:" line from Diagnostics.
+> - Not started: a neural next-word model.
+<!-- sha:4ea927639a79 -->
