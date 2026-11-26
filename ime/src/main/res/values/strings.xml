@@ -37,7 +37,7 @@
     <string name="practice_saved">Saved %1$s in Downloads.</string>
     <string name="practice_save_failed">Could not save the file: %1$s</string>
     <string name="training_title">Glide training</string>
-    <string name="training_intro">A longer Glide practice. You glide whole paragraphs one word at a time, and short lists of words that look alike (the / there, for / or / our ...), each one several times. Glide the highlighted word with this keyboard the way you do when you write; if it types another word, just carry on. About 400 glides, 10 to 20 minutes, and you can stop after any page. Only these glides are kept (the path of your finger and the words the keyboard offered): nothing you type anywhere else.</string>
+    <string name="training_intro">A longer Glide practice. You glide whole paragraphs one word at a time, and short lists of words that look alike (the / there, for / or / our ...), each one several times. Glide the highlighted word with this keyboard exactly the way you do when you really write, at your everyday speed (do not be extra careful: careful glides say little about everyday ones); if it types another word, just carry on. About 400 glides, 10 to 20 minutes, and you can stop after any page. Only these glides are kept (the path of your finger and the words the keyboard offered): nothing you type anywhere else.</string>
     <string name="training_learn_title">The keyboard learns from my glides here</string>
     <string name="training_learn_note">Every glide teaches it where your thumb lands (and, on a phone-sized keyboard, how you draw that word). The words themselves are not counted as your own writing. Switch off to only measure.</string>
     <string name="training_own_title">Words that give you trouble</string>
