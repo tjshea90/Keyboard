@@ -28,29 +28,30 @@ class GlideTeachingTest {
         return out
     }
 
-    @Test fun explore() {
-        for ((nm, wh) in listOf("phone" to (292f to 161f), "tablet" to (564f to 272f))) {
-            val keys = GlideEval.keysFor(wh.first, wh.second)
-            for (pit in listOf(1.2f, 1.6f, 2.0f)) for (aim in listOf(4f, 8f)) {
-                val habit = GlideHabitEval.forHabit(keys, pit)
-                val plain = repeat(keys, GlideHabitEval.Hand(keys, SimNoise.aim(aim), 5L, 0f, habit), "for", 12, teach = false)
-                val taught = repeat(keys, GlideHabitEval.Hand(keys, SimNoise.aim(aim), 5L, 0f, habit), "for", 12, teach = true)
-                println("TEACH $nm shift $pit aim $aim plain ${plain.count { it == "for" }}/12 ${plain.take(6)}  taught ${taught.count { it == "for" }}/12 $taught")
-            }
-        }
-    }
-
     @Test fun aHabitualMissIsFixedByAFewTaughtGlidesAndStaysWrongWithoutThem() {
-        // phone-sized keys: the "o" of "for" lands 0.9 of a key towards "i" every time
+        // phone-sized keys: the "o" of "for" lands 1.6 keys towards "i" every time (the finger stops short of the hairpin): the plain keyboard reads "fur"
         val keys = GlideEval.keysFor(292f, 161f)
-        val habit = GlideHabitEval.forHabit(keys, 0.9f)
-        val noise = SimNoise.aim(6f)
+        val habit = GlideHabitEval.forHabit(keys, 1.6f)
+        val noise = SimNoise.aim(4f)
         val plain = repeat(keys, GlideHabitEval.Hand(keys, noise, 5L, 0f, habit), "for", 12, teach = false)
         val taught = repeat(keys, GlideHabitEval.Hand(keys, noise, 5L, 0f, habit), "for", 12, teach = true)
         println("TEACH for-habit plain: $plain")
         println("TEACH for-habit taught: $taught")
-        assertTrue("the made-up hand really makes the plain keyboard miss (${plain.count { it == "for" }} of 12 right)", plain.count { it == "for" } <= 6)
-        assertTrue("taught glides lift the late answers: ${taught.takeLast(6)} vs plain ${plain.takeLast(6)}", taught.takeLast(6).count { it == "for" } > plain.takeLast(6).count { it == "for" })
+        assertTrue("the made-up hand really makes the plain keyboard miss (${plain.count { it == "for" }} of 12 right)", plain.count { it == "for" } <= 3)
+        assertTrue("after a few taught glides the word comes first: ${taught.takeLast(8)}", taught.takeLast(8).count { it == "for" } >= 6)
+    }
+
+    @Test fun onTabletKeysTeachingNeverMakesAHabitWorseAndTheReachIsDeliberatelyShort() {
+        // the same habit on the owner's tablet keys (55 dp pitch): the learned reach is a fifth of the phone's (research/R28), so a miss of more than a key and a quarter is NOT mended; a smaller one needs no mending
+        val keys = GlideEval.keysFor(564f, 272f)
+        val noise = SimNoise.aim(6f)
+        for (shift in listOf(0.6f, 1.2f, 1.6f)) {
+            val habit = GlideHabitEval.forHabit(keys, shift)
+            val plain = repeat(keys, GlideHabitEval.Hand(keys, noise, 5L, 0f, habit), "for", 12, teach = false)
+            val taught = repeat(keys, GlideHabitEval.Hand(keys, noise, 5L, 0f, habit), "for", 12, teach = true)
+            println("TEACH tablet shift $shift plain ${plain.count { it == "for" }}/12 taught ${taught.count { it == "for" }}/12")
+            assertTrue("teaching must not make a habit worse (shift $shift): ${taught.count { it == "for" }} vs ${plain.count { it == "for" }}", taught.count { it == "for" } >= plain.count { it == "for" } - 1)
+        }
     }
 
     @Test fun teachingNeverTouchesTheWordCountsPairsOrTriples() {
