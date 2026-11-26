@@ -45,6 +45,41 @@ class PracticeEval {
             return Triple(n, first, three)
         }
 
+        /**
+         * R36: what TEACHING would have done with these glides: the same glides in the order they were made, decoded by a keyboard that is taught each glide's word after it is decoded ([GlideTeaching], all lessons, as the
+         * Glide training screen does), against one that learns nothing. Reports first-choice rates per quarter, the thumb habit and the touch plane that were learned, and the words whose answer changed either way.
+         * With a file of distinct words only the thumb lessons can carry over to the next glide; a training file repeats words and the shape lessons show too.
+         */
+        fun replay(parsed: GlidePractice.Parsed, lex: BinaryLexicon, say: (String) -> Unit, parts: GlideTeaching.Parts = GlideTeaching.Parts()): Pair<Int, Int> {
+            val keys = parsed.keys
+            val cases = parsed.entries.filter { it.xs.size >= 2 }
+            if (cases.isEmpty()) return 0 to 0
+            val params = GlideParams.forPitchDp(keys.pitchDp)
+            val learned = GlideDecoder(keys, params); val plain = GlideDecoder(keys, params)
+            val model = PersonalModel(); learned.personal = model
+            val q = 4
+            val seenQ = IntArray(q); val hitL = IntArray(q); val hitP = IntArray(q)
+            val gained = ArrayList<String>(); val lost = ArrayList<String>()
+            for ((i, c) in cases.withIndex()) {
+                val b = (i * q / cases.size).coerceAtMost(q - 1)
+                val l = learned.decode(c.xs, c.ys, c.xs.size, listOf(lex), c.prev, 5, c.prev2)
+                val pl = plain.decode(c.xs, c.ys, c.xs.size, listOf(lex), c.prev, 5, c.prev2)
+                val lw = l.firstOrNull()?.text; val pw = pl.firstOrNull()?.text
+                seenQ[b]++; if (lw == c.word) hitL[b]++; if (pw == c.word) hitP[b]++
+                if (lw == c.word && pw != c.word) gained.add("${c.word}(was $pw)") else if (lw != c.word && pw == c.word) lost.add("${c.word}(now $lw)")
+                GlideTeaching.teach(learned, lex, lex.idOf(c.word), model, keys, c.word, lw, learned.lastPrint, parts)
+            }
+            val n = seenQ.sum(); val a = hitL.sum(); val b = hitP.sum()
+            say("PRACTICE replay with teaching: first %d / %d (%.1f %%) against %d / %d (%.1f %%) for a keyboard that learns nothing; by quarter taught %s plain %s".format(a, n, 100.0 * a / n, b, n, 100.0 * b / n,
+                (0 until q).joinToString(" ") { "%.0f".format(100.0 * hitL[it] / seenQ[it].coerceAtLeast(1)) }, (0 until q).joinToString(" ") { "%.0f".format(100.0 * hitP[it] / seenQ[it].coerceAtLeast(1)) }))
+            val o = FloatArray(2); var plane = 0f
+            for (u in floatArrayOf(0f, 1f)) for (v in floatArrayOf(0f, 1f)) { learned.field.at(u, v, o); plane = Math.max(plane, Math.hypot(o[0].toDouble(), o[1].toDouble()).toFloat()) }
+            say("PRACTICE replay: thumb habit learned x %.2f y %.2f pitches (%.1f, %.1f dp), touch plane up to %.1f dp, %d shapes of %d words, %d corrections".format(learned.biasX, learned.biasY, learned.biasX * keys.pitchDp, learned.biasY * keys.pitchDp, plane * keys.pitchDp, model.patterns.patternCount, model.patterns.wordCount, model.confusionCount))
+            if (gained.isNotEmpty()) say("PRACTICE replay: words the teaching mended: ${gained.joinToString(", ")}")
+            if (lost.isNotEmpty()) say("PRACTICE replay: words the teaching spoiled: ${lost.joinToString(", ")}")
+            return a to b
+        }
+
         /** Prints what the keyboard did when the glides were made, what the shipped decoder (alone and with the network) does with them now, and, with [sweep], how the guessed big-key values change that. Returns (glides, first right, first three) of the hybrid (or the decoder alone without a network). */
         fun report(parsed: GlidePractice.Parsed, lex: BinaryLexicon, net: ShapeNet?, sweep: Boolean, say: (String) -> Unit): Triple<Int, Int, Int> {
             val keys = parsed.keys
@@ -69,6 +104,7 @@ class PracticeEval {
                     say("PRACTICE   shapeW %.1f visitCap %.0f lmMin %.2f: alone %.1f / %.1f %%, with network %.1f / %.1f %%".format(shapeW, visitCap, lmMin, 100.0 * a.second / a.first.coerceAtLeast(1), 100.0 * a.third / a.first.coerceAtLeast(1), 100.0 * h.second / h.first.coerceAtLeast(1), 100.0 * h.third / h.first.coerceAtLeast(1)))
                 }
             }
+            replay(parsed, lex, say)
             return result
         }
     }
