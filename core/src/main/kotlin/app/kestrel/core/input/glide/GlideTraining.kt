@@ -97,22 +97,6 @@ class GlideTraining(
         return p.tokens.subList(from, s.token).joinToString(" ") { it.shown } + " "
     }
 
-    /** The two words the keyboard will decode the next glide with (what [boxText] ends in), for the file: (word before the word before, word before); null where there is none (the start of a sentence or a drill). */
-    fun contextWords(): Pair<String?, String?> {
-        val s = slot ?: return null to null
-        val p = pageList[s.page]
-        if (p.kind != Kind.TEXT) return null to null
-        var a: String? = null; var b: String? = null
-        var i = s.token - 1
-        while (i >= 0 && b == null) { val t = p.tokens[i]; if (t.word == null && !t.shown.any { it.isLetter() }) break; if (t.word != null) b = t.word; i--; if (t.shown.last() in ".!?") { break } }
-        if (b == null) return null to null
-        // (a sentence mark in the word before ends the sentence: nothing before it counts)
-        if (pageList[s.page].tokens[s.token - 1].shown.last() in ".!?") return null to null
-        var j = i
-        while (j >= 0 && a == null) { val t = p.tokens[j]; if (t.word != null) a = t.word; if (t.shown.last() in ".!?") break; j-- }
-        return a to b
-    }
-
     /**
      * The glide of the current word: [n] points; [got] what the keyboard offered. [prev] and [prev2] are the words it was decoded with. Marks the token, moves on, and says whether the page is now finished (the
      * caller shows its score and waits for [continueNext]). Returns the word that was asked for (to teach), or null when nothing was asked for.
