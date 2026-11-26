@@ -80,6 +80,65 @@ class PracticeEval {
             return a to b
         }
 
+        /**
+         * R36: a GLIDE TRAINING file (format 2) decoded with the words that were before every glide, as the keyboard saw them: first / first three / first five for all glides, for running text against the look-alike
+         * drills, by word length and by speed, how much the words before help, and the misses with the rank of the right word (not in the first five = the path does not say it; in the five but not first = the order /
+         * the language decides). A page counts as running text when at least 3 of 10 of its glides had a word before them (the file does not name the kind).
+         */
+        fun trainingReport(parsed: GlidePractice.Parsed, lex: BinaryLexicon, net: ShapeNet?, say: (String) -> Unit) {
+            if (!parsed.training) return
+            val keys = parsed.keys
+            val params = GlideParams.forPitchDp(keys.pitchDp)
+            val dec = GlideDecoder(keys, params)
+            val rescorer = net?.let { ShapeRescorer(it, keys, ShapeRescorer.DEFAULT_WEIGHT, ShapeRescorer.DEFAULT_GATE) }
+            class Row(val e: GlidePractice.Entry, val text: Boolean, val rank: Int, val rankNoCtx: Int, val top: String?, val ms: Float)
+            val textTags = parsed.entries.groupBy { it.tag }.filter { (_, es) -> es.count { it.prev != null } * 10 >= es.size * 3 }.keys
+            fun rankOf(e: GlidePractice.Entry, prev: String?, prev2: String?): Pair<Int, String?> {
+                val cs0 = dec.decode(e.xs, e.ys, e.xs.size, listOf(lex), prev, 40, prev2)
+                val cs = rescorer?.rescore(e.xs, e.ys, e.ts, e.xs.size, cs0)?.candidates ?: cs0
+                val r = cs.indexOfFirst { it.text == e.word }
+                return (if (r < 0) -1 else r + 1) to cs.firstOrNull()?.text
+            }
+            val rows = ArrayList<Row>()
+            for (e in parsed.entries) {
+                if (e.xs.size < 2) continue
+                val (rank, top) = rankOf(e, e.prev, e.prev2)
+                val isText = e.tag in textTags
+                val noCtx = if (isText && (e.prev != null || e.prev2 != null)) rankOf(e, null, null).first else rank
+                rows.add(Row(e, isText, rank, noCtx, top, e.ts.lastOrNull() ?: 0f))
+            }
+            say("TRAINING file: app ${parsed.version}, teaching ${if (parsed.teaching) "on" else "off"}, ${rows.size} glides on ${parsed.entries.map { it.tag }.distinct().size} pages (${textTags.size} of running text), key pitch %.1f dp".format(keys.pitchDp))
+            fun line(label: String, r: List<Row>) {
+                if (r.isEmpty()) return
+                val n = r.size
+                val first = r.count { it.rank == 1 }; val three = r.count { it.rank in 1..3 }; val five = r.count { it.rank in 1..5 }
+                val own = r.count { it.e.got.firstOrNull() == it.e.word }
+                say("TRAINING %-30s n %4d  first %5.1f %%  first three %5.1f %%  first five %5.1f %%  | not in the first five %3d (the path does not say it), in the five but not first %3d (order / language) | the keyboard's own first %5.1f %%".format(
+                    label, n, 100.0 * first / n, 100.0 * three / n, 100.0 * five / n, r.count { it.rank !in 1..5 }, r.count { it.rank in 2..5 }, 100.0 * own / n))
+            }
+            line("all glides", rows)
+            line("running text", rows.filter { it.text })
+            line("look-alike drills / missed words", rows.filter { !it.text })
+            val text = rows.filter { it.text }
+            line("running text, words of 2-3 letters", text.filter { it.e.word.length <= 3 })
+            line("running text, words of 4-5 letters", text.filter { it.e.word.length in 4..5 })
+            line("running text, words of 6+ letters", text.filter { it.e.word.length >= 6 })
+            if (text.size >= 30) {
+                val byMs = text.sortedBy { it.ms }; val t = byMs.size / 3
+                line("running text, fastest third", byMs.take(t)); line("running text, slowest third", byMs.takeLast(t))
+                say("TRAINING glide time of a word in running text: median %.0f ms, fastest third under %.0f ms".format(byMs[byMs.size / 2].ms, byMs[t].ms))
+            }
+            val ctxed = text.filter { it.e.prev != null }
+            if (ctxed.isNotEmpty()) say("TRAINING the word before helps: %d glides had one, first choice with it %.1f %% without it %.1f %%".format(ctxed.size, 100.0 * ctxed.count { it.rank == 1 } / ctxed.size, 100.0 * ctxed.count { it.rankNoCtx == 1 } / ctxed.size))
+            val firstPages = text.map { it.e.tag }.distinct()
+            if (firstPages.size >= 4) {
+                val half = firstPages.size / 2
+                line("running text, first half of pages", text.filter { it.e.tag in firstPages.take(half) }); line("running text, second half of pages", text.filter { it.e.tag in firstPages.drop(half) })
+            }
+            val misses = rows.filter { it.rank != 1 }.groupBy { it.e.word to (it.top ?: "-") }.entries.sortedByDescending { it.value.size }.take(30)
+            say("TRAINING the commonest misses (asked -> typed, how often, rank of the asked word in the keyboard's list, -1 = not in the first 40): " + misses.joinToString("; ") { (k, v) -> "${k.first} -> ${k.second} x${v.size} (rank ${v.map { it.rank }.sorted()[v.size / 2]})" })
+        }
+
         /** Prints what the keyboard did when the glides were made, what the shipped decoder (alone and with the network) does with them now, and, with [sweep], how the guessed big-key values change that. Returns (glides, first right, first three) of the hybrid (or the decoder alone without a network). */
         fun report(parsed: GlidePractice.Parsed, lex: BinaryLexicon, net: ShapeNet?, sweep: Boolean, say: (String) -> Unit): Triple<Int, Int, Int> {
             val keys = parsed.keys
@@ -105,6 +164,7 @@ class PracticeEval {
                 }
             }
             replay(parsed, lex, say)
+            trainingReport(parsed, lex, net, say)
             return result
         }
     }

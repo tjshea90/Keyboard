@@ -27,4 +27,30 @@ class PracticeEvalTest {
         assertTrue("the shipped decoder reads most simulated glides on big keys right (${r.second} of ${r.first})", r.second >= 0.80 * r.first)
         assertTrue(r.third >= r.second)
     }
+
+    @Test fun aTrainingFileOfSimulatedTabletGlidesIsReadWithItsContextAndSplitIntoTextAndDrills() {
+        val keys = GlideEval.keysFor(564f, 272f)
+        val sim = GestureSim(keys, Random(5))
+        val t = GlideTraining()
+        var guard = 0
+        while (!t.done && guard++ < 2000) {
+            if (t.atBreak) { t.continueNext(); continue }
+            val w = t.current ?: break
+            val p = sim.path(w, SimNoise.aim(8f))
+            if (p == null) { t.skip(); continue }
+            val ctx = t.boxText().trim().split(' ').filter { it.isNotEmpty() }.map { it.filter { c -> c.isLetter() }.lowercase() }.filter { it.isNotEmpty() }
+            t.record(p.xs, p.ys, FloatArray(p.xs.size) { it * 12f }, p.xs.size, listOf(w), ctx.lastOrNull(), ctx.getOrNull(ctx.size - 2))
+            if (t.answered >= 120) t.finishNow()
+        }
+        val parsed = GlidePractice.parse(t.serialize(keys, 564, 272, 1f, "test", teaching = false))
+        assertNotNull(parsed); assertTrue(parsed!!.training)
+        val lines = ArrayList<String>()
+        PracticeEval.trainingReport(parsed, GlideEval.loadLexicon(), null) { lines.add(it) }
+        assertTrue("it says what the file is: $lines", lines.any { it.startsWith("TRAINING file:") && it.contains("teaching off") })
+        assertTrue("running text is reported on its own: $lines", lines.any { it.startsWith("TRAINING running text") })
+        assertTrue("the word before is measured: $lines", lines.any { it.contains("the word before helps") })
+        assertTrue("the misses are listed: $lines", lines.any { it.contains("the commonest misses") })
+        val r = PracticeEval.replay(parsed, GlideEval.loadLexicon()) { lines.add(it) }
+        assertTrue("the replay runs on a training file too", r.first > 0)
+    }
 }
