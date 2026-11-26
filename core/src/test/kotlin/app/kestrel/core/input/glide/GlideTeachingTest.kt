@@ -28,6 +28,18 @@ class GlideTeachingTest {
         return out
     }
 
+    @Test fun explore() {
+        for ((nm, wh) in listOf("phone" to (292f to 161f), "tablet" to (564f to 272f))) {
+            val keys = GlideEval.keysFor(wh.first, wh.second)
+            for (pit in listOf(1.2f, 1.6f, 2.0f)) for (aim in listOf(4f, 8f)) {
+                val habit = GlideHabitEval.forHabit(keys, pit)
+                val plain = repeat(keys, GlideHabitEval.Hand(keys, SimNoise.aim(aim), 5L, 0f, habit), "for", 12, teach = false)
+                val taught = repeat(keys, GlideHabitEval.Hand(keys, SimNoise.aim(aim), 5L, 0f, habit), "for", 12, teach = true)
+                println("TEACH $nm shift $pit aim $aim plain ${plain.count { it == "for" }}/12 ${plain.take(6)}  taught ${taught.count { it == "for" }}/12 $taught")
+            }
+        }
+    }
+
     @Test fun aHabitualMissIsFixedByAFewTaughtGlidesAndStaysWrongWithoutThem() {
         // phone-sized keys: the "o" of "for" lands 0.9 of a key towards "i" every time
         val keys = GlideEval.keysFor(292f, 161f)
