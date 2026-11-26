@@ -88,13 +88,13 @@ class GlidePractice(val words: List<String> = WORDS) {
                             cx = FloatArray(26); cy = FloatArray(26)
                             for (k in 0 until 26) { val q = p[k].split(','); cx[k] = q[0].toFloat(); cy[k] = q[1].toFloat() }
                         }
-                        l.startsWith("w ") -> {
+                        l.startsWith("w ") -> try {                                       // (a damaged or cut-off line is skipped, the others stay)
                             val parts = l.substring(2).split(" | ")
-                            if (parts.size != 3) continue
-                            val pts = parts[2].split(';').filter { it.isNotEmpty() }.map { it.split(',') }
-                            if (pts.any { it.size != 3 }) continue
-                            out.add(Entry(parts[0], FloatArray(pts.size) { pts[it][0].toFloat() }, FloatArray(pts.size) { pts[it][1].toFloat() }, FloatArray(pts.size) { pts[it][2].toFloat() }, parts[1].split(',').filter { it.isNotEmpty() }))
-                        }
+                            if (parts.size == 3) {
+                                val pts = parts[2].split(';').filter { it.isNotEmpty() }.map { it.split(',') }
+                                if (pts.all { it.size == 3 }) out.add(Entry(parts[0], FloatArray(pts.size) { pts[it][0].toFloat() }, FloatArray(pts.size) { pts[it][1].toFloat() }, FloatArray(pts.size) { pts[it][2].toFloat() }, parts[1].split(',').filter { it.isNotEmpty() }))
+                            }
+                        } catch (e: NumberFormatException) { }
                     }
                 }
             } catch (e: Exception) { return null }
