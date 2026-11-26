@@ -50,7 +50,7 @@ class PracticeEvalTest {
         assertTrue("running text is reported on its own: $lines", lines.any { it.startsWith("TRAINING running text") })
         assertTrue("the word before is measured: $lines", lines.any { it.contains("the word before helps") })
         assertTrue("the misses are listed: $lines", lines.any { it.contains("the commonest misses") })
-        val r = PracticeEval.replay(parsed, GlideEval.loadLexicon()) { lines.add(it) }
+        val r = PracticeEval.replay(parsed, GlideEval.loadLexicon(), { lines.add(it) })
         assertTrue("the replay runs on a training file too", r.first > 0)
     }
 }
