@@ -1,15 +1,13 @@
-# CHECKPOINT 1086 — read me first, then TASKS.md
+# CHECKPOINT 1087 — read me first, then TASKS.md
 
-**Written:** 2026-11-26T20:32:00Z · **tests:** all 1 fast checks green (gradle suite: see ship.sh)
-**Branch:** `claude/awesome-bell-gmcf0i` · **builds on:** `e2fabad` (this checkpoint is the commit after it)
+**Written:** 2026-11-26T20:34:43Z · **tests:** all 1 fast checks green (gradle suite: see ship.sh)
+**Branch:** `claude/awesome-bell-gmcf0i` · **builds on:** `59b1eb9` (this checkpoint is the commit after it)
 
 ## Just done
-gated swoop-v0.7.0-alpha13 (ime code 24) and pushed it: handoff self-test, unit suites and the versionCode check passed here. NOT yet built - GitHub has not been asked.
+alpha13 (ime code 24, swoop-v0.7.0-alpha13) gated, pushed and android.yml DISPATCHED once on claude/awesome-bell-gmcf0i (full_build true)
 
 ## Do this next
-TRIGGER THE BUILD: mcp__github__actions_run_trigger, method run_workflow, workflow_id android.yml, ref claude/awesome-bell-gmcf0i, inputs {"full_build":"true","note":"R34: translating switches itself off when you leave the box (another app, tab or box, or the keyboard hides); a glide starts at once and no stray first letter is typed when a second finger or a resting thumb touches while you start a glide (a flick with no move events is a glide too); e-mail boxes are recognised by their hint, label or name, addresses you type are learned in every ordinary box and when the focus moves on (login forms), new screen My e-mail addresses, and after the @ the strip offers outlook.com, gmail.com, proton.me and the other popular domains"}.
-When the run is green, confirm the Release shows the APK (mcp__github__get_release_by_tag swoop-v0.7.0-alpha13), then:  bash tools/record-release.sh swoop-v0.7.0-alpha13 "R34: translating switches itself off when you leave the box (another app, tab or box, or the keyboard hides); a glide starts at once and no stray first letter is typed when a second finger or a resting thumb touches while you start a glide (a flick with no move events is a glide too); e-mail boxes are recognised by their hint, label or name, addresses you type are learned in every ordinary box and when the focus moves on (login forms), new screen My e-mail addresses, and after the @ the strip offers outlook.com, gmail.com, proton.me and the other popular domains"
-NEVER ship swoop-v0.7.0-alpha13 twice (check BUILDLOG.md and the Releases first).
+Next: wait for that run (mcp__github__actions_list list_workflow_runs android.yml branch claude/awesome-bell-gmcf0i): when green AND the Release swoop-v0.7.0-alpha13 shows the APK -> bash tools/record-release.sh swoop-v0.7.0-alpha13 "<the identical note given to ship.sh: see ship log / TASKS R34>" and give the owner the Release link. NEVER dispatch alpha13 twice. In parallel R34a: C4 pair candidates en_a/en_b.klx in scratchpad lm/ are being evaluated with java JUnitCore ShapeNetEvalTest (GLIDE_KLX=...), baseline = slice A 87.9/94.7 -> hybrid 92.3/96.0, B 88.8/95.8 -> 92.3/96.9, C 90.6/96.1 -> 94.4/97.8
 
 *(resuming? CLAUDE.md's "FIRST ACTION OF EVERY SESSION" says how; the briefing is tools/resume.sh. Do that first, or autosave may stay off all session.)*
 
@@ -18,6 +16,7 @@ NEVER ship swoop-v0.7.0-alpha13 twice (check BUILDLOG.md and the Releases first)
 
 ## Last ten checkpoints
 ```
+  59b1eb9 ckpt 1086: gated swoop-v0.7.0-alpha13 (ime code 24) and pushed it: handoff self-test, un
   e2fabad ckpt 1085: R34b R34c DONE (e-mail boxes recognised by hint/label, learning in every ordi
   002111e ckpt 1069: R34d DONE in code+tests: KeysView no longer types the first letter when a sec
   d5ce1d3 ckpt 1063: R34e DONE in code+tests: translation switches itself off on a new input sessi
@@ -27,5 +26,4 @@ NEVER ship swoop-v0.7.0-alpha13 twice (check BUILDLOG.md and the Releases first)
   441d4b0 ckpt 1047: gated swoop-v0.7.0-alpha12 (ime code 23) and pushed it: handoff self-test, un
   f9936c8 ckpt 1046: pre-ship: R33: a word on the strip that is spelled like the glided word and f
   a20ef6e ckpt 1036: R33 code: look-alike-fix rule (GlideSession.looksLikeFix + SpellingNear + eng
-  00d6ec0 ckpt 1022: R33 written into TASKS.md (owner: ave still wins over and, tapping and adds i
 ```
