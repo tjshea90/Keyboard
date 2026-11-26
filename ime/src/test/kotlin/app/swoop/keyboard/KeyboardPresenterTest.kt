@@ -821,15 +821,14 @@ class KeyboardPresenterTest {
     private fun passwordInfo() = EditorInfo().apply { inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD }
     private fun tool(r: Rig) = r.presenter.onToolbar(KeysView.TOOL_TRANSLATE)
 
-    @Test fun translatingCanAlwaysBeTurnedOffEvenInABoxWhereItCannotBeTurnedOn() {
+    @Test fun translatingCanAlwaysBeTurnedOffAndOnlyOnInABoxWhereItWorks() {
         val r = Rig(); val msgs = ArrayList<String>(); r.presenter.onTranslateMessage = { msgs.add(it) }
         tool(r); assertTrue("on in an ordinary box", r.view.translateOn)
-        r.presenter.startInput(passwordInfo())                       // the person goes on to a login box: the key still tells the truth ...
-        assertTrue(r.view.translateOn)
-        tool(r)                                                      // ... and ONE tap there turns it off (it used to answer "not available in this box" and stay on)
-        assertFalse("off after one tap in a password box", r.view.translateOn)
-        assertEquals(app.getString(R.string.translate_off), msgs.last())
-        tool(r); assertFalse("it cannot be turned ON there", r.view.translateOn); assertEquals(app.getString(R.string.translate_not_here), msgs.last())
+        tool(r); assertFalse("off after one tap", r.view.translateOn); assertEquals(app.getString(R.string.translate_off), msgs.last())
+        tool(r); assertTrue("on again", r.view.translateOn)
+        r.presenter.startInput(passwordInfo())                       // the person goes on to a login box: R34e, translating switches itself off there
+        assertFalse("off by itself in the login box", r.view.translateOn)
+        tool(r); assertFalse("it cannot be turned ON in a password box", r.view.translateOn); assertEquals(app.getString(R.string.translate_not_here), msgs.last())
         r.presenter.startInput(r.info); assertFalse("and it stays off in the next ordinary box", r.view.translateOn)
         tool(r); assertTrue("on again in an ordinary box", r.view.translateOn)
         tool(r); assertFalse("off again with one tap", r.view.translateOn)
@@ -838,7 +837,7 @@ class KeyboardPresenterTest {
     @Test fun enterNeverTranslatesInAPasswordBoxAndNeverWithTheSettingOff() {
         val r = Rig(); val msgs = ArrayList<String>(); r.presenter.onTranslateMessage = { msgs.add(it) }
         tool(r); assertTrue(r.view.translateOn)
-        // a login box while the toggle is still on: Enter is the normal Enter (digits: they are never "words", so this makes no request even if the guard were missing)
+        // a login box after the toggle was on (R34e: it has switched itself off by now; the guard behind it, "never translate in a password box", stays): Enter is the normal Enter (digits are never "words", so no request either way)
         r.presenter.startInput(passwordInfo()); r.et.setText("123456")
         val before = Engine.inputStats.enters
         r.presenter.onKey(Key.Go)
@@ -860,5 +859,75 @@ class KeyboardPresenterTest {
         assertTrue("a new keys view starts in the real state, not unlit", v2.translateOn)
         tool(r); assertFalse(v2.translateOn)
         val v3 = KeysView(app); r.presenter.view = v3; assertFalse(v3.translateOn)
+    }
+
+    // ---- R34e (2026-11-26): "if i have translation feature on, then switch apps or tabs, automatically turn translation off. It should only stay on if I'm actively using it"
+
+    private fun boxInfo(pkg: String? = "com.example.chat", fieldId: Int = 7, inputType: Int = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_MULTI_LINE, imeOptions: Int = 0, hint: CharSequence? = null) =
+        EditorInfo().apply { packageName = pkg; this.fieldId = fieldId; this.inputType = inputType; this.imeOptions = imeOptions; hintText = hint }
+
+    @Test fun translatingSwitchesItselfOffWhenAnotherAppTakesTheKeyboard() {
+        val r = Rig(); val msgs = ArrayList<String>(); r.presenter.onTranslateMessage = { msgs.add(it) }
+        r.presenter.startInput(boxInfo("com.example.chat"))
+        tool(r); assertTrue(r.view.translateOn)
+        r.presenter.startInput(boxInfo("com.example.mail"))                              // another app: a new input session
+        assertFalse("off in the other app", r.view.translateOn); assertEquals("and the person is told", app.getString(R.string.translate_auto_off), msgs.last())
+        r.presenter.startInput(boxInfo("com.example.chat"))
+        assertFalse("and it does not come back when the first app is used again", r.view.translateOn)
+    }
+
+    @Test fun aNewInputSessionInTheSameBoxIsAlsoOverBecauseTheAppWasLeftInBetween() {
+        val r = Rig(); r.presenter.startInput(boxInfo())
+        tool(r); assertTrue(r.view.translateOn)
+        r.presenter.startInput(boxInfo(), restarting = false)                            // Android starts the box afresh (after another app, a lock screen, Recents)
+        assertFalse(r.view.translateOn)
+    }
+
+    @Test fun translatingStaysOnWhileTheSameBoxKeepsTheKeyboard() {
+        val r = Rig(); r.presenter.startInput(boxInfo())
+        tool(r); assertTrue(r.view.translateOn)
+        r.presenter.startInput(boxInfo(imeOptions = EditorInfo.IME_ACTION_SEND), restarting = true)        // the app restarts the box (after Send, a changed action key): still the same box
+        assertTrue("still on", r.view.translateOn)
+        r.presenter.startInput(boxInfo(inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_CAP_SENTENCES), restarting = true)
+        assertTrue("capital letter flags are no new box", r.view.translateOn)
+    }
+
+    @Test fun translatingSwitchesOffWhenAnotherBoxGetsTheFocusLikeAnotherTab() {
+        val r = Rig(); r.presenter.startInput(boxInfo(fieldId = 7))
+        tool(r); assertTrue(r.view.translateOn)
+        r.presenter.startInput(boxInfo(fieldId = 8), restarting = true)                  // another field of the same app (a tab, the next box)
+        assertFalse(r.view.translateOn)
+        tool(r); assertTrue(r.view.translateOn)
+        r.presenter.startInput(boxInfo(fieldId = 8, hint = "Search"), restarting = true)  // a tab of a browser that keeps one view: the box describes itself differently
+        assertFalse(r.view.translateOn)
+        tool(r); assertTrue(r.view.translateOn)
+        r.presenter.startInput(boxInfo(fieldId = 8, hint = "Search", inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_URI), restarting = true)
+        assertFalse("a different kind of box is another box", r.view.translateOn)
+    }
+
+    @Test fun translatingSwitchesOffWhenTheKeyboardGoesAwayAndStaysOffWhenItComesBack() {
+        val r = Rig(); val msgs = ArrayList<String>(); r.presenter.onTranslateMessage = { msgs.add(it) }
+        r.presenter.startInput(boxInfo())
+        tool(r); assertTrue(r.view.translateOn)
+        r.presenter.inputViewFinished()                                                  // Back, the screen turned off, the browser's tab switcher
+        assertFalse("off the moment the keyboard is gone", r.view.translateOn)
+        r.presenter.startInput(boxInfo(), restarting = true)                             // the same box takes the keyboard again
+        assertFalse("and still off", r.view.translateOn); assertEquals("with a word to say why", app.getString(R.string.translate_auto_off), msgs.last())
+        msgs.clear(); r.presenter.startInput(boxInfo(), restarting = true)
+        assertTrue("the word is said once", msgs.none { it == app.getString(R.string.translate_auto_off) })
+    }
+
+    @Test fun leavingABoxWithTranslatingOffSaysNothing() {
+        val r = Rig(); val msgs = ArrayList<String>(); r.presenter.onTranslateMessage = { msgs.add(it) }
+        r.presenter.startInput(boxInfo()); r.presenter.inputViewFinished(); r.presenter.startInput(boxInfo("com.example.mail"))
+        assertTrue(msgs.none { it == app.getString(R.string.translate_auto_off) })
+        assertFalse(r.view.translateOn)
+    }
+
+    @Test fun translatingTurnedOnAgainInTheNewBoxWorksAsBefore() {
+        val r = Rig(); r.presenter.startInput(boxInfo("com.example.chat")); tool(r)
+        r.presenter.startInput(boxInfo("com.example.mail")); assertFalse(r.view.translateOn)
+        tool(r); assertTrue("one tap turns it on in the new app", r.view.translateOn)
+        r.presenter.startInput(boxInfo("com.example.mail"), restarting = true); assertTrue("and it stays while that box is used", r.view.translateOn)
     }
 }
