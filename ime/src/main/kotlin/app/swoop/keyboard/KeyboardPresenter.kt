@@ -69,6 +69,8 @@ class KeyboardPresenter(
     private var emailShown: List<String> = emptyList()
     /** R34c: what each chip of the address strip shows (a domain only, once the part before the @ is typed) -> the whole address a tap puts in. */
     private var emailLabels: Map<String, String> = emptyMap()
+    /** R34a2: the box is the glide practice screen's (its private option) and the screen is open: every glide in it is handed over, in no other box. */
+    private var practiceBox = false
     private fun saveEmailsIfChanged() { if (emailOn && !safeMode) try { glide.saveEmails() } catch (_: Exception) { } }
     /** Bumped for every request to the engine: an answer for an older one is dropped. */
     private var suggestSeq = 0
@@ -259,6 +261,7 @@ class KeyboardPresenter(
         latest = null; literalShown = null; noFixFor = null; suggestSeq++
         userMoved = false; editWord = null; editRaw = emptyMap()
         emailOn = !safeMode && st.emailSuggestions; emailLearner.reset(); emailShown = emptyList(); emailLabels = emptyMap()
+        practiceBox = !safeMode && Practice.sink != null && Practice.isPracticeBox(info.privateImeOptions)
         flow.leaveField(); translator?.cancel(); translateAllowed = !safeMode && field.kind != FieldKind.PASSWORD && field.kind != FieldKind.OMNIBOX && st.translateEnabled
         if (safeMode || !st.translateEnabled) flow.setOn(false, clock())      // (R24c: the feature switched off in Settings is OFF, not just hidden)
         else flow.tick(clock())                                               // (the inactivity timer may have switched it off meanwhile)
@@ -557,7 +560,11 @@ class KeyboardPresenter(
         if (!glideOn) return
         session.glideLifted()
         val (p2, p1) = session.context()
-        glide.engine.decode(xs, ys, count, p1, p2, ts) { res: GlideResult -> post(Runnable { session.onDecoded(res, p1, p2); view?.setShift(controller.shift) }) }
+        val practice = practiceBox
+        glide.engine.decode(xs, ys, count, p1, p2, ts) { res: GlideResult -> post(Runnable {
+            session.onDecoded(res, p1, p2); view?.setShift(controller.shift)
+            if (practice) Practice.sink?.glide(xs, ys, ts, count, res.candidates.take(3).map { it.text }, view?.glideKeys(), view?.width ?: 0, view?.height ?: 0)     // (R34a2: the prompted word's glide, nothing else)
+        }) }
     }
 
     override fun onCandidate(word: String) {
