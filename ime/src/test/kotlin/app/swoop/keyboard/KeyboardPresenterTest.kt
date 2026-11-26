@@ -992,7 +992,7 @@ class KeyboardPresenterTest {
 
     @Test fun aGlideInThePracticeBoxIsHandedOverWithItsPathAndTheWordsOffered() {
         val r = Rig(); val got = ArrayList<List<String>>(); var points = 0; var withKeys = false; var lastTime = -1f
-        Practice.sink = Practice.Sink { _, _, ts, n, offered, keys, w, h -> got.add(offered); points = n; withKeys = keys != null && w > 0 && h > 0; lastTime = ts[n - 1] }
+        Practice.sink = Practice.Sink { _, _, ts, n, offered, keys, w, h, _, _ -> got.add(offered); points = n; withKeys = keys != null && w > 0 && h > 0; lastTime = ts[n - 1]; null }
         try {
             r.info.privateImeOptions = Practice.OPTION; r.presenter.startInput(r.info)
             r.glide("hello")
@@ -1002,7 +1002,7 @@ class KeyboardPresenterTest {
 
     @Test fun aGlideInAnyOtherBoxOrWithTheScreenClosedIsNeverHandedOver() {
         var calls = 0
-        Practice.sink = Practice.Sink { _, _, _, _, _, _, _, _ -> calls++ }
+        Practice.sink = Practice.Sink { _, _, _, _, _, _, _, _, _, _ -> calls++; null }
         try {
             val r = Rig(); r.glide("hello"); r.glide("world")
             assertEquals("an ordinary box", 0, calls)
@@ -1011,6 +1011,41 @@ class KeyboardPresenterTest {
         } finally { Practice.sink = null }
         val r2 = Rig(); r2.info.privateImeOptions = Practice.OPTION; r2.presenter.startInput(r2.info); r2.glide("hello")
         assertEquals("the screen is closed: no sink, nothing kept", 0, calls)
+    }
+
+    // ---- R36 (owner 2026-11-26: "make a much longer glide training ... and the keyboard learns how I glide")
+
+    @Test fun aGlideTheTrainingScreenAsksTheKeyboardToLearnTeachesTheHandButNeverTheWords() {
+        val r = Rig(); val seen = ArrayList<Pair<String?, String?>>()
+        Practice.sink = Practice.Sink { _, _, _, _, _, _, _, _, prev, prev2 -> seen.add(prev to prev2); "hello" }
+        try {
+            r.info.privateImeOptions = Practice.OPTION; r.info.imeOptions = r.info.imeOptions or EditorInfo.IME_FLAG_NO_PERSONALIZED_LEARNING; r.presenter.startInput(r.info)
+            r.glide("hello")
+            assertEquals("the screen was asked once and was told which words the keyboard decoded with", 1, seen.size)
+            val line = r.host.engine.stats.line()
+            assertTrue("Diagnostics counts the lesson: $line", line.contains("Glide training taught 1 glides"))
+            assertFalse("a training text is not what the person writes: no word counts, no pairs: $line", line.contains("word pairs from your typing"))
+        } finally { Practice.sink = null }
+    }
+
+    @Test fun aScreenThatOnlyMeasuresTeachesNothing() {
+        val r = Rig()
+        Practice.sink = Practice.Sink { _, _, _, _, _, _, _, _, _, _ -> null }
+        try {
+            r.info.privateImeOptions = Practice.OPTION; r.info.imeOptions = r.info.imeOptions or EditorInfo.IME_FLAG_NO_PERSONALIZED_LEARNING; r.presenter.startInput(r.info)
+            r.glide("hello")
+            assertFalse(r.host.engine.stats.line().contains("Glide training taught"))
+        } finally { Practice.sink = null }
+    }
+
+    @Test fun theWordsBeforeAreWhatTheScreenSeesAsTheContextOfTheGlide() {
+        val r = Rig(); var last: Pair<String?, String?>? = null
+        Practice.sink = Practice.Sink { _, _, _, _, _, _, _, _, prev, prev2 -> last = prev to prev2; null }
+        try {
+            r.info.privateImeOptions = Practice.OPTION; r.presenter.startInput(r.info)
+            r.glide("hello"); r.glide("world")
+            assertEquals("the word before the second glide is the first one", "hello", last?.first)
+        } finally { Practice.sink = null }
     }
 
     @Test fun holdingADomainOrAnAddressOnTheStripAsksNothingBecauseItIsNoWordOfTheDictionary() {
