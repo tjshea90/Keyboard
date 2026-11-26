@@ -987,4 +987,29 @@ class KeyboardPresenterTest {
         r.presenter.startInput(EditorInfo().apply { inputType = InputType.TYPE_CLASS_TEXT; hintText = "Your name" })
         assertTrue("another hint: no addresses", r.view.candidatesForTest().none { it.contains("@") })
     }
+
+    // ---- R34a2 (owner 2026-11-26): the glide practice screen gets the glides of ITS box, and nothing else
+
+    @Test fun aGlideInThePracticeBoxIsHandedOverWithItsPathAndTheWordsOffered() {
+        val r = Rig(); val got = ArrayList<List<String>>(); var points = 0; var withKeys = false; var lastTime = -1f
+        Practice.sink = Practice.Sink { _, _, ts, n, offered, keys, w, h -> got.add(offered); points = n; withKeys = keys != null && w > 0 && h > 0; lastTime = ts[n - 1] }
+        try {
+            r.info.privateImeOptions = Practice.OPTION; r.presenter.startInput(r.info)
+            r.glide("hello")
+            assertEquals(1, got.size); assertEquals("hello", got[0][0]); assertTrue("a few touch points", points > 3); assertTrue("the key positions and the view size come with it", withKeys); assertTrue("times run forward from 0", lastTime > 0f)
+        } finally { Practice.sink = null }
+    }
+
+    @Test fun aGlideInAnyOtherBoxOrWithTheScreenClosedIsNeverHandedOver() {
+        var calls = 0
+        Practice.sink = Practice.Sink { _, _, _, _, _, _, _, _ -> calls++ }
+        try {
+            val r = Rig(); r.glide("hello"); r.glide("world")
+            assertEquals("an ordinary box", 0, calls)
+            r.info.privateImeOptions = "app.other=1,app.swoop.practice=2"; r.presenter.startInput(r.info); r.glide("there")
+            assertEquals("a look-alike option", 0, calls)
+        } finally { Practice.sink = null }
+        val r2 = Rig(); r2.info.privateImeOptions = Practice.OPTION; r2.presenter.startInput(r2.info); r2.glide("hello")
+        assertEquals("the screen is closed: no sink, nothing kept", 0, calls)
+    }
 }
