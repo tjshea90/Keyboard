@@ -93,7 +93,9 @@ class TrainingActivity : Activity(), Practice.Sink {
 
     override fun onPause() { if (Practice.sink === this) Practice.sink = null; super.onPause() }
 
+    /** Android 12 and older (the tablet): the back key. Android 13 and newer (the phone) call the callback registered in [onCreate] instead, predictive back included. */
     @Suppress("OVERRIDE_DEPRECATION")
+    @android.annotation.SuppressLint("GestureBackNavigation")
     override fun onBackPressed() { confirmLeave() }
 
     /** Leaving with glides that were not saved asks first (twenty minutes of gliding must not be lost by a slip of the thumb). */
