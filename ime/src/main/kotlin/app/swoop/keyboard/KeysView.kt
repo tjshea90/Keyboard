@@ -992,7 +992,14 @@ class KeysView(context: Context) : View(context) {
         val lim = dp(if (holdAlt != null) GLIDE_START_HELD_DP else GLIDE_START_DP)      // (a long press that already shows its digit is not turned into a glide by a thumb that rolls a little)
         return dx * dx + dy * dy > lim * lim
     }
-    private fun pathPitches(): Float { var len = 0f; for (i in 1 until gn) len += Math.hypot((gx[i] - gx[i - 1]).toDouble(), (gy[i] - gy[i - 1]).toDouble()).toFloat(); return len / pitch() }
+    private fun pathLen(): Float { var len = 0f; for (i in 1 until gn) len += Math.hypot((gx[i] - gx[i - 1]).toDouble(), (gy[i] - gy[i - 1]).toDouble()).toFloat(); return len }
+    /**
+     * R34d: how far (px) a thumb may roll outside the key it went down on and still have pressed it, and how short (px) a stroke has to be to be no glide at all. Both were measured in KEY WIDTHS ([TAP_MARGIN_PITCH], [MIN_GLIDE_PITCHES]),
+     * which grows with the keys: on a landscape tablet 0.45 key widths is 41 dp and a flick of that length typed the letter it began on. A thumb rolls the same few dp on every keyboard (Android's own tap slop is 8 dp), so the
+     * limits are capped in dp ([TAP_MARGIN_MAX_DP], [MIN_GLIDE_MAX_DP]); on phone-sized keys the key-width figure is the smaller one and nothing changes.
+     */
+    private fun tapMargin(): Float = Math.min(pitch() * TAP_MARGIN_PITCH, dp(TAP_MARGIN_MAX_DP))
+    private fun minGlideLen(): Float = Math.min(pitch() * MIN_GLIDE_PITCHES, dp(MIN_GLIDE_MAX_DP))
 
     /**
      * Owner, 2026-11-17: "always glide unless I am clearly only pressing one key". A touch is a tap only when every point of it stayed on the key it went down on (plus a margin of
@@ -1001,9 +1008,9 @@ class KeysView(context: Context) : View(context) {
      */
     private fun stayedOnKey(k: KeySpec?): Boolean {
         if (k == null) return true
-        val b = boxOf(k) ?: return pathPitches() < MIN_GLIDE_PITCHES
-        val m = pitch() * TAP_MARGIN_PITCH
-        for (i in 0 until gn) if (gx[i] < b.left - m || gx[i] > b.right + m || gy[i] < b.top - m || gy[i] > b.bottom + m) return pathPitches() < MIN_GLIDE_PITCHES
+        val b = boxOf(k) ?: return pathLen() < minGlideLen()
+        val m = tapMargin()
+        for (i in 0 until gn) if (gx[i] < b.left - m || gx[i] > b.right + m || gy[i] < b.top - m || gy[i] > b.bottom + m) return pathLen() < minGlideLen()
         return true
     }
 
@@ -1018,7 +1025,7 @@ class KeysView(context: Context) : View(context) {
     private fun maybePreview() {
         val now = SystemClock.uptimeMillis()
         if (now - lastPreviewAt < PREVIEW_MS || gn - lastPreviewN < PREVIEW_POINTS) return
-        if (pathPitches() < MIN_GLIDE_PITCHES) return                      // R28b: a glide now starts at 2.5 dp; a press that only wobbled is not asked about (it would clear the strip's guesses)
+        if (pathLen() < minGlideLen()) return                      // R28b: a glide now starts at 2.5 dp; a press that only wobbled is not asked about (it would clear the strip's guesses)
         lastPreviewAt = now; lastPreviewN = gn
         listener?.onGlideMove(gx, gy, gn)
     }
@@ -1114,6 +1121,9 @@ class KeysView(context: Context) : View(context) {
         const val MIN_GLIDE_PITCHES = 0.45f
         /** A path that never strays further than this (key widths) outside the key it started on is a tap. */
         const val TAP_MARGIN_PITCH = 0.22f
+        /** R34d: ... but never more than this many dp (Android's tap slop is 8 dp), and a stroke shorter than [MIN_GLIDE_PITCHES] key widths is no glide, never more than this many dp. */
+        const val TAP_MARGIN_MAX_DP = 8f
+        const val MIN_GLIDE_MAX_DP = 16f
         const val TRAIL_FADE_MS = 260L
         const val NO_WORD_MS = 1500L
         const val NOTICE_MS = 5000L
