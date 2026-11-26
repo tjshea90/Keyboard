@@ -55,7 +55,7 @@ class TrainingActivityTest {
     @Test fun startingAsksForTheFirstWordOfTheFirstParagraphInAnEmptyBoxThatCarriesThePrivateOption() {
         val a = start()
         val tr = a.trainingForTest!!
-        assertEquals("think", "think".takeIf { tr.current == it } ?: tr.current)           // (the first prompt is the first word with two letters or more)
+        assertEquals("the first prompt is the first word of two letters or more ('I' is typed by hand)", "was", tr.current)
         assertTrue(texts(a).any { it.startsWith("Page 1 of 11") })
         val b = box(a)!!
         assertTrue("the box is the private one: only its glides are handed over", Practice.isPracticeBox(b.privateImeOptions))
@@ -69,7 +69,7 @@ class TrainingActivityTest {
         val first = tr.current!!
         assertEquals("the keyboard is told to learn: it gets the word that was asked for", first, glideRight(a))
         assertEquals(1, tr.answered)
-        assertEquals("the box holds what was written so far (the first word 'I' too)", "I was ", box(a)!!.text.toString().let { if (first == "was") it else it })
+        assertEquals("the box holds what was written so far (the 'I' too)", "I was ", box(a)!!.text.toString())
         glideRight(a)
         assertEquals("I was thinking ", box(a)!!.text.toString())
         assertEquals("the cursor stands at the end", box(a)!!.text.length, box(a)!!.selectionStart)
