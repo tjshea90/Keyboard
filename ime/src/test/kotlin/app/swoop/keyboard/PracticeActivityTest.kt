@@ -5,7 +5,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.EditText
 import android.widget.TextView
-import app.kestrel.core.input.glide.GlideEval
+import app.kestrel.core.input.glide.GlideKeys
 import app.kestrel.core.input.glide.GlidePractice
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
@@ -26,7 +26,7 @@ class PracticeActivityTest {
     private val app: Application get() = RuntimeEnvironment.getApplication()
     private fun all(v: View, out: MutableList<View> = ArrayList()): MutableList<View> { out.add(v); if (v is ViewGroup) for (i in 0 until v.childCount) all(v.getChildAt(i), out); return out }
     private fun texts(a: PracticeActivity) = all(a.window.decorView).filterIsInstance<TextView>().filter { it !is EditText }.map { it.text.toString() }
-    private val keys = GlideEval.keysFor(564f, 272f)
+    private val keys = GlideKeys(FloatArray(26) { 30f + it * 20f }, FloatArray(26) { 60f + (it % 3) * 40f }, 30f, 26f, 36f)
     private fun glideOf(a: PracticeActivity, offered: List<String>) = a.glide(floatArrayOf(10f, 20f, 30f, 40f), floatArrayOf(5f, 6f, 7f, 8f), floatArrayOf(0f, 16f, 32f, 48f), 4, offered, keys, 1128, 520)
 
     @Test fun theScreenOpensTheSinkWhileItIsShownAndClosesItWhenItGoesAway() {
