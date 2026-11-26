@@ -167,6 +167,7 @@ class SetupActivity : Activity() {
         val help = u.card()
         with(u) {
             help.row(actionRow("Go back to my previous keyboard", "Opens Android's keyboard picker. Your old keyboard stays installed.") { chooseKeyboard() })
+            help.row(actionRow("Glide practice", "Glide 40 words that are shown to you, then save one file and attach it to the chat. Real glides from your tablet are what the keyboard can be tuned on. Only those glides are kept.") { startActivity(Intent(this@SetupActivity, PracticeActivity::class.java)) })
             help.row(actionRow("Diagnostics", "Numbers only, nothing you typed. Copy them into the chat when something is wrong.") { startActivity(Intent(this@SetupActivity, DiagnosticsActivity::class.java)) })
             help.row(actionRow("Reset settings", "Puts every switch on this screen back as it was at install. What the keyboard learned stays.", danger = true) {
                 AlertDialog.Builder(this@SetupActivity).setTitle("Reset settings?").setMessage("Every switch goes back to its install setting. Learned words are kept.")

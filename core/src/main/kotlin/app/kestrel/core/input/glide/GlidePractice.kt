@@ -31,6 +31,9 @@ class GlidePractice(val words: List<String> = WORDS) {
     /** The person skipped the current word (nothing is kept for it). */
     fun skip() { if (!done) index++ }
 
+    /** The person stops early: what was answered so far is the result. */
+    fun finishNow() { index = words.size }
+
     /** How many answered prompts the keyboard put first / among its first three. */
     fun firstRight(): Int = items.count { it.got.firstOrNull() == it.word }
     fun inThree(): Int = items.count { it.word in it.got }

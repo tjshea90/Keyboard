@@ -44,6 +44,12 @@
             android:label="@string/dict_title" />
 
         <activity
+            android:name=".PracticeActivity"
+            android:exported="false"
+            android:windowSoftInputMode="stateVisible|adjustResize"
+            android:label="@string/practice_title" />
+
+        <activity
             android:name=".EmailsActivity"
             android:exported="false"
             android:label="@string/emails_title" />
