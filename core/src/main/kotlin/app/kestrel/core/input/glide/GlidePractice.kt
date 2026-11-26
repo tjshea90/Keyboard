@@ -107,9 +107,11 @@ class GlidePractice(prompts: List<String> = WORDS) {
                         }
                         l.startsWith("w ") -> try {                                       // (a damaged or cut-off line is skipped, the others stay)
                             val parts = l.substring(2).split(" | ")
-                            if (parts.size == 3) {
+                            if (parts.size == 3 || parts.size == 4) {
                                 val pts = parts[2].split(';').filter { it.isNotEmpty() }.map { it.split(',') }
-                                if (pts.all { it.size == 3 }) out.add(Entry(parts[0], FloatArray(pts.size) { pts[it][0].toFloat() }, FloatArray(pts.size) { pts[it][1].toFloat() }, FloatArray(pts.size) { pts[it][2].toFloat() }, parts[1].split(',').filter { it.isNotEmpty() }))
+                                val x = if (parts.size == 4) parts[3].trim().split(' ') else emptyList()      // R36: "<page tag> <word before the word before> <word before>", "-" = none
+                                if (pts.all { it.size == 3 } && (parts.size == 3 || x.size == 3)) out.add(Entry(parts[0], FloatArray(pts.size) { pts[it][0].toFloat() }, FloatArray(pts.size) { pts[it][1].toFloat() }, FloatArray(pts.size) { pts[it][2].toFloat() }, parts[1].split(',').filter { it.isNotEmpty() },
+                                    prev = x.getOrNull(2)?.takeIf { it != "-" }, prev2 = x.getOrNull(1)?.takeIf { it != "-" }, tag = x.getOrNull(0)?.takeIf { it != "-" } ?: ""))
                             }
                         } catch (e: NumberFormatException) { }
                     }
@@ -118,7 +120,7 @@ class GlidePractice(prompts: List<String> = WORDS) {
             val x = cx ?: return null; val y = cy ?: return null
             if (keyW <= 0f || keyH <= 0f || pitch <= 0f || viewW <= 0 || viewH <= 0) return null
             val keys = GlideKeys(x, y, pitch, keyW, keyH).also { it.pitchDp = pitch / density.coerceAtLeast(0.1f) }
-            return Parsed(keys, viewW, viewH, density, version, out)
+            return Parsed(keys, viewW, viewH, density, version, out, training, teaching)
         }
 
         /**

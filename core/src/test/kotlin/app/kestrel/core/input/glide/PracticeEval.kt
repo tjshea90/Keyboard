@@ -23,14 +23,14 @@ class PracticeEval {
     }
 
     companion object {
-        private class Case(val word: String, val xs: FloatArray, val ys: FloatArray, val ts: FloatArray, val kept: List<String>)
+        private class Case(val word: String, val xs: FloatArray, val ys: FloatArray, val ts: FloatArray, val kept: List<String>, val prev: String? = null, val prev2: String? = null)
 
         private fun run(label: String, keys: GlideKeys, cases: List<Case>, lex: BinaryLexicon, params: GlideParams, net: ShapeNet?, w: Float, gate: Float, say: ((String) -> Unit)?): Triple<Int, Int, Int> {
             val dec = GlideDecoder(keys, params)
             val rescorer = net?.let { ShapeRescorer(it, keys, w, gate) }
             var first = 0; var three = 0; var n = 0
             for (c in cases) {
-                val cs0 = dec.decode(c.xs, c.ys, c.xs.size, listOf(lex), null, 40)
+                val cs0 = dec.decode(c.xs, c.ys, c.xs.size, listOf(lex), c.prev, 40, c.prev2)
                 n++
                 if (cs0.isEmpty()) { say?.invoke("PRACTICE $label miss: '${c.word}' -> nothing"); continue }
                 val cs = rescorer?.rescore(c.xs, c.ys, c.ts, c.xs.size, cs0)?.candidates ?: cs0
@@ -83,7 +83,7 @@ class PracticeEval {
         /** Prints what the keyboard did when the glides were made, what the shipped decoder (alone and with the network) does with them now, and, with [sweep], how the guessed big-key values change that. Returns (glides, first right, first three) of the hybrid (or the decoder alone without a network). */
         fun report(parsed: GlidePractice.Parsed, lex: BinaryLexicon, net: ShapeNet?, sweep: Boolean, say: (String) -> Unit): Triple<Int, Int, Int> {
             val keys = parsed.keys
-            val cases = parsed.entries.filter { it.xs.size >= 2 }.map { Case(it.word, it.xs, it.ys, it.ts, it.got) }
+            val cases = parsed.entries.filter { it.xs.size >= 2 }.map { Case(it.word, it.xs, it.ys, it.ts, it.got, it.prev, it.prev2) }
             say("PRACTICE file: app ${parsed.version}, view ${parsed.viewW} x ${parsed.viewH} px at ${parsed.density}, key pitch %.1f dp (key %.1f x %.1f px), ${cases.size} glides".format(keys.pitchDp, keys.keyW, keys.keyH))
             val gotFirst = cases.count { it.kept.firstOrNull() == it.word }; val gotThree = cases.count { it.word in it.kept }
             say("PRACTICE the keyboard's own answers when they were made: first %d / %d (%.1f %%), in the first three %d (%.1f %%)".format(gotFirst, cases.size, 100.0 * gotFirst / cases.size.coerceAtLeast(1), gotThree, 100.0 * gotThree / cases.size.coerceAtLeast(1)))
