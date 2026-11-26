@@ -1981,3 +1981,20 @@
 > - Still waiting from before: the ave/and check. If "ave" keeps coming, use Settings > Forget what it learned once, then send the "Glide typing:" line from Diagnostics.
 > - Not started: a neural next-word model.
 <!-- sha:4ea927639a79 -->
+
+## 2026-11-26T22:00:19Z
+> A neural next-word model is a small program that has read a huge amount of text and learned to guess the next word from the words before it.
+>
+> Your keyboard guesses the next word with a big table: "after *thank*, people usually write *you*", plus your own habits. That table only knows pairs it has seen. A neural model has no table. It has a trained feel for English, stored as a few million numbers. So it can make a sensible guess after a phrase it has never seen exactly, and it can use more of the sentence than the last word. That is what makes Gboard's suggestions feel smart. Google says its model is about 1.4 MB.
+>
+> For you it would mostly improve the suggestion box after a word. It would probably not fix many glide mistakes. When I gave the glide reader much richer word-pair information, glide accuracy didn't improve.
+>
+> It's hard to build well, for three reasons:
+> - It has to run on your tablet's slow processor every time you type a word.
+> - It needs training on lots of everyday chat-style text. The web text I tried was the wrong style and made suggestions slightly worse.
+> - Training it here, without a graphics chip, would be slow.
+>
+> I haven't started it. I'd do the Glide practice first, since that goes after the glide mistakes you complained about. If you want the suggestion box improved anyway, say so and I'll try a small version and measure it before shipping.
+>
+> Still open from before: install alpha15 and run Glide practice.
+<!-- sha:4a94df7da94e -->
