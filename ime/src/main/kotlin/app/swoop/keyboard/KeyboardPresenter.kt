@@ -258,7 +258,7 @@ class KeyboardPresenter(
         controller.caseForm = { w, prev -> if (properOn) glide.engine.caseFormOf(w, prev) else null }
         latest = null; literalShown = null; noFixFor = null; suggestSeq++
         userMoved = false; editWord = null; editRaw = emptyMap()
-        emailOn = !safeMode && st.emailSuggestions; emailLearner.reset(); emailShown = emptyList()
+        emailOn = !safeMode && st.emailSuggestions; emailLearner.reset(); emailShown = emptyList(); emailLabels = emptyMap()
         flow.leaveField(); translator?.cancel(); translateAllowed = !safeMode && field.kind != FieldKind.PASSWORD && field.kind != FieldKind.OMNIBOX && st.translateEnabled
         if (safeMode || !st.translateEnabled) flow.setOn(false, clock())      // (R24c: the feature switched off in Settings is OFF, not just hidden)
         else flow.tick(clock())                                               // (the inactivity timer may have switched it off meanwhile)
@@ -421,7 +421,7 @@ class KeyboardPresenter(
         val n = controller.addressPrefix().length
         session.settle(); learner.settle()
         if (controller.pickAddress(n, address)) { emailLearner.picked(address); saveEmailsIfChanged() }
-        emailShown = emptyList()
+        emailShown = emptyList(); emailLabels = emptyMap()
         view?.setShift(controller.shift)
         refreshSuggestions()
     }
