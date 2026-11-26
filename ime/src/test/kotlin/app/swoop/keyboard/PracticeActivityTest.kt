@@ -33,7 +33,7 @@ class PracticeActivityTest {
         assertNotNull("a row with a click listener for '$title'", v); v!!.performClick()
     }
     private val keys = GlideKeys(FloatArray(26) { 30f + it * 20f }, FloatArray(26) { 60f + (it % 3) * 40f }, 30f, 26f, 36f)
-    private fun glideOf(a: PracticeActivity, offered: List<String>) = a.glide(floatArrayOf(10f, 20f, 30f, 40f), floatArrayOf(5f, 6f, 7f, 8f), floatArrayOf(0f, 16f, 32f, 48f), 4, offered, keys, 1128, 520)
+    private fun glideOf(a: PracticeActivity, offered: List<String>) = a.glide(floatArrayOf(10f, 20f, 30f, 40f), floatArrayOf(5f, 6f, 7f, 8f), floatArrayOf(0f, 16f, 32f, 48f), 4, offered, keys, 1128, 520, null, null)
 
     @Test fun theScreenOpensTheSinkWhileItIsShownAndClosesItWhenItGoesAway() {
         val c = Robolectric.buildActivity(PracticeActivity::class.java).setup()
