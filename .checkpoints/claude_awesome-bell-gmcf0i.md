@@ -1,13 +1,13 @@
-# CHECKPOINT 1174 — read me first, then TASKS.md
+# CHECKPOINT 1178 — read me first, then TASKS.md
 
-**Written:** 2026-11-26T22:52:57Z · **tests:** all 1 fast checks green (gradle suite: see ship.sh)
-**Branch:** `claude/awesome-bell-gmcf0i` · **builds on:** `3b001d5` (this checkpoint is the commit after it)
+**Written:** 2026-11-26T22:55:38Z · **tests:** all 1 fast checks green (gradle suite: see ship.sh)
+**Branch:** `claude/awesome-bell-gmcf0i` · **builds on:** `afdd139` (this checkpoint is the commit after it)
 
 ## Just done
-alpha16 (ime code 27, swoop-v0.7.0-alpha16) gated and pushed; android.yml DISPATCHED ONCE on claude/awesome-bell-gmcf0i (full_build true); R36 docs + TASKS written; lint green; core 100 % + ime 361 tests green
+lab: PracticeEval.trainingReport (format-2 file decoded WITH the recorded words before; running text vs drills, word length, speed, the word before helps?, misses with rank: path vs order/language) + test; alpha16 build run 45907515000 + emu-smoke API 29 and 36 dispatched, waiting
 
 ## Do this next
-next: WAIT for the android.yml run (mcp__github__actions_list list_workflow_runs android.yml branch claude/awesome-bell-gmcf0i; never dispatch again); when green and the Release swoop-v0.7.0-alpha16 shows the APK: bash tools/record-release.sh swoop-v0.7.0-alpha16 'Glide training (Settings > Help): glide 8 everyday paragraphs and look-alike word lists several times, the keyboard learns where your thumb lands, one file to attach; boxes that learn nothing no longer move the thumb habit'; tick R36-4 with tools/claim.sh R36 --done; optional emu-smoke.yml dispatch on the tag (API 29); then final plain answer to the owner (practice file result, would-it-work, what was built, what was NOT run on tablet, open items R30f R32f R33f R34f R36f)
+next: WAIT for android.yml run 45907515000 (never dispatch again); when green + Release swoop-v0.7.0-alpha16 has the APK: bash tools/record-release.sh swoop-v0.7.0-alpha16 'Glide training (Settings > Help): glide 8 everyday paragraphs and look-alike word lists several times, the keyboard learns where your thumb lands, one file to attach; boxes that learn nothing no longer move the thumb habit'; check the two emu-smoke runs (API 29 + 36; API 36 has a boot-time launcher ANR flake: download the screenshot artifact before calling it a failure); tick R36-4 (bash tools/claim.sh R36 --done 'evidence'); final plain answer
 
 *(resuming? CLAUDE.md's "FIRST ACTION OF EVERY SESSION" says how; the briefing is tools/resume.sh. Do that first, or autosave may stay off all session.)*
 
@@ -16,6 +16,7 @@ next: WAIT for the android.yml run (mcp__github__actions_list list_workflow_runs
 
 ## Last ten checkpoints
 ```
+  781f3b8 ckpt 1174: alpha16 (ime code 27, swoop-v0.7.0-alpha16) gated and pushed; android.yml DIS
   3b001d5 ckpt 1173: gated swoop-v0.7.0-alpha16 (ime code 27) and pushed it: handoff self-test, un
   047ef15 ckpt 1172: pre-ship: Glide training (Settings > Help): glide 8 everyday paragraphs and l
   369bf17 ckpt 1167: R36 lab result: TrainingLabTest (made-up hand, real script, hold-out of unask
@@ -25,5 +26,7 @@ next: WAIT for the android.yml run (mcp__github__actions_list list_workflow_runs
   426fe05 ckpt 1130: Android 16 emulator smoke PASSED on the released alpha15 tag (run 45900554490
   ea77773 ckpt 1128: R34 DONE: alpha13, alpha14, alpha15 released and recorded (runs 45892015689, 
   72e6f77 ckpt 1125: alpha14 RELEASED and recorded (run 45895826479 green); emulator smoke API 29 
-  d3e7cf9 ckpt 1124: gated swoop-v0.7.0-alpha15 (ime code 26) and pushed it: handoff self-test, un
 ```
+
+(3 automatic checkpoint(s) since the last deliberate one — the
+session was still mid-step. `git diff` against it shows what changed.)
