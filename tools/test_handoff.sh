@@ -154,6 +154,11 @@ mkdir -p core/src/test/resources; printf 'KESTREL-KEYBOARD-LEARNING 1\nend 0\n' 
 git add -A >/dev/null 2>&1
 check "secretscan allows a learning-export fixture under src/test" 'bash tools/secretscan.sh'
 git reset -q; rm -rf core
+# R34a2: a glide practice file (the owner's real swipes) is private too
+printf 'SWOOP-GLIDE-PRACTICE 1\napp 0.7\nw the | the | 1,2,0\n' > pasted-practice.txt
+git add -A >/dev/null 2>&1
+check "secretscan blocks a pasted glide practice file" '! bash tools/secretscan.sh'
+git reset -q; rm -f pasted-practice.txt
 
 # ---------------------------------------------------------------- autosave + push
 echo hi > a.txt
@@ -233,6 +238,8 @@ check "inbox captures the message, redacts the key, and commits it" 'grep -q "pl
 
 printf '{"prompt":"here is my export:\\nKESTREL-KEYBOARD-LEARNING 1\\nw secretword 9\\nend 1"}' | bash tools/capture_inbox.sh
 check "inbox NEVER copies a pasted learning export into git (replaced by a note)" '! grep -q secretword INBOX.md && grep -q "NOT saved here on purpose" INBOX.md'
+printf '{"prompt":"my practice file:\\nSWOOP-GLIDE-PRACTICE 1\\nw secretpath | the | 1,2,0"}' | bash tools/capture_inbox.sh
+check "inbox NEVER copies a pasted glide practice file into git (replaced by a note)" '! grep -q secretpath INBOX.md && grep -q "glide practice file" INBOX.md'
 printf '{"prompt":"big paste: %s"}' "$(head -c 25000 /dev/zero | tr '\0' 'q')" | bash tools/capture_inbox.sh
 check "inbox does not copy a message over 20 KB (a note with its first 200 characters instead)" '! grep -Eq "q{300}" INBOX.md && grep -q "over 20 KB is not copied" INBOX.md'
 
