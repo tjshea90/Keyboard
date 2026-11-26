@@ -38,7 +38,7 @@ object GlideTeaching {
         val w = PersonalModel.norm(word) ?: return Lesson(false, false, false, false)
         val right = guessed != null && guessed.equals(w, ignoreCase = true)
         var shape = false; var wild = false; var confusion = false; var thumb = false
-        if (parts.confusion && !right && !guessed.isNullOrEmpty() && model.addConfusion(guessed.lowercase(), w, CONFUSION_WEIGHT)) confusion = true
+        if (parts.confusion && !right && !guessed.isNullOrEmpty() && PersonalModel.norm(guessed) != null) { model.addConfusion(guessed, w, CONFUSION_WEIGHT); confusion = true }
         if (parts.shape && print != null) {
             val ideal = if (keys != null) Fingerprint.ofWord(w, keys) else null
             if (ideal != null && Fingerprint.distance(ideal, print) > GlideTyping.FIT_D) wild = true
