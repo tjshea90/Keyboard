@@ -125,6 +125,7 @@ class SetupActivity : Activity() {
             learnedLine = line
             learn.row(line)
             learn.row(note("Nothing is learned in password boxes, or in apps that ask for private typing."))
+            learn.row(actionRow("My e-mail addresses", "Type your addresses once: they show above the keys in every e-mail box, and the keyboard finishes an address after the @ (outlook.com, gmail.com, proton.me ...).") { startActivity(Intent(this@SetupActivity, EmailsActivity::class.java)) })
             learn.row(switchRow("E-mail addresses", "Remembers the e-mail addresses you type (never one you paste or fill in from a password manager) and offers them above the keys in e-mail boxes. They stay on this device and are not in the export.", st.emailSuggestions) { change(Prefs.EMAIL_SUGGEST, it) })
             learn.row(actionRow("Forget my e-mail addresses", "Deletes only the saved e-mail addresses. Your words and corrections stay.") { flow.forgetEmailsNow() })
             learn.row(actionRow("Export what it learned", "Saves one plain-text file in Downloads. It lists your words: keep it private.") { flow.exportNow() })

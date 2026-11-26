@@ -44,6 +44,11 @@
             android:label="@string/dict_title" />
 
         <activity
+            android:name=".EmailsActivity"
+            android:exported="false"
+            android:label="@string/emails_title" />
+
+        <activity
             android:name=".DiagnosticsActivity"
             android:exported="false"
             android:label="@string/diag_title" />

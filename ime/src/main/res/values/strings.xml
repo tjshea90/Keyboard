@@ -19,6 +19,15 @@
     <string name="setup_fallback">If the buttons do not open the right screen on your tablet: Settings &gt; System &gt; Languages and input &gt; On-screen keyboard &gt; Manage keyboards, switch Swoop on; then tap in any text box and use the keyboard icon at the bottom right (or the notification Choose input method) to pick Swoop.</string>
     <string name="setup_back">To go back at any time: tap the keyboard icon (or the Choose input method notification) while typing and pick your old keyboard.</string>
     <string name="strip_hint">slide over the letters to type a word</string>
+    <string name="emails_title">My e-mail addresses</string>
+    <string name="emails_intro">Type your e-mail addresses once. They show above the keys in every e-mail box, and when you type the start of an address yourself the keyboard offers the rest, with outlook.com, gmail.com and proton.me after the @. They stay on this device.</string>
+    <string name="emails_hint">name@example.com</string>
+    <string name="emails_add">Add address</string>
+    <string name="emails_remove">Remove</string>
+    <string name="emails_list_title">Saved addresses</string>
+    <string name="emails_none">None yet. Addresses you type by hand in any box are added by themselves (never one you paste).</string>
+    <string name="emails_bad">That does not look like an e-mail address.</string>
+    <string name="emails_added">%1$s added.</string>
     <string name="dict_title">My dictionary</string>
     <string name="dict_intro">Type a word. If the keyboard knows it, you can remove it so it is never suggested or glided again. If it does not, you can add it, and it is suggested when you glide its pattern.</string>
     <string name="dict_hint">Type a word or the start of one</string>
