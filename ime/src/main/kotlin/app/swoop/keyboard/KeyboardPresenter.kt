@@ -563,7 +563,11 @@ class KeyboardPresenter(
         val practice = practiceBox
         glide.engine.decode(xs, ys, count, p1, p2, ts) { res: GlideResult -> post(Runnable {
             session.onDecoded(res, p1, p2); view?.setShift(controller.shift)
-            if (practice) Practice.sink?.glide(xs, ys, ts, count, res.candidates.take(3).map { it.text }, view?.glideKeys(), view?.width ?: 0, view?.height ?: 0)     // (R34a2: the prompted word's glide, nothing else)
+            if (practice) {                                                                                          // (R34a2: the prompted word's glide, nothing else)
+                val offered = res.candidates.take(3).map { it.text }
+                val asked = Practice.sink?.glide(xs, ys, ts, count, offered, view?.glideKeys(), view?.width ?: 0, view?.height ?: 0, p1, p2)
+                if (asked != null && !safeMode) glide.engine.teach(asked, offered.firstOrNull(), res.serial, { h -> glide.saveHabit(h) })   // R36: the Glide training lets the keyboard learn this hand from a word it asked for
+            }
         }) }
     }
 

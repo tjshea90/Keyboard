@@ -12,8 +12,12 @@ object Practice {
 
     fun isPracticeBox(privateImeOptions: String?): Boolean = privateImeOptions != null && privateImeOptions.split(',').any { it.trim() == OPTION }
 
-    /** A glide of the practice box: its path (view pixels, milliseconds from the first touch), the words the keyboard offered (best first, the first is what it typed), and the key positions and view size it decoded on. UI thread. */
-    fun interface Sink { fun glide(xs: FloatArray, ys: FloatArray, ts: FloatArray, n: Int, offered: List<String>, keys: GlideKeys?, viewW: Int, viewH: Int) }
+    /**
+     * A glide of the practice box: its path (view pixels, milliseconds from the first touch), the words the keyboard offered (best first, the first is what it typed), the key positions and view size it decoded on, and
+     * the two words it was decoded with ([prev] the one before, [prev2] the one before that; null where there are none). UI thread. R36: returns the word that was ASKED FOR when the screen wants the keyboard to learn
+     * from this glide (the Glide training screen, with its switch on: the engine is taught the hand, never the words), null when it only measures (the 40-word drill).
+     */
+    fun interface Sink { fun glide(xs: FloatArray, ys: FloatArray, ts: FloatArray, n: Int, offered: List<String>, keys: GlideKeys?, viewW: Int, viewH: Int, prev: String?, prev2: String?): String? }
 
     @Volatile var sink: Sink? = null
 }

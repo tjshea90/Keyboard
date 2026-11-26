@@ -91,12 +91,13 @@ class PracticeActivity : Activity(), Practice.Sink {
     override fun onPause() { if (Practice.sink === this) Practice.sink = null; super.onPause() }
 
     /** A glide of the practice box: kept with the word that was asked for; the box is emptied and the next word shown. */
-    override fun glide(xs: FloatArray, ys: FloatArray, ts: FloatArray, n: Int, offered: List<String>, keys: GlideKeys?, viewW: Int, viewH: Int) {
-        if (practice.done) return
+    override fun glide(xs: FloatArray, ys: FloatArray, ts: FloatArray, n: Int, offered: List<String>, keys: GlideKeys?, viewW: Int, viewH: Int, prev: String?, prev2: String?): String? {
+        if (practice.done) return null
         if (keys != null) { this.keys = keys; this.viewW = viewW; this.viewH = viewH }
         practice.record(xs, ys, ts, n, offered)
         input.setText("")
         render()
+        return null                                                                                  // (the 40-word drill only measures: nothing is taught)
     }
 
     private fun render() {
