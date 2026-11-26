@@ -758,7 +758,7 @@ class KeysView(context: Context) : View(context) {
                 val ni = e.actionIndex
                 // R34d (owner 2026-11-26: "make the delay from first key to glide instant so it doesn't erroneously type one letter"): a finger that has rested on a letter for a while is a thumb that holds the tablet (or a palm), not a key press:
                 // it types nothing, and the finger that lands now is the one that types or glides
-                if (armed && popup == null && holdAlt == null && firstUndecided() && SystemClock.uptimeMillis() - downAt >= RESTING_MS) {
+                if (armed && waitId < 0 && popup == null && holdAlt == null && firstUndecided() && SystemClock.uptimeMillis() - downAt >= RESTING_MS) {
                     dropFirstFinger(); activeId = e.getPointerId(ni); pressDown(e.getX(ni), e.getY(ni), at = e.eventTime); return true
                 }
                 // a glide in progress is never cut short by a second touch (a resting palm); the new finger is only recorded, and takes over if it moves (R28b). R34d: the same while the first finger is on a letter and has not moved yet
