@@ -930,4 +930,61 @@ class KeyboardPresenterTest {
         tool(r); assertTrue("one tap turns it on in the new app", r.view.translateOn)
         r.presenter.startInput(boxInfo("com.example.mail"), restarting = true); assertTrue("and it stays while that box is used", r.view.translateOn)
     }
+
+    // ---- R34b / R34c (owner 2026-11-26): "it still isn't recognizing email fields" and "after the @ sign, suggest popular email domains such as outlook.com, gmail.com and proton.me"
+
+    private fun Rig.typeKeys(text: String) { for (c in text) presenter.onKey(Key.Ch(c.toString())) }
+
+    @Test fun afterTheAtSignAnEmailBoxOffersOutlookGmailAndProtonAndATapFinishesTheAddress() {
+        val r = Rig(inputType = emailType); r.typeKeys("tj@")
+        assertEquals(listOf("outlook.com", "gmail.com", "proton.me"), r.view.candidatesForTest())
+        r.tapChip(1); assertEquals("tj@gmail.com", r.text); assertTrue("finished: nothing more to offer", r.view.candidatesForTest().isEmpty())
+    }
+
+    @Test fun theDomainsNarrowWhileTheDomainIsTyped() {
+        val r = Rig(inputType = emailType); r.typeKeys("tj@pr")
+        assertEquals(listOf("proton.me", "protonmail.com"), r.view.candidatesForTest()); r.tapChip(0); assertEquals("tj@proton.me", r.text)
+    }
+
+    @Test fun theDomainsThePersonUsesComeFirstAndAPickedAddressIsRemembered() {
+        val r = Rig(inputType = emailType); r.host.emails.learn("me@proton.me"); r.host.emails.learn("me@proton.me"); r.presenter.startInput(r.info)
+        r.typeKeys("tj@"); assertEquals(listOf("proton.me", "outlook.com", "gmail.com"), r.view.candidatesForTest())
+        r.tapChip(1); assertEquals("tj@outlook.com", r.text); assertTrue("the picked address is in the book now", "tj@outlook.com" in r.host.emails.addresses())
+    }
+
+    @Test fun anAddressTypedInAnOrdinaryTextBoxGetsItsDomainsToo() {
+        val r = Rig(suggest = true); r.typeKeys("mail me at tj@")
+        assertEquals(listOf("outlook.com", "gmail.com", "proton.me"), r.view.candidatesForTest())
+        r.tapChip(0); assertEquals("mail me at tj@outlook.com", r.text)
+    }
+
+    @Test fun anAtMentionInAnOrdinaryBoxGetsNoDomainsAndNeitherDoesPlainTyping() {
+        val r = Rig(suggest = true); r.typeKeys("hi @bo"); assertTrue(r.view.candidatesForTest().none { it.contains(".com") || it.endsWith(".me") })
+        val q = Rig(suggest = true); q.typeKeys("hello wor"); assertTrue(q.view.candidatesForTest().none { it.contains(".com") })
+    }
+
+    @Test fun withTheSwitchOffNoDomainsAreOffered() {
+        val r = Rig(inputType = emailType, extra = { it.putBoolean(Prefs.EMAIL_SUGGEST, false) }); r.typeKeys("tj@"); assertTrue(r.view.candidatesForTest().isEmpty())
+        val t = Rig(suggest = true, extra = { it.putBoolean(Prefs.EMAIL_SUGGEST, false) }); t.typeKeys("tj@"); assertTrue(t.view.candidatesForTest().none { it.endsWith(".com") })
+    }
+
+    @Test fun anAddressTypedInTheLoginBoxIsLearnedWhenTheFocusMovesOnWithoutTheBoxBeingFinished() {
+        val r = Rig(inputType = emailType); r.typeKeys("me@x.com")
+        assertTrue("the box is still open", r.host.emails.isEmpty)
+        r.presenter.startInput(passwordInfo(), restarting = true)                    // a login page: the next box (the password) takes the focus, the old one is never "finished"
+        assertEquals(listOf("me@x.com"), r.host.emails.addresses())
+    }
+
+    @Test fun anAddressTypedInAPlainTextBoxIsLearnedWhenTheBoxIsLeft() {
+        val r = Rig(suggest = true); r.typeKeys("tj@outlook.com"); r.presenter.finishInput()
+        assertEquals(listOf("tj@outlook.com"), r.host.emails.addresses())
+    }
+
+    @Test fun aTextBoxThatSaysEmailInItsHintIsAnEmailBoxAndGetsTheSavedAddresses() {
+        val r = Rig(); r.host.emails.learn("john@gmail.com"); r.host.emails.learn("john@gmail.com")
+        r.presenter.startInput(EditorInfo().apply { inputType = InputType.TYPE_CLASS_TEXT; hintText = "Email address" })
+        assertEquals(listOf("john@gmail.com"), r.view.candidatesForTest())
+        r.presenter.startInput(EditorInfo().apply { inputType = InputType.TYPE_CLASS_TEXT; hintText = "Your name" })
+        assertTrue("another hint: no addresses", r.view.candidatesForTest().none { it.contains("@") })
+    }
 }
