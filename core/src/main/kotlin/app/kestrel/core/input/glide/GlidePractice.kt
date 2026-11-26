@@ -52,12 +52,14 @@ class GlidePractice(prompts: List<String> = WORDS) {
 
     /**
      * The file: a magic line, which build and view the glides were made on (key centres in view pixels, so a lab can decode them exactly as the keyboard did), then one line per answered word.
-     * [version] is the app version; nothing else about the person or the device is written.
+     * [version] is the app version; nothing else about the person or the device is written. R36: a [training] file (the Glide training screen) is format 2: every line also says which page it came from and the two words
+     * before it, and the file says whether the keyboard was being [teaching] from the glides while they were made.
      */
-    fun serialize(keys: GlideKeys, viewW: Int, viewH: Int, density: Float, version: String): String {
+    fun serialize(keys: GlideKeys, viewW: Int, viewH: Int, density: Float, version: String, training: Boolean = false, teaching: Boolean = false): String {
         val sb = StringBuilder(4096)
-        sb.append(MAGIC).append('\n')
+        sb.append(if (training) MAGIC2 else MAGIC).append('\n')
         sb.append("app ").append(version).append('\n')
+        if (training) sb.append("teaching ").append(if (teaching) 1 else 0).append('\n')
         sb.append("view ").append(viewW).append(' ').append(viewH).append(' ').append(density).append('\n')
         sb.append("keys ").append(keys.keyW).append(' ').append(keys.keyH).append(' ').append(keys.pitch).append('\n')
         sb.append("centres ")
@@ -66,15 +68,18 @@ class GlidePractice(prompts: List<String> = WORDS) {
         for (e in items) {
             sb.append("w ").append(e.word).append(" | ").append(e.got.joinToString(",")).append(" | ")
             for (i in e.xs.indices) { if (i > 0) sb.append(';'); sb.append(fmt(e.xs[i])).append(',').append(fmt(e.ys[i])).append(',').append(Math.round(e.ts[i])) }
+            if (training) sb.append(" | ").append(e.tag.ifEmpty { "-" }).append(' ').append(e.prev2 ?: "-").append(' ').append(e.prev ?: "-")
             sb.append('\n')
         }
         return sb.toString()
     }
 
-    class Parsed(val keys: GlideKeys, val viewW: Int, val viewH: Int, val density: Float, val version: String, val entries: List<Entry>)
+    class Parsed(val keys: GlideKeys, val viewW: Int, val viewH: Int, val density: Float, val version: String, val entries: List<Entry>, val training: Boolean = false, val teaching: Boolean = false)
 
     companion object {
         const val MAGIC = "SWOOP-GLIDE-PRACTICE 1"
+        /** R36: the Glide training file (longer, with the context words and the page of every glide). */
+        const val MAGIC2 = "SWOOP-GLIDE-PRACTICE 2"
 
         private fun fmt(v: Float): String = if (v == Math.rint(v.toDouble()).toFloat()) v.toInt().toString() else "%.1f".format(java.util.Locale.US, v)
 
@@ -82,7 +87,9 @@ class GlidePractice(prompts: List<String> = WORDS) {
         fun parse(text: String?): Parsed? {
             if (text.isNullOrBlank()) return null
             val lines = text.lineSequence().map { it.trim() }.filter { it.isNotEmpty() }.toList()
-            if (lines.isEmpty() || lines[0] != MAGIC) return null
+            if (lines.isEmpty() || (lines[0] != MAGIC && lines[0] != MAGIC2)) return null
+            val training = lines[0] == MAGIC2
+            var teaching = false
             var version = ""; var viewW = 0; var viewH = 0; var density = 1f; var keyW = 0f; var keyH = 0f; var pitch = 0f
             var cx: FloatArray? = null; var cy: FloatArray? = null
             val out = ArrayList<Entry>()
@@ -90,6 +97,7 @@ class GlidePractice(prompts: List<String> = WORDS) {
                 for (l in lines.drop(1)) {
                     when {
                         l.startsWith("app ") -> version = l.substring(4)
+                        l.startsWith("teaching ") -> teaching = l.substring(9).trim() == "1"
                         l.startsWith("view ") -> { val p = l.substring(5).split(' '); viewW = p[0].toInt(); viewH = p[1].toInt(); density = p[2].toFloat() }
                         l.startsWith("keys ") -> { val p = l.substring(5).split(' '); keyW = p[0].toFloat(); keyH = p[1].toFloat(); pitch = p[2].toFloat() }
                         l.startsWith("centres ") -> {
