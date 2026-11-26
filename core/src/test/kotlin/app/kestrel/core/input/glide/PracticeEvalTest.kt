@@ -46,6 +46,7 @@ class PracticeEvalTest {
         assertNotNull(parsed); assertTrue(parsed!!.training)
         val lines = ArrayList<String>()
         PracticeEval.trainingReport(parsed, GlideEval.loadLexicon(), null) { lines.add(it) }
+        lines.forEach { println(it) }
         assertTrue("it says what the file is: $lines", lines.any { it.startsWith("TRAINING file:") && it.contains("teaching off") })
         assertTrue("running text is reported on its own: $lines", lines.any { it.startsWith("TRAINING running text") })
         assertTrue("the word before is measured: $lines", lines.any { it.contains("the word before helps") })
