@@ -1,21 +1,22 @@
-# CHECKPOINT 1110 — read me first, then TASKS.md
+# CHECKPOINT 1115 — read me first, then TASKS.md
 
-**Written:** 2026-11-26T21:07:02Z · **tests:** all 1 fast checks green (gradle suite: see ship.sh)
-**Branch:** `claude/awesome-bell-gmcf0i` · **builds on:** `1c1b1f5` (this checkpoint is the commit after it)
+**Written:** 2026-11-26T21:12:28Z · **tests:** all 1 fast checks green (gradle suite: see ship.sh)
+**Branch:** `claude/awesome-bell-gmcf0i` · **builds on:** `3a49707` (this checkpoint is the commit after it)
 
 ## Just done
-alpha14 (ime code 25, swoop-v0.7.0-alpha14) gated, pushed and android.yml DISPATCHED once on claude/awesome-bell-gmcf0i (full_build true); R34f owner check list written in TASKS
+R35 (owner asked for a prompt to change the setup script permanently) answered in chat and written into TASKS; alpha15 candidate coded: big-key tap/glide limits in dp (KeysViewTest 70 green) and held domain chip asks nothing (presenter test green)
 
 ## Do this next
-Next: wait for the alpha14 run (mcp__github__actions_list list_workflow_runs android.yml branch claude/awesome-bell-gmcf0i, newest run), when green + Release has the APK (get_release_by_tag swoop-v0.7.0-alpha14) -> bash tools/record-release.sh swoop-v0.7.0-alpha14 "R34a2: new Settings > Help > Glide practice: glide 40 words that are shown to you, the keyboard keeps only the paths of those glides and the words it offered (nothing else you type, nothing is learned from them), and one file can be saved and attached to the chat so the keyboard can be tuned on this tablet's real glides" ; then tick R34 parent in TASKS and send the FINAL plain answer (alpha13 link, alpha14 link, the 5 answers, open items). NEVER dispatch alpha14 twice. Possible alpha15 nit: ignore long-press on e-mail domain chips (onCandidateLong)
+Next: (1) alpha14 run 45895826479: when green + Release has APK -> bash tools/record-release.sh swoop-v0.7.0-alpha14 with the identical note (see ckpt 1110 / TASKS R34a2); (2) THEN bump ime/build.gradle.kts to 0.7.0-alpha15 code 26 (record BEFORE bumping), full :core:test :ime:testDebugUnitTest :ime:lintDebug, bash ship.sh note (big-key tap/glide limits in dp: a short flick on big keys is a glide not the first letter; a held e-mail domain chip asks nothing), dispatch android.yml once, record-release; (3) final plain answer with alpha13/14/15 links + open items (R34f owner steps incl. Glide practice file, R33f/R32f waiting, Kestrel copy not synced because the Browser repo is not attached here)
 
 *(resuming? CLAUDE.md's "FIRST ACTION OF EVERY SESSION" says how; the briefing is tools/resume.sh. Do that first, or autosave may stay off all session.)*
 
 ## Uncommitted right now
-    (nothing — the tree is clean as of this checkpoint)
+     M TASKS.md
 
 ## Last ten checkpoints
 ```
+  5b98638 ckpt 1110: alpha14 (ime code 25, swoop-v0.7.0-alpha14) gated, pushed and android.yml DIS
   1c1b1f5 ckpt 1109: gated swoop-v0.7.0-alpha14 (ime code 25) and pushed it: handoff self-test, un
   237e3ca ckpt 1106: R34a2 offline lab PracticeEval + PracticeEvalTest (simulated tablet glides ro
   dcae6cc ckpt 1103: alpha13 RELEASED and recorded (run 45892015689 green); R34a2 glide practice c
@@ -25,5 +26,7 @@ Next: wait for the alpha14 run (mcp__github__actions_list list_workflow_runs and
   59b1eb9 ckpt 1086: gated swoop-v0.7.0-alpha13 (ime code 24) and pushed it: handoff self-test, un
   e2fabad ckpt 1085: R34b R34c DONE (e-mail boxes recognised by hint/label, learning in every ordi
   002111e ckpt 1069: R34d DONE in code+tests: KeysView no longer types the first letter when a sec
-  d5ce1d3 ckpt 1063: R34e DONE in code+tests: translation switches itself off on a new input sessi
 ```
+
+(4 automatic checkpoint(s) since the last deliberate one — the
+session was still mid-step. `git diff` against it shows what changed.)
