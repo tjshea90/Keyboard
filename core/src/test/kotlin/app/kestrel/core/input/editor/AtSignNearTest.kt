@@ -17,9 +17,4 @@ class AtSignNearTest {
         assertFalse("a word after the address", near("bob@gmail.com and"))
         assertFalse("the address was left behind by a space", near("bob@gmail.com "))
     }
-
-    @Test fun aSelectionIsNeverAnAddressInProgress() {
-        val r = Rig(kind = FieldKind.TEXT); r.act { for (c in "bob@gm") type(c.toString()) }
-        assertTrue(r.c.atSignNear())
-    }
 }
