@@ -564,3 +564,8 @@ Is it done
 4) make the delay from first key to glide instant so it doesn't erroneously type one letter when I'm trying to glide type.
 5) if i have translation feature on, then switch apps or tabs, automatically turn translation off. It should only stay on if I'm actively using it
 ```
+
+## 2026-11-26T21:09:47Z
+```
+Give me a prompt to permanently change the setup script for this claude account
+```
