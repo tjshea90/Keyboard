@@ -52,3 +52,27 @@ R34c: once "name@" is typed, `EmailBook.suggest` offers domains: the ones this p
 
 ### 4.3 Where the remaining errors are (measured before this session, R24 / R30 / R32, real FUTO swipes, phone-sized keys)
 After the network re-ranker the first guess is right 92-94 % and the right word is in the first three 97 %: the remaining misses are look-alike words (same first and last letter), rare words and names, and short words read as long ones: i.e. the choice between words the PATH cannot separate. Only the LANGUAGE can separate them. Swoop's language side is the weak half: word counts from four sources (good) but word PAIRS from two small ones (SymSpell / Google Books 243 k pairs, Tatoeba sentences 143 k pairs after pruning) and no three-word table at all (the three-word phrases in `PersonalModel` are only the person's own).
+
+### 4.4 Experiment 1: a much bigger word-pair model from web text (REAL swipes, measured, NOT adopted)
+The one half of the engine that Google's papers say matters and that Swoop has least of is the language model: pairs came from two small sources and there is no three-word table. So the pairs were rebuilt from a big corpus and the whole decoder was measured on thousands of real swipes.
+* Text: four shards of C4 (`allenai/c4`, English web text, ODC-BY; 1 425 269 documents, 491 million running words of the list's vocabulary), counted with the new `tools/glide/count_pairs_big.py` (numpy, 7 s per 36 000 documents; a stretch of plain words ends at punctuation, digits, line ends and words not in the list, as the keyboard has no word before it either). 2.03 million pairs with 5 or more sightings.
+* Mixed into the shipped list the way R17 did the Tatoeba pairs (`mergePairs`, weight 0.85): candidate A = pairs seen 30+ times, at most 40 per word: 541 230 pairs (shipped list: 303 532), file 4.0 -> 5.4 MB; candidate B = 10+ times, at most 60: 972 712 pairs, 8.0 MB.
+* Measured with `ShapeNetEvalTest` (the shipped decoder with the word before from the sentence, then the network hybrid, three disjoint real-swipe sets: slice A first 8 MB of FUTO dev, slice B 12 MB from byte 100 M, slice C the FUTO TEST split; run as `GLIDE_KLX=<list> REAL_SWIPES=1 java ... JUnitCore ...ShapeNetEvalTest`, about 3 minutes):
+
+| list | slice A shipped / hybrid first choice | slice C | slice B |
+| :- | :- | :- | :- |
+| shipped (alpha12) | 87.9 / 92.3 | 90.6 / 94.4 | 88.8 / 92.3 |
+| candidate A (541 k pairs) | 88.3 / 92.2 | 90.8 / 94.3 | 88.7 / 92.6 |
+| candidate B (973 k pairs) | 88.3 / 92.2 | 90.9 / 94.3 | 89.1 / 92.8 |
+
+  The decoder alone gains about +0.3 points; with the network's second look the gain is -0.1 / -0.1 / +0.5, i.e. nothing. **Verdict: more word pairs do not move glide accuracy (the pair table is not the bottleneck), so the 1.4 to 4 MB would be dead weight on the tablet. Not adopted.** (It would still raise the next-word box; that was not measured here and the owner did not ask for it.) The counting script stays in the repository for the day a trigram table is tried.
+
+### 4.5 Experiment 2: is the way the network and the language are added up the problem? (no)
+The hybrid is `score + 0.7 * logP(network)`. `ShapeNetEvalTest` (R34_GRID=1) searched, on the same three real-swipe sets, a grid of: how much the language side counts (beta 0.8 to 2), how much the network counts (w 0.4 to 1.2), and the network's log P per letter or per sqrt(letters). The best cell (93.33 % first choice over all 5 400 swipes) is 0.13 points above the shipped cell (93.20) and the optimum is flat in every direction: **the shipped weights are already at the top; nothing to gain by re-weighting.**
+
+### 4.6 Where the remaining misses are (R34_MISSES=n, hybrid, same three sets; words only)
+First choice is right 92.3 / 94.4 / 92.3 % (A / C / B); the right word is in the first three 96 / 97.8 / 96.9 %. The misses:
+* slice C (test split, 127 misses = 5.6 %): 39 look-alikes with the same first and last letter, 14 where a shorter word was chosen, 1 longer, only 4 where the right word is not among the 40 candidates. Nearly all are twins ONE KEY apart where both words are common: is/us, in/on, it/or, of/off, has/had, hit/hot, but/bit, our/or, son/soon, first/frost. 
+* slice B: the same picture (42 look-alikes of 136); slice A: 45 of its 103 misses have the right word outside the candidates (a few donors with sloppy or off-set swipes; slices B and C have 4 each).
+* In the twin cases the network often outvotes a sensible language preference (e.g. meant "is" after "he", network log-likelihood 5 nats in favour of "us"): a reading of the path, not a missing fact about English. Only a better reading of the finger can fix those: that is what per-person learning (touch plane, shape memory) is for, and what this phone-sized public data cannot show for the owner's tablet.
+**Conclusion for R34a: on public real swipes the engine is at the top of what its inputs can give (92-94 % first, 97 % in the first three; the open FUTO network alone reports 93 % with no language model). The next step that can still move the owner's numbers is data from HIS tablet:** see section 5.
