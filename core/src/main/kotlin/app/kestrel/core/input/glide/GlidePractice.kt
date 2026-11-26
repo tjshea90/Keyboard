@@ -107,7 +107,7 @@ class GlidePractice(prompts: List<String> = WORDS) {
                         }
                         l.startsWith("w ") -> try {                                       // (a damaged or cut-off line is skipped, the others stay)
                             val parts = l.substring(2).split(" | ")
-                            if (parts.size == 3 || parts.size == 4) {
+                            if (parts.size == 4 || (parts.size == 3 && !training)) {                       // (a format 2 line that lost its end is damaged: skipped)
                                 val pts = parts[2].split(';').filter { it.isNotEmpty() }.map { it.split(',') }
                                 val x = if (parts.size == 4) parts[3].trim().split(' ') else emptyList()      // R36: "<page tag> <word before the word before> <word before>", "-" = none
                                 if (pts.all { it.size == 3 } && (parts.size == 3 || x.size == 3)) out.add(Entry(parts[0], FloatArray(pts.size) { pts[it][0].toFloat() }, FloatArray(pts.size) { pts[it][1].toFloat() }, FloatArray(pts.size) { pts[it][2].toFloat() }, parts[1].split(',').filter { it.isNotEmpty() },

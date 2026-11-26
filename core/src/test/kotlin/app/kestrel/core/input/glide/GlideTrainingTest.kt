@@ -41,7 +41,7 @@ class GlideTrainingTest {
         assertEquals(listOf("I", "think", "a", "cat,", "or", "two."), toks.map { it.shown })
         assertEquals(listOf(null, "think", null, "cat", "or", "two"), toks.map { it.word })
         assertEquals(listOf("think", "cat", "or", "two"), t.practice.words)
-        assertEquals("the box is empty at the start of a paragraph", "", t.boxText())
+        assertEquals("the first word of the paragraph is typed by hand: the box starts with it", "I ", t.boxText())
         t.record(xs, ys, ts, 3, listOf("think"), null, null)
         assertEquals("what the keyboard sees: everything written so far, one letter words and marks included", "I think a ", t.boxText())
         t.record(xs, ys, ts, 3, listOf("cat"), "think", "I")
