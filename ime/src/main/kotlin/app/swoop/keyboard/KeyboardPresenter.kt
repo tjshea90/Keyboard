@@ -229,7 +229,7 @@ class KeyboardPresenter(
     fun startInput(info: EditorInfo, restarting: Boolean = false) {
         val field = FieldInfos.from(info)
         // R34b: a focus that moves to the next box of the same window (a login page: e-mail box, then password box) never "finishes" the old box: its typed address is learned HERE, before the new box starts (it was lost before)
-        emailLearner.finishField(); saveEmailsIfChanged()
+        /*RED-CHECK emailLearner.finishField(); saveEmailsIfChanged()*/
         // R34e (owner 2026-11-26: "if i have translation feature on, then switch apps or tabs, automatically turn translation off. It should only stay on if I'm actively using it"): translating belongs to the box it was switched on in
         val box = boxKeyOf(info)
         val sameBox = restarting && box == translateBox && !viewLeft
