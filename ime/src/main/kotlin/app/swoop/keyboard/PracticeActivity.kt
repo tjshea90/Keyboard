@@ -1,11 +1,8 @@
 package app.swoop.keyboard
 
 import android.app.Activity
-import android.content.ContentValues
 import android.os.Build
 import android.os.Bundle
-import android.os.Environment
-import android.provider.MediaStore
 import android.text.InputType
 import android.view.View
 import android.view.ViewGroup
@@ -20,9 +17,6 @@ import android.widget.TextView
 import android.widget.Toast
 import app.kestrel.core.input.glide.GlideKeys
 import app.kestrel.core.input.glide.GlidePractice
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
 
 /**
  * Glide practice (R34a2, owner 2026-11-26: "It still gets a lot of glide predictions wrong"): public data cannot say how glides look on THIS tablet, so the person glides 40 words that are shown one at a time, with this keyboard,
@@ -129,21 +123,10 @@ class PracticeActivity : Activity(), Practice.Sink {
     private fun save() {
         val k = keys
         if (k == null || viewW <= 0) { Toast.makeText(this, getString(R.string.practice_nothing), Toast.LENGTH_SHORT).show(); return }
-        val version = try { packageManager.getPackageInfo(packageName, 0).versionName ?: "" } catch (_: Exception) { "" }
-        val text = practice.serialize(k, viewW, viewH, resources.displayMetrics.density, version)
-        val name = "Swoop glide practice " + SimpleDateFormat("yyyy-MM-dd HHmm", Locale.US).format(Date()) + ".txt"
-        try {
-            val cr = contentResolver
-            val cv = ContentValues().apply {
-                put(MediaStore.Downloads.DISPLAY_NAME, name); put(MediaStore.Downloads.MIME_TYPE, "text/plain")
-                put(MediaStore.Downloads.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS); put(MediaStore.Downloads.IS_PENDING, 1)
-            }
-            val uri = cr.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, cv) ?: throw java.io.IOException("Android would not create the file")
-            try {
-                (cr.openOutputStream(uri, "w") ?: throw java.io.IOException("Android would not open the file")).use { it.write(text.toByteArray(Charsets.UTF_8)) }
-                cr.update(uri, ContentValues().apply { put(MediaStore.Downloads.IS_PENDING, 0) }, null, null)
-            } catch (e: Exception) { try { cr.delete(uri, null, null) } catch (_: Exception) { }; throw e }
-            Toast.makeText(this, getString(R.string.practice_saved, name), Toast.LENGTH_LONG).show()
-        } catch (e: Exception) { Toast.makeText(this, getString(R.string.practice_save_failed, e.message ?: e.javaClass.simpleName), Toast.LENGTH_LONG).show() }
+        val text = practice.serialize(k, viewW, viewH, resources.displayMetrics.density, PracticeFile.version(this))
+        val name = PracticeFile.name("practice")
+        val err = PracticeFile.save(this, name, text)
+        if (err == null) Toast.makeText(this, getString(R.string.practice_saved, name), Toast.LENGTH_LONG).show()
+        else Toast.makeText(this, getString(R.string.practice_save_failed, err), Toast.LENGTH_LONG).show()
     }
 }
