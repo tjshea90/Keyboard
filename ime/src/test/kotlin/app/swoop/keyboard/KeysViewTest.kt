@@ -424,6 +424,76 @@ class KeysViewTest {
         assertEquals(1, t.glides.size); assertTrue("a resting finger is not a key press", t.keys.isEmpty())
     }
 
+    // ------------------------------------------------------------------ R34d (2026-11-26): "make the delay from first key to glide instant so it doesn't erroneously type one letter when I'm trying to glide type"
+
+    @Test fun aFlickWhoseOnlyEventsAreTheTouchDownAndTheLiftIsAGlideNotTheFirstLetter() {
+        val (v, t) = glideView(); val (ax, ay) = at(v, "a"); val (dx, _) = at(v, "d")
+        down(v, ax, ay); up(v, dx, ay)                                                        // a panel that delivered no move in between: the lift point says where the finger went
+        assertEquals("a glide", 1, t.glides.size); assertTrue("not the letter the finger went down on", t.keys.isEmpty())
+    }
+
+    @Test fun aThumbThatHoldsTheTabletOnALetterTypesNothingWhenTheOtherFingerGlides() {
+        val (v, t) = glideView(); val (zx, zy) = at(v, "z"); val (ax, ay) = at(v, "a"); val (dx, dy) = at(v, "d")
+        touch(v, MotionEvent.ACTION_DOWN, 0, Triple(0, zx, zy))                                // the thumb that holds the tablet rests on a key at the edge ...
+        advance(500)
+        touch(v, MotionEvent.ACTION_POINTER_DOWN, 1, Triple(0, zx, zy), Triple(1, ax, ay))      // ... and the glide finger lands
+        touch(v, MotionEvent.ACTION_MOVE, 0, Triple(0, zx, zy), Triple(1, (ax + dx) / 2f, ay))
+        touch(v, MotionEvent.ACTION_MOVE, 0, Triple(0, zx, zy), Triple(1, dx, dy))
+        touch(v, MotionEvent.ACTION_POINTER_UP, 1, Triple(0, zx, zy), Triple(1, dx, dy))
+        assertEquals("the glide went through", 1, t.glides.size); assertTrue("the resting thumb's key is not typed: ${t.keys}", t.keys.isEmpty())
+        touch(v, MotionEvent.ACTION_UP, 0, Triple(0, zx, zy))
+        assertTrue("nor when that thumb lifts", t.keys.isEmpty()); assertEquals(1, t.glides.size)
+    }
+
+    @Test fun aThumbThatHoldsTheTabletAndAnotherThatTapsTypeOnlyTheTap() {
+        val (v, t) = glideView(); val (zx, zy) = at(v, "z"); val (kx, ky) = at(v, "k")
+        touch(v, MotionEvent.ACTION_DOWN, 0, Triple(0, zx, zy)); advance(500)
+        touch(v, MotionEvent.ACTION_POINTER_DOWN, 1, Triple(0, zx, zy), Triple(1, kx, ky))
+        touch(v, MotionEvent.ACTION_POINTER_UP, 1, Triple(0, zx, zy), Triple(1, kx, ky))
+        touch(v, MotionEvent.ACTION_UP, 0, Triple(0, zx, zy))
+        assertEquals(listOf("k"), t.keys)
+    }
+
+    @Test fun aSecondFingerThatTouchesTheScreenJustBeforeAGlideStartsDoesNotCostTheGlide() {
+        val (v, t) = glideView(); val (ax, ay) = at(v, "a"); val (dx, dy) = at(v, "d"); val (px, py) = at(v, "p")
+        touch(v, MotionEvent.ACTION_DOWN, 0, Triple(0, ax, ay)); advance(30)
+        touch(v, MotionEvent.ACTION_POINTER_DOWN, 1, Triple(0, ax, ay), Triple(1, px, py))        // another finger (a palm, a ghost touch) lands for a moment before the glide has moved
+        touch(v, MotionEvent.ACTION_MOVE, 0, Triple(0, (ax + dx) / 2f, ay), Triple(1, px, py)); touch(v, MotionEvent.ACTION_MOVE, 0, Triple(0, dx, dy), Triple(1, px, py))
+        touch(v, MotionEvent.ACTION_POINTER_UP, 1, Triple(0, dx, dy), Triple(1, px, py))
+        touch(v, MotionEvent.ACTION_UP, 0, Triple(0, dx, dy))
+        assertEquals("the glide went through", 1, t.glides.size); assertTrue("no stray letter: ${t.keys}", t.keys.isEmpty())
+    }
+
+    @Test fun twoThumbsThatOverlapKeepTheOrderOfTheirTapsWithGlideTypingOn() {
+        val (v, t) = glideView(); val (tx, ty) = at(v, "t"); val (hx, hy) = at(v, "h")
+        touch(v, MotionEvent.ACTION_DOWN, 0, Triple(0, tx, ty)); advance(40)
+        touch(v, MotionEvent.ACTION_POINTER_DOWN, 1, Triple(0, tx, ty), Triple(1, hx, hy)); advance(40)
+        touch(v, MotionEvent.ACTION_POINTER_UP, 0, Triple(0, tx, ty), Triple(1, hx, hy))          // the first thumb lifts: the letter it pressed
+        touch(v, MotionEvent.ACTION_UP, 0, Triple(1, hx, hy))
+        assertEquals(listOf("t", "h"), t.keys); assertTrue(t.glides.isEmpty())
+    }
+
+    @Test fun aSecondThumbThatTapsAndLiftsFirstIsTypedAfterTheFirstThumbsLetter() {
+        val (v, t) = glideView(); val (tx, ty) = at(v, "t"); val (hx, hy) = at(v, "h")
+        touch(v, MotionEvent.ACTION_DOWN, 0, Triple(0, tx, ty)); advance(30)
+        touch(v, MotionEvent.ACTION_POINTER_DOWN, 1, Triple(0, tx, ty), Triple(1, hx, hy)); advance(40)
+        touch(v, MotionEvent.ACTION_POINTER_UP, 1, Triple(0, tx, ty), Triple(1, hx, hy))          // the newer thumb lifts first
+        touch(v, MotionEvent.ACTION_UP, 0, Triple(0, tx, ty))
+        assertEquals("pressed order", listOf("t", "h"), t.keys)
+    }
+
+    @Test fun aSecondThumbThatMovesWhileTheFirstOnlyJustLandedIsTheGlideAndTheLetterBeforeItIsTyped() {
+        val (v, t) = glideView(); val (tx, ty) = at(v, "t"); val (gx, gy) = at(v, "g"); val (hx, _) = at(v, "h"); val (jx, jy) = at(v, "j")
+        touch(v, MotionEvent.ACTION_DOWN, 0, Triple(0, tx, ty)); advance(30)
+        touch(v, MotionEvent.ACTION_POINTER_DOWN, 1, Triple(0, tx, ty), Triple(1, gx, gy))
+        touch(v, MotionEvent.ACTION_MOVE, 0, Triple(0, tx, ty), Triple(1, (gx + hx) / 2f, gy))
+        assertEquals("the first thumb's letter is typed when the other one turns out to glide", listOf("t"), t.keys)
+        touch(v, MotionEvent.ACTION_MOVE, 0, Triple(0, tx, ty), Triple(1, jx, jy))
+        touch(v, MotionEvent.ACTION_POINTER_UP, 1, Triple(0, tx, ty), Triple(1, jx, jy))
+        touch(v, MotionEvent.ACTION_UP, 0, Triple(0, tx, ty))
+        assertEquals(listOf("t"), t.keys); assertEquals("and the glide is read", 1, t.glides.size)
+    }
+
     @Test fun theViewReportsOnlyNumbersAboutAGlideStrokeAndAHandOver() {
         val (v, t) = glideView(); val (ax, ay) = at(v, "a"); val (dx, dy) = at(v, "d"); val (hx, hy) = at(v, "h"); val (kx, ky) = at(v, "k")
         touch(v, MotionEvent.ACTION_DOWN, 0, Triple(0, ax, ay))
