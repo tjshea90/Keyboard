@@ -48,7 +48,7 @@ object FieldInfos {
     }
 
     private val MAIL_WORD = Regex("e[-_ ]?mail|correo", RegexOption.IGNORE_CASE)
-    private val NOT_AN_ADDRESS = Regex("subject|asunto|body|message|mensaje|signature|firma|template|notif|preview|search|buscar|find|filter|tip|spam|password|contrase", RegexOption.IGNORE_CASE)
+    private val NOT_AN_ADDRESS = Regex("subject|asunto|body|message|mensaje|signature|firma|template|notif|preview|search|buscar|filter", RegexOption.IGNORE_CASE)
 
     /**
      * R34b: does what a box says about itself (its hint, label and field name) mean "type an e-mail address here"? Short texts only, and never a box about an e-mail ("Email subject", "Search mail", "Email notifications"):
