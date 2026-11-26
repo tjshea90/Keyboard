@@ -1012,4 +1012,10 @@ class KeyboardPresenterTest {
         val r2 = Rig(); r2.info.privateImeOptions = Practice.OPTION; r2.presenter.startInput(r2.info); r2.glide("hello")
         assertEquals("the screen is closed: no sink, nothing kept", 0, calls)
     }
+
+    @Test fun holdingADomainOrAnAddressOnTheStripAsksNothingBecauseItIsNoWordOfTheDictionary() {
+        val r = Rig(inputType = emailType); r.typeKeys("tj@")
+        assertEquals(listOf("outlook.com", "gmail.com", "proton.me"), r.view.candidatesForTest())
+        r.presenter.onCandidateLong("gmail.com"); assertNull("no 'remove this word' question", r.view.confirmWord)
+    }
 }

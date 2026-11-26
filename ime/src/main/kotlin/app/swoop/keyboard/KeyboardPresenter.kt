@@ -122,7 +122,7 @@ class KeyboardPresenter(
     }
 
     override fun onCandidateLong(word: String) {
-        if (EmojiMap.isEmoji(word) || word == literalShown) return
+        if (EmojiMap.isEmoji(word) || word == literalShown || emailLabels.containsKey(word)) return          // (an e-mail address or a domain is no word of the dictionary: nothing to remove)
         view?.confirmWord = word
     }
 
