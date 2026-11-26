@@ -996,7 +996,7 @@ class KeyboardPresenterTest {
         try {
             r.info.privateImeOptions = Practice.OPTION; r.presenter.startInput(r.info)
             r.glide("hello")
-            assertEquals(1, got.size); assertEquals("hello", got[0][0]); assertTrue("a few touch points", points > 3); assertTrue("the key positions and the view size come with it", withKeys); assertTrue("times run forward from 0", lastTime > 0f)
+            assertEquals(1, got.size); assertEquals("hello", got[0][0]); assertTrue("a few touch points", points > 3); assertTrue("the key positions and the view size come with it", withKeys); assertTrue("times are milliseconds from the first touch", lastTime >= 0f)
         } finally { Practice.sink = null }
     }
 

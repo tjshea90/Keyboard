@@ -26,6 +26,12 @@ class PracticeActivityTest {
     private val app: Application get() = RuntimeEnvironment.getApplication()
     private fun all(v: View, out: MutableList<View> = ArrayList()): MutableList<View> { out.add(v); if (v is ViewGroup) for (i in 0 until v.childCount) all(v.getChildAt(i), out); return out }
     private fun texts(a: PracticeActivity) = all(a.window.decorView).filterIsInstance<TextView>().filter { it !is EditText }.map { it.text.toString() }
+    /** A settings row (action row): its click listener sits on the row, not on the title. */
+    private fun clickRow(a: PracticeActivity, title: String) {
+        var v: View? = all(a.window.decorView).filterIsInstance<TextView>().first { it.text.toString() == title }
+        while (v != null && !v.hasOnClickListeners()) v = v.parent as? View
+        assertNotNull("a row with a click listener for '$title'", v); v!!.performClick()
+    }
     private val keys = GlideKeys(FloatArray(26) { 30f + it * 20f }, FloatArray(26) { 60f + (it % 3) * 40f }, 30f, 26f, 36f)
     private fun glideOf(a: PracticeActivity, offered: List<String>) = a.glide(floatArrayOf(10f, 20f, 30f, 40f), floatArrayOf(5f, 6f, 7f, 8f), floatArrayOf(0f, 16f, 32f, 48f), 4, offered, keys, 1128, 520)
 
@@ -61,7 +67,7 @@ class PracticeActivityTest {
         all(a.window.decorView).filterIsInstance<TextView>().first { it.text.toString() == "Finish now" }.performClick()
         val t = texts(a)
         assertTrue("one answered of one: $t", t.any { it.startsWith("The first word was right 1 of 1 times") })
-        all(a.window.decorView).filterIsInstance<TextView>().first { it.text.toString() == "Start again" }.performClick()
+        clickRow(a, "Start again")
         assertTrue(texts(a).contains(GlidePractice.WORDS[0]))
         assertNotNull(Practice.sink)
     }
