@@ -6,25 +6,31 @@ package app.kestrel.core.input.glide
  * screen is open. The result is a plain-text file the person attaches to the chat; a lab ([PracticeEval] in the tests) re-decodes it on the recorded key positions to measure and tune the decoder for that tablet.
  * Pure Kotlin, no Android. The file is private to the owner: it is never committed (tools/secretscan.sh blocks its magic line).
  */
-class GlidePractice(val words: List<String> = WORDS) {
-    /** One answered prompt: the word asked for, the finger's path (view pixels, milliseconds from the first touch) and the (up to three) words the keyboard offered, best first. */
-    class Entry(val word: String, val xs: FloatArray, val ys: FloatArray, val ts: FloatArray, val got: List<String>)
+class GlidePractice(prompts: List<String> = WORDS) {
+    /**
+     * One answered prompt: the word asked for, the finger's path (view pixels, milliseconds from the first touch) and the (up to three) words the keyboard offered, best first. R36 (Glide training): [prev] and [prev2] are
+     * the two words before it that the keyboard decoded it with (null: none, as at the start of a sentence or in a drill), [tag] says which page of the training it came from ("p3" the third page).
+     */
+    class Entry(val word: String, val xs: FloatArray, val ys: FloatArray, val ts: FloatArray, val got: List<String>, val prev: String? = null, val prev2: String? = null, val tag: String = "")
 
+    private val list = ArrayList(prompts)
+    /** The words asked for, in order (R36: more can be added while the training runs: the words that were missed). */
+    val words: List<String> get() = list
     private val items = ArrayList<Entry>()
     var index = 0; private set
     val entries: List<Entry> get() = items
-    val total: Int get() = words.size
+    val total: Int get() = list.size
     /** The word to glide now; null when every prompt was answered or skipped. */
-    val current: String? get() = words.getOrNull(index)
-    val done: Boolean get() = index >= words.size
+    val current: String? get() = list.getOrNull(index)
+    val done: Boolean get() = index >= list.size
     val answered: Int get() = items.size
 
     /** The glide of the current word: [n] points of [xs], [ys], [ts]; [got] what the keyboard offered (the first is what it typed). Moves on to the next word. */
-    fun record(xs: FloatArray, ys: FloatArray, ts: FloatArray, n: Int, got: List<String>) {
+    fun record(xs: FloatArray, ys: FloatArray, ts: FloatArray, n: Int, got: List<String>, prev: String? = null, prev2: String? = null, tag: String = "") {
         val w = current ?: return
         val m = n.coerceIn(0, minOf(xs.size, ys.size, ts.size))
         val t0 = if (m > 0) ts[0] else 0f
-        items.add(Entry(w, xs.copyOf(m), ys.copyOf(m), FloatArray(m) { ts[it] - t0 }, got.take(3)))
+        items.add(Entry(w, xs.copyOf(m), ys.copyOf(m), FloatArray(m) { ts[it] - t0 }, got.take(3), prev, prev2, tag))
         index++
     }
 
@@ -32,7 +38,10 @@ class GlidePractice(val words: List<String> = WORDS) {
     fun skip() { if (!done) index++ }
 
     /** The person stops early: what was answered so far is the result. */
-    fun finishNow() { index = words.size }
+    fun finishNow() { index = list.size }
+
+    /** R36: more words to ask for, after the ones already in the list. */
+    fun append(more: List<String>) { list.addAll(more) }
 
     /** How many answered prompts the keyboard put first / among its first three. */
     fun firstRight(): Int = items.count { it.got.firstOrNull() == it.word }
