@@ -756,13 +756,53 @@ class GlideTyping(
             val mi = m.idOf(word)
             if (mi >= 0) { lex = m; id = mi } else { val ui = u?.idOf(word) ?: -1; if (ui < 0 || u == null) return@execute; lex = u; id = ui }
             d.learnFrom(lex, id)
-            bx = d.biasX; by = d.biasY; habitX = bx; habitY = by
-            val k = keys
-            if (k != null) stats.onHabit(bx * k.pitch, by * k.pitch)
-            val t = d.field.toArray(); touchSaved = t
-            reportPlane(d)
-            habit(floatArrayOf(bx, by) + t)
+            thumbMoved(d, habit)
         }
+    }
+
+    /** The decoder's thumb habit (and touch plane) just changed: it is kept here, shown in Diagnostics and handed to [habit] to be saved. Executor thread. */
+    private fun thumbMoved(d: GlideDecoder, habit: (FloatArray) -> Unit) {
+        bx = d.biasX; by = d.biasY; habitX = bx; habitY = by
+        val k = keys
+        if (k != null) stats.onHabit(bx * k.pitch, by * k.pitch)
+        val t = d.field.toArray(); touchSaved = t
+        reportPlane(d)
+        habit(floatArrayOf(bx, by) + t)
+    }
+
+    /**
+     * R36 (the Glide training screen): the glide that was just decoded (decode number [serial]) was made for [word], a word the person was ASKED to glide, and the keyboard put [guessed] first (null: nothing). Everything
+     * about the hand is learned from it at once ([GlideTeaching]): where the thumb lands, this word's shape, what it was mistaken for. The word counts, pairs and triples are NOT touched (a training text is not what
+     * the person writes). Nothing happens when a later glide has been decoded since (the decoder's state would belong to that one), or the word is not in the list. [habit] gets the new thumb habit to be saved;
+     * [done] says whether anything was learned. Runs on the engine's thread.
+     */
+    fun teach(word: String, guessed: String?, serial: Int, habit: (FloatArray) -> Unit, done: (GlideTeaching.Lesson?) -> Unit = {}) {
+        executor.execute {
+            val lesson = try { teachNow(word.lowercase(), guessed?.lowercase(), serial, habit) } catch (e: Exception) { null }
+            done(lesson)
+        }
+    }
+
+    private fun teachNow(word: String, guessed: String?, serialNo: Int, habit: (FloatArray) -> Unit): GlideTeaching.Lesson? {
+        val d = decoder ?: return null
+        val m = main ?: return null
+        if (serialNo != serial) return null                                                     // a later glide was decoded since: the decoder's path is that one's
+        ensurePersonal(); ensureDictionary()
+        if (dictionary.isBlocked(word)) return null                                             // a word the person removed is not taught again
+        val u = userLex
+        var lex: GlideLexicon? = null; var id = -1
+        val mi = m.idOf(word)
+        if (mi >= 0) { lex = m; id = mi } else { val ui = u?.idOf(word) ?: -1; if (u != null && ui >= 0) { lex = u; id = ui } }
+        if (lex == null) return null                                                            // a word the list lacks cannot be put among a glide's guesses: nothing to teach
+        val lesson = GlideTeaching.teach(d, lex, id, personal, keys, word, guessed, lastPrint)
+        if (lesson.thumb) thumbMoved(d, habit)
+        if (lesson.any) {
+            personalDirty = true
+            stats.onTaught(lesson)
+            stats.onLearned(personal.wordCount, personal.pairCount, personal.confusionCount, personal.tripleCount, personal.patterns.patternCount, personal.patterns.wordCount)
+            if (System.nanoTime() / 1_000_000 - lastSaveAt > SAVE_EVERY_MS) saveNow()
+        } else if (lesson.wild) stats.onTaught(lesson)
+        return lesson
     }
 
     companion object {
