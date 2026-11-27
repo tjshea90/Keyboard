@@ -135,6 +135,21 @@ class PracticeEval {
                 val half = firstPages.size / 2
                 line("running text, first half of pages", text.filter { it.e.tag in firstPages.take(half) }); line("running text, second half of pages", text.filter { it.e.tag in firstPages.drop(half) })
             }
+            // R38: the misses of RUNNING TEXT one by one (the drills ask for look-alike twins on purpose: they show what is possible, not what daily typing looks like) and the big-key values judged on running text alone
+            val textMisses = text.filter { it.rank != 1 }
+            if (textMisses.isNotEmpty()) say("TRAINING running-text misses (asked -> first, rank of the asked word, the two words before): " + textMisses.joinToString("; ") { "${it.e.word} -> ${it.top} (rank ${it.rank}; '${it.e.prev2 ?: "-"} ${it.e.prev ?: "-"}')" })
+            val textCases = parsed.entries.filter { it.xs.size >= 2 && it.tag in textTags }.map { Case(it.word, it.xs, it.ys, it.ts, it.got, it.prev, it.prev2) }
+            if (textCases.size >= 30) {
+                val base = GlideParams.forPitchDp(keys.pitchDp)
+                fun cell(shapeW: Float, lmMin: Float, visitCap: Float): String {
+                    val pr = GlideParams(shapeW = shapeW, visitCap = visitCap, lmMin = lmMin, touchField = base.touchField, letterW = base.letterW, patMaxGap = base.patMaxGap, confMaxGap = base.confMaxGap)
+                    val a = run("text", keys, textCases, lex, pr, null, 0f, 0f, null)
+                    val h = if (net != null) run("text", keys, textCases, lex, pr, net, ShapeRescorer.DEFAULT_WEIGHT, ShapeRescorer.DEFAULT_GATE, null) else a
+                    return "alone %.1f / %.1f %%, with network %.1f / %.1f %%".format(100.0 * a.second / a.first, 100.0 * a.third / a.first, 100.0 * h.second / h.first, 100.0 * h.third / h.first)
+                }
+                say("TRAINING big-key values on running text only (n ${textCases.size}); the shipped values: shapeW ${base.shapeW} visitCap ${base.visitCap} lmMin ${base.lmMin}: " + cell(base.shapeW, base.lmMin, base.visitCap))
+                for (shapeW in listOf(1.0f, 1.5f, 2.0f, 3.0f)) for (lmMin in listOf(0.12f, 0.45f, 0.8f)) say("TRAINING   running text shapeW %.1f lmMin %.2f: %s".format(shapeW, lmMin, cell(shapeW, lmMin, base.visitCap)))
+            }
             val misses = rows.filter { it.rank != 1 }.groupBy { it.e.word to (it.top ?: "-") }.entries.sortedByDescending { it.value.size }.take(30)
             say("TRAINING the commonest misses (asked -> typed, how often, rank of the asked word in the keyboard's list, -1 = not in the first 40): " + misses.joinToString("; ") { (k, v) -> "${k.first} -> ${k.second} x${v.size} (rank ${v.map { it.rank }.sorted()[v.size / 2]})" })
         }
