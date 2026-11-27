@@ -167,6 +167,19 @@ class KeysView(context: Context) : View(context) {
     /** R34d: when the waiting finger landed, and a letter it tapped and lifted while the first finger had not decided yet (typed right after the first finger's own letter, dropped when that finger glides). */
     private var waitAt = 0L
     private var pendingTap: KeySpec? = null
+    /** R38: the finger now tracked landed while another one was gliding and had not moved yet when that one lifted: if it only lifts again it is no key press (a palm, a resting thumb), but if it moves it is the next word's glide. */
+    private var noTap = false
+    /** R38: the erase key pressed by the OTHER thumb while the first one is gliding (it used to be thrown away with every other second touch): its pointer id, when it went down, and its own repeat. */
+    private var sideId = -1
+    private var sideStartAt = 0L
+    private val sideRepeat = object : Runnable {
+        override fun run() {
+            if (sideId < 0) return
+            val held = SystemClock.uptimeMillis() - sideStartAt
+            if (BackspaceRepeat.wordMode(held)) listener?.onDeleteWord() else listener?.onKey(Key.Backspace)
+            handler.postDelayed(this, BackspaceRepeat.delayAfter(held))
+        }
+    }
 
     // ---- glide (KB-103)
     private var glideEnabled = false
@@ -768,9 +781,12 @@ class KeysView(context: Context) : View(context) {
     @SuppressLint("ClickableViewAccessibility") // KB-305 adds TalkBack key descriptions; this view is a keyboard, not a button
     override fun onTouchEvent(e: MotionEvent): Boolean {
         when (e.actionMasked) {
-            MotionEvent.ACTION_DOWN -> { requestUnbufferedDispatch(e); waitId = -1; wtn = 0; pendingTap = null; activeId = e.getPointerId(0); pressDown(e.getX(0), e.getY(0), at = e.eventTime) }   // unbuffered: every touch sample at once, not batched to the frame (a fast trail)
+            MotionEvent.ACTION_DOWN -> { requestUnbufferedDispatch(e); stopSideErase(); waitId = -1; wtn = 0; pendingTap = null; activeId = e.getPointerId(0); pressDown(e.getX(0), e.getY(0), at = e.eventTime) }   // unbuffered: every touch sample at once, not batched to the frame (a fast trail)
             MotionEvent.ACTION_POINTER_DOWN -> {
                 val ni = e.actionIndex
+                // R38 (owner 2026-11-27: "I have a hard time pressing the erase key because I'm moving fast"): the other thumb presses erase while this one is drawing a word. That touch used to be recorded as "a second finger during a glide" and
+                // thrown away, so the erase key did nothing. It is a real press: it erases at once (the first thumb's glide goes on untouched) and repeats while held.
+                if (gliding && !firstUndecided() && sideId < 0 && waitId < 0 && popup == null && !inStrip(e.getY(ni)) && keyAt(e.getX(ni), e.getY(ni))?.key === Key.Backspace) { startSideErase(e.getPointerId(ni)); return true }
                 // R34d (owner 2026-11-26: "make the delay from first key to glide instant so it doesn't erroneously type one letter"): a finger that has rested on a letter for a while is a thumb that holds the tablet (or a palm), not a key press:
                 // it types nothing, and the finger that lands now is the one that types or glides
                 if (armed && waitId < 0 && popup == null && holdAlt == null && firstUndecided() && SystemClock.uptimeMillis() - downAt >= RESTING_MS) {
@@ -802,14 +818,26 @@ class KeysView(context: Context) : View(context) {
             }
             MotionEvent.ACTION_POINTER_UP -> {
                 val i = e.actionIndex; val id = e.getPointerId(i)
+                if (id == sideId) { stopSideErase(); return true }
                 if (id == activeId) { val undecided = firstUndecided(); pressUp(e, i); activeId = -1; takeOverWaiting(e, restingOk = undecided) }
                 else if (id == waitId) noteWaitLift()
             }
-            MotionEvent.ACTION_UP -> { if (activeId >= 0) { val i = e.findPointerIndex(activeId).let { if (it < 0) 0 else it }; pressUp(e, i) }; activeId = -1 }
-            MotionEvent.ACTION_CANCEL -> { pressCancel(); activeId = -1; waitId = -1; wtn = 0; pendingTap = null }
+            MotionEvent.ACTION_UP -> { stopSideErase(); if (activeId >= 0) { val i = e.findPointerIndex(activeId).let { if (it < 0) 0 else it }; pressUp(e, i) }; activeId = -1 }
+            MotionEvent.ACTION_CANCEL -> { stopSideErase(); pressCancel(); activeId = -1; waitId = -1; wtn = 0; pendingTap = null }
         }
         return true
     }
+
+    private fun startSideErase(id: Int) {
+        sideId = id; sideStartAt = SystemClock.uptimeMillis()
+        haptic(); click()
+        val k = rows.firstNotNullOfOrNull { row -> row.firstOrNull { it.key === Key.Backspace } }
+        if (k != null) light(k)
+        listener?.onKey(Key.Backspace)
+        handler.removeCallbacks(sideRepeat); handler.postDelayed(sideRepeat, BackspaceRepeat.FIRST_MS)
+    }
+
+    private fun stopSideErase() { sideId = -1; handler.removeCallbacks(sideRepeat) }
 
     private fun addWait(x: Float, y: Float, t: Long) {
         if (wtn == wtx.size) { if (wtn >= 1024) return; wtx = wtx.copyOf(wtn * 2); wty = wty.copyOf(wtn * 2); wtt = wtt.copyOf(wtn * 2) }
@@ -877,9 +905,13 @@ class KeysView(context: Context) : View(context) {
         for (k in 1 until n) { val dx = wtx[k] - wtx[0]; val dy = wty[k] - wty[0]; if (dx * dx + dy * dy > lim) { moved = true; break } }
         if (!isLetter(keyAt(wtx[0], wty[0]))) { listener?.onTouchNote(NOTE_RESTING_IGNORED); return }
         if (!moved) {
-            if (!restingOk || SystemClock.uptimeMillis() - waitAt >= RESTING_MS) { listener?.onTouchNote(NOTE_RESTING_IGNORED); return }
+            // R38 (owner 2026-11-27: "it still often does not register that I'm glide typing"): people rest about 100 ms on the first key before they move (their own file: median 106 ms, up to 213 ms). A thumb that
+            // landed moments ago while the other one was still drawing, and has not moved yet when that one lifts, is the NEXT word's glide beginning: it is kept and glides when it moves. It used to be dropped whole
+            // (activeId = -1 above, every later move ignored). A finger that has been resting longer than that is a palm or a thumb that holds the tablet, as before.
+            val fresh = SystemClock.uptimeMillis() - waitAt < RESTING_MS
+            if (!fresh) { listener?.onTouchNote(NOTE_RESTING_IGNORED); return }
             activeId = id
-            pressDown(wtx[0], wty[0], quiet = true, at = wtt[0])          // (its key click was played when it landed)
+            pressDown(wtx[0], wty[0], quiet = true, at = wtt[0], noTap = !restingOk)          // (its key click was played when it landed)
             for (k in 1 until n) addPoint(wtx[k], wty[k], wtt[k])
             return
         }
@@ -892,9 +924,9 @@ class KeysView(context: Context) : View(context) {
         listener?.onTouchNote(NOTE_TAKEOVER)
     }
 
-    private fun pressDown(x: Float, y: Float, quiet: Boolean = false, at: Long = SystemClock.uptimeMillis()) {
+    private fun pressDown(x: Float, y: Float, quiet: Boolean = false, at: Long = SystemClock.uptimeMillis(), noTap: Boolean = false) {
         handler.removeCallbacks(repeat); clearHold()
-        armed = false; gliding = false; stripDown = -1; pendingTap = null
+        armed = false; gliding = false; stripDown = -1; pendingTap = null; this.noTap = noTap
         if (inStrip(y)) {                                             // the strip was touched: a toolbar icon or a guess
             toolDown = toolAt(x, y); stripDown = if (toolDown >= 0) -1 else chipAt(x, y); stripLong = false
             if (toolDown >= 0) haptic()
