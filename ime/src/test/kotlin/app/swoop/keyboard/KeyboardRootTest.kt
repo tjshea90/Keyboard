@@ -445,4 +445,16 @@ class KeyboardRootTest {
         val p = r.panelRect(); val rects = r.systemGestureExclusionRects
         assertTrue("the strips are the squeezed keyboard's own edges: $p $rects", rects.all { it.left >= p.left && it.right <= p.right })
     }
+
+    @Test fun aTouchRightBesideASqueezedKeyboardIsTheKeysOwnAndTypesTheNearestKey() {
+        val (r, _) = root { it.putInt(Prefs.DOCK_FRAC, 600); it.putInt(Prefs.DOCK_X, 500) }
+        val typed = ArrayList<String>(); r.keys.listener = object : KeysView.Listener { override fun onKey(key: app.kestrel.core.input.Key) { typed.add((key as? app.kestrel.core.input.Key.Ch)?.text ?: key.toString()) } }
+        val p = r.panelRect(); assertTrue("squeezed: ${p.left}", p.left > 40 * dp)
+        val (qx, qy) = r.keys.centerOf("q")!!; val y = p.top + r.grip.height + r.keys.top.toFloat() + qy
+        touch(r, MotionEvent.ACTION_DOWN, p.left - 12 * dp, y); touch(r, MotionEvent.ACTION_UP, p.left - 12 * dp, y)
+        assertEquals("a tap 12 dp outside the q key types q", listOf("q"), typed)
+        typed.clear()
+        touch(r, MotionEvent.ACTION_DOWN, p.left - 80 * dp, y); touch(r, MotionEvent.ACTION_UP, p.left - 80 * dp, y)
+        assertTrue("far from the keys it is still nobody's: $typed", typed.isEmpty())
+    }
 }
