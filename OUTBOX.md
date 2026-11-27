@@ -2042,3 +2042,53 @@
 > - **You, from before:** R34f (translation turns itself off, glides starting on the top-row keys, e-mail addresses learned in login boxes, domains after @), R33f (glide "and" a dozen times and tap "and" if "ave" appears), R32f and R30f.
 > - **Me:** the next-word suggestion model is not started, and it is your call. The Kestrel browser's copy of the keyboard is not updated. For the setup-script change, say "do it" and I will make it.
 <!-- sha:54afc7a56147 -->
+
+## 2026-11-27T05:08:41Z
+> Alpha17 is released and every test I could run here is green. I haven't tried it on your tablet or phone, because the sandbox has no emulator. The Maven 429 problem is fixed in the repo and in this account's setup script.
+>
+> Install it from here. The Release page opens on any device because the repo is public:
+>
+> https://github.com/tjshea90/Keyboard/releases/tag/swoop-v0.7.0-alpha17
+>
+> The build run on GitHub (id 45942092495) passed its tests and checked the signing certificate.
+>
+> ## Were the earlier fixes merged?
+> - **In this branch:** yes. All 15 other branches are inside it.
+> - **On the default branch:** no. That branch has none of this work, and putting it there is your call.
+> - **Installed on your tablet:** alpha16 was the last release before this one. Your file says alpha16, so the "glide start instant" fix from the day before was already installed when you recorded it. What follows is what was still wrong.
+>
+> ## Your training file
+> - **Accuracy:** I replayed your 447 glides. The right word is first for 86.6% of them and in the first three for 96.2%. The misses are mostly look-alike pairs: our/or, meet/met, off/of, too/to, good/god. Their paths are almost the same shape, so no change to the glide reader helps. I did not change it.
+> - **What the file can't show:** it only holds glides that registered. A glide that typed one letter, or never started, leaves no trace, so I found those causes in the touch code.
+> - **How your thumbs land:** you rest about 0.1 seconds on the first key before moving.
+>
+> ## Glides that don't start, one letter instead of a glide
+> - **Android's edge back swipe:** a touch starting within about 30 dp of a screen edge can be taken over as "back", which kills glides starting on q, a, p or l. The keyboard now asks Android to leave its two side strips alone.
+> - **Next word's thumb dropped:** if your other thumb had landed for the next word but not moved yet when the first thumb lifted, that glide was thrown away. It is now kept.
+> - **Margin beside a squeezed keyboard:** a touch just outside the keys used to do nothing. It now counts as the nearest key.
+>
+> ## Erase key
+> - **Pressed mid-glide:** erase pressed with your other thumb while one thumb was still gliding was silently dropped. It now erases at once and repeats while held.
+> - **Bigger:** about 24% taller and 12% wider. No letter moved, so your learned glide data stays valid.
+> - **Easier to hit:** a touch in a gap now goes to the nearest key edge, not the nearest key centre, so wide keys like erase stop losing to narrow neighbours.
+>
+> Settings > Diagnostics has new counters on its "touch:" line for the erase and edge cases.
+>
+> ## Maven 429
+> - **Cause:** the setup script on this account had no mirror at all. The only Google mirror in the project was Robolectric's own download setting, and Gradle itself kept asking Maven Central.
+> - **Repo fix:** the Keyboard repo now asks Google's public copy of Maven Central first. It is off on GitHub's runners, so the release build is unchanged.
+> - **Proof:** a col
+> [... 512 characters omitted ...]
+> on.
+> 2. Click the environment name in the title bar, then Edit, then Setup script.
+> 3. Paste the block from `research/R39-maven-429.md` (section "Other accounts") above the existing lines.
+> 4. Save. It applies from the next new session.
+>
+> Without the edit, those accounts still get the repo fix once their sessions merge this branch. They won't get the warm-up fix, and your other repos stay unprotected.
+>
+> ## Still open
+> - **For you:** install alpha17 and try glides from q, a, p and l, two-thumb glides, and erase with the other thumb during a glide. Then attach Diagnostics or a new training file if anything still fails.
+> - **For you:** paste the setup block into your other accounts.
+> - **Not done:** the Kestrel browser's copy of the keyboard code is not updated, because there is no checkout of that repo here.
+> - **Not done:** the earlier setup-tidy session (R37) still has its final steps unfinished.
+<!-- sha:b214f1261085 -->
