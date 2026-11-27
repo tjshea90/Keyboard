@@ -13,7 +13,7 @@ Owner request R37 (TASKS.md): tidy the Claude Code setup for Android work, check
 
 ## 3. What is loaded in a session (from the synced plugin folder: 74 plugins)
 682 skills (names alone are about 23 KB of every session's start), about 100 connector entries (about 50 need a sign-in, 15 fail to start), 11 plugin agents with long descriptions, and these plugin HOOKS that run code in every session whatever the project:
-- `security-guidance`: on every prompt, every edit and Bash call and at Stop (its AI diff review needs credentials this cloud session does not have; the scripts still run and log).
+- `security-guidance`: on every prompt, every edit and Bash call and at Stop (its AI diff review appears to be off here: it left a "no credentials" notice file; the scripts still run and keep a growing log).
 - `stackhawk-hawkscan`: SessionStart text orders a web scan after every code change without asking; needs Docker and a key; this repo has no web app.
 - `carta-investors` (7 hooks, 3 at SessionStart), `pixeltable` and `cockroachdb` (Python after every edit), `signoz` (Node at start and on WebFetch), `honeycomb`, `datadog` (only for their own tools).
 
