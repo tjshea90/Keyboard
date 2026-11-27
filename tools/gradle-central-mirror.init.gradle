@@ -26,8 +26,14 @@ def putMirrorInFrontOfCentral = { repos ->
 }
 
 if (System.getenv('CI') != 'true' && System.getenv('SWOOP_NO_MIRROR') == null) {
+    // the plugin repositories are still empty before settings.gradle runs: the mirror goes FIRST there (the plugin portal and google() answer 404 for what the mirror has, and the mirror for what only they have)
+    gradle.beforeSettings { settings ->
+        try {
+            def r = settings.pluginManagement.repositories.maven { name = 'centralMirrorPlugins'; url = mirrorUrl }
+        } catch (Throwable ignored) { }
+    }
+    // the library repositories: in front of Maven Central, once the settings file has said where Central is
     gradle.settingsEvaluated { settings ->
-        putMirrorInFrontOfCentral(settings.pluginManagement.repositories)
         try { putMirrorInFrontOfCentral(settings.dependencyResolutionManagement.repositories) } catch (Throwable ignored) { }
     }
 }
