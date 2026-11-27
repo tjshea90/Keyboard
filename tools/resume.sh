@@ -149,7 +149,8 @@ SHORT
 if [ "$TEXT_MODE" -eq 1 ]; then
   printf '%s\n' "$BRIEF"
 elif command -v python3 >/dev/null 2>&1; then
-  printf '%s' "$BRIEF" | python3 -I -c '
+  # fit-brief.py wraps the text in the hook JSON AND keeps it under the hook cap; if it is missing or fails: the plain wrapper, then raw text.
+  printf '%s' "$BRIEF" | python3 -I "$D/tools/fit-brief.py" 2>/dev/null || printf '%s' "$BRIEF" | python3 -I -c '
 import json, sys
 print(json.dumps({"hookSpecificOutput": {"hookEventName": "SessionStart", "additionalContext": sys.stdin.read()}}))
 ' 2>/dev/null || printf '%s\n' "$BRIEF"
