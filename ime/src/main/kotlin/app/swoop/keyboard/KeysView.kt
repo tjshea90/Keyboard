@@ -940,7 +940,7 @@ class KeysView(context: Context) : View(context) {
         if (isBubbleKey(k)) { bubbleKey = k; bubbleText = k!!.label }
         spaceIsDown = (k?.key as? Key.Ch)?.text == " "; spaceHeld = false
         if (spaceIsDown) handler.postDelayed(spaceHold, SPACE_HOLD_MS)
-        if (k != null) { if (!quiet) { haptic(); click() }; if (altOf(k) != null || isSymbolKey(k) || isDigitKey(k)) handler.postDelayed(hold, HOLD_MS) }
+        if (k != null) { if (!quiet) { haptic(); click() }; if (!noTap && (altOf(k) != null || isSymbolKey(k) || isDigitKey(k))) handler.postDelayed(hold, HOLD_MS) }
         if (k?.key === Key.Backspace) { listener?.onKey(Key.Backspace); repeatStartAt = SystemClock.uptimeMillis(); handler.postDelayed(repeat, BackspaceRepeat.FIRST_MS) }
         downX = x; downY = y; downAt = SystemClock.uptimeMillis(); firstMoveAt = 0L
         if (glideEnabled && page == Page.LETTERS && pressedLetter != null) {
@@ -1004,6 +1004,7 @@ class KeysView(context: Context) : View(context) {
         val letter = pressedLetter
         if (letter != null) {                              // a tap on a letter types the letter it went down on, even when the finger drifted (held: its digit)
             pressedLetter = null; down = null; gn = 0
+            if (noTap) { noTap = false; dyn(); listener?.onTouchNote(NOTE_RESTING_IGNORED); return }          // R38: it landed during another finger's glide and never moved: not a key press
             light(letter); emit(if (alt != null) Key.Ch(alt) else letter.key!!)
             flushPendingTap()
             return
@@ -1025,6 +1026,7 @@ class KeysView(context: Context) : View(context) {
         handler.removeCallbacks(repeat)
         val alt = holdAlt; clearHold(); popup = null
         pressedLetter = null; down = null; armed = false; gliding = false; gn = 0
+        if (noTap) { noTap = false; return }                                                              // R38: not a key press (see [noTap])
         light(l); emit(if (alt != null) Key.Ch(alt) else l.key!!)
     }
 
@@ -1062,6 +1064,7 @@ class KeysView(context: Context) : View(context) {
     }
 
     private fun beginGlide() {
+        noTap = false
         lastPreviewAt = SystemClock.uptimeMillis(); lastPreviewN = 0; firstMoveAt = lastPreviewAt
         clearHold(); gliding = true; down = null; pressedLetter = null
         handler.removeCallbacks(repeat); handler.removeCallbacks(unlight); litKey = null
@@ -1082,6 +1085,7 @@ class KeysView(context: Context) : View(context) {
         val k = glideDown; glideDown = null
         if (stayedOnKey(k)) {                            // a tap that slid a little (the finger never left its own key): the key it went down on
             gn = 0; dyn()
+            if (noTap) { noTap = false; listener?.onTouchNote(NOTE_RESTING_IGNORED); return }          // R38: (a finger that landed during another finger's glide and only wobbled)
             if (k?.key != null) { light(k); emit(k.key!!) }
             flushPendingTap()
             return
