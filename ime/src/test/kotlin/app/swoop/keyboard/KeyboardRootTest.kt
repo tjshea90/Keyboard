@@ -8,6 +8,7 @@ import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.widget.FrameLayout
+import app.kestrel.core.input.Key
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -448,7 +449,7 @@ class KeyboardRootTest {
 
     @Test fun aTouchRightBesideASqueezedKeyboardIsTheKeysOwnAndTypesTheNearestKey() {
         val (r, _) = root { it.putInt(Prefs.DOCK_FRAC, 600); it.putInt(Prefs.DOCK_X, 500) }
-        val typed = ArrayList<String>(); r.keys.listener = object : KeysView.Listener { override fun onKey(key: app.kestrel.core.input.Key) { typed.add((key as? app.kestrel.core.input.Key.Ch)?.text ?: key.toString()) } }
+        val typed = ArrayList<String>(); r.keys.listener = object : KeysView.Listener { override fun onKey(key: Key) { typed.add((key as? Key.Ch)?.text ?: key.toString()) }; override fun onCursor(steps: Int) {} }
         val p = r.panelRect(); assertTrue("squeezed: ${p.left}", p.left > 40 * dp)
         val (qx, qy) = r.keys.centerOf("q")!!; val y = p.top + r.grip.height + r.keys.top.toFloat() + qy
         touch(r, MotionEvent.ACTION_DOWN, p.left - 12 * dp, y); touch(r, MotionEvent.ACTION_UP, p.left - 12 * dp, y)
