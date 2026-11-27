@@ -575,4 +575,80 @@ class KeysViewTest {
             assertTrue("w=$w wanted $target got $h (mul $m)", Math.abs(h - target) <= 1)
         }
     }
+
+    // ------------------------------------------------------------------ R38 (2026-11-27): "it still often does not register that I'm glide typing ... types one letter ... a hard time pressing the erase key because I'm moving fast"
+
+    @Test fun aSecondThumbThatLandedMomentsAgoAndHasNotMovedYetStillGlidesWhenTheFirstThumbLifts() {
+        val (v, t) = glideView(); val (ax, ay) = at(v, "a"); val (dx, dy) = at(v, "d"); val (hx, hy) = at(v, "h"); val (kx, ky) = at(v, "k")
+        touch(v, MotionEvent.ACTION_DOWN, 0, Triple(0, ax, ay))
+        touch(v, MotionEvent.ACTION_MOVE, 0, Triple(0, (ax + dx) / 2f, ay)); touch(v, MotionEvent.ACTION_MOVE, 0, Triple(0, dx, dy))
+        advance(120)
+        touch(v, MotionEvent.ACTION_POINTER_DOWN, 1, Triple(0, dx, dy), Triple(1, hx, hy))                    // the next word's thumb lands (people rest about 100 ms before they move)
+        advance(60)
+        touch(v, MotionEvent.ACTION_POINTER_UP, 0, Triple(0, dx, dy), Triple(1, hx, hy))                      // the first thumb lifts before the new one has moved at all
+        assertEquals("the first glide ends", 1, t.glides.size)
+        advance(60)
+        touch(v, MotionEvent.ACTION_MOVE, 0, Triple(1, (hx + kx) / 2f, hy)); touch(v, MotionEvent.ACTION_MOVE, 0, Triple(1, kx, ky))
+        touch(v, MotionEvent.ACTION_UP, 0, Triple(1, kx, ky))
+        assertEquals("the second thumb's glide is not lost", 2, t.glides.size); assertTrue("no stray letter: ${t.typed()}", t.keys.isEmpty())
+    }
+
+    @Test fun aSecondThumbThatLandsDuringAGlideAndOnlyLiftsAgainTypesNothingEvenWhenItWasAdopted() {
+        val (v, t) = glideView(); val (ax, ay) = at(v, "a"); val (dx, dy) = at(v, "d"); val (gx, gy) = at(v, "g")
+        touch(v, MotionEvent.ACTION_DOWN, 0, Triple(0, ax, ay))
+        touch(v, MotionEvent.ACTION_MOVE, 0, Triple(0, (ax + dx) / 2f, ay)); touch(v, MotionEvent.ACTION_MOVE, 0, Triple(0, dx, dy))
+        touch(v, MotionEvent.ACTION_POINTER_DOWN, 1, Triple(0, dx, dy), Triple(1, gx, gy)); advance(40)
+        touch(v, MotionEvent.ACTION_POINTER_UP, 0, Triple(0, dx, dy), Triple(1, gx, gy))
+        advance(50); touch(v, MotionEvent.ACTION_UP, 0, Triple(1, gx, gy))
+        assertEquals(1, t.glides.size); assertTrue("a thumb that landed during a glide and never moved is not a key press: ${t.typed()}", t.keys.isEmpty())
+    }
+
+    @Test fun backspaceWithTheOtherThumbWhileAGlideIsInProgressIsNotLost() {
+        val (v, t) = glideView(); val (ax, ay) = at(v, "a"); val (dx, dy) = at(v, "d"); val (bx, by) = at(v, "\u232B")
+        touch(v, MotionEvent.ACTION_DOWN, 0, Triple(0, ax, ay))
+        touch(v, MotionEvent.ACTION_MOVE, 0, Triple(0, (ax + dx) / 2f, ay)); touch(v, MotionEvent.ACTION_MOVE, 0, Triple(0, dx, dy))
+        assertTrue(v.isGliding)
+        touch(v, MotionEvent.ACTION_POINTER_DOWN, 1, Triple(0, dx, dy), Triple(1, bx, by))
+        assertEquals("Backspace is pressed at once", listOf<app.kestrel.core.input.Key>(app.kestrel.core.input.Key.Backspace), t.keys)
+        assertTrue("and the glide goes on", v.isGliding)
+        touch(v, MotionEvent.ACTION_POINTER_UP, 1, Triple(0, dx, dy), Triple(1, bx, by))
+        advance(1500); assertEquals("a lifted Backspace does not repeat", 1, t.keys.size)
+        touch(v, MotionEvent.ACTION_UP, 0, Triple(0, dx, dy))
+        assertEquals("the glide still ends as a glide", 1, t.glides.size); assertEquals(1, t.keys.size)
+    }
+
+    @Test fun aBackspaceHeldWithTheOtherThumbWhileGlidingRepeatsAndStopsWhenLifted() {
+        val (v, t) = glideView(); val (ax, ay) = at(v, "a"); val (dx, dy) = at(v, "d"); val (bx, by) = at(v, "\u232B")
+        touch(v, MotionEvent.ACTION_DOWN, 0, Triple(0, ax, ay))
+        touch(v, MotionEvent.ACTION_MOVE, 0, Triple(0, (ax + dx) / 2f, ay)); touch(v, MotionEvent.ACTION_MOVE, 0, Triple(0, dx, dy))
+        touch(v, MotionEvent.ACTION_POINTER_DOWN, 1, Triple(0, dx, dy), Triple(1, bx, by))
+        advance(1200); val held = t.keys.size; assertTrue("it repeats while held: $held", held > 3)
+        touch(v, MotionEvent.ACTION_POINTER_UP, 1, Triple(0, dx, dy), Triple(1, bx, by)); val atLift = t.keys.size
+        advance(1500); assertEquals("and stops when lifted", atLift, t.keys.size)
+        touch(v, MotionEvent.ACTION_UP, 0, Triple(0, dx, dy))
+    }
+
+    @Test fun backspaceIsTheBiggestKeyOfItsRowAndStaysInsideTheKeyboard() {
+        val (v, _) = glideView(); val b = v.boxForTest("\u232B")!!; val m = v.boxForTest("m")!!; val l = v.boxForTest("l")!!
+        assertTrue("taller than a letter key: ${b.height()} against ${m.height()}", b.height() > m.height() * 1.15f)
+        assertTrue("wider than 1.5 letter keys: ${b.width()} against ${m.width()}", b.width() > m.width() * 1.5f)
+        assertTrue("never over the key beside it: ${b.left} / ${m.right}", b.left >= m.right)
+        assertTrue("nor over the row above: ${b.top} / ${l.bottom}", b.top >= l.bottom)
+        assertTrue("inside the view: ${b.right} / ${v.width}", b.right <= v.width.toFloat() && b.bottom <= v.height.toFloat())
+    }
+
+    @Test fun aTouchJustAboveOrBesideTheErasekeyStillErases() {
+        val (v, t) = view(); val b = v.boxForTest("\u232B")!!; val m = v.boxForTest("m")!!
+        val y = b.centerY()
+        tap(v, (m.right + (b.left - m.right) * 0.5f + 1f).coerceAtMost(b.left + 1f) to y)              // in the gap beside it, nearer its edge than the centre of m
+        tap(v, b.centerX() to (b.top + 1f))                                                            // at its top edge, in what used to be the gap above it
+        assertEquals(listOf("<bs>", "<bs>"), t.keys)
+    }
+
+    @Test fun aTouchInTheGapNextToAWideKeyGoesToTheNearerEdgeNotTheNearerCentre() {
+        val (v, t) = view(); val m = v.boxForTest("m")!!; val b = v.boxForTest("\u232B")!!
+        val x = m.right + (b.left - m.right) * 0.8f                                                    // 80 % of the way from m to the erase key
+        tap(v, x to m.centerY())
+        assertEquals("the erase key's edge is nearer", listOf("<bs>"), t.keys)
+    }
 }
