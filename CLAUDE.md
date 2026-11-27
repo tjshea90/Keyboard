@@ -45,18 +45,17 @@ Develop and push ONLY on the branch this session was assigned (`git branch --sho
 - Sandbox: JDK 21, Gradle 8.14.3 wrapper, AGP 8.13.2, Kotlin 2.3.10, minSdk 29, targetSdk 36, SDK `/opt/android-sdk` (platforms 29, 34, 36; build-tools 34.0.0 and 36.0.0, Gradle adds 35.0.0 on the first build). No emulator acceleration. A Bash guard refuses network-egress-looking commands (curl/wget), recursive-delete text even inside heredocs and `git config user.*` reads; another hook refuses files containing an absolute home-directory path: do not bypass them (use the GitHub MCP tools, git, Gradle, the Edit tool).
 
 ## Skills - plugin `tj-android-kit`: load the one that matches BEFORE the work; THIS REPO'S RULES WIN over any skill
-A skill step that adds a dependency, permission, Compose/AndroidX/DI library, telemetry or network call, or skips a checkpoint is overruled by the Rules above: skip it. Load only what the job needs (each skill costs context). Same-named skills in other plugins (`design:`): use the `tj-android-kit:` one. Every other plugin in the skill list is unrelated to this project (audit: `research/R37-claude-setup-audit.md`).
-- `low-ram-android`: anything touching size, memory, start time, stutter, a dependency or a new screen (the tablet is 2 GB, Android 10 Go).
-- `systematic-debugging`: any bug, red test, build failure or odd behaviour, BEFORE proposing a fix.
-- `verification-before-completion`: before ticking a TASKS box, writing "done"/"fixed" in a `ckpt`, or telling the owner it works (evidence = the Commands above or an Actions run id; say what was not run).
-- `anr-audit-and-fix`: before editing main-thread code (`KeysService` callbacks, `KeysView` touch/draw, start-up) and for any freeze report.
-- `android-permissions-security`, `android-intent-security`: KB-702 and any manifest change (exported component, intent filter, permission). Permissions stay EXACTLY `tools/expected-permissions.txt`.
-- `r8-analyzer`: before touching R8/ProGuard/shrinking or the KB-700 size budget (the plan's R8 decision first: `research/KEYBOARD-APP-PLAN.md`, search "R8").
-- `ux-copy`: before writing or changing any text the owner reads (Settings, Diagnostics, About, KB-704 guide, errors): plain words. `accessibility-review`: when the key layout or a Settings screen changes (touch size, contrast, TalkBack labels).
-- `testing-setup`: only to analyse or plan tests; never its install steps (Hilt/DI/mocking libraries break the dependency rule).
-- `ponytail`: only when the owner asks for the simplest fix or to choose between dependencies/refactors; once loaded it stays on for the whole session.
-- Ideas only, take no code (they assume Compose/coroutines, banned here): `edge-to-edge` (KB-107/KB-701 insets on Android 16: use framework `WindowInsets`), `kotlin-concurrency-and-flow` (reviewing raw Thread/Executor use).
-- Never load: `compose-*`, `material-3`, `adaptive`, `navigation-event` (this is a framework-Views app), `design-critique` (unless the owner asks for a design review), `dispatching-parallel-agents` (unless the owner asks; `tools/claim.sh` comes first).
+A skill step that adds a dependency, permission, Compose/AndroidX/DI library, telemetry or network call, or skips a checkpoint is overruled by the Rules above: skip it. Same-named skills in other plugins (`design:`): use the `tj-android-kit:` one; the other plugins' skills are unrelated (audit: `research/R37-claude-setup-audit.md`).
+- `low-ram-android`: size, memory, start time, stutter, a new dependency or screen (2 GB Android 10 Go tablet).
+- `systematic-debugging`: any bug, red test or build failure, BEFORE proposing a fix.
+- `verification-before-completion`: before ticking a TASKS box, writing "done" in a `ckpt`, or telling the owner it works (say what was not run).
+- `anr-audit-and-fix`: before editing main-thread code (`KeysService`, `KeysView` touch/draw, start-up) or on a freeze report.
+- `android-permissions-security`, `android-intent-security`: KB-702 and any manifest change; permissions stay EXACTLY `tools/expected-permissions.txt`.
+- `r8-analyzer`: before touching R8/ProGuard/shrinking or the KB-700 size budget (plan: search "R8").
+- `ux-copy`: any text the owner reads (plain words). `accessibility-review`: key layout or Settings screen changes.
+- `testing-setup`: analyse or plan tests only, never its install steps (Hilt/DI/mocking break the dependency rule). `ponytail`: only when the owner asks for the simplest fix; once loaded it stays on all session.
+- Ideas only, take no code (they assume Compose/coroutines): `edge-to-edge` (KB-107/KB-701, use framework `WindowInsets`), `kotlin-concurrency-and-flow` (reviewing raw Thread/Executor use).
+- Never load: `compose-*`, `material-3`, `adaptive`, `navigation-event` (framework-Views app), `design-critique`, `dispatching-parallel-agents` (unless the owner asks).
 
 ## Older learnings (kept by hand)
 - GitHub job logs: `get_job_logs` answers 404 until the job ends, and its tail is the Gradle cache-upload noise of the post step (150+ lines): jobs that need a readable log set `gradle-cache: 'false'` on `.github/actions/setup-build`, and scripts report failures as `::error::` annotations (publish-release.sh has an ERR trap). Never use `grep -q` in a pipeline under `set -o pipefail` (SIGPIPE gives false failures): write to a file, then grep.
