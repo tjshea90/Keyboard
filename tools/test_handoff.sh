@@ -80,6 +80,15 @@ assert cmds and all(\"swoop-checkpoint-hooks\" in c for c in cmds)
 " "$D/tools/session-root-hooks.json"'
 check "signing/CERT_SHA256 pins the certificate of the public dev key signing/dev/swoop-dev.p12" '[ "$(keytool -list -v -keystore "$D/signing/dev/swoop-dev.p12" -storetype PKCS12 -storepass swoop-dev -alias swoop-dev 2>/dev/null | sed -n "s/.*SHA256: *//p" | head -1 | tr -d ":" | tr "A-F" "a-f")" = "$(tr -d " \r\n" < "$D/signing/CERT_SHA256")" ]'
 check "the only keystore in the repo is the public dev key in signing/dev/" '! git -C "$D" ls-files 2>/dev/null | grep -E "\.(jks|keystore|p12)$" | grep -qv "^signing/dev/"'
+check "settings.gradle.kts asks the Google copy of Maven Central BEFORE mavenCentral() in both repository lists (R39: Central answers HTTP 429), and the init script is valid" 'python3 -I -c "
+import re,sys
+t=open(sys.argv[1]).read()
+blocks=re.findall(r\"repositories \\{(.*?)\\n    \\}\", t, re.S)
+assert len(blocks)==2, len(blocks)
+for b in blocks: assert \"centralMirror\" in b and b.index(\"centralMirror\") < b.index(\"mavenCentral()\"), b
+assert \"maven-central.storage-download.googleapis.com\" in t
+i=open(sys.argv[2]).read(); assert \"centralMirror\" in i and \"catch (Throwable\" in i
+" "$D/settings.gradle.kts" "$D/tools/gradle-central-mirror.init.gradle"'
 check "tools/MIRROR_MAIN is on or off" 'grep -Eq "^(on|off)$" "$D/tools/MIRROR_MAIN"'
 check "HANDOFF.md, BRIEF.md, TASKS.md, BUILDLOG.md and CLAUDE.md exist" '[ -f "$D/HANDOFF.md" ] && [ -f "$D/BRIEF.md" ] && [ -f "$D/TASKS.md" ] && [ -f "$D/BUILDLOG.md" ] && [ -f "$D/CLAUDE.md" ]'
 check "the app is readable through appinfo.sh (version, tag, asset) and only swoop-v tags count" '[ "$(bash "$D/tools/appinfo.sh" tag)" = "swoop-v$(bash "$D/tools/appinfo.sh" vname)" ] && [ -n "$(bash "$D/tools/appinfo.sh" asset)" ] && bash "$D/tools/appinfo.sh" of-tag swoop-v1.0 && ! bash "$D/tools/appinfo.sh" of-tag kestrel-v1.0'
