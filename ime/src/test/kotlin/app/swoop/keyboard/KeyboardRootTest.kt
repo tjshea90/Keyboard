@@ -441,7 +441,7 @@ class KeyboardRootTest {
         assertTrue("only the edges, not the whole keyboard: $rects", rects.all { it.width() <= p.width() / 2 })
     }
     @Test fun theEdgeStripsFollowAKeyboardThatWasSqueezedOrFloated() {
-        val (r, _) = root { it.putInt("dockFrac", 600) }
+        val (r, _) = root { it.putInt(Prefs.DOCK_FRAC, 600); it.putInt(Prefs.DOCK_X, 500) }
         val p = r.panelRect(); val rects = r.systemGestureExclusionRects
         assertTrue("the strips are the squeezed keyboard's own edges: $p $rects", rects.all { it.left >= p.left && it.right <= p.right })
     }
