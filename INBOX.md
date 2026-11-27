@@ -594,3 +594,10 @@ Tidy and improve this Claude Code setup for Android app building. I have uploade
 ```
 @"/root/.claude/uploads/97e3f906-84af-5886-921b-1000c61ed534/f6302ae1-Swoop_glide_training_2026-11-26_2239.txt" first see if the fixes were merged from earlier. Then optimize from the training file. It still often does not register that I'm glide typing, especially at the edges of the keyboard. It often types one letter when I'm trying to glide. Sometimes i have a hard time pressing the erase key because I'm moving fast. Try to make it bigger and easier to press. Without ruining anything else
 ```
+
+## 2026-11-27T04:20:39Z
+```
+the Gradle downloads hit the Maven rate limit (HTTP 429
+
+This happens a lot and i thought i already fixed it with a setup script which gets a Google mirror. Figure out the best way to permanently fix this
+```
