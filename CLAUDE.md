@@ -25,7 +25,7 @@ Name "Swoop" is a placeholder (one string + one applicationId `app.swoop.keyboar
 
 ## Rules
 - Dependencies: kotlin-stdlib only (+ androidx.profileinstaller only if a baseline profile is made). No AppCompat/Compose/Material/Room/WorkManager/coroutines. NEVER a Google Mobile Services dependency.
-- `:core` is pure Kotlin/JVM on the Java 8 API surface (no Android imports). Never block the UI thread. No `largeHeap`, `allowBackup=false`. No native code unless `research/PERF.md` proves the need. Tap path allocates nothing.
+- `:core` (package `app.kestrel.core`) is pure Kotlin/JVM on the Java 8 API surface (no Android imports). Never block the UI thread. No `largeHeap`, `allowBackup=false`. No native code unless `research/PERF.md` proves the need. Tap path allocates nothing.
 - Manifest permissions are EXACTLY `tools/expected-permissions.txt` (empty until KB-601, then `INTERNET` only: no ACCESS_NETWORK_STATE, RECORD_AUDIO, READ_CONTACTS). ALL network code lives in `app.swoop.keyboard.translate`; two hosts only. Tell the owner in plain words about any change under `translate/` or the manifest.
 - Learn nothing in password fields or when `IME_FLAG_NO_PERSONALIZED_LEARNING` is set. Never log typed text. Diagnostics show counters only.
 - **The repo is PUBLIC and the hooks copy chat into it:** never paste a secret, password, personal data or anything you would not post publicly.
