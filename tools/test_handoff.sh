@@ -91,7 +91,7 @@ check "the privacy rules are in .gitignore (keystores, APKs, learning exports, r
 git init -q --bare "$T/remote.git"
 git clone -q "$T/remote.git" "$T/work" 2>/dev/null
 mkdir -p "$T/work/tools" "$T/work/ime" "$T/work/signing"
-cp "$D"/tools/*.sh "$D"/tools/session-root-hooks.json "$D"/tools/MIRROR_MAIN "$D"/tools/expected-permissions.txt "$T/work/tools/" 2>/dev/null
+cp "$D"/tools/*.sh "$D"/tools/fit-brief.py "$D"/tools/session-root-hooks.json "$D"/tools/MIRROR_MAIN "$D"/tools/expected-permissions.txt "$T/work/tools/" 2>/dev/null
 echo off > "$T/work/tools/MIRROR_MAIN"
 cp "$D"/ship.sh "$D"/signing/CERT_SHA256 "$T/work/" 2>/dev/null
 cp "$D/.gitattributes" "$T/work/.gitattributes" 2>/dev/null
@@ -211,6 +211,30 @@ check "resume briefing fits the 10,000-char hook cap (with a long INBOX + TASKS 
   head -c 6000 /dev/zero | tr "\0" "x" >> INBOX.md
   bash tools/ckpt.sh "$(head -c 7000 /dev/zero | tr "\0" "d")" "$(head -c 3000 /dev/zero | tr "\0" "n")" >/dev/null 2>&1
   [ "$(bash tools/resume.sh --text | wc -c)" -lt 10000 ]'
+# The hook path (JSON) is what a new session sees. A fresh session branch merges many branches first, so its briefing outgrows the
+# cap (12 KB seen on 2026-11-26: cut to a 2 KB preview, 'Do this next' lost). fit-brief.py squeezes it, least important parts first.
+check "resume in hook mode prints valid hook JSON that carries the briefing" '
+  bash tools/resume.sh 2>/dev/null | python3 -I -c "import json,sys; d=json.load(sys.stdin)[\"hookSpecificOutput\"]; assert d[\"hookEventName\"]==\"SessionStart\" and \"RESUMING SWOOP\" in d[\"additionalContext\"]"'
+check "fit-brief leaves a small briefing untouched" '
+  [ "$(printf "%s" "small briefing" | python3 -I "$D/tools/fit-brief.py" | python3 -I -c "import json,sys; print(json.load(sys.stdin)[\"hookSpecificOutput\"][\"additionalContext\"])")" = "small briefing" ]'
+check "fit-brief squeezes a briefing with 12 merged branches under the hook cap and keeps the CHECKPOINT" '
+  {
+    echo "=== RESUMING TEST ==="
+    for i in $(seq 1 12); do echo "  sync: MERGED branch-$i (30 commit(s), its newest $i min old - cut off? read its card and the diff of its last commits)"; done
+    echo "######## CHECKPOINT.md - where the last session stopped. START HERE. ########"
+    echo "## Do this next"; echo "KEEPME-NEXT-STEP"; head -c 3000 /dev/zero | tr "\0" "c"; echo
+    echo "######## TASKS.md - the 18 NEWEST open items (line numbers; older ones: grep) ########"
+    for i in $(seq 1 18); do echo "$i:- [ ] task $(head -c 110 /dev/zero | tr "\0" "t")"; done
+    echo "  (5 done - not shown)"; echo
+    echo "######## INBOX.md tail - x ########"; head -c 2500 /dev/zero | tr "\0" "i"; echo
+    echo "######## OUTBOX.md tail - x ########"; head -c 2500 /dev/zero | tr "\0" "o"; echo
+    echo "######## RULES (x) ########"; head -c 1200 /dev/zero | tr "\0" "r"
+  } > "$T/big.txt"
+  python3 -I "$D/tools/fit-brief.py" < "$T/big.txt" > "$T/fit.json"
+  [ "$(wc -c < "$T/fit.json")" -le 9900 ] && grep -q KEEPME-NEXT-STEP "$T/fit.json" && grep -q "RESUMING TEST" "$T/fit.json" && grep -q "older branches" "$T/fit.json"'
+check "fit-brief still prints valid JSON under the cap for a hopeless 60 KB single line" '
+  head -c 60000 /dev/zero | tr "\0" "z" | python3 -I "$D/tools/fit-brief.py" > "$T/cut.json"
+  [ "$(wc -c < "$T/cut.json")" -le 9900 ] && python3 -I -c "import json,sys; json.load(open(sys.argv[1]))" "$T/cut.json"'
 
 # ---------------------------------------------------------------- many sessions and accounts: cards, merge driver, union files, conflicts, claims, cold clone
 check "ckpt keeps this session's own card in .checkpoints/" '[ -f .checkpoints/sess1.md ] && grep -q "^# CHECKPOINT" .checkpoints/sess1.md'
