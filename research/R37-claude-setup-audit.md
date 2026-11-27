@@ -27,7 +27,13 @@ Switch off on claude.ai (73 plugins; keep only `tj-android-kit`), grouped by why
 - Keep: tj-android-kit; the GitHub tools; Claude Code's own skills (code-review, simplify, security-review, loop, fewer-permission-prompts, init, run).
 
 ## 4. Build and tests
-(filled in below when the run ends; if missing, the run was cut off: rerun `./gradlew --continue --no-parallel --max-workers=2 :core:test :ime:assembleDebug :ime:testDebugUnitTest :ime:lintDebug`)
+Measured in this cold container with `./gradlew --continue --no-parallel --max-workers=2 :core:test :ime:assembleDebug :ime:testDebugUnitTest :ime:lintDebug`, then `:tools:assemble :eval:assemble`:
+- `:core:test`: 82 classes, 694 tests, 0 failures, 15 lab classes skipped by design (they need REAL_SWIPES-style flags).
+- `:ime:testDebugUnitTest`: 23 classes, 361 tests, 0 failures, 1 skipped.
+- `:ime:lintDebug`: 0 errors, 57 warnings (UnusedResources 22, ObsoleteSdkInt 12, PluralsCandidate 7, ViewConstructor 4, ClickableViewAccessibility 3, RtlHardcoded 2, rest 7).
+- `:ime:assembleDebug`: debug APK 7.7 MB. `:tools` and `:eval` build; they have no tests of their own.
+- It took 5 attempts: 1-4 stopped on HTTP 429 from `repo.maven.apache.org` for ONE Robolectric jar (`nativeruntime-dist-compat-1.0.16`; attempt 1 had run `:core:test` for 11 minutes first), attempt 5 passed in 1 min 28 s. Nothing was blocked.
+- NOT run: anything on the tablet or an emulator (no KVM here), the GitHub Actions workflow, `tools/prewarm.sh`.
 
 ## 5. Changed / not changed
 Changed: `CLAUDE.md` (see its git diff), `TASKS.md` (R37), this file. Not changed on purpose: `.claude/settings.json` (6 light hooks, in step with `tools/session-root-hooks.json`; no skills, commands or agents live in the repo), `AGENTS.md` (still holds the old Session Learnings block), `HANDOFF.md` section 4 (same commands as before, still valid once the cache is warm), plan line 152, the cloud environment's setup script, any plugin setting.
