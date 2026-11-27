@@ -1,0 +1,33 @@
+// Gradle init script (R39): ask Google's public copy of Maven Central BEFORE repo.maven.apache.org.
+//
+// Why: the cloud sandboxes share a few internet addresses, so Maven Central answers whole downloads with "429 Too Many Requests" (kotlin-stdlib, kotlin-scripting-compiler, Robolectric's 70 MB native jar ...) and a
+// build stops half way. Google's bucket holds the same files (same coordinates, same checksums) and is not throttled that way. The mirror is put in FRONT of Maven Central in the settings' repository lists, so Central
+// is only asked for what the copy lacks (a 404). Nothing is replaced, nothing else changes. GitHub's own runners ("CI=true") keep asking Central; SWOOP_NO_MIRROR=1 switches this off anywhere.
+//
+// Install (the environment setup script does it): copy to ~/.gradle/init.d/central-mirror.gradle. Every repository of the owner that uses settings-level repositories (pluginManagement / dependencyResolutionManagement)
+// is covered at once; the Keyboard repo carries the same line in its own settings.gradle.kts, so it works without this file too.
+// Written so that a failure here can never stop a build: any problem is swallowed and Gradle goes on with the repositories it was given.
+
+def mirrorUrl = 'https://maven-central.storage-download.googleapis.com/maven2/'
+def centralHosts = ['repo.maven.apache.org', 'repo1.maven.org']
+
+def putMirrorInFrontOfCentral = { repos ->
+    try {
+        if (repos.findByName('centralMirror') != null) return
+        def central = repos.find { r -> r instanceof MavenArtifactRepository && centralHosts.contains(r.url.host) }
+        if (central == null) return                                   // this list never asks Maven Central: nothing to put the mirror in front of
+        def at = repos.indexOf(central)
+        def mirror = repos.maven { name = 'centralMirror'; url = mirrorUrl }       // (appended; moved in front of Central next)
+        repos.remove(mirror)
+        repos.add(at, mirror)
+    } catch (Throwable ignored) {
+        // never stop a build over a mirror
+    }
+}
+
+if (System.getenv('CI') != 'true' && System.getenv('SWOOP_NO_MIRROR') == null) {
+    gradle.settingsEvaluated { settings ->
+        putMirrorInFrontOfCentral(settings.pluginManagement.repositories)
+        try { putMirrorInFrontOfCentral(settings.dependencyResolutionManagement.repositories) } catch (Throwable ignored) { }
+    }
+}
