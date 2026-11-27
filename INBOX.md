@@ -608,3 +608,8 @@ the Gradle downloads hit the Maven rate limit (HTTP 429
 
 This happens a lot and i thought i already fixed it with a setup script which gets a Google mirror. Figure out the best way to permanently fix this
 ```
+
+## 2026-11-27T04:53:05Z
+```
+I have the same old setup script on other claude accounts from before the change you did. Should i change the other accounts also? How?
+```
