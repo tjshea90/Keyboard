@@ -328,7 +328,20 @@ class KeysView(context: Context) : View(context) {
     private fun layoutKeys() {
         if (rectsW == width && rectsH == height && rects.isNotEmpty()) return
         rectsW = width; rectsH = height
-        rects = MiniKeyboardGeometry.slots(rows, width - 2 * pad, height - 2 * pad - stripPx(), gapX(), gapY(), 0f, ImeLayout.rowWeights(rows)).map { r -> r.map { KeyBox(it.left + pad, it.top + pad + stripPx(), it.right + pad, it.bottom + pad + stripPx()) } }
+        rects = MiniKeyboardGeometry.slots(rows, width - 2 * pad, height - 2 * pad - stripPx(), gapX(), gapY(), 0f, ImeLayout.rowWeights(rows)).mapIndexed { i, r -> r.mapIndexed { j, it ->
+            val kb = KeyBox(it.left + pad, it.top + pad + stripPx(), it.right + pad, it.bottom + pad + stripPx())
+            if (rows[i][j].key === Key.Backspace) widenErase(kb) else kb
+        } }
+    }
+
+    /**
+     * R38 (owner 2026-11-27: "I have a hard time pressing the erase key because I'm moving fast. Try to make it bigger and easier to press ... without ruining anything else"): the erase key is drawn and hit bigger. No letter may move
+     * to make room (the glide shapes and the learned thumb habit are measured on the letters' places), so it grows into the gaps around it: half a gap to the left, a bit into the margin at the right, half of the gap above and
+     * below. The neighbours keep their own boxes; what stays between them and it is still shared by nearest edge ([keyAt]).
+     */
+    private fun widenErase(b: KeyBox): KeyBox {
+        val gx = gapX(); val gy = gapY()
+        return KeyBox(b.left - gx * ERASE_GROW_X, b.top - gy * ERASE_GROW_Y, Math.min(b.right + pad * ERASE_GROW_RIGHT, width.toFloat()), Math.min(b.bottom + gy * ERASE_GROW_Y, height.toFloat()))
     }
 
     /** The 26 letter keys' centres as laid out now (the same function that draws them), for the glide decoder (KB-103). Null before the first layout. */
@@ -616,6 +629,8 @@ class KeysView(context: Context) : View(context) {
     private fun keyAt(x: Float, y: Float): KeySpec? {
         layoutKeys()
         if (rects.isEmpty()) return null
+        // inside a drawn key: the key (the erase key's box reaches into the gaps around it, so this comes before the rows are compared)
+        for ((i, row) in rects.withIndex()) for ((j, b) in row.withIndex()) { val k = rows[i][j]; if (k.key != null && b.contains(x, y)) return k }
         // the row under (or nearest to) the finger: the pad around the keys and the gaps between rows belong to the closest row
         var ri = 0; var best = Float.MAX_VALUE
         for ((i, row) in rects.withIndex()) {
@@ -624,12 +639,12 @@ class KeysView(context: Context) : View(context) {
             if (d < best) { best = d; ri = i }
         }
         if (best > dp(10f)) return null
-        // inside a key, else the nearest key of that row horizontally (a thumb that lands on a gap still types)
+        // else the nearest key of that row horizontally (a thumb that lands on a gap still types). R38: nearest by the distance to the key's EDGE; by the distance to its centre a wide key (erase, shift, enter) lost the gap beside it to a narrow neighbour
         var near: KeySpec? = null; var nearD = Float.MAX_VALUE
         for ((j, b) in rects[ri].withIndex()) {
             val k = rows[ri][j]; if (k.key == null) continue
-            if (b.contains(x, y)) return k
-            val d = Math.abs(x - b.centerX); if (d < nearD) { nearD = d; near = k }
+            val d = if (x < b.left) b.left - x else if (x > b.right) x - b.right else 0f
+            if (d < nearD) { nearD = d; near = k }
         }
         return near
     }
@@ -1069,6 +1084,8 @@ class KeysView(context: Context) : View(context) {
         for ((i, row) in rows.withIndex()) for ((j, k) in row.withIndex()) if (k.label == label && k.key != null) return rects[i][j].centerX to rects[i][j].centerY
         return null
     }
+    /** Tests: the drawn (and hit) box of the key labelled [label], in this view's pixels. */
+    fun boxForTest(label: String): RectF? { layoutKeys(); for ((i, row) in rows.withIndex()) for ((j, k) in row.withIndex()) if (k.label == label && k.key != null) return rects[i][j].let { RectF(it.left, it.top, it.right, it.bottom) }; return null }
     fun bubbleTextForTest(): String? = if (bubbleKey != null) bubbleText else null
     fun pageForTest(): Page = page
     fun candidatesForTest(): List<String> = cands
@@ -1108,6 +1125,10 @@ class KeysView(context: Context) : View(context) {
         const val TOOL_CLIPBOARD = 2
         const val TOOL_TRANSLATE = 3
         /** A finger that has moved this far (dp) from where it went down has started a glide (a path that never leaves its own key and stays short is still a tap, see [stayedOnKey]). R28b: 5 -> 2.5 (owner: "as soon as I start moving my finger it recognizes that I'm glide typing"). */
+        /** R38: how far the erase key grows into the gaps around it, in gaps (left, above and below) and in margins (right). */
+        const val ERASE_GROW_X = 0.5f
+        const val ERASE_GROW_Y = 0.5f
+        const val ERASE_GROW_RIGHT = 0.7f
         const val GLIDE_START_DP = 2.5f
         /** ... but a long press that already shows its digit needs this much, so the digit is not lost to a rolling thumb. */
         const val GLIDE_START_HELD_DP = 8f
