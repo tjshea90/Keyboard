@@ -440,9 +440,25 @@ class KeyboardRoot(context: Context) : FrameLayout(context), GripBar.Host {
         super.onMeasure(widthMeasureSpec, heightMeasureSpec)
     }
 
+    /**
+     * R38 (owner 2026-11-27: "it still often does not register that I'm glide typing, especially at the edges of the keyboard"): with gesture navigation (the Android 10 tablet's default, and the phone's) a touch that starts within
+     * about 30 dp of the left or right edge of the SCREEN is the "back" swipe: Android takes the finger away from the keyboard (the keyboard gets a cancel), so a glide that starts on q, a, p or l, or on the erase key,
+     * dies before it began. The keyboard's two side strips are handed back to the keyboard (API 29 `setSystemGestureExclusionRects`; the system only looks at the part of them that touches a screen edge, and keeps at most 200 dp
+     * of height per edge). A keyboard floating or squeezed away from the edges is not touched by this. The "back" swipe still works everywhere above the keyboard.
+     */
+    private fun keepEdgeSwipeOffTheKeys() {
+        val p = panelRect()
+        if (p.width() <= 0 || p.height() <= 0) { if (edgeRects.isNotEmpty()) { edgeRects = emptyList(); systemGestureExclusionRects = edgeRects }; return }
+        val e = Math.min((EDGE_EXCLUDE_DP * d).toInt(), p.width() / 2)
+        val want = listOf(Rect(p.left, p.top, p.left + e, p.bottom), Rect(p.right - e, p.top, p.right, p.bottom))
+        if (want != edgeRects) { edgeRects = want; systemGestureExclusionRects = want }
+    }
+    private var edgeRects: List<Rect> = emptyList()
+
     private var lastLayoutLog = ""
     override fun onLayout(changed: Boolean, l: Int, t: Int, r: Int, b: Int) {
         super.onLayout(changed, l, t, r, b)
+        keepEdgeSwipeOffTheKeys()
         val loc = IntArray(2); grip.getLocationOnScreen(loc)
         val msg = "layout root=${r - l}x${b - t} panel=${panelRect().flattenToString()} grip=${grip.width}x${grip.height} at screen ${loc[0]},${loc[1]} keys=${keys.width}x${keys.height} floating=$floating"
         if (msg != lastLayoutLog) { lastLayoutLog = msg; Diag.d(msg) }
