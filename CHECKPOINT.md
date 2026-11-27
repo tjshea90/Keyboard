@@ -1,21 +1,23 @@
-# CHECKPOINT 1249 — read me first, then TASKS.md
+# CHECKPOINT 1251 — read me first, then TASKS.md
 
-**Written:** 2026-11-27T04:48:57Z · **tests:** all 1 fast checks green (gradle suite: see ship.sh)
-**Branch:** `claude/peaceful-turing-tyvm1e` · **builds on:** `55b0b1e` (this checkpoint is the commit after it)
+**Written:** 2026-11-27T04:53:49Z · **tests:** all 1 fast checks green (gradle suite: see ship.sh)
+**Branch:** `claude/peaceful-turing-tyvm1e` · **builds on:** `8751334` (this checkpoint is the commit after it)
 
 ## Just done
-alpha17 build dispatched: android.yml run 45942092495 (run_number 31) on claude/peaceful-turing-tyvm1e, head 55b0b1e
+R39b answered: other accounts need one paste each (block in research/R39-maven-429.md 'Other accounts'); this session only edits its own account
 
 ## Do this next
-wait for run 45942092495 (mcp__github__actions_get get_workflow_run), then mcp__github__get_release_by_tag swoop-v0.7.0-alpha17, then bash tools/record-release.sh swoop-v0.7.0-alpha17 with the note from CHECKPOINT/ship output, tick R38-5 (bash tools/claim.sh R38 --done), final plain-words answer (R38 + R39)
+poll run 45942092495 (mcp__github__actions_get get_workflow_run), then release check, record-release swoop-v0.7.0-alpha17, tick R38-5, final answer (include R39b: how to edit the other accounts)
 
 *(resuming? CLAUDE.md's "FIRST ACTION OF EVERY SESSION" says how; the briefing is tools/resume.sh. Do that first, or autosave may stay off all session.)*
 
 ## Uncommitted right now
-    (nothing — the tree is clean as of this checkpoint)
+     M TASKS.md
+     M research/R39-maven-429.md
 
 ## Last ten checkpoints
 ```
+  7e40362 ckpt 1249: alpha17 build dispatched: android.yml run 45942092495 (run_number 31) on clau
   55b0b1e ckpt 1248: gated swoop-v0.7.0-alpha17 (ime code 28) and pushed it: handoff self-test, un
   ec2b546 ckpt 1247: R38-1..4 ticked; version bumped to code 28 / 0.7.0-alpha17; full suites green
   a540b09 ckpt 1245: R39 DONE: repo settings put Google's Maven Central copy before mavenCentral (
@@ -25,5 +27,7 @@ wait for run 45942092495 (mcp__github__actions_get get_workflow_run), then mcp__
   e66717b ckpt 1205: R37-2 DONE with evidence: cold container, 5 Gradle attempts (1-4 stopped only
   f526160 ckpt 1202: R37-3 done in CLAUDE.md: removed the Session Learnings block that was byte-id
   6345562 ckpt 1187: R37 (owner: tidy Claude Code setup + tj-android-kit) written into TASKS.md an
-  bfc03fa ckpt 1181: R36 DONE: swoop-v0.7.0-alpha16 released and recorded (https://github.com/tjsh
 ```
+
+(1 automatic checkpoint(s) since the last deliberate one — the
+session was still mid-step. `git diff` against it shows what changed.)

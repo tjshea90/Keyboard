@@ -21,3 +21,38 @@ Owner, his words: "the Gradle downloads hit the Maven rate limit (HTTP 429) ... 
 * A repo whose Gradle files declare repositories in `build.gradle` (project level, not in settings) is not changed by the init script; its own settings need the two lines.
 * If the Google copy lags behind Central for a brand-new release, that one artifact comes from Central (a 404 on the copy falls through) and could still meet a 429; pinned versions are old enough.
 * Not tested on a truly fresh container: this container already had the SDK and Gradle wrapper. The Gradle caches WERE cold.
+
+## Other Claude accounts (owner 2026-11-27: "I have the same old setup script on other claude accounts ... Should i change the other accounts also? How?")
+
+* The environment setup script belongs to ONE account's environment. This session could only edit the account it runs on (`update_environment`, he approved a card). Every other account keeps the old script until its owner edits it.
+* What each account gets from the REPO alone, with no edit: `settings.gradle.kts` (Google's copy first) reaches that account's sessions as soon as this branch is merged into theirs (`tools/sync.sh` does that at every resume) or becomes the default branch. What it does NOT get without the edit: the warm-up that runs BEFORE the session starts (on the default branch, which still lacks the mirror, so it can still meet a 429 and leave a half-warm cache), and every other repo of that account (Browser, LinkMeter ...).
+* How, per account (2 minutes): claude.ai/code > open any session > the environment name in the session's title bar > Edit > Setup script > paste the block below ABOVE the existing lines (keep the rest as it is) > Save. It takes effect in the next NEW session (a fresh container), not in one that is already open.
+
+```
+# 0) Maven Central answers the shared cloud addresses with HTTP 429 and Gradle builds stop half way. Google keeps a public copy of Central
+#    that is not throttled: this init script (every Gradle build reads ~/.gradle/init.d) asks that copy BEFORE repo.maven.apache.org.
+#    Any error inside it is swallowed. Same text as tools/gradle-central-mirror.init.gradle in the Keyboard repo (R39).
+mkdir -p "$HOME/.gradle/init.d"
+cat > "$HOME/.gradle/init.d/central-mirror.gradle" <<'EOF_MIRROR'
+def mirrorUrl = 'https://maven-central.storage-download.googleapis.com/maven2/'
+def centralHosts = ['repo.maven.apache.org', 'repo1.maven.org']
+def putMirrorInFrontOfCentral = { repos ->
+    try {
+        if (repos.findByName('centralMirror') != null) return
+        def central = repos.find { r -> r instanceof MavenArtifactRepository && centralHosts.contains(r.url.host) }
+        if (central == null) return
+        def at = repos.indexOf(central)
+        def mirror = repos.maven { name = 'centralMirror'; url = mirrorUrl }
+        repos.remove(mirror)
+        repos.add(at, mirror)
+    } catch (Throwable ignored) { }
+}
+if (System.getenv('CI') != 'true' && System.getenv('SWOOP_NO_MIRROR') == null) {
+    gradle.beforeSettings { settings -> try { settings.pluginManagement.repositories.maven { name = 'centralMirrorPlugins'; url = mirrorUrl } } catch (Throwable ignored) { } }
+    gradle.settingsEvaluated { settings -> try { putMirrorInFrontOfCentral(settings.dependencyResolutionManagement.repositories) } catch (Throwable ignored) { } }
+}
+EOF_MIRROR
+```
+
+* Checked: this exact block, run in an empty home, made a Gradle build fetch 58 of 58 files from the Google copy and none from Maven Central or the plugin portal. NOT yet proven on a fresh container of any account.
+
