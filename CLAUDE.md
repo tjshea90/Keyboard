@@ -3,8 +3,8 @@
 ## Mission
 Very light, fast Android keyboard (system IME) for ONE tablet (MediaTek MT8168B, Android 10 Go API 29, 2 GB RAM, 32-bit userspace, no Google services, internet only through a flaky phone hotspot) and the owner's Android 16 phone.
 Glide + tap typing that keeps learning from the owner; Gboard-like everyday features; optional "translate to Mexican Spanish" using LinkMeter's service and method (MyMemory then Google; a toolbar toggle that is OFF until turned on, any app;
-Enter translates, Enter again sends). The ONE keyboard app holds the INTERNET permission, used only by the `translate` package under the guard rails of plan 9.2. No accounts, telemetry, ads, AI. The owner will NOT type Spanish.
-Name "Swoop" is a placeholder (one string + one applicationId `app.swoop.keyboard`). Repo: `tjshea90/Keyboard`, **PUBLIC since 2026-11-17** (the owner made it public; the plan calls it swoop-keyboard and assumed private - same repo). Public means: the INBOX/OUTBOX chat copies, every commit and the encrypted key file are world-readable; Actions minutes and KVM emulators on GitHub runners are free.
+Enter translates, Enter again sends). The ONE keyboard app holds the INTERNET permission, used only by the `translate` package under the guard rails of plan 9.2. No accounts, telemetry, ads, AI. The owner will NOT type Spanish in apps (a Spanish status message in the chat is possible).
+Name "Swoop" is a placeholder (one string + one applicationId `app.swoop.keyboard`). Repo: `tjshea90/Keyboard`, **PUBLIC since 2026-11-17** (the plan calls it swoop-keyboard: same repo). Public means: the INBOX/OUTBOX chat copies, every commit and the dev signing key are world-readable; Actions minutes and KVM emulators on GitHub runners are free.
 **Plan and every finding: `research/KEYBOARD-APP-PLAN.md`** (read sections 1, 2, 3, 4, 12 first; the rest when a task points at it). Job list `TASKS.md` (KB-ids = plan section 12). Where the last session stopped: `CHECKPOINT.md`. New with no context: `HANDOFF.md`. Decisions that do not change: `BRIEF.md`.
 
 ## FIRST ACTION OF EVERY SESSION - cold resume (assume the last session was cut off mid-step)
