@@ -17,6 +17,7 @@ class GlideStats {
     private var shapes = 0; private var shapeWords = 0; private var shapeLifts = 0; private var shapeFlips = 0
     private var previews = 0; private var previewMs = 0L; private var shown = 0; private var shownMs = 0L; private var shownMax = 0L
     private var retries = 0
+    private var taught = 0; private var taughtWild = 0
     private var shapeRuns = 0; private var shapeChanged = 0; private var shapeMs = 0L; private var shapeMsMax = 0L; private var shapeLoadMs = -1L; private var shapeSkipped = 0; private var shapeOffMs = -1L
     private var suggested = 0; private var suggestMs = 0L; private var suggestMax = 0L; private var suggPicked = 0; private var typedLearned = 0; private var autoFixed = 0; private var autoUndone = 0; private var retyped = 0
 
@@ -74,6 +75,8 @@ class GlideStats {
     @Synchronized fun onAutoCorrectUndone() { autoUndone++ }
     /** A word was erased and another typed in its place (the new one was meant). */
     @Synchronized fun onRetyped() { retyped++ }
+    /** R36: the Glide training screen taught the keyboard a glide of a known word ([GlideTeaching]); [GlideTeaching.Lesson.wild]: it was too far from the word's letters to be remembered as its shape. */
+    @Synchronized fun onTaught(lesson: GlideTeaching.Lesson) { taught++; if (lesson.wild) taughtWild++ }
 
     @Synchronized fun line(): String {
         if (loadMs < 0 && glides == 0 && typedLearned == 0 && suggested == 0) return "Glide typing: not used yet this run"
@@ -103,6 +106,7 @@ class GlideStats {
         if (learnedWords > 0 || learnedTop > 0) sb.append("; learned $learnedWords words and $learnedPairs word pairs from your typing, a learned word was the first guess $learnedTop times")
         if (learnedCorrections > 0 || learnedTriples > 0) sb.append("; $learnedCorrections corrections and $learnedTriples three-word phrases remembered")
         if (shapes > 0 || shapeLifts > 0) sb.append("; $shapes glide shapes of $shapeWords words remembered, a remembered shape helped $shapeLifts times and changed the first guess $shapeFlips times")
+        if (taught > 0) sb.append("; Glide training taught $taught glides ($taughtWild too far off their word to keep as its shape)")
         if (typedLearned > 0 || suggested > 0) sb.append("; tap typing: $typedLearned words learned, suggestions made $suggested times (avg ${if (suggested > 0) suggestMs / suggested else 0} ms, worst $suggestMax ms), $suggPicked picked from the strip, $retyped erased and retyped")
         if (autoFixed > 0) sb.append("; automatic fixes $autoFixed, taken back $autoUndone")
         if (retries > 0) sb.append("; a deleted word came up first again and went to second place $retries times")
@@ -756,13 +760,53 @@ class GlideTyping(
             val mi = m.idOf(word)
             if (mi >= 0) { lex = m; id = mi } else { val ui = u?.idOf(word) ?: -1; if (ui < 0 || u == null) return@execute; lex = u; id = ui }
             d.learnFrom(lex, id)
-            bx = d.biasX; by = d.biasY; habitX = bx; habitY = by
-            val k = keys
-            if (k != null) stats.onHabit(bx * k.pitch, by * k.pitch)
-            val t = d.field.toArray(); touchSaved = t
-            reportPlane(d)
-            habit(floatArrayOf(bx, by) + t)
+            thumbMoved(d, habit)
         }
+    }
+
+    /** The decoder's thumb habit (and touch plane) just changed: it is kept here, shown in Diagnostics and handed to [habit] to be saved. Executor thread. */
+    private fun thumbMoved(d: GlideDecoder, habit: (FloatArray) -> Unit) {
+        bx = d.biasX; by = d.biasY; habitX = bx; habitY = by
+        val k = keys
+        if (k != null) stats.onHabit(bx * k.pitch, by * k.pitch)
+        val t = d.field.toArray(); touchSaved = t
+        reportPlane(d)
+        habit(floatArrayOf(bx, by) + t)
+    }
+
+    /**
+     * R36 (the Glide training screen): the glide that was just decoded (decode number [serial]) was made for [word], a word the person was ASKED to glide, and the keyboard put [guessed] first (null: nothing). Everything
+     * about the hand is learned from it at once ([GlideTeaching]): where the thumb lands, this word's shape, what it was mistaken for. The word counts, pairs and triples are NOT touched (a training text is not what
+     * the person writes). Nothing happens when a later glide has been decoded since (the decoder's state would belong to that one), or the word is not in the list. [habit] gets the new thumb habit to be saved;
+     * [done] says whether anything was learned. Runs on the engine's thread.
+     */
+    fun teach(word: String, guessed: String?, serial: Int, habit: (FloatArray) -> Unit, done: (GlideTeaching.Lesson?) -> Unit = {}) {
+        executor.execute {
+            val lesson = try { teachNow(word.lowercase(), guessed?.lowercase(), serial, habit) } catch (e: Exception) { null }
+            done(lesson)
+        }
+    }
+
+    private fun teachNow(word: String, guessed: String?, serialNo: Int, habit: (FloatArray) -> Unit): GlideTeaching.Lesson? {
+        val d = decoder ?: return null
+        val m = main ?: return null
+        if (serialNo != serial) return null                                                     // a later glide was decoded since: the decoder's path is that one's
+        ensurePersonal(); ensureDictionary()
+        if (dictionary.isBlocked(word)) return null                                             // a word the person removed is not taught again
+        val u = userLex
+        var lex: GlideLexicon? = null; var id = -1
+        val mi = m.idOf(word)
+        if (mi >= 0) { lex = m; id = mi } else { val ui = u?.idOf(word) ?: -1; if (u != null && ui >= 0) { lex = u; id = ui } }
+        if (lex == null) return null                                                            // a word the list lacks cannot be put among a glide's guesses: nothing to teach
+        val lesson = GlideTeaching.teach(d, lex, id, personal, keys, word, guessed, lastPrint, keys?.let { GlideTeaching.Parts.forPitchDp(it.pitchDp) } ?: GlideTeaching.Parts())
+        if (lesson.thumb) thumbMoved(d, habit)
+        if (lesson.any) {
+            personalDirty = true
+            stats.onTaught(lesson)
+            stats.onLearned(personal.wordCount, personal.pairCount, personal.confusionCount, personal.tripleCount, personal.patterns.patternCount, personal.patterns.wordCount)
+            if (System.nanoTime() / 1_000_000 - lastSaveAt > SAVE_EVERY_MS) saveNow()
+        } else if (lesson.wild) stats.onTaught(lesson)
+        return lesson
     }
 
     companion object {

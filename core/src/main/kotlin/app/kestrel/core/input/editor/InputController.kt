@@ -713,6 +713,21 @@ class InputController(editor: EditorBridge, val stats: InputStats = InputStats()
         return if (tail.endsWith(tok)) tok else null
     }
 
+    /**
+     * R34c: an "@" stands inside the word before the cursor (after at least one character), so an address may be being typed. Allocates nothing: the keyboard asks after every key in every ordinary box.
+     */
+    fun atSignNear(): Boolean {
+        if (selStart >= 0 && selStart != selEnd) return false
+        var i = before.length - 1; var n = 0
+        while (i >= 0 && n <= app.kestrel.core.input.glide.EmailBook.MAX_LEN) {
+            val c = before[i]
+            if (c == '@') return i > 0 && !before[i - 1].isWhitespace() && before[i - 1] !in ADDRESS_STOPS
+            if (c.isWhitespace() || c in ADDRESS_STOPS) return false
+            i--; n++
+        }
+        return false
+    }
+
     /** R32c: what has been typed of an address so far: the characters before the cursor back to the last space, comma, semicolon or bracket (not checked to be an address). */
     fun addressPrefix(): String = if (selStart >= 0 && selStart != selEnd) "" else before.takeLastWhile { !it.isWhitespace() && it !in ADDRESS_STOPS }.takeLast(app.kestrel.core.input.glide.EmailBook.MAX_LEN + 1)
 

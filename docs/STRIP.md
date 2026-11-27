@@ -28,6 +28,9 @@ Research: `research/R20-clipboard-and-strip.md` (what Gboard, SwiftKey, HeliBoar
 ## E-mail boxes (R32c)
 In an e-mail box (not in any other box) the strip lists the saved e-mail addresses instead of words: the best three while the box is empty, narrowing as letters are typed; a tap replaces what was typed of the address. See `research/R32-punctuation-suggestions.md` section 5.
 
+R34b/c (2026-11-26) changes it: a box counts as an e-mail box also when a plain text box SAYS so in its hint, label or field name (`FieldInfos.looksLikeEmailBox`); the saved addresses can be typed in once in Settings > My e-mail addresses; and once "name@" is typed (in an e-mail box, or in an ordinary text or search box with an @ inside the word) the strip offers DOMAINS: the person's own first, then outlook.com, gmail.com, proton.me, hotmail.com ... filtered by what is typed of the domain. A chip shows only the domain; a tap puts in the whole address (no space after it). Details: `research/R34-glide-engines.md` section 3.
+
+
 ## The copied text (R20a)
 * The first (left) box, only where a word starts (nothing typed since the last space or the start of the box) and no glide is pending. Gboard / SwiftKey / HeliBoard do the same (research note 1.2).
 * Freshness `CLIP_CHIP_TTL_MS` = 5 minutes (HeliBoard, the one public rule, uses 3; Gboard's chip time is not documented). The copy's age is the clip's own timestamp (`ClipboardHost.copyTime`, tolerant of both clocks Android versions use) so a copy made while the keyboard was not on screen keeps its real age.

@@ -22,7 +22,7 @@ class ShapeNetEvalTest {
     private val cand = System.getenv("R30_CAND")?.toIntOrNull() ?: 40
     private val areaW = 292f; private val areaH = 161f      // GlideEval.keysFor() defaults
 
-    class Row(val score: FloatArray, val hit: BooleanArray, val len: IntArray, val ctcA: FloatArray, val ctcB: FloatArray, val meantLen: Int, val ctcC: FloatArray = FloatArray(0))
+    class Row(val score: FloatArray, val hit: BooleanArray, val len: IntArray, val ctcA: FloatArray, val ctcB: FloatArray, val meantLen: Int, val ctcC: FloatArray = FloatArray(0), val texts: List<String> = emptyList(), val meant: String = "", val prev: String? = null, val cost: FloatArray = FloatArray(0))
 
     private class Ctx(val net: ShapeNet, val dec: GlideDecoder)
 
@@ -50,7 +50,7 @@ class ShapeNetEvalTest {
                 val em = c.net.emissions(tr, when (mode) { 0 -> kA; 1 -> kB; else -> kC }, 26)
                 for ((i, x) in cs.withIndex()) { val w = letters(x.text); if (w.isNotEmpty()) ctc[mode][i] = ShapeNet.ctcLogP(em, 26, w) }
             }
-            Row(FloatArray(cs.size) { i -> cs[i].score }, BooleanArray(cs.size) { i -> String(GlideLetters.keyOf(cs[i].text)) == item.key }, IntArray(cs.size) { i -> cs[i].text.length }, ctc[0], ctc[1], item.word.length, ctc[2])
+            Row(FloatArray(cs.size) { i -> cs[i].score }, BooleanArray(cs.size) { i -> String(GlideLetters.keyOf(cs[i].text)) == item.key }, IntArray(cs.size) { i -> cs[i].text.length }, ctc[0], ctc[1], item.word.length, ctc[2], cs.map { it.text }, item.word, item.prev, FloatArray(cs.size) { i -> cs[i].cost })
         }) }
         val out = jobs.map { it.get() }
         pool.shutdown()
@@ -105,6 +105,70 @@ class ShapeNetEvalTest {
         println(sb.toString())
     }
 
+    /**
+     * R34a: the hybrid is `score + w * logP`; the language side (`score + cost` = the prior and the rare-word price) keeps its old weight although the path side now has two witnesses. Is a joint grid of
+     * (beta = how much the language side counts, w = how much the network counts, gamma = the network's log P divided by letters^gamma) better than w alone? Chosen on one set of slices, read on the other.
+     */
+    private fun combo(rs: List<Row?>, beta: Float, w: Float, gamma: Float): Cnt {
+        val c = Cnt()
+        for (r in rs) {
+            if (r == null || r.cost.size != r.score.size) continue
+            c.n++
+            val m = r.score.size
+            var bi = 0; var bs = Float.NEGATIVE_INFINITY
+            val order = (0 until m).sortedByDescending { i -> val lp = r.ctcC[i] / Math.pow(r.len[i].coerceAtLeast(1).toDouble(), gamma.toDouble()).toFloat(); r.score[i] + (beta - 1f) * (r.score[i] + r.cost[i]) + w * lp }
+            bi = order[0]
+            if (r.hit[bi]) c.t1++
+            if (order.take(3).any { r.hit[it] }) c.t3++
+        }
+        return c
+    }
+
+    private fun comboGrid(sets: Map<String, List<Row?>>) {
+        val betas = listOf(0.8f, 1f, 1.25f, 1.5f, 2f); val ws = listOf(0.4f, 0.55f, 0.7f, 0.9f, 1.2f); val gs = listOf(0f, 0.5f)
+        println("R34 combination grid (top-1 % on each slice; beta = language side, w = network, gamma = per-letter exponent)")
+        val sb = StringBuilder()
+        for (g in gs) for (b in betas) for (w in ws) {
+            sb.setLength(0); sb.append("R34 grid gamma=%.1f beta=%.2f w=%.2f:".format(g, b, w))
+            var tot = 0.0; var n = 0
+            for ((k, rs) in sets) { val c = combo(rs, b, w, g); sb.append("  %s %.1f/%.1f".format(k, 100.0 * c.t1 / c.n, 100.0 * c.t3 / c.n)); tot += c.t1; n += c.n }
+            sb.append("  | all %.2f".format(100.0 * tot / n))
+            println(sb.toString())
+        }
+    }
+
+    /** R34a: what the hybrid still gets wrong (R34_MISSES=n prints the first n misses of each slice: the word meant, the word chosen, the word before, where the meant word stands, and how the score splits into the shipped part and the network's). Words only, from public text. */
+    private fun dumpMisses(label: String, rs: List<Row?>, w: Float, max: Int) {
+        var shown = 0; var inList = 0; var missAll = 0
+        val classes = java.util.TreeMap<String, Int>()
+        for (r in rs) {
+            if (r == null || r.texts.isEmpty()) continue
+            val b = best(r, 3, w)
+            if (r.hit[b]) continue
+            missAll++
+            val meantIdx = r.hit.indexOfFirst { it }
+            if (meantIdx >= 0) inList++
+            val ch = r.texts[b]; val me = r.meant
+            val cls = when {
+                meantIdx < 0 -> "meant word not among the candidates"
+                ch.length >= me.length + 2 -> "chosen is 2+ letters longer"
+                me.length >= ch.length + 2 -> "chosen is 2+ letters shorter"
+                ch.first() == me.first() && ch.last() == me.last() -> "look-alike (same first and last letter)"
+                else -> "other"
+            }
+            classes.merge(cls, 1, Int::plus)
+            if (shown < max) {
+                shown++
+                val order = (0 until r.score.size).sortedByDescending { r.score[it] + w * r.ctcC[it] }
+                val rank = if (meantIdx >= 0) order.indexOf(meantIdx) + 1 else -1
+                val sh = if (meantIdx >= 0) "shipped gap %.1f, net gap %.1f".format(r.score[b] - r.score[meantIdx], w * (r.ctcC[b] - r.ctcC[meantIdx])) else ""
+                println("R34 [$label] miss: meant '${me}' chosen '${ch}' after '${r.prev ?: "-"}' rank ${rank} ${sh}")
+            }
+        }
+        println("R34 [$label] misses $missAll (meant word in the list of ${r0(rs)}: $inList): " + classes.entries.joinToString("; ") { "${it.key} ${it.value}" })
+    }
+    private fun r0(rs: List<Row?>) = rs.firstOrNull { it != null }?.score?.size ?: 0
+
     private fun fmt(c: Cnt) = "top1 %.1f%% top3 %.1f%%".format(100.0 * c.t1 / c.n, 100.0 * c.t3 / c.n)
 
     private fun load(name: String, fileEnv: String, def: String, mb: Long, offsetMb: Long, url: String = RealSwipe.DEV_URL): List<RealSwipe.Swipe> {
@@ -127,6 +191,7 @@ class ShapeNetEvalTest {
         println("R30 [$label] CHOSEN w=$chosenW: shipped ${fmt(rank(rs, 0, null, false))} | hybrid A ${fmt(rank(rs, 1, chosenW, false))} | hybrid B (keyboard area) ${fmt(rank(rs, 2, chosenW, false))} | hybrid C (letter box) ${fmt(rank(rs, 3, chosenW, false))}")
         println("R30 [$label] short words (<=4 letters, n=$sn): shipped hit %.1f%% s2l(short meant, 2+ longer chosen) %d | hybrid C hit %.1f%% s2l %d".format(100.0 * shortHit(rs, 0, 0f) / sn, s2l(rs, 0, 0f), 100.0 * shortHit(rs, 3, chosenW) / sn, s2l(rs, 3, chosenW)))
         gate(label, rs, chosenW)
+        System.getenv("R34_MISSES")?.toIntOrNull()?.let { dumpMisses(label, rs, chosenW, it) }
         for (w in grid) println("R30 [$label] hybrid w=%-5.2f  A: %s | B: %s | A/letter: %s | B/letter: %s".format(w, fmt(rank(rs, 1, w, false)), fmt(rank(rs, 2, w, false)), fmt(rank(rs, 1, w, true)), fmt(rank(rs, 2, w, true))))
     }
 
@@ -140,6 +205,7 @@ class ShapeNetEvalTest {
         val its = ev.items(sw, fit)
         println("R30 slice A: ${sw.size} swipes read, ${its.size} in the word list; fit x' = %.2f x + %.2f, y' = %.2f y + %.2f".format(fit.ax, fit.bx, fit.ay, fit.by))
         val rs = rows(its, fit, weights, "slice A")
+        val allSets = java.util.LinkedHashMap<String, List<Row?>>(); allSets["A"] = rs
         val grid = (System.getenv("R30_GRID") ?: "0.05,0.1,0.2,0.35,0.5,1,2,4").split(',').map { it.toFloat() }
         report("A", rs, grid)
 
@@ -162,7 +228,8 @@ class ShapeNetEvalTest {
                 val sc = load("slice C (test split)", "R30_C_FILE", "build/real-swipes-c.jsonl", 12, 0, System.getenv("R30_C_URL") ?: RealSwipe.DEV_URL.replace("dev.jsonl", "test.jsonl"))
                 val fitC = ev.calibrate(sc); val itsC = ev.items(sc, fitC)
                 println("R30 slice C (test split): ${sc.size} swipes read, ${itsC.size} in the word list")
-                report("C", rows(itsC, fitC, weights, "slice C"), grid)
+                val rc = rows(itsC, fitC, weights, "slice C"); allSets["C"] = rc
+                report("C", rc, grid)
             } catch (e: Exception) { println("R30 slice C failed: $e") }
         }
         if (System.getenv("R30_B") != "0") {
@@ -171,7 +238,8 @@ class ShapeNetEvalTest {
             val itsB = ev.items(sb, fitB)
             println("R30 slice B: ${sb.size} swipes read, ${itsB.size} in the word list; fit x' = %.2f x + %.2f, y' = %.2f y + %.2f".format(fitB.ax, fitB.bx, fitB.ay, fitB.by))
             val rb = rows(itsB, fitB, weights, "slice B")
-            report("B", rb, grid)
+            report("B", rb, grid); allSets["B"] = rb
         }
+        if (System.getenv("R34_GRID") == "1") comboGrid(allSets)
     }
 }

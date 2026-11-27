@@ -45,26 +45,37 @@ class EmailBook(private val cap: Int = CAP) {
 
     /**
      * What to offer for the text [typed] so far in an e-mail box (up to [max], best first): the addresses that start with it (all of them when nothing is typed yet); and once an "@" is there, the part before it with the
-     * domains this person uses behind it ("bob@" gives bob@gmail.com and bob@work.example when those are the domains seen). An address that is already typed in full is not offered again.
+     * domains behind it ("bob@" gives bob@outlook.com, bob@gmail.com, bob@proton.me ...): the domains this person uses first (most used first), then the popular ones of [POPULAR_DOMAINS] (R34c, owner 2026-11-26: "after the @ sign, suggest
+     * popular email domains"), filtered by what is typed of the domain. The part before the @ keeps the capitals it was typed with. An address that is already typed in full is not offered again.
      */
     @Synchronized fun suggest(typed: String, max: Int = 3): List<String> {
-        val t = typed.trim().lowercase()
+        val raw = typed.trim()
+        val t = raw.lowercase()
         if (t.length > MAX_LEN) return emptyList()
         val out = ArrayList<String>(max)
         for (e in ranked()) { if (out.size >= max) break; if (e.address != t && e.address.startsWith(t)) out.add(e.address) }
         val at = t.indexOf('@')
         if (out.size < max && at > 0 && t.indexOf('@', at + 1) < 0) {
-            val local = t.substring(0, at); val domPart = t.substring(at + 1)
-            if (LOCAL.matches(local)) {
-                val dom = LinkedHashMap<String, Int>()
-                for (e in ranked()) { val d = e.address.substringAfter('@'); dom[d] = (dom[d] ?: 0) + e.uses }
-                for ((d, _) in dom.entries.sortedByDescending { it.value }) {
+            val local = raw.substring(0, at); val domPart = t.substring(at + 1)
+            if (LOCAL.matches(local.lowercase())) {
+                for (d in domains()) {
                     if (out.size >= max) break
+                    if (!d.startsWith(domPart)) continue
                     val cand = "$local@$d"
-                    if (d.startsWith(domPart) && cand != t && cand !in out) out.add(cand)
+                    if (cand.lowercase() != t && out.none { it.equals(cand, ignoreCase = true) }) out.add(cand)
                 }
             }
         }
+        return out
+    }
+
+    /** The domains to offer after an @: the ones this person's addresses use (by how often), then the popular ones not yet in the list. */
+    private fun domains(): List<String> {
+        val own = LinkedHashMap<String, Int>()
+        for (e in ranked()) { val d = e.address.substringAfter('@'); own[d] = (own[d] ?: 0) + e.uses }
+        val out = ArrayList<String>(own.size + POPULAR_DOMAINS.size)
+        for ((d, _) in own.entries.sortedByDescending { it.value }) out.add(d)
+        for (d in POPULAR_DOMAINS) if (d !in own) out.add(d)
         return out
     }
 
@@ -72,6 +83,8 @@ class EmailBook(private val cap: Int = CAP) {
     @Synchronized fun serialize(): String { dirty = false; return ranked().joinToString("\n") { "${it.address}\t${it.uses}\t${it.last}" } }
 
     companion object {
+        /** The mail services most people use, in the order they are offered after an @ when the person has not used them yet (the owner asked for outlook.com, gmail.com and proton.me first). */
+        val POPULAR_DOMAINS: List<String> = listOf("outlook.com", "gmail.com", "proton.me", "hotmail.com", "yahoo.com", "icloud.com", "protonmail.com", "live.com", "aol.com", "msn.com")
         const val CAP = 40
         /** An address longer than this is not kept (the keyboard only reads 64 characters before the cursor). */
         const val MAX_LEN = 60

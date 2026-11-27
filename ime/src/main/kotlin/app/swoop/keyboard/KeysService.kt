@@ -148,14 +148,14 @@ class KeysService : InputMethodService() {
         root?.applySettings(Settings(this), safeMode)
         Settings(this).let { st -> if (!safeMode && (st.clipboardHistory || st.suggestCopied)) clips.capture(history = st.clipboardHistory) }       // a copy made while the keyboard was not on screen (it keeps its own time)
         Diag.d("onStartInputView safe=$safeMode floating=${root?.floating}")
-        presenter.startInput(editorInfo)
+        presenter.startInput(editorInfo, restarting)
     }
 
     override fun onFinishInput() { presenter.finishInput(); super.onFinishInput() }
 
     /** The keyboard goes away (Back, another app): what was learned is written now, so a killed process loses nothing. */
-    override fun onFinishInputView(finishingInput: Boolean) { presenter.saveLearned(); super.onFinishInputView(finishingInput) }
-    override fun onWindowHidden() { presenter.saveLearned(); super.onWindowHidden() }
+    override fun onFinishInputView(finishingInput: Boolean) { presenter.saveLearned(); presenter.inputViewFinished(); super.onFinishInputView(finishingInput) }
+    override fun onWindowHidden() { presenter.saveLearned(); presenter.inputViewFinished(); super.onWindowHidden() }
     override fun onDestroy() { presenter.saveLearned(); try { (getSystemService(CLIPBOARD_SERVICE) as android.content.ClipboardManager).removePrimaryClipChangedListener(clipListener) } catch (_: Exception) { }; super.onDestroy() }
 
     /** Android tells us every selection change, ours and everybody else's; the controller tells them apart (plan 6.4). */
