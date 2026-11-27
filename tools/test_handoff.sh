@@ -91,7 +91,7 @@ check "the privacy rules are in .gitignore (keystores, APKs, learning exports, r
 git init -q --bare "$T/remote.git"
 git clone -q "$T/remote.git" "$T/work" 2>/dev/null
 mkdir -p "$T/work/tools" "$T/work/ime" "$T/work/signing"
-cp "$D"/tools/*.sh "$D"/tools/session-root-hooks.json "$D"/tools/MIRROR_MAIN "$D"/tools/expected-permissions.txt "$T/work/tools/" 2>/dev/null
+cp "$D"/tools/*.sh "$D"/tools/fit-brief.py "$D"/tools/session-root-hooks.json "$D"/tools/MIRROR_MAIN "$D"/tools/expected-permissions.txt "$T/work/tools/" 2>/dev/null
 echo off > "$T/work/tools/MIRROR_MAIN"
 cp "$D"/ship.sh "$D"/signing/CERT_SHA256 "$T/work/" 2>/dev/null
 cp "$D/.gitattributes" "$T/work/.gitattributes" 2>/dev/null
