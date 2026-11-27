@@ -589,3 +589,8 @@ Tidy and improve this Claude Code setup for Android app building. I have uploade
 4. List every plugin, skill and connector that is loaded in this session and that this project has no use for, so I can switch them off on claude.ai. Do not install anything that costs money, sends data out of the repository or changes my accounts.
 5. Commit your changes to a new branch and tell me what you changed.
 ```
+
+## 2026-11-27T03:44:27Z
+```
+@"/root/.claude/uploads/97e3f906-84af-5886-921b-1000c61ed534/f6302ae1-Swoop_glide_training_2026-11-26_2239.txt" first see if the fixes were merged from earlier. Then optimize from the training file. It still often does not register that I'm glide typing, especially at the edges of the keyboard. It often types one letter when I'm trying to glide. Sometimes i have a hard time pressing the erase key because I'm moving fast. Try to make it bigger and easier to press. Without ruining anything else
+```
