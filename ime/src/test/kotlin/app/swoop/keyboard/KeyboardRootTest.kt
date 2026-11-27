@@ -430,4 +430,19 @@ class KeyboardRootTest {
         assertTrue("the panel follows the keys: ${r.panelRect().height()} vs $tall", r.panelRect().height() < tall - 100 * dp)
         assertEquals("the overlay is exactly as tall as the keys", r.keys.height, r.overlay.height); assertEquals(r.keys.height + r.grip.height, r.panelRect().height())
     }
+
+    // ---- R38 (2026-11-27): glides that start at the screen's edge were taken by the system's "back" swipe
+
+    @Test fun theKeyboardKeepsTheSystemBackSwipeOffItsLeftAndRightEdges() {
+        val (r, _) = root()
+        val p = r.panelRect(); val rects = r.systemGestureExclusionRects
+        assertTrue("a strip at the left edge of the keyboard: $rects", rects.any { it.left <= p.left && it.right >= p.left + 30 * dp && it.top <= p.top + p.height() / 2 && it.bottom >= p.bottom - 1 })
+        assertTrue("a strip at the right edge of the keyboard: $rects", rects.any { it.right >= p.right && it.left <= p.right - 30 * dp && it.top <= p.top + p.height() / 2 && it.bottom >= p.bottom - 1 })
+        assertTrue("only the edges, not the whole keyboard: $rects", rects.all { it.width() <= p.width() / 2 })
+    }
+    @Test fun theEdgeStripsFollowAKeyboardThatWasSqueezedOrFloated() {
+        val (r, _) = root { it.putInt("dockFrac", 600) }
+        val p = r.panelRect(); val rects = r.systemGestureExclusionRects
+        assertTrue("the strips are the squeezed keyboard's own edges: $p $rects", rects.all { it.left >= p.left && it.right <= p.right })
+    }
 }

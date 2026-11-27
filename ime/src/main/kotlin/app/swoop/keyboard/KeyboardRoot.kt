@@ -671,5 +671,7 @@ class KeyboardRoot(context: Context) : FrameLayout(context), GripBar.Host {
         const val VERT_DEAD_DP = 10f
         const val FRAME_DP = 8f
         const val CORNER_DP = 24f
+        /** R38: how wide the strips at the keyboard's left and right edge are that the system's "back" swipe may not take (it starts within about 30 dp of a screen edge, a bit more with the high sensitivity setting). */
+        const val EDGE_EXCLUDE_DP = 56f
     }
 }
