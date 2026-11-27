@@ -609,7 +609,7 @@ class KeysViewTest {
         touch(v, MotionEvent.ACTION_MOVE, 0, Triple(0, (ax + dx) / 2f, ay)); touch(v, MotionEvent.ACTION_MOVE, 0, Triple(0, dx, dy))
         assertTrue(v.isGliding)
         touch(v, MotionEvent.ACTION_POINTER_DOWN, 1, Triple(0, dx, dy), Triple(1, bx, by))
-        assertEquals("Backspace is pressed at once", listOf<app.kestrel.core.input.Key>(app.kestrel.core.input.Key.Backspace), t.keys)
+        assertEquals("Backspace is pressed at once", listOf<Key>(Key.Backspace), t.keys)
         assertTrue("and the glide goes on", v.isGliding)
         touch(v, MotionEvent.ACTION_POINTER_UP, 1, Triple(0, dx, dy), Triple(1, bx, by))
         advance(1500); assertEquals("a lifted Backspace does not repeat", 1, t.keys.size)
