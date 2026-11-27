@@ -618,3 +618,8 @@ I have the same old setup script on other claude accounts from before the change
 ```
 This session's worker process was restarted. If your previous turn was already complete, take no action and wait for the next event. Otherwise, continue from where you left off.
 ```
+
+## 2026-11-27T05:00:03Z
+```
+I hit my usage limit while you were working, but it has reset now. Please continue from where you left off.
+```
