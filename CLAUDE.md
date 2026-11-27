@@ -13,7 +13,7 @@ Name "Swoop" is a placeholder (one string + one applicationId `app.swoop.keyboar
 3. Verify the net: `git log --oneline -3` shows `auto-checkpoint:` commits. If not, run `bash tools/ckpt.sh "did" "next"` by hand after every step and say so.
 
 ## The save ladder (you can be cut off at ANY moment; work is only safe once PUSHED)
-0 `capture_inbox.sh` (every owner message, verbatim, keys redacted) | 0b `capture_outbox.sh` (what you told the owner) | 1 `autosave.sh` after every tool call: `git add -A`, secret scan, commit `auto-checkpoint:`, push |
+0 `tools/capture_inbox.sh` (every owner message, verbatim, keys redacted) | 0b `tools/capture_outbox.sh` (what you told the owner) | 1 `tools/autosave.sh` after every tool call: `git add -A`, secret scan, commit `auto-checkpoint:`, push |
 2 `bash tools/ckpt.sh "did" "next"` **by you after every completed step** (rewrites CHECKPOINT.md, fast self-test, commit, push; "next" must name file / function / command / run id - no diff can reconstruct it) |
 3 `bash ship.sh "note"` at real versions | 4 GitHub Actions `android.yml` tests, builds, SIGNS, publishes the Release.
 - New owner request: write it into TASKS.md in their words as `[ ]` boxes and `ckpt` BEFORE any code. Tick a box only when written, tested, committed; name the proof (`bash tools/claim.sh <ID> --done "evidence"`).
