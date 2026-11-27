@@ -615,7 +615,7 @@ class KeyboardRoot(context: Context) : FrameLayout(context), GripBar.Host {
             marginTouch = false
             val c = cornerAt(ev.x, ev.y)
             if (c >= 0) { startResize(c, ev); return true }
-            if (inKeyMargin(ev.x, ev.y)) { marginTouch = true; marginDx = (panel.left + pane.left + keys.left).toFloat(); marginDy = (panel.top + pane.top + keys.top).toFloat() }
+            if (inKeyMargin(ev.x, ev.y)) { marginTouch = true; keys.listener?.onTouchNote(KeysView.NOTE_MARGIN); marginDx = (panel.left + pane.left + keys.left).toFloat(); marginDy = (panel.top + pane.top + keys.top).toFloat() }
         }
         if (marginTouch) {
             val m = MotionEvent.obtain(ev); m.offsetLocation(-marginDx, -marginDy)

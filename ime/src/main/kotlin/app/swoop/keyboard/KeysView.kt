@@ -830,6 +830,7 @@ class KeysView(context: Context) : View(context) {
 
     private fun startSideErase(id: Int) {
         sideId = id; sideStartAt = SystemClock.uptimeMillis()
+        listener?.onTouchNote(NOTE_SIDE_ERASE)
         haptic(); click()
         val k = rows.firstNotNullOfOrNull { row -> row.firstOrNull { it.key === Key.Backspace } }
         if (k != null) light(k)
@@ -911,6 +912,7 @@ class KeysView(context: Context) : View(context) {
             val fresh = SystemClock.uptimeMillis() - waitAt < RESTING_MS
             if (!fresh) { listener?.onTouchNote(NOTE_RESTING_IGNORED); return }
             activeId = id
+            if (!restingOk) listener?.onTouchNote(NOTE_ADOPTED)
             pressDown(wtx[0], wty[0], quiet = true, at = wtt[0], noTap = !restingOk)          // (its key click was played when it landed)
             for (k in 1 until n) addPoint(wtx[k], wty[k], wtt[k])
             return
@@ -1172,6 +1174,10 @@ class KeysView(context: Context) : View(context) {
         const val NOTE_TAKEOVER = 2
         const val NOTE_RESTING_IGNORED = 3
         const val NOTE_PADDING_START = 4
+        /** R38: the erase key pressed by the other thumb during a glide / a finger that landed during a glide and moved only later was kept / a touch began in the margin beside a squeezed keyboard. */
+        const val NOTE_SIDE_ERASE = 5
+        const val NOTE_ADOPTED = 6
+        const val NOTE_MARGIN = 7
         /** R34d: a finger that has stayed on a letter this long (ms) without moving when another finger lands is a thumb that holds the tablet, not a key press: it types nothing. A fast two-thumb tap overlaps by far less. */
         const val RESTING_MS = 300L
         /** A path shorter than this (in key pitches) is a tap that slid a little, not a glide. */

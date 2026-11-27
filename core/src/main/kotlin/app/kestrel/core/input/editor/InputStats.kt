@@ -25,13 +25,17 @@ class InputStats {
     @JvmField var takeovers = 0
     @JvmField var restingIgnored = 0
     @JvmField var paddingStarts = 0
+    /** R38: the erase key pressed by the other thumb during a glide, a finger kept that landed during a glide and had not moved yet, touches that began in the margin beside a squeezed keyboard. */
+    @JvmField var sideErases = 0
+    @JvmField var adoptedFingers = 0
+    @JvmField var marginTouches = 0
 
     fun touchLine(): String {
-        if (strokes == 0 && takeovers == 0 && restingIgnored == 0 && paddingStarts == 0) return ""
+        if (strokes == 0 && takeovers == 0 && restingIgnored == 0 && paddingStarts == 0 && sideErases == 0 && adoptedFingers == 0 && marginTouches == 0) return ""
         val n = if (strokes == 0) 1 else strokes
         val pts = strokePoints / n; val ms = strokeMs / n
         val every = if (strokePoints > strokes) strokeMs.toFloat() / (strokePoints - strokes) else 0f
-        return "$strokes glide strokes, avg $pts touch points in $ms ms (a point every ${"%.1f".format(every)} ms), first move after avg ${firstMoveMs / n} ms (worst $firstMoveMax ms); second thumb took over $takeovers times, a resting second finger was ignored $restingIgnored times; $paddingStarts strokes began on the padding above the top row"
+        return "$strokes glide strokes, avg $pts touch points in $ms ms (a point every ${"%.1f".format(every)} ms), first move after avg ${firstMoveMs / n} ms (worst $firstMoveMax ms); second thumb took over $takeovers times, a resting second finger was ignored $restingIgnored times; $paddingStarts strokes began on the padding above the top row; erase pressed during the other thumb's glide $sideErases times, a finger that landed during a glide and moved later was kept $adoptedFingers times, $marginTouches touches began in the margin beside a squeezed keyboard"
     }
 
     fun line(): String = "keys $keys, backspaces $backspaces, enters $enters, glides $glides, picks $swaps, cursor moves $cursorMoves, foreign changes $foreignReports, resyncs $resyncs"
