@@ -601,3 +601,10 @@ the Gradle downloads hit the Maven rate limit (HTTP 429
 
 This happens a lot and i thought i already fixed it with a setup script which gets a Google mirror. Figure out the best way to permanently fix this
 ```
+
+## 2026-11-27T04:44:12Z
+```
+the Gradle downloads hit the Maven rate limit (HTTP 429
+
+This happens a lot and i thought i already fixed it with a setup script which gets a Google mirror. Figure out the best way to permanently fix this
+```
