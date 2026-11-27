@@ -1064,7 +1064,6 @@ class KeysView(context: Context) : View(context) {
     }
 
     private fun beginGlide() {
-        noTap = false
         lastPreviewAt = SystemClock.uptimeMillis(); lastPreviewN = 0; firstMoveAt = lastPreviewAt
         clearHold(); gliding = true; down = null; pressedLetter = null
         handler.removeCallbacks(repeat); handler.removeCallbacks(unlight); litKey = null
@@ -1090,6 +1089,7 @@ class KeysView(context: Context) : View(context) {
             flushPendingTap()
             return
         }
+        noTap = false                                    // (a real glide: the flag only keeps a wobble of a finger that landed during another glide from being typed)
         pendingTap = null                                // (a glide: a quick tap of another finger during it types nothing)
         val now = SystemClock.uptimeMillis()
         listener?.onTouchNote(NOTE_STROKE, gn, (now - downAt).toInt(), (firstMoveAt - downAt).toInt().coerceAtLeast(0))
