@@ -101,6 +101,17 @@ class GlideSessionTest {
         assertTrue("a habit update must have been reported", e.habits.isNotEmpty())
     }
 
+    @Test fun aBoxThatLearnsNothingMovesNoThumbHabitEither() {                      // R36: "learn nothing when the field says so" includes where the thumb lands (the practice and training boxes ask for it)
+        val e = Env(noLearn = true); e.glide("hello"); e.key(Key.Ch(" "))
+        assertTrue("no habit update in a field that asks for no personalised learning (${e.habits.size})", e.habits.isEmpty())
+        assertTrue("and nothing else learned: ${e.learned()}", e.learned().isEmpty())
+        val f = Env(noLearn = true); f.glide("for")
+        val alt = f.ui.words.firstOrNull { it != "for" }
+        if (alt != null) { assertTrue(f.s.pick(alt)); f.rig.sync(); f.key(Key.Ch(" ")); assertTrue("a pick in such a box moves nothing either", f.habits.isEmpty()) }
+        val p = Env(kind = FieldKind.PASSWORD); p.glide("hello"); p.key(Key.Ch(" "))
+        assertTrue("a password box neither", p.habits.isEmpty())
+    }
+
     @Test fun backspaceRightAfterAGlideTakesTheWordBackAndTeachesNothing() {
         val e = Env(); e.glide("hello"); e.key(Key.Backspace)
         assertEquals("", e.rig.text); assertTrue(e.learned().isEmpty() || !e.learned().contains("w hello"))

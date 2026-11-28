@@ -169,7 +169,7 @@ class GlideSession(
             g.learn(pendingPrev, word, 3f, pendingPrev2, old, 1f)
         }
         g?.stats?.onPicked(); g?.stats?.onStripReplaced(fix = !viaGuess, rescued = true)
-        g?.accepted(word) { h -> habitChanged(h) }
+        if (learnAllowed()) g?.accepted(word) { h -> habitChanged(h) }
         glidedNow = word; glidedAt = now()
         return true
     }
@@ -188,7 +188,7 @@ class GlideSession(
         val g = engine()
         g?.stats?.onPicked(); g?.stats?.onStripReplaced(fix = !isGuess, rescued = false)
         g?.shadowFor(pendingSerial)?.let { if (!pendingRevised && it.plain == word && it.learned != word) g.stats.onShadowPlainPicked() }
-        g?.accepted(word) { h -> habitChanged(h) }
+        if (learnAllowed()) g?.accepted(word) { h -> habitChanged(h) }          // (R36: a box that learns nothing, a password or a practice box, does not move the thumb habit either)
         show(listOf(word) + shown.filter { it != word }.take(2))
         return true
     }
@@ -233,7 +233,7 @@ class GlideSession(
         val trust = if (trusted) 1f else g.keepTrust(w)
         val gentle = trust < 0.5f
         if (gentle) g.stats.onRareKept()
-        if (verdict.habit && !gentle) g.accepted(w) { h -> habitChanged(h) }
+        if (verdict.habit && !gentle && learnAllowed()) g.accepted(w) { h -> habitChanged(h) }
         if (learnAllowed()) {
             pendingShown?.let { g.learnCase(it) }
             if (pendingStart) g.learnStart(w)

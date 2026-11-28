@@ -1896,3 +1896,149 @@
 >
 > Details are in `research/R32-punctuation-suggestions.md`, section 7.
 <!-- sha:e57b653ae974 -->
+
+## 2026-11-26T21:12:31Z
+> Here is the prompt you asked for. Nothing has been changed yet.
+>
+> **What it changes.** Your "Default" environment is personal, so a saved edit applies to every future session that uses it, not just one. The setup script today is one line: it downloads `tools/setup-android.sh` from your `novig` repo and runs it. That is what installs the Android SDK and warms Gradle for novig.
+>
+> A setup script runs as root each time a fresh container is built, after the repos are cloned and before Claude starts. It can't read your saved variables or secrets. If it fails, the session doesn't start. A saved change only shows up in the next new session, not in a running one.
+>
+> **What I put in it.** The block keeps your line and adds a part that only acts when the Keyboard repo is in the session:
+> - It fills the Gradle and Robolectric caches. This session's first test run had to download them, and `--offline` failed until it did.
+> - It puts the glide network weights where the lab reads them.
+>
+> I ran that block here and it worked (18 seconds with warm caches). I could not try a brand-new container, so the first cold run will take a few minutes.
+>
+> ```text
+> Permanently change the setup script of my "Default" cloud environment (it is personal, so the change applies to all my future sessions).
+>
+> Do exactly this, in order:
+> 1. Call get_environment and read the CURRENT setup script from it (do not rely on memory). Tell me in one line what it does.
+> 2. Keep the existing first line exactly as it is. Add the block below after it, unchanged. (If I wrote a different change under "MY CHANGE" at the end of this message, make that change instead and ignore the block.)
+> 3. Before you propose anything, run the new block yourself from the folder that holds the repository checkouts (the parent of your working directory) and show me that every step worked. Use only commands you saw work.
+> 4. Rules for the script: plain Unix text, at most 100 lines of at most 200 bytes each, no secrets (it cannot read my saved variables or secrets anyway), idempotent and non-interactive, skip a repository's steps when its folder is not there, and make every optional step non-fatal, because a failing setup script stops every new session from starting.
+> 5. Then call update_environment with environment_name "Default", applies_to "my personal environment: all of my future sessions that use it, not only this one", the WHOLE new script in setup_script, script_change "replaces the existing setup script" and a one-line reason. I will approve the card.
+> 6. Afterwards call get_environment again, confirm the saved script matches, and tell me it takes effect the next time a container is built fresh (a NEW session), not in the running one.
+>
+> The block to add after the existing line:
+>
+> # the Swoop keyboard (tjshea90/Keyboard), only when it is one of the session's repositories: fill the Gradle and Robolectric caches (the first test run of a session
+> # otherwise downloads them, and "./gradlew --offline" on the ime tests fails) and put the open swipe network where the glide lab reads it. Never stops a session from starting.
+> if [ -d Keyboard ]; then
+>   export ANDROID_HOME="${ANDROID_HOME:-/opt/android-sdk}"
+>   mkdir -p Keyboard/core/build/r30
+>   cp -n Keyboard/ime/src/main/assets/glide/swipe_encoder.bin Keyboard/core/build/r30/swipe_encoder.bin 2>/dev/null || true
+>   ( cd Keyboard && ./gradlew --no-daemon -q :core:compileTestKotlin :ime:testDebugUnitTest --tests 'app.swoop.keyboard.KeysServiceTest' > /tmp/keyboard-prewarm.log 2>&1 ) \
+>     || echo "keyboard prewarm failed (see /tmp/keyboard-prewarm.log): sessions still start, the first test run downloads what is missing"
+> fi
+>
+> MY CHANGE (leave empty to use the block above):
+> ```
+>
+> You can also edit it yourself, without any prompt. Open the cloud environment menu in a session's title bar, tap Edit, then Setup script. Or tell me "do it" and I'll propose that edit here; you approve it on a card.
+>
+> I'm adding this request to TASKS.md, then going back to the alpha14 build.
+<!-- sha:b6228e3cee69 -->
+
+## 2026-11-26T21:54:03Z
+> Alpha15 is out and has everything from this session (alpha13 and alpha14 are inside it). Install this one:
+>
+> https://github.com/tjshea90/Keyboard/releases/tag/swoop-v0.7.0-alpha15
+>
+> **1. Glide predictions.** I tested the engine on about 5,400 real swipes with phone-sized keys. The first word is right 92–94% of the time, and the right word is in the first three about 97%. Nearly all the misses are twin words one key apart (is/us, in/on, it/or). I tried a much bigger word-pair model built from 490 million words of web text. It did not help gliding and was worse on everyday sentences, so I didn't ship it. Re-balancing the neural check against the language model also gained nothing.
+>
+> What can still help is real glides from your tablet. The new Settings > Help > Glide practice shows 40 words (about 3 minutes). Glide each one, tap Save the file, and attach the file here. It keeps only those glides and nothing else you type.
+>
+> I did not read, decompile or copy any Gboard code or models. This repo is public, so anything taken from Google's closed files would be published to everyone, and I can't verify the permission. Google's published papers and the open network already in your keyboard cover the same ideas.
+>
+> **2. Email fields.** There were three reasons it failed:
+> - An address typed in a login box was thrown away when you tapped the next box.
+> - Only boxes the app marked as email were handled.
+> - A new install knew no addresses.
+>
+> All three are fixed. A box that says "email" in its hint now counts as an email box. Settings > Learning > My e-mail addresses lets you type yours once.
+>
+> **3. Domains after the @.** Typing `name@` now offers outlook.com, gmail.com and proton.me, with your own domains first, then hotmail, yahoo and icloud. One tap finishes the address. It works in email boxes and ordinary text boxes, but not for @mentions.
+>
+> **4. Glide start.** A stray first letter could appear in four ways:
+> - A second finger or palm touching before your glide had moved.
+> - A thumb resting on a key.
+> - A very fast flick.
+> - On big keys, a short flick counted as a tap. On your tablet in landscape, a "tap" could be 4 mm long.
+>
+> All four are fixed.
+>
+> **5. Translation.** It switches itself off when you change app, tab or text box, or when the keyboard goes away, and the strip says so once. It stays on while you keep typing in the same box.
+>
+> **6. Setup-script prompt.** It's in my earlier message above. Nothing has been changed yet; say "do it" and I'll apply it.
+>
+> **What I haven't tested.** None of this has run on your tablet or phone. The automated tests pass, and an Android 10 and an Android 16 emulator typed and glided fine. The two-finger fixes are covered only by the automated tests. The Kestrel browser's copy of the keyboard code is not updated; that repo isn't attached to this session.
+>
+> **Open items**
+> - Install alpha15 and try: translation on then switch apps; glides starting on top-row keys; an address typed in a login box before tapping the password box; typing `tj@`.
+> - Run Glide practice and attach the file.
+> - Still waiting from before: the ave/and check. If "ave" keeps coming, use Settings > Forget what it learned once, then send the "Glide typing:" line from Diagnostics.
+> - Not started: a neural next-word model.
+<!-- sha:4ea927639a79 -->
+
+## 2026-11-26T22:00:19Z
+> A neural next-word model is a small program that has read a huge amount of text and learned to guess the next word from the words before it.
+>
+> Your keyboard guesses the next word with a big table: "after *thank*, people usually write *you*", plus your own habits. That table only knows pairs it has seen. A neural model has no table. It has a trained feel for English, stored as a few million numbers. So it can make a sensible guess after a phrase it has never seen exactly, and it can use more of the sentence than the last word. That is what makes Gboard's suggestions feel smart. Google says its model is about 1.4 MB.
+>
+> For you it would mostly improve the suggestion box after a word. It would probably not fix many glide mistakes. When I gave the glide reader much richer word-pair information, glide accuracy didn't improve.
+>
+> It's hard to build well, for three reasons:
+> - It has to run on your tablet's slow processor every time you type a word.
+> - It needs training on lots of everyday chat-style text. The web text I tried was the wrong style and made suggestions slightly worse.
+> - Training it here, without a graphics chip, would be slow.
+>
+> I haven't started it. I'd do the Glide practice first, since that goes after the glide mistakes you complained about. If you want the suggestion box improved anyway, say so and I'll try a small version and measure it before shipping.
+>
+> Still open from before: install alpha15 and run Glide practice.
+<!-- sha:4a94df7da94e -->
+
+## 2026-11-26T23:05:59Z
+> The Glide training is built and released as alpha16. It is a measurement tool first and a learning tool second, and on your tablet it will probably change little.
+>
+> **Your practice file**
+> - The keyboard put the right word first 39 of 40 times (97.5%), and the right word was always among the first three.
+> - The only miss was "our" typed as "or". On the keyboard those two are the same straight line, because o to r passes over u. Only the words around them can tell them apart.
+> - Your thumb lands almost exactly on the keys, about 2 dp off (roughly a third of a millimetre). So isolated words are not your tablet's problem.
+>
+> **Would a longer training work?**
+> - **As a measurement, yes.** The 40 words had no sentences around them, and your wrong words (ave, fur, there) happen inside sentences. The new training uses whole paragraphs, so the keyboard sees the words before each glide, as in a real message.
+> - **As learning, only one thing helps: where your thumb lands.** I tested this on a simulated hand: the real training script, then 1,500 to 2,000 fresh words it was never asked for.
+>   - Phone-sized keys gained about 1.5 points, and tablet keys 0.3 to 0.6. It was never worse.
+>   - Your thumb is already on target, so don't expect your wrong words to disappear because of the training.
+> - **I switched off two kinds of learning**, because the simulation showed they make the tablet worse:
+>   - Remembering "it typed A, I meant B" cost 2 to 5 points on tablet keys.
+>   - Remembering how you draw each word cost 0.1 to 1 point on big keys. It stays on for phone-sized keys.
+> - The training never counts the paragraph words as your own writing, so it can't bend your suggestions.
+>
+> **What is new: Settings → Help → Glide training**
+> - It is about 400 glides, 10 to 20 minutes, and you can stop after any page.
+> - It has 8 everyday paragraphs. Three more pages have look-alike words (the/there/they, for/or/our, it/is/in and so on), each glided four times, never twice in a row.
+> - You can add your own trouble words, and the last page repeats the words that went wrong together with what the keyboard typed instead.
+> - The box keeps the words you have written so far, so each glide is decoded with real context. Each page shows its score.
+> - A switch turns learning off if you only want it to measure.
+> - Please glide at your normal speed and don't be careful. Careful glides say little about everyday ones.
+> - At the end, tap "Save the file" and attach the file to the chat. Don't paste it.
+> - Boxes that learn nothing (passwords, practice, training) used to move the thumb habit anyway. They no longer do.
+>
+> **What I checked**
+> - All tests and lint pass.
+> - GitHub built and signed alpha16 (build log recorded).
+> - The keyboard passed the emulator checks on Android 10 and Android 16.
+> - I did **not** run it on your tablet.
+> - The training screen itself was only checked by automatic tests, not on a real or emulated screen.
+> - The "would it work" numbers come from a simulated hand, not yours.
+>
+> https://github.com/tjshea90/Keyboard/releases/tag/swoop-v0.7.0-alpha16
+>
+> **Still open**
+> - **You, now:** install alpha16, run Glide training, and attach the saved file (R36f). I will then split your misses into "the finger path doesn't show the word" and "the word order or language picked wrong", and fix whichever it is.
+> - **You, from before:** R34f (translation turns itself off, glides starting on the top-row keys, e-mail addresses learned in login boxes, domains after @), R33f (glide "and" a dozen times and tap "and" if "ave" appears), R32f and R30f.
+> - **Me:** the next-word suggestion model is not started, and it is your call. The Kestrel browser's copy of the keyboard is not updated. For the setup-script change, say "do it" and I will make it.
+<!-- sha:54afc7a56147 -->

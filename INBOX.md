@@ -555,3 +555,27 @@ Is it done
 ```
 Is it done
 ```
+
+## 2026-11-26T19:53:25Z
+```
+1) improve the keyboard prediction engine. It still gets a lot of glide predictions wrong. See if there are any models or other glide engines it can learn from or adopt. Google gave me developer permission to reverse engineer gboard code if claude can do so.
+2) it still isn't recognizing email fields and suggesting my email addresses at the top.
+3) for email fields, if i don't select one of my emails at the top and instead type an email, after the @ sign, suggest popular email domains such as outlook.Com, Gmail.Com, and proton.Me.
+4) make the delay from first key to glide instant so it doesn't erroneously type one letter when I'm trying to glide type.
+5) if i have translation feature on, then switch apps or tabs, automatically turn translation off. It should only stay on if I'm actively using it
+```
+
+## 2026-11-26T21:09:47Z
+```
+Give me a prompt to permanently change the setup script for this claude account
+```
+
+## 2026-11-26T21:59:40Z
+```
+What is a neural next word model
+```
+
+## 2026-11-26T22:05:02Z
+```
+@"/root/.claude/uploads/6b745898-fab9-531b-9e27-c84d56b04344/e9b93cb5-Swoop_glide_practice_2026-11-26_1702.txt" I did the glide practice and it is attached. Can you make a much longer glide training that i can glide full paragraphs and problematic words several times and the keyboard learns how i glide? Would this work,?
+```

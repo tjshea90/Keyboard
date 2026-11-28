@@ -99,4 +99,20 @@ class KeysServiceTest {
         assertEquals("Set up Swoop", a.title.toString())
         assertTrue(!SetupActivity.isEnabled(a) && !SetupActivity.isCurrent(a))
     }
+
+    // ---- R34e: the service tells the presenter when the keyboard goes away and whether the box is a restart of the same one
+    @Test fun translatingStaysOnInTheSameBoxButSwitchesOffWhenTheKeyboardLeavesOrAnotherAppComes() {
+        java.io.File(app.filesDir, "crash_guard.txt").delete()
+        val s = Robolectric.setupService(KeysService::class.java)
+        val keys = (s.onCreateInputView() as KeyboardRoot).keys
+        fun info(pkg: String) = android.view.inputmethod.EditorInfo().apply { packageName = pkg; fieldId = 3; inputType = android.text.InputType.TYPE_CLASS_TEXT }
+        s.onStartInputView(info("com.example.chat"), false)
+        keys.listener!!.onToolbar(KeysView.TOOL_TRANSLATE); assertTrue("the person switched translating on", keys.translateOn)
+        s.onStartInputView(info("com.example.chat"), true); assertTrue("the same box restarted: still on", keys.translateOn)
+        s.onFinishInputView(false); assertTrue("the keyboard went away: off", !keys.translateOn)
+        s.onStartInputView(info("com.example.chat"), true); assertTrue("and it does not come back by itself", !keys.translateOn)
+        keys.listener!!.onToolbar(KeysView.TOOL_TRANSLATE); assertTrue("on again, one tap", keys.translateOn)
+        s.onFinishInput(); s.onStartInputView(info("com.example.mail"), false); assertTrue("another app: off", !keys.translateOn)
+        java.io.File(app.filesDir, "crash_guard.txt").delete()
+    }
 }

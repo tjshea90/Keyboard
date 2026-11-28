@@ -50,6 +50,14 @@ if [ -n "$EXPORT_HIT" ]; then
   exit 1
 fi
 
+# R34a2: a GLIDE PRACTICE FILE (the owner's finger paths on his own tablet) is private too: it starts a line with its magic header. Only the prompted words are in it, but real swipes are never committed.
+PRACTICE_HIT="$(printf '%s\n' "$EXPORT_DIFF" | grep -m1 -E '^\+SWOOP-GLIDE-PRACTICE [0-9]' || true)"
+if [ -n "$PRACTICE_HIT" ]; then
+  echo "SECRET SCAN TRIPPED - a Swoop GLIDE PRACTICE FILE (the owner's real swipes) is in the tree - nothing was committed."
+  echo "Remove it (such files are attached to a chat, never committed), then checkpoint again."
+  exit 1
+fi
+
 # Added lines only. An existing line that already looked like this was already
 # pushed long ago; re-flagging it would wedge every future checkpoint.
 #

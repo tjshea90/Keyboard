@@ -78,4 +78,23 @@ class FieldInfosTest {
         assertEquals("a look-alike option is not the option", FieldKind.TEXT, info(T, 0, "app.kestrel.omnibox=2,xapp.kestrel.omnibox=1").kind)
         assertEquals("no option, no change", FieldKind.TEXT, info(T, 0, "").kind)
     }
+
+    /** R34b (owner 2026-11-26: "it still isn't recognizing email fields"): a plain text box that says "email" in its hint, label or field name is an e-mail box; a box ABOUT e-mail is not. */
+    @Test fun aPlainTextBoxThatSaysEmailInItsHintLabelOrNameIsAnEmailBox() {
+        fun kind(hint: String? = null, label: String? = null, name: String? = null, type: Int = T, opts: Int = 0) =
+            FieldInfos.from(EditorInfo().also { it.inputType = type; it.imeOptions = opts; it.hintText = hint; it.label = label; it.fieldName = name }).kind
+        for (h in listOf("Email", "E-mail address", "Enter your email", "Email or phone", "Username or email", "Correo electr\u00F3nico", "email_address")) assertEquals("hint '$h'", FieldKind.EMAIL, kind(hint = h))
+        assertEquals(FieldKind.EMAIL, kind(label = "Your E-Mail")); assertEquals(FieldKind.EMAIL, kind(name = "user_email")); assertEquals(FieldKind.EMAIL, kind(name = "emailAddress"))
+        assertEquals("the look of a web text box", FieldKind.EMAIL, kind(hint = "Email", type = T or InputType.TYPE_TEXT_VARIATION_WEB_EDIT_TEXT))
+        for (h in listOf("Email subject", "Search mail", "Message body", "Email notifications", "Subject", "Name", "Phone", "")) assertEquals("hint '$h'", FieldKind.TEXT, kind(hint = h))
+        assertEquals("no hint at all", FieldKind.TEXT, kind())
+        assertEquals("a long text is a sentence, not a hint", FieldKind.TEXT, kind(hint = "Please type the email you used when you signed up for the newsletter last year"))
+        assertEquals("a multi-line box is for writing", FieldKind.TEXT, kind(hint = "Email", type = T or InputType.TYPE_TEXT_FLAG_MULTI_LINE))
+        assertEquals("a password box stays one", FieldKind.PASSWORD, kind(hint = "Email", type = T or InputType.TYPE_TEXT_VARIATION_PASSWORD))
+        assertEquals("a search box stays one", FieldKind.SEARCH, kind(hint = "Email", opts = EditorInfo.IME_ACTION_SEARCH))
+        assertEquals("an address bar stays one", FieldKind.URL, kind(hint = "Email", type = T or InputType.TYPE_TEXT_VARIATION_URI))
+        assertEquals("a subject line is no address", FieldKind.TEXT, kind(hint = "Email", type = T or InputType.TYPE_TEXT_VARIATION_EMAIL_SUBJECT))
+        val f = FieldInfos.from(EditorInfo().also { it.inputType = T or InputType.TYPE_TEXT_FLAG_CAP_SENTENCES; it.hintText = "Email" })
+        assertEquals("an e-mail box asks for no capitals", 0, f.capsFlags); assertEquals(false, f.composingAllowed); assertEquals(true, f.learningAllowed)
+    }
 }

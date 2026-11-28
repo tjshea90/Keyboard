@@ -164,6 +164,9 @@ class KeysView(context: Context) : View(context) {
     // takes over when the first thumb lifts, instead of being thrown away.
     private var waitId = -1
     private var wtx = FloatArray(64); private var wty = FloatArray(64); private var wtt = LongArray(64); private var wtn = 0
+    /** R34d: when the waiting finger landed, and a letter it tapped and lifted while the first finger had not decided yet (typed right after the first finger's own letter, dropped when that finger glides). */
+    private var waitAt = 0L
+    private var pendingTap: KeySpec? = null
 
     // ---- glide (KB-103)
     private var glideEnabled = false
@@ -750,10 +753,22 @@ class KeysView(context: Context) : View(context) {
     @SuppressLint("ClickableViewAccessibility") // KB-305 adds TalkBack key descriptions; this view is a keyboard, not a button
     override fun onTouchEvent(e: MotionEvent): Boolean {
         when (e.actionMasked) {
-            MotionEvent.ACTION_DOWN -> { requestUnbufferedDispatch(e); waitId = -1; wtn = 0; activeId = e.getPointerId(0); pressDown(e.getX(0), e.getY(0), at = e.eventTime) }   // unbuffered: every touch sample at once, not batched to the frame (a fast trail)
+            MotionEvent.ACTION_DOWN -> { requestUnbufferedDispatch(e); waitId = -1; wtn = 0; pendingTap = null; activeId = e.getPointerId(0); pressDown(e.getX(0), e.getY(0), at = e.eventTime) }   // unbuffered: every touch sample at once, not batched to the frame (a fast trail)
             MotionEvent.ACTION_POINTER_DOWN -> {
-                if (gliding) {                                    // a glide in progress is never cut short by a second touch (a resting palm); the new finger is only recorded, and takes over if it moves (R28b)
-                    if (waitId < 0) { val i = e.actionIndex; waitId = e.getPointerId(i); wtn = 0; addWait(e.getX(i), e.getY(i), e.eventTime) }
+                val ni = e.actionIndex
+                // R34d (owner 2026-11-26: "make the delay from first key to glide instant so it doesn't erroneously type one letter"): a finger that has rested on a letter for a while is a thumb that holds the tablet (or a palm), not a key press:
+                // it types nothing, and the finger that lands now is the one that types or glides
+                if (armed && waitId < 0 && popup == null && holdAlt == null && firstUndecided() && SystemClock.uptimeMillis() - downAt >= RESTING_MS) {
+                    dropFirstFinger(); activeId = e.getPointerId(ni); pressDown(e.getX(ni), e.getY(ni), at = e.eventTime); return true
+                }
+                // a glide in progress is never cut short by a second touch (a resting palm); the new finger is only recorded, and takes over if it moves (R28b). R34d: the same while the first finger is on a letter and has not moved yet
+                // (it used to type that letter at once and lose the glide it was about to draw), when the new finger lands on a letter too; a tap on the strip or a function key still types the first letter first
+                if (gliding || (armed && popup == null && holdAlt == null && !inStrip(e.getY(ni)) && isLetter(keyAt(e.getX(ni), e.getY(ni))))) {
+                    if (waitId < 0) {
+                        val undecided = firstUndecided()
+                        waitId = e.getPointerId(ni); wtn = 0; waitAt = SystemClock.uptimeMillis(); pendingTap = null; addWait(e.getX(ni), e.getY(ni), e.eventTime)
+                        if (undecided) { haptic(); click() }          // it may be a tap: it gets its key click now
+                    }
                     return true
                 }
                 // the second thumb: the letter the first one holds is typed NOW (in the order they were pressed), then the new finger is the tracked one
@@ -762,15 +777,21 @@ class KeysView(context: Context) : View(context) {
             }
             MotionEvent.ACTION_MOVE -> {
                 val i = e.findPointerIndex(activeId); if (i >= 0) pressMove(e, i)
-                if (waitId >= 0) { val j = e.findPointerIndex(waitId); if (j >= 0) { for (h in 0 until e.historySize) addWait(e.getHistoricalX(j, h), e.getHistoricalY(j, h), e.getHistoricalEventTime(h)); addWait(e.getX(j), e.getY(j), e.eventTime) } }
+                if (waitId >= 0) {
+                    val j = e.findPointerIndex(waitId)
+                    if (j >= 0) {
+                        for (h in 0 until e.historySize) addWait(e.getHistoricalX(j, h), e.getHistoricalY(j, h), e.getHistoricalEventTime(h)); addWait(e.getX(j), e.getY(j), e.eventTime)
+                        if (firstUndecided() && waitMoved()) handOverToWaiting(e)          // R34d: the newer finger is the one that moves: it is the glide, the first finger was a tap
+                    }
+                }
             }
             MotionEvent.ACTION_POINTER_UP -> {
                 val i = e.actionIndex; val id = e.getPointerId(i)
-                if (id == activeId) { pressUp(e, i); activeId = -1; takeOverWaiting(e) }
-                else if (id == waitId) { waitId = -1; wtn = 0; listener?.onTouchNote(NOTE_RESTING_IGNORED) }          // the second finger lifted first: a tap or a palm during the glide, typed nothing (as before)
+                if (id == activeId) { val undecided = firstUndecided(); pressUp(e, i); activeId = -1; takeOverWaiting(e, restingOk = undecided) }
+                else if (id == waitId) noteWaitLift()
             }
             MotionEvent.ACTION_UP -> { if (activeId >= 0) { val i = e.findPointerIndex(activeId).let { if (it < 0) 0 else it }; pressUp(e, i) }; activeId = -1 }
-            MotionEvent.ACTION_CANCEL -> { pressCancel(); activeId = -1; waitId = -1; wtn = 0 }
+            MotionEvent.ACTION_CANCEL -> { pressCancel(); activeId = -1; waitId = -1; wtn = 0; pendingTap = null }
         }
         return true
     }
@@ -780,18 +801,73 @@ class KeysView(context: Context) : View(context) {
         wtx[wtn] = x; wty[wtn] = y; wtt[wtn] = t; wtn++
     }
 
+    /** R34d: the first finger is on a letter and has not decided yet: it has not left its key (a roll of a few dp does not count), so it may still be a tap or the start of a glide. */
+    private fun firstUndecided(): Boolean = armed && (!gliding || stayedOnKey(glideDown))
+
+    /** R34d: the waiting finger has moved far enough from where it landed to be a glide. */
+    private fun waitMoved(): Boolean {
+        if (wtn < 2) return false
+        val lim = dp(GLIDE_START_DP); val dx = wtx[wtn - 1] - wtx[0]; val dy = wty[wtn - 1] - wty[0]
+        return dx * dx + dy * dy > lim * lim
+    }
+
+    /** R34d: the finger that rested on a letter is let go without typing it (a thumb that holds the tablet). */
+    private fun dropFirstFinger() {
+        handler.removeCallbacks(repeat); handler.removeCallbacks(unlight); clearHold(); popup = null
+        pressedLetter = null; down = null; armed = false; gliding = false; glideDown = null; litKey = null; gn = 0
+        removeCallbacks(fadeStep); fadeStart = 0L; pendingTap = null; dyn()
+        listener?.onTouchNote(NOTE_RESTING_IGNORED)
+    }
+
+    /** R34d: the first finger was a tap: its letter is typed now (it was pressed first) and its touch is over. */
+    private fun typeFirstFingerNow() {
+        val k = glideDown ?: pressedLetter
+        handler.removeCallbacks(repeat); clearHold(); popup = null
+        pressedLetter = null; down = null; armed = false; gliding = false; glideDown = null; gn = 0
+        if (k?.key != null) { light(k); emit(k.key!!) }
+    }
+
+    /** R34d: the newer finger moved while the first had only just landed and not moved: the first was a tap (a thumb that has rested for long is let go instead), the newer one is the glide, its path from the first touch on. */
+    private fun handOverToWaiting(e: MotionEvent) {
+        if (SystemClock.uptimeMillis() - downAt >= RESTING_MS) dropFirstFinger() else typeFirstFingerNow()
+        activeId = -1
+        takeOverWaiting(e)
+    }
+
+    /** R34d: the waiting finger lifted first. A quick tap on a letter while the first finger had not decided is typed right after the first finger's letter; anything else (a palm, a tap during a glide) types nothing, as before. */
+    private fun noteWaitLift() {
+        var tap: KeySpec? = null
+        if (firstUndecided() && wtn > 0 && SystemClock.uptimeMillis() - waitAt < RESTING_MS) {
+            val lim = dp(GLIDE_START_DP); var still = true
+            for (k in 1 until wtn) { val dx = wtx[k] - wtx[0]; val dy = wty[k] - wty[0]; if (dx * dx + dy * dy > lim * lim) { still = false; break } }
+            if (still) keyAt(wtx[0], wty[0])?.let { if (isLetter(it)) tap = it }
+        }
+        pendingTap = tap; waitId = -1; wtn = 0
+        if (tap == null) listener?.onTouchNote(NOTE_RESTING_IGNORED)
+    }
+
+    private fun flushPendingTap() { val p = pendingTap; pendingTap = null; if (p?.key != null) { light(p); emit(p.key!!) } }
+
     /**
      * R28b: the first thumb lifted while a second one is still down. When the second one has moved (it is drawing the next word), its recorded path becomes the glide in progress, as if it had been tracked since
-     * it landed. A finger that stayed put (a palm, a thumb resting on the screen) types nothing, as before.
+     * it landed. A finger that stayed put (a palm, a thumb resting on the screen) types nothing, as before. R34d: unless the first finger was only a tap ([restingOk]) and this one landed a moment ago: then it is the next tap
+     * (or the start of the next glide) and carries on as a finger that just went down.
      */
-    private fun takeOverWaiting(e: MotionEvent) {
+    private fun takeOverWaiting(e: MotionEvent, restingOk: Boolean = false) {
         val id = waitId; val n = wtn; waitId = -1; wtn = 0
         if (id < 0 || n == 0 || !glideEnabled || page != Page.LETTERS) return
         val j = e.findPointerIndex(id); if (j < 0) return
         val lim = dp(GLIDE_START_DP) * dp(GLIDE_START_DP)
         var moved = false
         for (k in 1 until n) { val dx = wtx[k] - wtx[0]; val dy = wty[k] - wty[0]; if (dx * dx + dy * dy > lim) { moved = true; break } }
-        if (!moved || !isLetter(keyAt(wtx[0], wty[0]))) { listener?.onTouchNote(NOTE_RESTING_IGNORED); return }
+        if (!isLetter(keyAt(wtx[0], wty[0]))) { listener?.onTouchNote(NOTE_RESTING_IGNORED); return }
+        if (!moved) {
+            if (!restingOk || SystemClock.uptimeMillis() - waitAt >= RESTING_MS) { listener?.onTouchNote(NOTE_RESTING_IGNORED); return }
+            activeId = id
+            pressDown(wtx[0], wty[0], quiet = true, at = wtt[0])          // (its key click was played when it landed)
+            for (k in 1 until n) addPoint(wtx[k], wty[k], wtt[k])
+            return
+        }
         activeId = id
         pressDown(wtx[0], wty[0], quiet = true, at = wtt[0])
         if (!armed) { activeId = -1; return }
@@ -803,7 +879,7 @@ class KeysView(context: Context) : View(context) {
 
     private fun pressDown(x: Float, y: Float, quiet: Boolean = false, at: Long = SystemClock.uptimeMillis()) {
         handler.removeCallbacks(repeat); clearHold()
-        armed = false; gliding = false; stripDown = -1
+        armed = false; gliding = false; stripDown = -1; pendingTap = null
         if (inStrip(y)) {                                             // the strip was touched: a toolbar icon or a guess
             toolDown = toolAt(x, y); stripDown = if (toolDown >= 0) -1 else chipAt(x, y); stripLong = false
             if (toolDown >= 0) haptic()
@@ -871,6 +947,8 @@ class KeysView(context: Context) : View(context) {
             return
         }
         if (gliding) { for (h in 0 until e.historySize) addPoint(e.getHistoricalX(i, h), e.getHistoricalY(i, h), e.getHistoricalEventTime(h)); addPoint(x, y, e.eventTime); endGlide(); return }
+        // R34d: a flick whose only events were the touch down and the lift (a panel that sent no move in between): the lift point already says it went somewhere, so it is a glide and not a press of the key it began on
+        if (armed && movedFar(x, y)) { beginGlide(); addPoint(x, y, e.eventTime); endGlide(); return }
         armed = false
         handler.removeCallbacks(repeat)
         val alt = holdAlt; clearHold(); dyn()          // the bubble goes away BEFORE the key is sent to the app (which can take a moment)
@@ -880,6 +958,7 @@ class KeysView(context: Context) : View(context) {
         if (letter != null) {                              // a tap on a letter types the letter it went down on, even when the finger drifted (held: its digit)
             pressedLetter = null; down = null; gn = 0
             light(letter); emit(if (alt != null) Key.Ch(alt) else letter.key!!)
+            flushPendingTap()
             return
         }
         val k = keyAt(x, y)
@@ -889,6 +968,7 @@ class KeysView(context: Context) : View(context) {
 
     private fun pressCancel() {
         handler.removeCallbacks(stripHold); toolDown = -1; handler.removeCallbacks(repeat); handler.removeCallbacks(spaceHold); clearHold(); popup = null; spaceIsDown = false; spaceHeld = false; down = null; pressedLetter = null; armed = false; stripDown = -1; spaceDown = false; sliding = false; litKey = null; dyn()
+        pendingTap = null
         if (gliding) { gliding = false; fadeStart = SystemClock.uptimeMillis(); postOnAnimation(fadeStep) }
     }
 
@@ -912,7 +992,14 @@ class KeysView(context: Context) : View(context) {
         val lim = dp(if (holdAlt != null) GLIDE_START_HELD_DP else GLIDE_START_DP)      // (a long press that already shows its digit is not turned into a glide by a thumb that rolls a little)
         return dx * dx + dy * dy > lim * lim
     }
-    private fun pathPitches(): Float { var len = 0f; for (i in 1 until gn) len += Math.hypot((gx[i] - gx[i - 1]).toDouble(), (gy[i] - gy[i - 1]).toDouble()).toFloat(); return len / pitch() }
+    private fun pathLen(): Float { var len = 0f; for (i in 1 until gn) len += Math.hypot((gx[i] - gx[i - 1]).toDouble(), (gy[i] - gy[i - 1]).toDouble()).toFloat(); return len }
+    /**
+     * R34d: how far (px) a thumb may roll outside the key it went down on and still have pressed it, and how short (px) a stroke has to be to be no glide at all. Both were measured in KEY WIDTHS ([TAP_MARGIN_PITCH], [MIN_GLIDE_PITCHES]),
+     * which grows with the keys: on a landscape tablet 0.45 key widths is 41 dp and a flick of that length typed the letter it began on. A thumb rolls the same few dp on every keyboard (Android's own tap slop is 8 dp), so the
+     * limits are capped in dp ([TAP_MARGIN_MAX_DP], [MIN_GLIDE_MAX_DP]); on phone-sized keys the key-width figure is the smaller one and nothing changes.
+     */
+    private fun tapMargin(): Float = Math.min(pitch() * TAP_MARGIN_PITCH, dp(TAP_MARGIN_MAX_DP))
+    private fun minGlideLen(): Float = Math.min(pitch() * MIN_GLIDE_PITCHES, dp(MIN_GLIDE_MAX_DP))
 
     /**
      * Owner, 2026-11-17: "always glide unless I am clearly only pressing one key". A touch is a tap only when every point of it stayed on the key it went down on (plus a margin of
@@ -921,9 +1008,9 @@ class KeysView(context: Context) : View(context) {
      */
     private fun stayedOnKey(k: KeySpec?): Boolean {
         if (k == null) return true
-        val b = boxOf(k) ?: return pathPitches() < MIN_GLIDE_PITCHES
-        val m = pitch() * TAP_MARGIN_PITCH
-        for (i in 0 until gn) if (gx[i] < b.left - m || gx[i] > b.right + m || gy[i] < b.top - m || gy[i] > b.bottom + m) return pathPitches() < MIN_GLIDE_PITCHES
+        val b = boxOf(k) ?: return pathLen() < minGlideLen()
+        val m = tapMargin()
+        for (i in 0 until gn) if (gx[i] < b.left - m || gx[i] > b.right + m || gy[i] < b.top - m || gy[i] > b.bottom + m) return pathLen() < minGlideLen()
         return true
     }
 
@@ -938,7 +1025,7 @@ class KeysView(context: Context) : View(context) {
     private fun maybePreview() {
         val now = SystemClock.uptimeMillis()
         if (now - lastPreviewAt < PREVIEW_MS || gn - lastPreviewN < PREVIEW_POINTS) return
-        if (pathPitches() < MIN_GLIDE_PITCHES) return                      // R28b: a glide now starts at 2.5 dp; a press that only wobbled is not asked about (it would clear the strip's guesses)
+        if (pathLen() < minGlideLen()) return                      // R28b: a glide now starts at 2.5 dp; a press that only wobbled is not asked about (it would clear the strip's guesses)
         lastPreviewAt = now; lastPreviewN = gn
         listener?.onGlideMove(gx, gy, gn)
     }
@@ -949,8 +1036,10 @@ class KeysView(context: Context) : View(context) {
         if (stayedOnKey(k)) {                            // a tap that slid a little (the finger never left its own key): the key it went down on
             gn = 0; dyn()
             if (k?.key != null) { light(k); emit(k.key!!) }
+            flushPendingTap()
             return
         }
+        pendingTap = null                                // (a glide: a quick tap of another finger during it types nothing)
         val now = SystemClock.uptimeMillis()
         listener?.onTouchNote(NOTE_STROKE, gn, (now - downAt).toInt(), (firstMoveAt - downAt).toInt().coerceAtLeast(0))
         fadeStart = now; postOnAnimation(fadeStep)
@@ -1026,10 +1115,15 @@ class KeysView(context: Context) : View(context) {
         const val NOTE_TAKEOVER = 2
         const val NOTE_RESTING_IGNORED = 3
         const val NOTE_PADDING_START = 4
+        /** R34d: a finger that has stayed on a letter this long (ms) without moving when another finger lands is a thumb that holds the tablet, not a key press: it types nothing. A fast two-thumb tap overlaps by far less. */
+        const val RESTING_MS = 300L
         /** A path shorter than this (in key pitches) is a tap that slid a little, not a glide. */
         const val MIN_GLIDE_PITCHES = 0.45f
         /** A path that never strays further than this (key widths) outside the key it started on is a tap. */
         const val TAP_MARGIN_PITCH = 0.22f
+        /** R34d: ... but never more than this many dp (Android's tap slop is 8 dp), and a stroke shorter than [MIN_GLIDE_PITCHES] key widths is no glide, never more than this many dp. */
+        const val TAP_MARGIN_MAX_DP = 8f
+        const val MIN_GLIDE_MAX_DP = 16f
         const val TRAIL_FADE_MS = 260L
         const val NO_WORD_MS = 1500L
         const val NOTICE_MS = 5000L

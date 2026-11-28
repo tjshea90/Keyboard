@@ -125,6 +125,7 @@ class SetupActivity : Activity() {
             learnedLine = line
             learn.row(line)
             learn.row(note("Nothing is learned in password boxes, or in apps that ask for private typing."))
+            learn.row(actionRow("My e-mail addresses", "Type your addresses once: they show above the keys in every e-mail box, and the keyboard finishes an address after the @ (outlook.com, gmail.com, proton.me ...).") { startActivity(Intent(this@SetupActivity, EmailsActivity::class.java)) })
             learn.row(switchRow("E-mail addresses", "Remembers the e-mail addresses you type (never one you paste or fill in from a password manager) and offers them above the keys in e-mail boxes. They stay on this device and are not in the export.", st.emailSuggestions) { change(Prefs.EMAIL_SUGGEST, it) })
             learn.row(actionRow("Forget my e-mail addresses", "Deletes only the saved e-mail addresses. Your words and corrections stay.") { flow.forgetEmailsNow() })
             learn.row(actionRow("Export what it learned", "Saves one plain-text file in Downloads. It lists your words: keep it private.") { flow.exportNow() })
@@ -166,6 +167,8 @@ class SetupActivity : Activity() {
         val help = u.card()
         with(u) {
             help.row(actionRow("Go back to my previous keyboard", "Opens Android's keyboard picker. Your old keyboard stays installed.") { chooseKeyboard() })
+            help.row(actionRow("Glide practice", "Glide 40 words that are shown to you, then save one file and attach it to the chat. Real glides from your tablet are what the keyboard can be tuned on. Only those glides are kept.") { startActivity(Intent(this@SetupActivity, PracticeActivity::class.java)) })
+            help.row(actionRow("Glide training", "A much longer practice: glide whole paragraphs and the words that get mixed up, several times each, and let the keyboard learn how you glide. Saves one file you can attach to the chat.") { startActivity(Intent(this@SetupActivity, TrainingActivity::class.java)) })
             help.row(actionRow("Diagnostics", "Numbers only, nothing you typed. Copy them into the chat when something is wrong.") { startActivity(Intent(this@SetupActivity, DiagnosticsActivity::class.java)) })
             help.row(actionRow("Reset settings", "Puts every switch on this screen back as it was at install. What the keyboard learned stays.", danger = true) {
                 AlertDialog.Builder(this@SetupActivity).setTitle("Reset settings?").setMessage("Every switch goes back to its install setting. Learned words are kept.")
