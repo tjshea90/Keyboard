@@ -53,11 +53,11 @@ class CommonWordGuardTest {
         assertEquals("and the ", e.rig.text)
     }
 
-    /** A reading only 4.7 nats rarer ("toe", about 110 times) and a pair that only THE PERSON made: not in the shipped list, so it is never proof. */
+    /** A reading only 4.7 nats rarer ("toe", about 110 times) and a pair that only THE PERSON made (many times): not in the shipped list, so it is never proof. */
     @Test fun aPairOnlyThePersonMadeNeverOverturnsACommonWord() {
         val e = Env()
-        repeat(4) { e.engine.learnWord(null, "toe", 1f); e.engine.learnWord("toe", "it", 1f) }
-        e.glide(cand("to", 5.0f), cand("toe", 4.95f))
+        repeat(40) { e.engine.learnWord(null, "toe", 1f); e.engine.learnWord("toe", "it", 1f) }
+        e.glide(cand("to", 5.0f), cand("toe", 4.99f))
         e.glide(cand("it", 5.0f))
         assertEquals("to it ", e.rig.text)
     }
