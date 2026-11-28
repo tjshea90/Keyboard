@@ -47,6 +47,25 @@ class ReviseProbeTest {
         }
     }
 
+    @Test fun nextWordNumbers() {
+        val bytes = GlideEval.findAsset().readBytes()
+        val keys = GlideEval.keysFor(564f, 160f)
+        val engine = GlideTyping({ bytes }, Executor { it.run() }, savePersonal = { })
+        engine.prepare(keys, null, null)
+        val cases = listOf(
+            "it" to listOf("to", "yo", "go", "so", "no", "do", "of", "or", "ti"),
+            "the" to listOf("and", "ave", "ane", "abd", "any", "access", "age"),
+            "it" to listOf("make", "maggie", "mace", "male", "made", "take", "mike"),
+            "you" to listOf("for", "fur", "foe", "fir", "fog", "got"),
+            "it" to listOf("or", "our", "out", "ir", "of"),
+            "to" to listOf("and", "ave", "age", "access"),
+        )
+        for ((next, cands) in cases) {
+            val ln = engine.nextWordLnProbs(cands, next, null)
+            println("PROBE3 next=$next: " + cands.indices.joinToString { "${cands[it]}=${ln?.get(it)?.let { v -> "%.2f".format(v) }}" })
+        }
+    }
+
     @Test fun simulateToIt() {
         val bytes = GlideEval.findAsset().readBytes()
         val keys = GlideEval.keysFor(564f, 160f)
