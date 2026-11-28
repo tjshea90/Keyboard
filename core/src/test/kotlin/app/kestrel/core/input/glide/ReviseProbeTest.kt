@@ -47,6 +47,19 @@ class ReviseProbeTest {
         }
     }
 
+    @Test fun learnedPairNumbers() {
+        val bytes = LexiconFile.build(
+            listOf("to" to 28_000_000L, "and" to 25_000_000L, "it" to 11_000_000L, "the" to 50_000_000L, "toe" to 260_000L, "yo" to 4_000L).map { LexiconFile.Entry(it.first, it.second) },
+            listOf(LexiconFile.Pair("to", "the", 3_000_000L)))
+        val keys = GlideEval.keysFor(564f, 160f)
+        val engine = GlideTyping({ bytes }, Executor { it.run() }, savePersonal = { })
+        engine.prepare(keys, null, null)
+        println("PROBE5 before learning: " + engine.nextWordLnProbs(listOf("to", "toe"), "it", null)?.toList())
+        repeat(40) { engine.learnWord(null, "toe", 1f); engine.learnWord("toe", "it", 1f) }
+        println("PROBE5 after 40x toe, toe-it: " + engine.nextWordLnProbs(listOf("to", "toe"), "it", null)?.toList() + "  contextLn to=${engine.contextLn("to", null, null)} toe=${engine.contextLn("toe", null, null)}")
+        println("PROBE5 pairLn(to,it)=${engine.pairLn("to", "it")} pairLn(toe,it)=${engine.pairLn("toe", "it")}")
+    }
+
     @Test fun pairStrengths() {
         val lex = GlideEval.loadLexicon()
         fun b(a: String, c: String): String { val ia = lex.idOf(a); val ic = lex.idOf(c); if (ia < 0 || ic < 0) return "unknown"; val v = lex.bigramLogProb(ia, ic); return if (v.isNaN()) "none" else "%.2f".format(v) }
