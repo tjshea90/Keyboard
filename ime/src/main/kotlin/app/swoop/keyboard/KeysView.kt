@@ -681,6 +681,9 @@ class KeysView(context: Context) : View(context) {
             val b = rects[i][j]
             sb.append(' ').append(name).append('=').append(Math.round(loc[0] + b.centerX)).append(',').append(Math.round(loc[1] + b.centerY))
         }
+        // R40: the centre of every filled suggestion chip (chip0, chip1 ...), geometry only, never the words: the daily-use simulation taps one to prove "delete half of a glided word, tap the suggestion" in a real Gecko field.
+        val cs = chips(); val cb = chipBoxes()
+        for (i in cb.indices) if (i < cs.size && cs[i].isNotEmpty()) sb.append(" chip").append(i).append('=').append(Math.round(loc[0] + cb[i].centerX())).append(',').append(Math.round(loc[1] + cb[i].centerY()))
         return sb.toString()
     }
 
