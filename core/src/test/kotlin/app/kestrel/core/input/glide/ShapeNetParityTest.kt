@@ -16,7 +16,7 @@ class ShapeNetParityTest {
     /** The shipped weights (the app's assets) and the upstream reference numbers (test resources); core/build/r30 (R30FetchTest) is a fallback. */
     private fun first(vararg names: String): File? = names.map { File(it) }.firstOrNull { it.isFile }
     private fun files(): Pair<File, File>? {
-        val w = first("../ime/src/main/assets/glide/swipe_encoder.bin", "ime/src/main/assets/glide/swipe_encoder.bin", "build/r30/swipe_encoder.bin")
+        val w = first("../ime/src/main/assets/glide/swipe_encoder.bin", "ime/src/main/assets/glide/swipe_encoder.bin", "../geckoapp/src/main/assets/glide/swipe_encoder.bin", "geckoapp/src/main/assets/glide/swipe_encoder.bin", "build/r30/swipe_encoder.bin")
         val r = first("src/test/resources/swipe_reference.bin", "core/src/test/resources/swipe_reference.bin", "build/r30/swipe_reference.bin")
         return if (w != null && r != null) w to r else null
     }

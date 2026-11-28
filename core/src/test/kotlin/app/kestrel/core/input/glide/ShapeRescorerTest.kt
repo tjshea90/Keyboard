@@ -12,7 +12,7 @@ import java.util.concurrent.Executor
 class ShapeRescorerTest {
     private val keys = GlideEval.keysFor()
     private val weights: ByteArray by lazy {
-        listOf("../ime/src/main/assets/glide/swipe_encoder.bin", "ime/src/main/assets/glide/swipe_encoder.bin").map { File(it) }.first { it.isFile }.readBytes()
+        listOf("../ime/src/main/assets/glide/swipe_encoder.bin", "ime/src/main/assets/glide/swipe_encoder.bin", "../geckoapp/src/main/assets/glide/swipe_encoder.bin", "geckoapp/src/main/assets/glide/swipe_encoder.bin").map { File(it) }.first { it.isFile }.readBytes()      // (the Kestrel browser keeps the weights in its geckoapp assets: this file is shared with it)
     }
 
     /** A path through the centres of [word]'s letters: [per] points on each stroke, [dt] ms apart. */
