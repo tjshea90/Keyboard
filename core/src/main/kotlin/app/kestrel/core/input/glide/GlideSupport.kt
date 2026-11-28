@@ -441,6 +441,16 @@ class GlideTyping(
     }
 
     /**
+     * R40: the pair ([prev], [next]) is in the shipped word list (the 243 000 commonest word pairs of printed English): real corpus support, which a pair the person made once or the class model guessed is not. False while the list
+     * is not loaded or either word is unknown. Plain table look-ups.
+     */
+    fun pairInList(prev: String, next: String): Boolean {
+        val m = main ?: return false
+        val a = m.idOf(prev.lowercase()); val b = m.idOf(next.lowercase())
+        return a >= 0 && b >= 0 && !m.bigramLogProb(a, b).isNaN()
+    }
+
+    /**
      * R26a: ln P([next] | each of [cands] as the word before it); null when the engine is not ready or [next] is unknown. Synchronous, cheap (a few table look-ups), called on the UI thread between decodes.
      */
     fun nextWordLnProbs(cands: List<String>, next: String, candPrev: String?): FloatArray? {

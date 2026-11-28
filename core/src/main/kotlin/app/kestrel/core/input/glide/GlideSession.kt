@@ -126,7 +126,7 @@ class GlideSession(
             if (t <= bestTotal) continue
             // R40 (owner: "weights so that words like and make the are not replaced with words like ave age access Maggie"): a reading far rarer than the word on screen never replaces it, whatever the next word says
             val newLn = g.contextLn(all[i].text, null, null)
-            if (newLn == null || !CorrectionGuard.allows(oldLn, newLn)) { if (t - first > REVISE_MARGIN) refused = true; continue }
+            if (newLn == null || !CorrectionGuard.allows(oldLn, newLn, g.pairInList(all[i].text, nextWord), g.pairInList(old, nextWord))) { if (t - first > REVISE_MARGIN) refused = true; continue }
             bestTotal = t; best = i
         }
         if (best == 0 || bestTotal - first <= REVISE_MARGIN) { if (refused) g.stats.onReviseRefused(); return }

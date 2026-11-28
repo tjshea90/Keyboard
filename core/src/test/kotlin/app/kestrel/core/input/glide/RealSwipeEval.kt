@@ -177,13 +177,16 @@ class RealSwipeEval {
         }
         if (cur.isNotEmpty()) chains.add(cur)
         // R40: the weight rule ([CorrectionGuard]) swept on the same replay: "off" is the shipped R26a behaviour, the others refuse a reading that is more than the allowance rarer than the word on screen
-        val guards = listOf(Triple("off", -1f, 0f), Triple("min0.5", 0.5f, 0.5f), Triple("min1.0", 1.0f, 0.5f), Triple("min1.5", 1.5f, 0.5f), Triple("min2.0", 2.0f, 0.5f), Triple("min2.5", 2.5f, 0.5f), Triple("min3.5", 3.5f, 0.5f))
+        // (name, minDrop of rule A, backedDrop of rule B; a negative minDrop = no guard at all, backedDrop 0 = rule B off)
+        val guards = listOf(Triple("off", -1f, 0f), Triple("A1.5", 1.5f, 0f), Triple("A1.5+B5.5", 1.5f, 5.5f), Triple("A1.0+B5.5", 1.0f, 5.5f), Triple("A2.0+B5.5", 2.0f, 5.5f), Triple("A1.5+B4.5", 1.5f, 4.5f), Triple("A3.0+B5.5", 3.0f, 5.5f))
         val n = margins.size * weights.size * guards.size
         val tot = IntArray(n); val before = IntArray(n); val after = IntArray(n)
         val mended = IntArray(n); val spoiled = IntArray(n); val changed = IntArray(n)
         val detail = ArrayList<String>()
         fun ln(text: String): Float { val id = lex.idOf(text); return if (id < 0) -20f else lex.logProb(id) }
-        fun allowed(g: Triple<String, Float, Float>, oldLn: Float, newLn: Float): Boolean = g.second < 0f || oldLn - newLn <= (g.third * (-oldLn - CorrectionGuard.BASE)).coerceIn(g.second, 4.5f)
+        fun pair(a: String, nid: Int): Boolean { val id = lex.idOf(a); return id >= 0 && !lex.bigramLogProb(id, nid).isNaN() }
+        fun allowed(g: Triple<String, Float, Float>, oldText: String, newText: String, nid: Int): Boolean =
+            g.second < 0f || CorrectionGuard.allows(ln(oldText), ln(newText), pair(newText, nid), pair(oldText, nid), minDrop = g.second, backedDrop = if (g.third > 0f) g.third else -100f)
         var words = 0; var glided = 0
         for ((ci, chain) in chains.withIndex()) {
             if (ci >= maxChains) break
@@ -213,14 +216,14 @@ class RealSwipeEval {
                     val tot2 = DoubleArray(cands.size) { i -> cands[i].score + wt * a.lm * lnP[i] }
                     for ((mi, m) in margins.withIndex()) for ((gi, g) in guards.withIndex()) {
                         val ix = (wi * margins.size + mi) * guards.size + gi
-                        var best = 0; for (i in 1 until cands.size) if (allowed(g, oldLn, ln(cands[i].text)) && tot2[i] > tot2[best]) best = i
+                        var best = 0; for (i in 1 until cands.size) if (allowed(g, cands[0].text, cands[i].text, nid) && tot2[i] > tot2[best]) best = i
                         tot[ix]++; if (ok0) before[ix]++
                         val pick = if (best != 0 && tot2[best] - tot2[0] > m) best else 0
                         val ok1 = String(GlideLetters.keyOf(cands[pick].text)) == a.truthKey
                         if (ok1) after[ix]++
                         if (pick != 0) {
                             changed[ix]++; if (!ok0 && ok1) mended[ix]++ else if (ok0 && !ok1) spoiled[ix]++
-                            if (gi == 0 && mi == margins.indexOf(1f).coerceAtLeast(0) && wi == 0) detail.add("%s -> %s  (next %s)  drop %.1f  ln old %.1f new %.1f  %s".format(cands[0].text, cands[pick].text, nx.onScreen, oldLn - ln(cands[pick].text), oldLn, ln(cands[pick].text), if (!ok0 && ok1) "MENDED" else if (ok0 && !ok1) "SPOILED" else "neutral"))
+                            if (gi == 0 && mi == margins.indexOf(1f).coerceAtLeast(0) && wi == 0) detail.add("%s -> %s  (next %s)  drop %.1f  ln old %.1f new %.1f  pair old %s new %s  %s".format(cands[0].text, cands[pick].text, nx.onScreen, oldLn - ln(cands[pick].text), oldLn, ln(cands[pick].text), pair(cands[0].text, nid), pair(cands[pick].text, nid), if (!ok0 && ok1) "MENDED" else if (ok0 && !ok1) "SPOILED" else "neutral"))
                         }
                     }
                 }
