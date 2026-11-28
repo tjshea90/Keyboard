@@ -43,6 +43,8 @@ class GlideSession(
 
     /** R26a: the glided word before may be fixed when the next glide shows it was a look-alike (Settings: "Fix the word before"). */
     var reviseBefore = true
+    /** R40: the weight rule ([CorrectionGuard]) applies to that fix. Always on in the keyboard; the labs switch it off to measure what it prevents. */
+    var guardRevisions = true
     private var prevAll: List<GlideCandidate> = emptyList()      // the 3 + 2 candidates of the glide that is on screen, best first
     private var prevLm = 0f
     private var prevCtx: String? = null                          // the word before that glided word
@@ -126,7 +128,7 @@ class GlideSession(
             if (t <= bestTotal) continue
             // R40 (owner: "weights so that words like and make the are not replaced with words like ave age access Maggie"): a reading far rarer than the word on screen never replaces it, whatever the next word says
             val newLn = g.contextLn(all[i].text, null, null)
-            if (newLn == null || !CorrectionGuard.allows(oldLn, newLn, g.pairLn(old, nextWord), g.pairLn(all[i].text, nextWord))) { if (t - first > REVISE_MARGIN) refused = true; continue }
+            if (newLn == null || (guardRevisions && !CorrectionGuard.allows(oldLn, newLn, g.pairLn(old, nextWord), g.pairLn(all[i].text, nextWord)))) { if (t - first > REVISE_MARGIN) refused = true; continue }
             bestTotal = t; best = i
         }
         if (best == 0 || bestTotal - first <= REVISE_MARGIN) { if (refused) g.stats.onReviseRefused(); return }
