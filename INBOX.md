@@ -724,3 +724,8 @@ Sometimes the keyboard corrects a prior word to a rare word that makes no sense 
   Not read (needed for thresholds and Backspace): AutoCorrectionUtils, DictionaryFacilitatorImpl, Settings (mScoreLimitForAutocorrect, the threshold mapping), inputlogic/ or LatinIME for revert.
 </agent-message>
 ```
+
+## 2026-11-28T15:04:25Z
+```
+This session's worker process was restarted. If your previous turn was already complete, take no action and wait for the next event. Otherwise, continue from where you left off.
+```
