@@ -169,7 +169,10 @@ class InputController(editor: EditorBridge, val stats: InputStats = InputStats()
             return true
         }
         // the same selection as believed: usually only the composing region changed; but an app that replaced the text and left the cursor where it was looks the same, so with no own edit outstanding the window is checked
-        if (newSelStart == selStart && newSelEnd == selEnd && (!pending.isEmpty() || windowStillTrue())) return true
+        if (newSelStart == selStart && newSelEnd == selEnd && (!pending.isEmpty() || windowStillTrue())) {
+            if (pending.isEmpty()) composingEndedByApp(candStart, candEnd)
+            return true
+        }
         if (selStart < 0) {                                           // the first reports after an unknown state are the truth (and the text may have changed with them)
             keepTight = -1; autoTrailAt = -1; typedTail = ""
             if (adopt > 0) adopt--
