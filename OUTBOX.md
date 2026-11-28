@@ -2144,3 +2144,7 @@
 ## 2026-11-28T15:47:24Z
 > The Browser release (alpha117) is still testing on GitHub. The keyboard engine was last in sync with the Browser at commit `084d839`, and both repos are fully pushed. I've set a background wait on the release tag and will record the release and give you the full report when it lands, or sooner if a run fails.
 <!-- sha:0555e854bd67 -->
+
+## 2026-11-28T16:02:50Z
+> Status: both releases are out. Swoop alpha18 and Kestrel G alpha117 are published and recorded, and the Browser's full test run was green. A second simulation run is now testing your exact half-deleted-word case in a real Firefox-engine field. I'll check it in about eight minutes and then send the full report.
+<!-- sha:dc2f74b35771 -->
