@@ -98,5 +98,6 @@ AOSP / HeliBoard never autocorrect a capitals-only word or a capitalised name. S
 
 ## 6. Still open / next (kept honest)
 * NOT run on the tablet or the phone; Robolectric, a fake editor and the real word list only.
+* Fuzz soak (`SWOOP_FUZZ_SCALE=10 ./gradlew --no-build-cache :core:cleanTest :core:test --tests "*InputControllerFuzzTest*"`, many more random streams than the default): the controller fuzz now also lets the APP end the composing word at random (`FakeEditor.appEndsComposing`); every default stream passes. The 10x soak finds two failing seeds outside the default range, neither caused by R40-3: seed 1388 (late reports + cursor move) fails the same with the R40-3 logic switched off, and seed 2321 is the known KB-101b class (Enter leaves the selection unknown, then Backspace leaves the keyboard's window one space short; the composing word is null in that stream, so the new code never runs). Not fixed here. Note: Gradle restores an earlier result from its build cache unless `--no-build-cache` is given (environment variables are not inputs).
 * (Closed: principle 4, section 5.4.)
 * The typed "yo" (a real, rare word one neighbour key from "to") is "known" and never fixed, in any context. AOSP would replace it if the context made "to" far better. Left alone unless the simulation shows a net gain.
