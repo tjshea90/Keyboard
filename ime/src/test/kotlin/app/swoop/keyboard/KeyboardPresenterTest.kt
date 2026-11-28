@@ -269,6 +269,7 @@ class KeyboardPresenterTest {
     /** R40: what AOSP / HeliBoard do: capitals-only words and names in the middle of a sentence are never changed by a space; a capital at the start of a sentence says nothing. */
     @Test fun aWordInCapitalsIsNeverFixed() {
         val r = Rig(glidePref = false, suggest = true, autoFix = true, words = tapList)
+        r.tap("\u21E7"); r.tap("\u21E7")                                       // Shift twice = caps lock
         for (c in "TEH") r.tapLetter(c.toString()); r.tap("space")
         assertEquals("TEH ", r.text)
     }
