@@ -20,11 +20,16 @@ class CommonWordGuardTest {
             .map { LexiconFile.Entry(it.first, it.second) },
         listOf(LexiconFile.Pair("yo", "it", 3_000L), LexiconFile.Pair("ave", "the", 10_000L), LexiconFile.Pair("from", "the", 900_000L), LexiconFile.Pair("hello", "world", 20_000L))
     )
+    // the lexicon of PostCorrectionTest (R26a): "from the" is a strong pair, "form the" is not one: the positive controls
+    private val fromForm = LexiconFile.build(
+        listOf("form" to 600L, "from" to 700L, "the" to 300L, "yo" to 1L, "world" to 800L, "hello" to 500L).map { LexiconFile.Entry(it.first, it.second) },
+        listOf(LexiconFile.Pair("from", "the", 3000L), LexiconFile.Pair("from", "world", 300L), LexiconFile.Pair("hello", "world", 400L))
+    )
     private fun cand(text: String, score: Float) = GlideCandidate(text, score, 0.2f, 0f, text.length)
 
-    private inner class Env {
+    private inner class Env(words: ByteArray = bytes) {
         val rig = Rig("")
-        val engine = GlideTyping({ bytes }, Executor { it.run() }, savePersonal = { })
+        val engine = GlideTyping({ words }, Executor { it.run() }, savePersonal = { })
         val s = GlideSession(rig.c, { engine }, { 1_000L }, { })
         init { engine.prepare(keys, null, null); assertTrue(engine.ready); s.ui = object : GlideSession.Ui { override fun showCandidates(words: List<String>) {}; override fun clearCandidates() {}; override fun showNoWord() {} } }
         fun glide(vararg c: GlideCandidate, lm: Float = 1.0f, more: List<GlideCandidate> = emptyList()) {
@@ -49,14 +54,14 @@ class CommonWordGuardTest {
     }
 
     @Test fun aRareWordIsStillMendedToACommonOneWhenTheNextWordProvesIt() {
-        val e = Env()
+        val e = Env(fromForm)
         e.glide(cand("form", 5.0f), cand("from", 4.8f))
         e.glide(cand("the", 5.0f))
         assertEquals("from the ", e.rig.text)
     }
 
     @Test fun aCommonAlternativeStillWinsWhenARareOneAlsoFitsTheNextWord() {
-        val e = Env()
+        val e = Env(fromForm)
         e.glide(cand("form", 5.0f), cand("yo", 4.95f), cand("from", 4.8f))      // the rare "yo" stands between and must not block the common reading
         e.glide(cand("the", 5.0f))
         assertEquals("from the ", e.rig.text)
