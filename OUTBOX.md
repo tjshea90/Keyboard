@@ -2164,3 +2164,7 @@
 ## 2026-11-28T16:18:08Z
 > The run should finish within a few minutes. I'll poll its small artifact listing next, which is cheaper than the full run record.
 <!-- sha:9c566e8f5a37 -->
+
+## 2026-11-28T16:24:10Z
+> Status: I've started a third simulation run with a rewritten half-word test. It taps the first letters of a word and then a suggestion, on a normal page and on one that ends the word's composition on purpose. It needs about 17 minutes, so I'll check back when the timer fires.
+<!-- sha:b4276244301f -->
