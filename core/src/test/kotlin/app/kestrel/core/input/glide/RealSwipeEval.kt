@@ -177,16 +177,16 @@ class RealSwipeEval {
         }
         if (cur.isNotEmpty()) chains.add(cur)
         // R40: the weight rule ([CorrectionGuard]) swept on the same replay: "off" is the shipped R26a behaviour, the others refuse a reading that is more than the allowance rarer than the word on screen
-        // (name, minDrop of rule A, backedDrop of rule B; a negative minDrop = no guard at all, backedDrop 0 = rule B off)
-        val guards = listOf(Triple("off", -1f, 0f), Triple("A1.5", 1.5f, 0f), Triple("A1.5+B5.5", 1.5f, 5.5f), Triple("A1.0+B5.5", 1.0f, 5.5f), Triple("A2.0+B5.5", 2.0f, 5.5f), Triple("A1.5+B4.5", 1.5f, 4.5f), Triple("A3.0+B5.5", 3.0f, 5.5f))
+        // (name, minDrop of rule A, pair gain of rule B (0 = rule B off); a negative minDrop = no guard at all)
+        val guards = listOf(Triple("off", -1f, 0f), Triple("A1.5", 1.5f, 0f), Triple("A1.5+B5", 1.5f, 5f), Triple("A1.5+B3", 1.5f, 3f), Triple("A1.5+B7", 1.5f, 7f), Triple("A1.0+B5", 1.0f, 5f), Triple("A2.5+B5", 2.5f, 5f))
         val n = margins.size * weights.size * guards.size
         val tot = IntArray(n); val before = IntArray(n); val after = IntArray(n)
         val mended = IntArray(n); val spoiled = IntArray(n); val changed = IntArray(n)
         val detail = ArrayList<String>()
         fun ln(text: String): Float { val id = lex.idOf(text); return if (id < 0) -20f else lex.logProb(id) }
-        fun pair(a: String, nid: Int): Boolean { val id = lex.idOf(a); return id >= 0 && !lex.bigramLogProb(id, nid).isNaN() }
+        fun pair(a: String, nid: Int): Float { val id = lex.idOf(a); return if (id < 0) Float.NaN else lex.bigramLogProb(id, nid) }
         fun allowed(g: Triple<String, Float, Float>, oldText: String, newText: String, nid: Int): Boolean =
-            g.second < 0f || CorrectionGuard.allows(ln(oldText), ln(newText), pair(newText, nid), pair(oldText, nid), minDrop = g.second, backedDrop = if (g.third > 0f) g.third else -100f)
+            g.second < 0f || CorrectionGuard.allows(ln(oldText), ln(newText), pair(oldText, nid), pair(newText, nid), minDrop = g.second, pairGain = if (g.third > 0f) g.third else 1000f)
         var words = 0; var glided = 0
         for ((ci, chain) in chains.withIndex()) {
             if (ci >= maxChains) break
@@ -223,7 +223,7 @@ class RealSwipeEval {
                         if (ok1) after[ix]++
                         if (pick != 0) {
                             changed[ix]++; if (!ok0 && ok1) mended[ix]++ else if (ok0 && !ok1) spoiled[ix]++
-                            if (gi == 0 && mi == margins.indexOf(1f).coerceAtLeast(0) && wi == 0) detail.add("%s -> %s  (next %s)  drop %.1f  ln old %.1f new %.1f  pair old %s new %s  %s".format(cands[0].text, cands[pick].text, nx.onScreen, oldLn - ln(cands[pick].text), oldLn, ln(cands[pick].text), pair(cands[0].text, nid), pair(cands[pick].text, nid), if (!ok0 && ok1) "MENDED" else if (ok0 && !ok1) "SPOILED" else "neutral"))
+                            if (gi == 0 && mi == margins.indexOf(1f).coerceAtLeast(0) && wi == 0) detail.add("%s -> %s  (next %s)  drop %.1f  ln old %.1f new %.1f  pair old %.1f new %.1f  %s".format(cands[0].text, cands[pick].text, nx.onScreen, oldLn - ln(cands[pick].text), oldLn, ln(cands[pick].text), pair(cands[0].text, nid), pair(cands[pick].text, nid), if (!ok0 && ok1) "MENDED" else if (ok0 && !ok1) "SPOILED" else "neutral"))
                         }
                     }
                 }

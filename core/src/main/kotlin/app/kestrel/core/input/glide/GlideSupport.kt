@@ -441,13 +441,13 @@ class GlideTyping(
     }
 
     /**
-     * R40: the pair ([prev], [next]) is in the shipped word list (the 243 000 commonest word pairs of printed English): real corpus support, which a pair the person made once or the class model guessed is not. False while the list
-     * is not loaded or either word is unknown. Plain table look-ups.
+     * R40: ln P([next] | [prev]) in the SHIPPED word list alone (the 243 000 commonest word pairs of printed English: real corpus support, which a pair the person made once or the class model guessed is not); NaN while the
+     * list is not loaded, when either word is unknown or when the pair is not in the list. Plain table look-ups.
      */
-    fun pairInList(prev: String, next: String): Boolean {
-        val m = main ?: return false
+    fun pairLn(prev: String, next: String): Float {
+        val m = main ?: return Float.NaN
         val a = m.idOf(prev.lowercase()); val b = m.idOf(next.lowercase())
-        return a >= 0 && b >= 0 && !m.bigramLogProb(a, b).isNaN()
+        return if (a < 0 || b < 0) Float.NaN else m.bigramLogProb(a, b)
     }
 
     /**
