@@ -400,39 +400,46 @@ def scene_autocorrect(rep):
     sh("input keyevent KEYCODE_BACK", check=False)
 
 
-HALF_WORDS = [("because", 3), ("tomorrow", 3), ("important", 3)]          # the word glided, and how many of its first letters stay when the Backspaces are done (about half)
+HALF_WORDS = [("because", 3), ("tomorrow", 3), ("important", 4)]          # the word, and how many of its first letters are tapped before a suggestion is picked (about half)
 
 
 def composing_lost_reports():
-    """Debug log: selection reports in which the app (Gecko) took away the composing word that the keyboard still believed in and nothing of ours explains (the case R40-3 fixed)."""
+    """The keyboard's own counter (debug log, on every selection report line, `lost=N`): how many times the app (Gecko) took away the composing word the keyboard believed in, the case R40-3 fixed."""
     out = adb("logcat", "-d", "-s", "SwoopDiag:D", check=False)
-    return sum(1 for l in out.splitlines() if "sel report" in l and "cand=-1/-1" in l and "ours=false" in l and "composing=true" in l)
+    best = 0
+    for l in out.splitlines():
+        m = re.search(r"sel report .* lost=(\d+)", l)
+        if m:
+            best = max(best, int(m.group(1)))
+    return best
 
 
 def scene_halfword(rep):
     """R40-3, owner 2026-11-28: "i glide a word and the keyboard gets it wrong so i delete half the word and press the correct word which is suggested, but it leaves the half typed word and simply adds the
-    correct word to it". The same steps inside a real Gecko field: glide a word (clean, and with a sloppy thumb), Backspace until about half is left, tap a suggestion chip (the keyboard's debug log gives
-    the chips' centres, never their words). The field must then hold ONE word: never the half word with the pick stuck on, never a space between them."""
+    correct word to it". Found cause: an app ends the composing word of the keyboard on its own while the cursor stays. The same steps inside a real Gecko field, on two pages: `text` (a plain field) and `resetting`
+    (a page that re-sets the field's value after every change, the React / Flutter / Compose pattern, which ends the composing word on purpose). The first letters of a word are tapped (after a glide that was
+    undone with one Backspace, which takes the whole glided word off, as designed), a suggestion chip is tapped (the keyboard's debug log gives the chips' centres, never their words). The field must then
+    hold ONE word: never the half word with the pick stuck on, never a space between them."""
     w, h = screen()
-    reset()
-    open_url("http://localhost:%d/f/text" % PORT)
-    st = wait_state(lambda s: s.get("kind") == "text" and s.get("last") == "load", timeout=60)
-    if st.get("last") != "load":
-        rep.row("half word page loaded", "FAIL", "the page never reported")
-        return
-    time.sleep(1.5)
-    drive.tap(w // 2, int(h * 0.30))
-    time.sleep(2.0)
-    km = drive.wait_settled(timeout=15)
-    if km is None or km.page != "letters":
-        rep.row("half word keyboard", "FAIL", "Swoop did not show")
-        return
-    rnd = random.Random(23)
-    lost0 = composing_lost_reports()
-    clean = tried = 0
-    for word, keep in HALF_WORDS:
-        for chip, sigma in ((0, 0.0), (1, 0.45)):
-            label = "half word '%s' chip %d%s" % (word, chip, " (sloppy thumb)" if sigma else "")
+    for kind in ("text", "resetting"):
+        reset()
+        open_url("http://localhost:%d/f/%s" % (PORT, kind))
+        st = wait_state(lambda s: s.get("kind") == kind and s.get("last") == "load", timeout=60)
+        if st.get("last") != "load":
+            rep.row("half word [%s] page loaded" % kind, "FAIL", "the page never reported")
+            continue
+        time.sleep(1.5)
+        drive.tap(w // 2, int(h * 0.30))
+        time.sleep(2.0)
+        km = drive.wait_settled(timeout=15)
+        if km is None or km.page != "letters":
+            rep.row("half word [%s] keyboard" % kind, "FAIL", "Swoop did not show")
+            continue
+        lost0 = composing_lost_reports()
+        clean = tried = 0
+        trials = [(word, keep, chip, False) for word, keep in HALF_WORDS for chip in (0, 1)] + [("because", 3, 0, True)]
+        for word, keep, chip, glide_first in trials:
+            label = "half word [%s] '%s'%s chip %d" % (kind, word, " after a glide undone" if glide_first else "", chip)
             if not keyboard_showing():                    # a tap that missed the strip may have opened another screen: back to the field
                 sh("input keyevent KEYCODE_BACK", check=False)
                 time.sleep(1.0)
@@ -442,22 +449,31 @@ def scene_halfword(rep):
             if km is None or km.page != "letters":
                 rep.row(label, "WARN", "Swoop not showing, step skipped")
                 continue
-            ev0 = state().get("events", 0)
-            try:
-                drive.glide_word(word, km=km, jitter=jitter_for(word, km, sigma, rnd) if sigma else None)
-            except Exception as e:
-                rep.row(label, "FAIL", "glide: " + str(e)[:100])
-                continue
-            wait_state(lambda s: s.get("events", 0) > ev0, timeout=6.0, step=0.1)
-            time.sleep(1.0)
-            glided = PageValue()()
-            drive.backspaces(max(0, len(glided) - keep))
-            time.sleep(1.6)
+            if glide_first:
+                ev0 = state().get("events", 0)
+                try:
+                    drive.glide_word(word, km=km)
+                except Exception as e:
+                    rep.row(label, "FAIL", "glide: " + str(e)[:100])
+                    continue
+                wait_state(lambda s: s.get("events", 0) > ev0, timeout=6.0, step=0.1)
+                time.sleep(1.0)
+                drive.backspaces(1)                       # one Backspace right after a glide takes the whole glided word off
+                time.sleep(1.0)
+                left = PageValue()()
+                if left:
+                    drive.backspaces(len(left) + 2)
+                    time.sleep(0.6)
+            drive.type_text(word[:keep])                  # the first letters, tapped: the word being typed (composing)
+            time.sleep(1.5)
             half = PageValue()()
             want = "chip%d" % chip
+            if not half.strip():
+                rep.row(label, "WARN", "typing %r left the field empty" % word[:keep])
+                continue
             km2 = drive.wait_keymap(page="letters", need=(want,), timeout=8)
             if km2 is None or want not in km2.keys:
-                rep.row(label, "INFO", "glided %r, Backspaces left %r, but the strip showed no chip %d to tap" % (glided, half, chip))
+                rep.row(label, "INFO", "the field holds %r but the strip showed no chip %d to tap" % (half, chip))
                 drive.backspaces(len(half) + 3)
                 time.sleep(0.6)
                 continue
@@ -468,23 +484,22 @@ def scene_halfword(rep):
             after = PageValue()()
             tok, prefix = after.strip(), half.strip()
             if after == half:
-                rep.row(label, "INFO", "glided %r, Backspaces left %r, the chip tap changed nothing" % (glided, half))
+                rep.row(label, "INFO", "the field held %r, the chip tap changed nothing" % half)
             else:
                 tried += 1
-                bad = (" " in tok) or (len(prefix) >= 2 and tok.count(prefix) > 1)
+                bad = (not tok) or (" " in tok) or (len(prefix) >= 2 and tok.lower().count(prefix.lower()) > 1)
                 clean += 0 if bad else 1
-                rep.row(label, "FAIL" if bad else "OK", "glided %r, Backspaces left %r, picked a chip: the page holds %r%s" % (glided, half, after, "  <- the half word was NOT replaced" if bad else ""))
-                shot(rep, "halfword-%s-%d%s" % (word, chip, "s" if sigma else ""))
+                rep.row(label, "FAIL" if bad else "OK", "the field held %r, a chip was picked: now %r%s" % (half, after, "  <- the half word was NOT replaced" if bad else ""))
+                shot(rep, "halfword-%s-%s-%d%s" % (kind, word, chip, "g" if glide_first else ""))
             drive.backspaces(len(after) + 3)
             time.sleep(0.8)
-    lost = max(0, composing_lost_reports() - lost0)
-    rep.row("half word summary", "INFO", "%d of %d picks left one clean word; the app took the keyboard's composing word away by itself %d time(s) during these steps" % (clean, tried, lost))
-    rep.event("halfword", clean=clean, tried=tried, app_ended_composing=lost)
-    sh("input keyevent KEYCODE_BACK", check=False)
-    time.sleep(1.0)
+        lost = max(0, composing_lost_reports() - lost0)
+        rep.row("half word [%s] summary" % kind, "INFO", "%d of %d picks left one clean word; the page took the keyboard's composing word away by itself %d time(s) during these steps" % (clean, tried, lost))
+        rep.event("halfword-" + kind, clean=clean, tried=tried, app_ended_composing=lost)
+        sh("input keyevent KEYCODE_BACK", check=False)
+        time.sleep(0.8)
 
 
-# ---------------------------------------------------------------------------------------------------------------------------------------------- Kestrel's own screen
 def ui_dump():
     sh("uiautomator dump /sdcard/sim_ui.xml", check=False)
     try:
