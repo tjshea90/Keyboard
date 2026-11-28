@@ -27,12 +27,13 @@ class ComposingDroppedTest {
         assertEquals("ac", r.text)
     }
 
-    @Test fun anAutomaticFixReplacesTheTypoEvenWhenTheAppEndedTheComposingWord() {
+    /** The keyboard no longer owns the word, so it does not "fix" it: the space is typed and the text is not garbled ("teh the " would be the bug). */
+    @Test fun anAutomaticFixIsNeverGluedIntoAWordTheAppEnded() {
         val r = Rig("")
         r.typeAll("teh")
         r.ed.appEndsComposing(); r.sync(); r.check()
         r.act { typeCorrected("the", " ") }
-        assertEquals("the ", r.text)
+        assertEquals("teh ", r.text)
     }
 
     @Test fun lettersTypedAfterTheAppEndedTheComposingWordStartANewOneAndStayAfterIt() {

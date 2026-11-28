@@ -170,8 +170,12 @@ class InputControllerTest {
         val last = r.ed.updates.last(); r.ed.updates.clear()
         assertTrue(r.c.onSelectionUpdate(last[0], last[1], last[2], last[3])); r.check()
     }
-    @Test fun aReportThatOnlyChangesTheComposingRegionIsIgnored() {
-        val r = Rig().typeAll("ab"); assertTrue(r.c.onSelectionUpdate(2, 2, -1, -1)); assertEquals("ab", r.c.composing)
+    @Test fun aReportThatShowsTheSameComposingWordChangesNothing() {
+        val r = Rig().typeAll("ab"); assertTrue(r.c.onSelectionUpdate(2, 2, 0, 2)); assertEquals("ab", r.c.composing)
+    }
+    /** R40-3: the editor says the word is no longer composing (the app ended it): the keyboard stops treating it as composing, and counts it. */
+    @Test fun aReportWithNoComposingRegionAtTheSameCursorMeansTheAppEndedTheWord() {
+        val r = Rig().typeAll("ab"); assertTrue(r.c.onSelectionUpdate(2, 2, -1, -1)); assertNull(r.c.composing); assertEquals(1, r.c.stats.composingLost)
     }
     @Test fun theUserMovingTheCursorDropsComposingAndGlide() {
         val r = Rig().typeAll("hel"); r.ed.userMove(0); r.sync()
