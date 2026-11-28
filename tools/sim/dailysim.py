@@ -417,7 +417,8 @@ def composing_lost_reports():
 def scene_halfword(rep):
     """R40-3, owner 2026-11-28: "i glide a word and the keyboard gets it wrong so i delete half the word and press the correct word which is suggested, but it leaves the half typed word and simply adds the
     correct word to it". Found cause: an app ends the composing word of the keyboard on its own while the cursor stays. The same steps inside a real Gecko field, on two pages: `text` (a plain field) and `resetting`
-    (a page that re-sets the field's value after every change, the React / Flutter / Compose pattern, which ends the composing word on purpose). The first letters of a word are tapped (after a glide that was
+    (a page that re-sets the field's value after every change, the React / Flutter / Compose pattern: Gecko ends the composing word and the cursor jumps, a foreign report for Swoop; the quieter same-cursor report
+    that R40-3 handles has not shown up in Gecko so far, the `lost=` counter in the summary row says so, and the controller fuzz is its proof). The first letters of a word are tapped (after a glide that was
     undone with one Backspace, which takes the whole glided word off, as designed), a suggestion chip is tapped (the keyboard's debug log gives the chips' centres, never their words). The field must then
     hold ONE word: never the half word with the pick stuck on, never a space between them."""
     w, h = screen()
