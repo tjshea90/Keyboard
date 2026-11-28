@@ -15,10 +15,11 @@ import java.util.concurrent.Executor
 class CommonWordGuardTest {
     private val keys = GlideEval.keysFor(564f, 160f)
     // shares in the proportions of the real list: "to" / "and" / "it" / "the" are everyday words, "yo" / "ave" about 10 000 times rarer (ln difference about 9), "form" about 20 times rarer than "from"
+    // (counts times 2 500 so that the list totals about 3e11 like the real one: the personal boost is calibrated to that scale)
     private val bytes = LexiconFile.build(
-        listOf("to" to 28_000_000L, "and" to 25_000_000L, "it" to 11_000_000L, "the" to 50_000_000L, "from" to 4_100_000L, "form" to 190_000L, "world" to 550_000L, "hello" to 120_000L, "yo" to 4_000L, "ave" to 14_000L, "toe" to 260_000L)
+        listOf("to" to 70_000_000_000L, "and" to 62_000_000_000L, "it" to 27_000_000_000L, "the" to 125_000_000_000L, "from" to 10_000_000_000L, "form" to 475_000_000L, "world" to 1_400_000_000L, "hello" to 300_000_000L, "yo" to 10_000_000L, "ave" to 35_000_000L, "toe" to 650_000_000L)
             .map { LexiconFile.Entry(it.first, it.second) },
-        listOf(LexiconFile.Pair("yo", "it", 3_000L), LexiconFile.Pair("ave", "the", 10_000L), LexiconFile.Pair("from", "the", 900_000L), LexiconFile.Pair("hello", "world", 20_000L))
+        listOf(LexiconFile.Pair("yo", "it", 7_500_000L), LexiconFile.Pair("ave", "the", 25_000_000L), LexiconFile.Pair("from", "the", 2_250_000_000L), LexiconFile.Pair("hello", "world", 50_000_000L))
     )
     // the lexicon of PostCorrectionTest (R26a): "from the" is a strong pair, "form the" is not one: the positive controls
     private val fromForm = LexiconFile.build(
