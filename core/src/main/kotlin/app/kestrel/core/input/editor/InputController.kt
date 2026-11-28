@@ -196,6 +196,21 @@ class InputController(editor: EditorBridge, val stats: InputStats = InputStats()
         return false
     }
 
+    /**
+     * R40-3 (owner 2026-11-28: "i delete half the word and press the correct word which is suggested, but it leaves the half typed word and simply adds the correct word to it"). The editor reports, with the selection, the
+     * composing region it holds. When no own edit is outstanding and the cursor is where this keyboard believes it is, a report that shows NO composing word (or another one) at the end of the word being tapped means
+     * the APP ended the word on its own (a web page's script, a React / Flutter / Compose field that re-sets its state, a spell checker). The letters stay in the text as plain text. Believing the old word still composing
+     * would make the next replacement (a strip word, an automatic fix, a Backspace) call setComposingText, which with no composing region INSERTS beside the letters instead of replacing them.
+     * [composingUnknown] makes the next edit close whatever the editor may still hold, so a wrong report costs a word that stops being underlined, never lost text.
+     */
+    private fun composingEndedByApp(candStart: Int, candEnd: Int) {
+        val c = composing ?: return
+        if (selStart < 0 || selStart != selEnd) return
+        if (candStart == selStart - c.length && candEnd == selStart) return           // still the word believed
+        composing = null; composingUnknown = true
+        stats.composingLost++
+    }
+
     // ------------------------------------------------------------------------------------------------------------ typing
 
     fun tapShift() { shift = if (shift == ShiftState.OFF) ShiftState.ONCE else ShiftState.OFF }
