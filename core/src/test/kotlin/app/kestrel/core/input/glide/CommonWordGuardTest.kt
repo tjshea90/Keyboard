@@ -14,11 +14,11 @@ import java.util.concurrent.Executor
  */
 class CommonWordGuardTest {
     private val keys = GlideEval.keysFor(564f, 160f)
-    // shares as in a real list: "to" and "it" are everyday words, "yo" / "ave" / "fur" are about 10 000 times rarer (ln difference about 9)
+    // shares in the proportions of the real list: "to" / "and" / "it" / "the" are everyday words, "yo" / "ave" about 10 000 times rarer (ln difference about 9), "form" about 20 times rarer than "from"
     private val bytes = LexiconFile.build(
-        listOf("to" to 900_000_000L, "yo" to 90_000L, "it" to 600_000_000L, "and" to 800_000_000L, "ave" to 70_000L, "the" to 2_000_000_000L, "form" to 600L, "from" to 700_000L, "world" to 8_000_000L, "hello" to 500_000L)
+        listOf("to" to 28_000_000L, "and" to 25_000_000L, "it" to 11_000_000L, "the" to 50_000_000L, "from" to 4_100_000L, "form" to 190_000L, "world" to 550_000L, "hello" to 120_000L, "yo" to 4_000L, "ave" to 14_000L)
             .map { LexiconFile.Entry(it.first, it.second) },
-        listOf(LexiconFile.Pair("yo", "it", 80_000L), LexiconFile.Pair("ave", "the", 60_000L), LexiconFile.Pair("from", "the", 600_000L), LexiconFile.Pair("hello", "world", 400_000L))
+        listOf(LexiconFile.Pair("yo", "it", 3_000L), LexiconFile.Pair("ave", "the", 10_000L), LexiconFile.Pair("from", "the", 900_000L), LexiconFile.Pair("hello", "world", 20_000L))
     )
     private fun cand(text: String, score: Float) = GlideCandidate(text, score, 0.2f, 0f, text.length)
 
