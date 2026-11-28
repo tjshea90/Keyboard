@@ -76,7 +76,24 @@ Not found anywhere public: how Gboard decides to autocorrect (thresholds), and w
 * Root cause found by a seeded fuzz through the real presenter, keys view, glide engine and a real EditText (`StripPickFuzzTest`, mutation-checked: without the fix seed 98 gives "IwoIso", the half-typed "Iwo" glued in front of the picked "Iso"): **apps end the composing word on their own** (a page script, a React Native / Flutter / Compose field that re-sets its state) while the cursor stays. Android tells the keyboard in the next selection report (composing region -1..-1), but the keyboard ignored the composing region of a report with an unchanged selection ("usually only the composing region changed"). It went on believing the half word was still composing; replacing a composing word is `setComposingText`, which with NO composing region in the editor INSERTS beside the letters. Backspace (also `setComposingText`) and the automatic fix had the same hole.
 * Fix (core `InputController`): a report that shows no composing word where one was believed, with the cursor where expected and no own edit outstanding, makes the word plain text (`composingEndedByApp`; the next edit closes whatever the editor may still hold, so a wrong report costs an underline, never text); `pickWord` replaces the WHOLE word before the cursor when only its tail was composing. Counter in Diagnostics ("word ended by the app N"). Tests: core `ComposingDroppedTest` (4), `InputControllerTest` (2), presenter tests (2), `StripPickFuzzTest`.
 
+### 5.3 The same rule on everyday sentences (simulated thumbs, the real session code)
+`ReviseAuditLabTest` (`R40_LAB=1`): the hand-written everyday sentences of `EvalCorpus` (1 250 glided words per row), a simulated thumb (normal = 8 dp scatter, sloppy = 11 dp, the real hand is near sloppy) over the tablet's key layout, the real engine and `GlideSession`; every change the fix makes to a word on screen is labelled against the word meant.
+
+| thumb | variant | words right | retroactive changes | mended | spoiled |
+| :- | :- | :- | :- | :- | :- |
+| normal | fix off | 97.52 % | 0 | 0 | 0 |
+| normal | unguarded (alpha17) | 97.92 % | 5 | 5 | 0 |
+| normal | guarded (R40) | 97.92 % | 5 | 5 | 0 |
+| sloppy | fix off | 97.12 % | 0 | 0 | 0 |
+| sloppy | unguarded | 97.44 % | 4 | 4 | 0 |
+| sloppy | guarded | 97.28 % | 2 | 2 | 0 |
+
+Read: the fix does mend words on everyday text and the guard leaves the good ones (*of -> i'd*) alone. It declined one lucky fix (*some -> somewhere* before a word that "some" can also precede: both are valid, so the older word stays). **There are no spoiled words in either variant here: the "to it -> yo it" class needs a learned pair and does not occur without one**, so the guard is insurance against that loop, bought for about 0.1 point on this simulation and 0.0 on real swipes. That is the trade the owner asked for.
+
+### 5.4 Names and acronyms are never auto-fixed (principle 4)
+AOSP / HeliBoard never autocorrect a capitals-only word or a capitalised name. Swoop did: a first-time name ("Niall") typed in the middle of a sentence could become "Nail" on the space. Now `KeyboardPresenter.looksLikeNameOrAcronym`: a word of two or more letters all in capitals, or a word with a capital that is NOT at the start of a sentence, is left as typed. A capital at the start of a sentence says nothing (the keyboard puts it there), so "Teh" there is still "The". Tests: presenter `aWordInCapitalsIsNeverFixed`, `aCapitalisedWordInTheMiddleOfASentenceIsAName`, `aCapitalisedWordAtTheStartOfASentenceIsStillFixed` (mutation-checked: with the rule off the first two give "THE" and "hello The").
+
 ## 6. Still open / next (kept honest)
 * NOT run on the tablet or the phone; Robolectric, a fake editor and the real word list only.
-* Gap against principle 4: a capitals-only typed word and a capitalised word in the middle of a sentence (a probable name) can still be auto-fixed on a space. AOSP never does. To measure and close (R40-5).
+* (Closed: principle 4, section 5.4.)
 * The typed "yo" (a real, rare word one neighbour key from "to") is "known" and never fixed, in any context. AOSP would replace it if the context made "to" far better. Left alone unless the simulation shows a net gain.
