@@ -2168,3 +2168,7 @@
 ## 2026-11-28T16:24:10Z
 > Status: I've started a third simulation run with a rewritten half-word test. It taps the first letters of a word and then a suggestion, on a normal page and on one that ends the word's composition on purpose. It needs about 17 minutes, so I'll check back when the timer fires.
 <!-- sha:b4276244301f -->
+
+## 2026-11-28T16:40:56Z
+> The simulation is a few minutes from done, and I'll read its report as soon as it's up.
+<!-- sha:12be6039341b -->
