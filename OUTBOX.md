@@ -2156,3 +2156,7 @@
 ## 2026-11-28T16:15:33Z
 > Still waiting on the simulation's last steps; I'll check again shortly.
 <!-- sha:d0bbb6220894 -->
+
+## 2026-11-28T16:16:12Z
+> Waiting on the run's last steps.
+<!-- sha:530f38c98c1a -->
