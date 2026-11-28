@@ -118,9 +118,18 @@ class GlideSession(
         val all = prevAll
         if (all.size < 2 || all[0].text != old) return
         val lnP = g.nextWordLnProbs(all.map { it.text }, nextWord, prevCtx) ?: return
+        val oldLn = g.contextLn(old, null, null) ?: return                                  // R40: the weight of the word on screen (unknown: nothing is changed)
         var best = 0; var bestTotal = all[0].score + prevLm * lnP[0]; val first = bestTotal
-        for (i in 1 until all.size) { val t = all[i].score + prevLm * lnP[i]; if (t > bestTotal) { bestTotal = t; best = i } }
-        if (best == 0 || bestTotal - first <= REVISE_MARGIN) return
+        var refused = false
+        for (i in 1 until all.size) {
+            val t = all[i].score + prevLm * lnP[i]
+            if (t <= bestTotal) continue
+            // R40 (owner: "weights so that words like and make the are not replaced with words like ave age access Maggie"): a reading far rarer than the word on screen never replaces it, whatever the next word says
+            val newLn = g.contextLn(all[i].text, null, null)
+            if (newLn == null || !CorrectionGuard.allows(oldLn, newLn)) { if (t - first > REVISE_MARGIN) refused = true; continue }
+            bestTotal = t; best = i
+        }
+        if (best == 0 || bestTotal - first <= REVISE_MARGIN) { if (refused) g.stats.onReviseRefused(); return }
         val w = all[best].text
         if (!controller.swapGlide(w)) return
         pendingWord = w; pendingGuessed = null; topGuess = w; pendingRevised = true; glidedNow = w
@@ -229,7 +238,8 @@ class GlideSession(
         if (verdict.circular) g.stats.onGuarded()
         // R33: a glide that was only KEPT (not picked, not retyped, not revised) is weak evidence: a rare word of the shipped list that merely stayed in the text teaches only a light lesson, no shape and no thumb habit,
         // so a wrong look-alike (ave for and, fur for for) cannot grow into the first choice by being left alone or by a failed correction
-        val trusted = pendingWeight > 1f || afterUndo || pendingRevised
+        // (R40: a word the NEXT glide swapped in is the keyboard's own second guess, not the person's choice: it is learned like a kept glide, lightly when it is rare, so a wrong swap cannot grow into a habit)
+        val trusted = pendingWeight > 1f || afterUndo
         val trust = if (trusted) 1f else g.keepTrust(w)
         val gentle = trust < 0.5f
         if (gentle) g.stats.onRareKept()

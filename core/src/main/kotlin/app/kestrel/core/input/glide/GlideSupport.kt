@@ -5,7 +5,7 @@ import java.util.concurrent.Executor
 /** What glide typing did, counted on the tablet itself (no words are kept) so a Diagnostics paste says how accurate it was in real use (AT1g). */
 class GlideStats {
     private var glides = 0; private var noMatch = 0; private var kept = 0; private var picked = 0; private var undone = 0; private var revised = 0
-    private var commonFirst = 0
+    private var commonFirst = 0; private var reviseRefused = 0
     private var rareKept = 0; private var stripReplaced = 0; private var stripFix = 0; private var stripRescued = 0; private var stripAdded = 0
     private var guarded = 0; private var shadowDiffer = 0; private var shadowLearnedKept = 0; private var shadowPlainPicked = 0; private var planeDp = -1f
     private var ms = 0L; private var msMax = 0L
@@ -49,6 +49,8 @@ class GlideStats {
     @Synchronized fun onPlane(maxDp: Float) { planeDp = maxDp }
     /** R26a: the word before was changed because the next glide showed it was probably another look-alike word. */
     @Synchronized fun onRevised() { revised++ }
+    /** R40: the next word asked for a change of the word before that the weight rule ([CorrectionGuard]) refused: the other reading was far rarer. */
+    @Synchronized fun onReviseRefused() { reviseRefused++ }
     @Synchronized fun onLoaded(millis: Long, words: Int) { loadMs = millis; loadWords = words }
     @Synchronized fun onWarm(millis: Long) { warmMs = millis }
     @Synchronized fun onHabit(xDp: Float, yDp: Float) { habitX = xDp; habitY = yDp }
@@ -87,6 +89,7 @@ class GlideStats {
             sb.append("$glides glides")
             if (judged > 0) sb.append(": best word kept $kept (${100 * kept / judged} %), another candidate picked $picked, deleted right away $undone")
             if (revised > 0) sb.append(", word before fixed by the next word $revised times")
+            if (reviseRefused > 0) sb.append(", word before kept because the other reading was far rarer $reviseRefused times")
             if (shadowDiffer > 0) sb.append("; learning changed the first guess $shadowDiffer times (you kept the learned word $shadowLearnedKept times, you picked the plain decoder's word $shadowPlainPicked times)")
             if (stripReplaced > 0 || stripAdded > 0) sb.append(", strip taps after a glide: replaced the glided word $stripReplaced times ($stripFix of them because the tapped word looked like it and was far likelier, $stripRescued after the keyboard lost the glide), added a next word $stripAdded times")
             if (rareKept > 0) sb.append(", kept glides of rare words learned only lightly $rareKept times")
