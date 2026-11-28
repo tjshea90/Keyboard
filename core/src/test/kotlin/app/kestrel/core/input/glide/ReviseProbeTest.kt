@@ -17,6 +17,36 @@ class ReviseProbeTest {
             println("PROBE bigram ln P($c | $a) = ${b(a, c)}")
     }
 
+    @Test fun simulateToItWithLearnedYoIt() {
+        val bytes = GlideEval.findAsset().readBytes()
+        val keys = GlideEval.keysFor(564f, 160f)
+        for (noise in listOf(SimNoise.NORMAL, SimNoise.SLOPPY)) for (k in listOf(0, 1, 2, 3)) for (revise in listOf(true, false)) {
+            var changed = 0; val n = 300
+            val seen = HashMap<String, Int>()
+            for (seed in 1..n) {
+                val rnd = Random(seed.toLong())
+                val sim = GestureSim(keys, rnd)
+                val rig = Rig("")
+                val engine = GlideTyping({ bytes }, Executor { it.run() }, savePersonal = { })
+                engine.prepare(keys, null, null)
+                repeat(k) { engine.learnWord(null, "yo", 1f); engine.learnWord("yo", "it", 1f) }
+                val s = GlideSession(rig.c, { engine }, { 1_000L }, { })
+                s.reviseBefore = revise
+                s.ui = object : GlideSession.Ui { override fun showCandidates(words: List<String>) {}; override fun clearCandidates() {}; override fun showNoWord() {} }
+                for (w in listOf("to", "it")) {
+                    val p = sim.path(w, noise) ?: continue
+                    val (p2, p1) = s.context()
+                    engine.decode(p.xs, p.ys, p.xs.size, p1, p2, null) { res -> s.onDecoded(res, p1, p2) }
+                    rig.sync()
+                }
+                val t = rig.text.trim()
+                seen[t] = (seen[t] ?: 0) + 1
+                if (t != "to it") changed++
+            }
+            println("PROBE2 ${noise.name} learned yo-it x$k revise=$revise: not-'to it' = $changed/$n; " + seen.entries.sortedByDescending { it.value }.take(6).joinToString { "${it.key}=${it.value}" })
+        }
+    }
+
     @Test fun simulateToIt() {
         val bytes = GlideEval.findAsset().readBytes()
         val keys = GlideEval.keysFor(564f, 160f)
