@@ -77,13 +77,15 @@ class StripPickFuzzTest {
         }
         val text: String get() = et.text.toString()
         val cursor: Int get() = et.selectionStart
+        /** The app ends the composing word on its own: the text and the cursor stay, the editor reports "no composing region". */
+        fun appEndsComposing() { BaseInputConnection.removeComposingSpans(et.text); report() }
         fun tapChip(i: Int): Boolean { val c = view.chipCenterForTest(i) ?: return false; ev(MotionEvent.ACTION_DOWN, c.first, c.second); ev(MotionEvent.ACTION_UP, c.first, c.second); return true }
     }
 
     private val vocab = listOf("and", "the", "for", "make", "access", "there", "would", "about", "which", "people", "because", "something", "tomorrow", "hello", "world", "going", "think", "right")
 
     @Test fun aStripWordNeverLandsBehindTheLettersItWasMeantToReplace() {
-        val n = (System.getenv("R40_FUZZ_N")?.toIntOrNull() ?: 60)
+        val n = (System.getenv("R40_FUZZ_N")?.toIntOrNull() ?: 120)
         val bad = ArrayList<String>()
         for (seed in 1..n) {
             val rnd = Random(seed.toLong() * 7919L)
@@ -91,12 +93,13 @@ class StripPickFuzzTest {
             val trace = StringBuilder()
             val steps = 5 + rnd.nextInt(9)
             for (st in 0 until steps) {
-                when (rnd.nextInt(10)) {
+                when (rnd.nextInt(12)) {
+                    10 -> { trace.append("APP-ENDS-COMPOSING "); r.appEndsComposing() }
                     0, 1, 2 -> { val w = vocab[rnd.nextInt(vocab.size)]; trace.append("glide($w) "); r.glide(w) }
                     3, 4 -> { val w = vocab[rnd.nextInt(vocab.size)]; val k = 1 + rnd.nextInt(Math.min(4, w.length)); trace.append("type(${w.take(k)}) "); for (c in w.take(k)) r.tapLetter(c.toString()) }
                     5, 6, 7 -> { val k = 1 + rnd.nextInt(5); trace.append("bs x$k "); repeat(k) { r.tap("⌫") } }
                     8 -> { trace.append("space "); r.tap("space") }
-                    else -> {
+                    else -> {            // 9, 11: tap a strip box
                         val shown = r.view.candidatesForTest()
                         if (shown.isEmpty()) continue
                         val i = rnd.nextInt(shown.size)
