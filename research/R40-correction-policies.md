@@ -93,6 +93,9 @@ Read: the fix does mend words on everyday text and the guard leaves the good one
 ### 5.4 Names and acronyms are never auto-fixed (principle 4)
 AOSP / HeliBoard never autocorrect a capitals-only word or a capitalised name. Swoop did: a first-time name ("Niall") typed in the middle of a sentence could become "Nail" on the space. Now `KeyboardPresenter.looksLikeNameOrAcronym`: a word of two or more letters all in capitals, or a word with a capital that is NOT at the start of a sentence, is left as typed. A capital at the start of a sentence says nothing (the keyboard puts it there), so "Teh" there is still "The". Tests: presenter `aWordInCapitalsIsNeverFixed`, `aCapitalisedWordInTheMiddleOfASentenceIsAName`, `aCapitalisedWordAtTheStartOfASentenceIsStillFixed` (mutation-checked: with the rule off the first two give "THE" and "hello The").
 
+### 5.5 The decode-time common-word guard (R32e) re-measured: left as it is
+`RareGuardEvalTest` (`REAL_SWIPES=1 REAL_RARE=1`), 3 768 real swipes through the shipped decoder + trained network + `CommonGuard`: first choice 92.52 % on all words, 94.64 % on the 5 000 commonest ("everyday"). At the shipped gap 6 / margin 3 the guard flips 8 glides (+4 / -3) on all words and 4 on everyday words (+4 / -0). A looser margin (5 to 8) would gain at most 3 more everyday words in 3 134 and gives them back on the full set (net 0 at 5, -9 at 8). Per word: and 96.7 %, for 97.0 %, to 97.3 %, of 95.2 %, the 100 % and the guard changes none of them. Nothing to tune: the first-guess weights are at their plateau, and the owner's own misses are the one-key twins (R34, R38), which no frequency weight can separate.
+
 ## 6. Still open / next (kept honest)
 * NOT run on the tablet or the phone; Robolectric, a fake editor and the real word list only.
 * (Closed: principle 4, section 5.4.)
