@@ -46,6 +46,9 @@ FIELDS = {
     "editable": '<div id="f" class="big" contenteditable="true" style="border:2px solid #468"></div>',
     "url": '<input id="f" type="url" placeholder="https://" autocomplete="off">',
     "email": '<input id="f" type="email" placeholder="you@example.com" autocomplete="off">',
+    # R40-3: a page that re-sets the field's value from its own state a moment after every change (the React / Flutter / Compose pattern). That ENDS the keyboard's composing word while the cursor stays: the owner's
+    # "half-typed word stays and the picked word is added to it" case, made on purpose.
+    "resetting": '<input id="f" type="text" placeholder="type here" autocomplete="off"><script>(function(){var f=document.getElementById("f");f.addEventListener("input",function(){setTimeout(function(){var v=f.value,s=f.selectionStart;f.value="";f.value=v;try{f.setSelectionRange(s,s);}catch(e){}},40);});})();</script>',
 }
 
 STATE = {"value": "", "events": 0, "comp": 0, "last": "", "kind": ""}
