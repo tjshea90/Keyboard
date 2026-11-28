@@ -811,6 +811,7 @@ def main():
         if a.suite in ("typing", "all"):
             scene_fields(rep)
             scene_autocorrect(rep)
+            scene_halfword(rep)
             scene_address(rep)
             scene_private(rep)
             scene_memory(rep, "after typing")
