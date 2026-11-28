@@ -357,8 +357,20 @@ class KeyboardPresenter(
         if (capitalizeI) { val i = capitalizedI(typed); if (i != null) return i }
         if (properOn) { val p = properNoun(typed); if (p != null) return p }
         if (!autoFixOn) return null
+        if (looksLikeNameOrAcronym(typed)) return null
         val l = latest ?: return null
         return if (l.typed == typed) l.autoCorrect else null
+    }
+
+    /**
+     * R40 (what AOSP LatinIME and HeliBoard do, research/R40-correction-policies.md section 2): a word typed in CAPITALS (an acronym, shouting) and a word with a capital in the middle of a sentence (a name) are never
+     * changed by a space, however close a plain word is: "Niall" is not "Nail", "LMAO" is not "LAO". A capital at the start of a sentence says nothing (the keyboard puts it there itself), so "Teh" there is still fixed.
+     */
+    private fun looksLikeNameOrAcronym(typed: String): Boolean {
+        val letters = typed.filter { it.isLetter() }
+        if (letters.length >= 2 && letters.all { it.isUpperCase() }) return true
+        if (typed.isEmpty() || !typed[0].isUpperCase()) return false
+        return !InputController.startsSentence(controller.before.dropLast(typed.length), controller.selStart - typed.length)
     }
 
     /** R18b: "monday" -> "Monday", "sarah" -> "Sarah", "iphone" -> "iPhone": a word typed all in small letters that is written with a capital wherever it stands (the case book: the names the person writes with capitals, then the built-in list). */

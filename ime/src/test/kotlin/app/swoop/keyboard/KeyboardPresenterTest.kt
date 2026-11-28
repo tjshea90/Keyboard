@@ -266,6 +266,26 @@ class KeyboardPresenterTest {
         assertEquals("teh ", r.text)
     }
 
+    /** R40: what AOSP / HeliBoard do: capitals-only words and names in the middle of a sentence are never changed by a space; a capital at the start of a sentence says nothing. */
+    @Test fun aWordInCapitalsIsNeverFixed() {
+        val r = Rig(glidePref = false, suggest = true, autoFix = true, words = tapList)
+        for (c in "TEH") r.tapLetter(c.toString()); r.tap("space")
+        assertEquals("TEH ", r.text)
+    }
+
+    @Test fun aCapitalisedWordInTheMiddleOfASentenceIsAName() {
+        val r = Rig(glidePref = false, suggest = true, autoFix = true, words = tapList)
+        for (c in "hello") r.tap(c.toString()); r.tap("space")
+        r.tap("⇧"); for (c in "teh") r.tapLetter(c.toString()); r.tap("space")
+        assertEquals("hello Teh ", r.text)
+    }
+
+    @Test fun aCapitalisedWordAtTheStartOfASentenceIsStillFixed() {
+        val r = Rig(glidePref = false, suggest = true, autoFix = true, words = tapList)
+        r.tap("⇧"); for (c in "teh") r.tapLetter(c.toString()); r.tap("space")
+        assertEquals("The ", r.text)
+    }
+
     @Test fun aWordKnownToTheListIsNeverFixed() {
         val r = Rig(glidePref = false, suggest = true, autoFix = true, words = tapList)
         for (c in "hellp") r.tap(c.toString()); r.tap("space")
