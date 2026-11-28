@@ -47,6 +47,20 @@ class ReviseProbeTest {
         }
     }
 
+    @Test fun pairStrengths() {
+        val lex = GlideEval.loadLexicon()
+        fun b(a: String, c: String): String { val ia = lex.idOf(a); val ic = lex.idOf(c); if (ia < 0 || ic < 0) return "unknown"; val v = lex.bigramLogProb(ia, ic); return if (v.isNaN()) "none" else "%.2f".format(v) }
+        fun u(w: String) = lex.idOf(w).let { if (it < 0) "?" else "%.2f".format(lex.logProb(it)) }
+        for ((a, c) in listOf("the" to "are", "there" to "are", "the" to "were", "there" to "were", "good" to "of", "guild" to "of", "he" to "up", "grew" to "up", "work" to "number", "serial" to "number", "back" to "holidays", "bank" to "holidays",
+            "to" to "it", "yo" to "it", "and" to "the", "ave" to "the", "make" to "it", "maggie" to "it", "for" to "the", "fur" to "the", "and" to "to", "access" to "to", "or" to "the", "our" to "the", "out" to "of"))
+            println("PROBE4 pair ($a $c): list ln P = ${b(a, c)}   [ln($a)=${u(a)} ln($c)=${u(c)}]")
+        // how strong are the weakest pairs in the list?
+        val all = ArrayList<Float>()
+        for (id in 0 until lex.size) for (s2 in lex.successors(id)) all.add(lex.bigramLogProb(id, s2))
+        all.sort()
+        println("PROBE4 pairs ${all.size}: min %.2f p1 %.2f p5 %.2f p25 %.2f median %.2f p75 %.2f max %.2f".format(all.first(), all[all.size / 100], all[all.size / 20], all[all.size / 4], all[all.size / 2], all[all.size * 3 / 4], all.last()))
+    }
+
     @Test fun nextWordNumbers() {
         val bytes = GlideEval.findAsset().readBytes()
         val keys = GlideEval.keysFor(564f, 160f)
