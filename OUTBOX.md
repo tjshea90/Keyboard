@@ -2172,3 +2172,52 @@
 ## 2026-11-28T16:40:56Z
 > The simulation is a few minutes from done, and I'll read its report as soon as it's up.
 <!-- sha:12be6039341b -->
+
+## 2026-11-28T16:49:03Z
+> Both fixes are released, but I haven't run either app on your tablet or phone. Everything I ran was on GitHub's Android emulators, JVM tests and a simulated thumb.
+>
+> Both update over what you have installed:
+>
+> https://github.com/tjshea90/Keyboard/releases/tag/swoop-v0.7.0-alpha18
+>
+> https://github.com/tjshea90/Browser/releases/tag/kestrel-g-v0.3.0-alpha117
+>
+> **What I changed**
+> 1. **Rare words replacing common ones** (`and` → `ave`, `make` → `age`):
+>    - The fix that edits the previous word now compares the two words' frequencies. An everyday word can only be swapped for one almost as common.
+>    - A rarer replacement is allowed only if the next word proves it from the shipped word-pair list. "there are" passes and "the are" doesn't.
+>    - A swapped-in word is now learned only lightly. That stops `ave`, `access` and `yo` feeding themselves back as first choices.
+>    - On 3,011 real swipes this lost none of the good fixes.
+> 2. **`to it` → `yo it`:** I reproduced the mechanism but not your exact event. A one-off learned word pair let a look-alike win, and the swapped-in word was then learned at full strength. Both are closed. `yo` is roughly 6,000 times rarer than `to`, so that swap is now refused.
+> 3. **Half-typed word stays:**
+>    - **Cause:** some apps end the "word being typed" on their own, and Swoop kept believing it was still open, so the suggestion landed next to the half word. Swoop now notices and replaces the whole word.
+>    - **Checks:** random-input stress tests, which fail without the fix. Ordinary typing on emulated Android 10 and 16. In real Firefox-engine fields, 14 of 14 suggestion taps left one clean word.
+> 4. **Names and ALL-CAPS words** in the middle of a sentence are no longer auto-fixed on Space.
+>
+> **Research:** Gboard's public paper, the Android open-source keyboard, HeliBoard, SwiftKey, iOS, FUTO and AnySoftKeyboard. They agree on three rules:
+> - Don't replace a valid typed word unless the new one is far better.
+> - Never touch names, capitals or digits.
+> - Treat a reverted fix as a mistake.
+>
+> Their exact thresholds aren't published, so mine are measured, not copied. The write-up is `research/R40-correction-policies.md` in the Swoop repo.
+>
+> **The browser's keyboard**
+> - **Same engine and learning rule:** it runs Swoop alpha18's engine: the same word list, the trained glide network (Kestrel had none) and about ten versions of ranking fixes. Glided words are learned by the same single rule.
+> - **Staying in step:** after each Swoop engine change, one command (`tools/sync-browser.sh`) brings it into Kestrel, and Swoop warns at session start while Kestrel is behind.
+> - **If Swoop is your chosen keyboard:** Kestrel already types through the real Swoop and its one memory.
+> - **Not identical yet:** the panel's own keyboard lacks Swoop's fix-on-Space, fix-the-word-before and suggestion-replace rules. So it can't make those mistakes, but it isn't the same behaviour.
+>
+> **Not proven**
+> - **Your exact `yo it` event** is not reproduced.
+> - **The case the half-word 
+> [... 303 characters omitted ...]
+> ll behind Swoop. The Browser can legitimately be ahead of Swoop's last release, as it is now.
+> - **alpha116:** I wrote the missing build-log line for another session's release, copied word for word from its Release page.
+>
+> **Needs your decision (R41):** you wrote "with everything it learned." Today you can move Swoop's learning into Kestrel's panel by tapping "Export what the keyboard learned" in Swoop, then "Import what the keyboard learned" in Kestrel Settings. A live link would let another app read your typing memory, and both apps are signed with a public key, so I designed it (read-only, allow-list, Settings switch) but did not build it. Should I build it, yes or no?
+>
+> **Open items**
+> - Your yes/no on R41.
+> - Try both releases on tablet and phone: glide `to it`, `and`, `make`; glide a word wrong, delete part, tap the suggestion.
+> - The older waiting tests, R32f, R33f, R34f, R36f and R38f.
+<!-- sha:5f09bd2e5c2a -->
