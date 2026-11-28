@@ -2140,3 +2140,7 @@
 > - **Not done:** the Kestrel browser's copy of the keyboard code is not updated, because there is no checkout of that repo here.
 > - **Not done:** the earlier setup-tidy session (R37) still has its final steps unfinished.
 <!-- sha:b214f1261085 -->
+
+## 2026-11-28T15:47:24Z
+> The Browser release (alpha117) is still testing on GitHub. The keyboard engine was last in sync with the Browser at commit `084d839`, and both repos are fully pushed. I've set a background wait on the release tag and will record the release and give you the full report when it lands, or sooner if a run fails.
+<!-- sha:0555e854bd67 -->
