@@ -176,8 +176,14 @@ class RealSwipeEval {
             cur.add(s0)
         }
         if (cur.isNotEmpty()) chains.add(cur)
-        val tot = IntArray(margins.size * weights.size); val before = IntArray(margins.size * weights.size); val after = IntArray(margins.size * weights.size)
-        val mended = IntArray(margins.size * weights.size); val spoiled = IntArray(margins.size * weights.size); val changed = IntArray(margins.size * weights.size)
+        // R40: the weight rule ([CorrectionGuard]) swept on the same replay: "off" is the shipped R26a behaviour, the others refuse a reading that is more than the allowance rarer than the word on screen
+        val guards = listOf(Triple("off", -1f, 0f), Triple("min0.5", 0.5f, 0.5f), Triple("min1.0", 1.0f, 0.5f), Triple("min1.5", 1.5f, 0.5f), Triple("min2.0", 2.0f, 0.5f), Triple("min2.5", 2.5f, 0.5f), Triple("min3.5", 3.5f, 0.5f))
+        val n = margins.size * weights.size * guards.size
+        val tot = IntArray(n); val before = IntArray(n); val after = IntArray(n)
+        val mended = IntArray(n); val spoiled = IntArray(n); val changed = IntArray(n)
+        val detail = ArrayList<String>()
+        fun ln(text: String): Float { val id = lex.idOf(text); return if (id < 0) -20f else lex.logProb(id) }
+        fun allowed(g: Triple<String, Float, Float>, oldLn: Float, newLn: Float): Boolean = g.second < 0f || oldLn - newLn <= (g.third * (-oldLn - CorrectionGuard.BASE)).coerceIn(g.second, 4.5f)
         var words = 0; var glided = 0
         for ((ci, chain) in chains.withIndex()) {
             if (ci >= maxChains) break
@@ -201,26 +207,31 @@ class RealSwipeEval {
                 if (nid < 0) continue
                 val ok0 = String(GlideLetters.keyOf(cands[0].text)) == a.truthKey
                 val pnext = Math.exp(lex.logProb(nid).toDouble())
+                val oldLn = ln(cands[0].text)
                 for ((wi, wt) in weights.withIndex()) {
                     val lnP = DoubleArray(cands.size) { i -> val cid = lex.idOf(cands[i].text); var pb = 0.0; if (cid >= 0) { val b = lex.bigramLogProb(cid, nid); if (!b.isNaN()) pb = Math.exp(b.toDouble()) }; Math.log(0.6 * pnext + 0.4 * pb) }
                     val tot2 = DoubleArray(cands.size) { i -> cands[i].score + wt * a.lm * lnP[i] }
-                    var best = 0; for (i in 1 until cands.size) if (tot2[i] > tot2[best]) best = i
-                    for ((mi, m) in margins.withIndex()) {
-                        val ix = wi * margins.size + mi
+                    for ((mi, m) in margins.withIndex()) for ((gi, g) in guards.withIndex()) {
+                        val ix = (wi * margins.size + mi) * guards.size + gi
+                        var best = 0; for (i in 1 until cands.size) if (allowed(g, oldLn, ln(cands[i].text)) && tot2[i] > tot2[best]) best = i
                         tot[ix]++; if (ok0) before[ix]++
                         val pick = if (best != 0 && tot2[best] - tot2[0] > m) best else 0
                         val ok1 = String(GlideLetters.keyOf(cands[pick].text)) == a.truthKey
                         if (ok1) after[ix]++
-                        if (pick != 0) { changed[ix]++; if (!ok0 && ok1) mended[ix]++ else if (ok0 && !ok1) spoiled[ix]++ }
+                        if (pick != 0) {
+                            changed[ix]++; if (!ok0 && ok1) mended[ix]++ else if (ok0 && !ok1) spoiled[ix]++
+                            if (gi == 0 && mi == margins.indexOf(1f).coerceAtLeast(0) && wi == 0) detail.add("%s -> %s  (next %s)  drop %.1f  ln old %.1f new %.1f  %s".format(cands[0].text, cands[pick].text, nx.onScreen, oldLn - ln(cands[pick].text), oldLn, ln(cands[pick].text), if (!ok0 && ok1) "MENDED" else if (ok0 && !ok1) "SPOILED" else "neutral"))
+                        }
                     }
                 }
             }
         }
         println("POST words $words, glided $glided, chains ${chains.size}; judged words (a glided word with a next word on screen): ${tot[0]}")
-        for ((wi, wt) in weights.withIndex()) for ((mi, m) in margins.withIndex()) {
-            val ix = wi * margins.size + mi
-            println("POST weight %.1f margin %.1f: first-choice before %.2f%% after %.2f%% (%+.2f points); changed %d, mended %d, spoiled %d".format(wt, m, 100.0 * before[ix] / tot[ix], 100.0 * after[ix] / tot[ix], 100.0 * (after[ix] - before[ix]) / tot[ix], changed[ix], mended[ix], spoiled[ix]))
+        for ((wi, wt) in weights.withIndex()) for ((mi, m) in margins.withIndex()) for ((gi, g) in guards.withIndex()) {
+            val ix = (wi * margins.size + mi) * guards.size + gi
+            println("POST weight %.1f margin %.1f guard %-6s: first-choice before %.2f%% after %.2f%% (%+.2f points); changed %d, mended %d, spoiled %d".format(wt, m, g.first, 100.0 * before[ix] / tot[ix], 100.0 * after[ix] / tot[ix], 100.0 * (after[ix] - before[ix]) / tot[ix], changed[ix], mended[ix], spoiled[ix]))
         }
+        for (d in detail) println("POSTCHANGE $d")
     }
 
     /**
