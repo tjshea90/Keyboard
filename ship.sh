@@ -99,7 +99,8 @@ bash tools/ckpt.sh \
   "gated $TAG ($APP code $VCODE) and pushed it: handoff self-test, unit suites and the versionCode check passed here. NOT yet built - GitHub has not been asked." \
   "TRIGGER THE BUILD: mcp__github__actions_run_trigger, method run_workflow, workflow_id android.yml, ref $BR, inputs {\"full_build\":\"true\",\"note\":\"$NOTE\"}.
 When the run is green, confirm the Release shows the APK (mcp__github__get_release_by_tag $TAG), then:  bash tools/record-release.sh $TAG \"$NOTE\"
-NEVER ship $TAG twice (check BUILDLOG.md and the Releases first)." >/dev/null 2>&1
+NEVER ship $TAG twice (check BUILDLOG.md and the Releases first).
+THEN keep the Kestrel browser's built-in keyboard identical (owner R40-6): bash tools/sync-browser.sh   (merges the Browser's newest tips into MY Browser branch, copies the engine + word list + shape network, checks the pin, commits and pushes that branch only; add --test for the Browser's JVM suites)." >/dev/null 2>&1
 echo "  OK    next step recorded in CHECKPOINT.md (survives an interruption here)"
 echo
 echo "== $TAG ($APP code $VCODE) is ready for GitHub to build =="

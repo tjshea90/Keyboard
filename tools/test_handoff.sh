@@ -57,6 +57,7 @@ check "android.yml publishes with 'gh release create --target' (a tag PUSH from 
 check "android.yml can write the Release (permissions: contents: write)" 'grep -q "contents: write" "$D/.github/workflows/android.yml"'
 
 # ---------------------------------------------------------------- the repo's own wiring
+check "the Browser link is wired in: tools/sync-browser.sh exists, resume.sh prints its status and ship.sh's next-step card names it (owner R40-6)" '[ -f "$D/tools/sync-browser.sh" ] && grep -q "sync-browser.sh --status" "$D/tools/resume.sh" && grep -q "tools/sync-browser.sh" "$D/ship.sh"'
 check "every tools/*.sh and ship.sh passes bash -n" 'for f in "$D"/tools/*.sh "$D"/ship.sh "$D"/bootstrap.sh; do bash -n "$f" || exit 1; done'
 check ".claude/settings.json is valid JSON and every hook command points at an existing tools/ script" 'python3 -I - "$D" <<PY
 import json, re, sys, os

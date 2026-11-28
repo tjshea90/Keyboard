@@ -111,6 +111,7 @@ BRIEF="$(
   [ -d "$AH/platforms" ] && echo "  OK    android sdk: $(ls "$AH/platforms" | tr '\n' ' ')" || echo "  note  no android sdk here - APKs are built by GitHub Actions anyway (android.yml)"
   echo "  APKs: GitHub Actions builds + signs them, Releases hold them (tag swoop-v<ver>). No emulator/KVM in the cloud sandbox (GitHub runners have KVM: use them for emulator tests). Repo is PUBLIC: chat copies in INBOX/OUTBOX are world-readable."
   echo "  last recorded release code $(app_last_code 2>/dev/null || echo ?) (BUILDLOG.md); now in Gradle: $(app_vname 2>/dev/null) ($(app_vcode 2>/dev/null))"
+  bash tools/sync-browser.sh --status 2>/dev/null | head -2 || true      # R40-6: is the Kestrel browser's built-in keyboard the same engine as this one?
   echo
 
   if [ -f CHECKPOINT.md ]; then
