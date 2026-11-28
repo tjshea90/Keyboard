@@ -40,5 +40,5 @@ class InputStats {
         return "$strokes glide strokes, avg $pts touch points in $ms ms (a point every ${"%.1f".format(every)} ms), first move after avg ${firstMoveMs / n} ms (worst $firstMoveMax ms); second thumb took over $takeovers times, a resting second finger was ignored $restingIgnored times; $paddingStarts strokes began on the padding above the top row; erase pressed during the other thumb's glide $sideErases times, a finger that landed during a glide and moved later was kept $adoptedFingers times, $marginTouches touches began in the margin beside a squeezed keyboard"
     }
 
-    fun line(): String = "keys $keys, backspaces $backspaces, enters $enters, glides $glides, picks $swaps, cursor moves $cursorMoves, foreign changes $foreignReports, resyncs $resyncs"
+    fun line(): String = "keys $keys, backspaces $backspaces, enters $enters, glides $glides, picks $swaps, cursor moves $cursorMoves, foreign changes $foreignReports, resyncs $resyncs" + (if (composingLost > 0) ", word ended by the app $composingLost" else "")
 }
