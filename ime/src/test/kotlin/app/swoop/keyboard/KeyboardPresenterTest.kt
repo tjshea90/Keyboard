@@ -217,6 +217,29 @@ class KeyboardPresenterTest {
         assertTrue("the strip moves on to what may follow", r.view.candidatesForTest().none { it == "hello" })
     }
 
+    /**
+     * R40-3 (owner 2026-11-28: "i delete half the word and press the correct word which is suggested, but it leaves the half typed word and simply adds the correct word to it"): many apps end the composing word on their own
+     * (a page script, a React / Flutter / Compose field that re-sets its state) while the cursor stays. The editor says so in its next report; the keyboard must then replace the letters as plain text, not insert beside them.
+     */
+    @Test fun aStripWordReplacesTheHalfTypedLettersEvenWhenTheAppEndedTheComposingWord() {
+        val r = Rig(glidePref = false, suggest = true, words = tapList)
+        r.tap("h"); r.tap("e"); r.tap("l")
+        BaseInputConnection.removeComposingSpans(r.et.text); r.report()               // the app ended the word being tapped; the letters and the cursor stay
+        assertEquals("hel", r.text)
+        assertTrue("the strip still offers the word: ${r.view.candidatesForTest()}", r.view.candidatesForTest().contains("hello"))
+        r.presenter.onCandidate("hello"); r.report()
+        assertEquals("hello ", r.text)
+    }
+
+    @Test fun backspaceKeepsDeletingWhenTheAppEndedTheComposingWord() {
+        val r = Rig(glidePref = false, suggest = true, words = tapList)
+        r.tap("h"); r.tap("e"); r.tap("l"); r.tap("l")
+        BaseInputConnection.removeComposingSpans(r.et.text); r.report()
+        r.tap("⌫"); assertEquals("hel", r.text)
+        r.tap("⌫"); assertEquals("he", r.text)
+        r.tap("l"); assertEquals("hel", r.text)
+    }
+
     @Test fun theTypedWordInQuotesCanBeKept() {
         val r = Rig(glidePref = false, suggest = true, words = tapList)
         for (c in "kestrel") r.tap(c.toString())
