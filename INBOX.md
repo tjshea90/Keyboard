@@ -623,3 +623,8 @@ This session's worker process was restarted. If your previous turn was already c
 ```
 I hit my usage limit while you were working, but it has reset now. Please continue from where you left off.
 ```
+
+## 2026-11-28T08:30:02Z
+```
+Sometimes the keyboard corrects a prior word to a rare word that makes no sense in context. There should be weights so that words like and make the are not replaced with words like ave age access Maggie. Do further research on how popular keyboards treat correction of words. Sometimes i glide a word and the keyboard gets it wrong so i delete half the word and press the correct word which is suggested, but it leaves the half typed word and simply adds the correct word to it. Just now when i typed "to it" the keyboard retroactively changed it to "yo it". That is ridiculous. Fix everything, improve the keyboard as much as possible, then make the browser app always use the latest version of swoop with everything it learned so that the built in keyboard in the browser is identical at all times to swoop and everything it learned and all version updates
+```
