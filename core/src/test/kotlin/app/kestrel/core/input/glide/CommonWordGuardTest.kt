@@ -16,7 +16,7 @@ class CommonWordGuardTest {
     private val keys = GlideEval.keysFor(564f, 160f)
     // shares in the proportions of the real list: "to" / "and" / "it" / "the" are everyday words, "yo" / "ave" about 10 000 times rarer (ln difference about 9), "form" about 20 times rarer than "from"
     private val bytes = LexiconFile.build(
-        listOf("to" to 28_000_000L, "and" to 25_000_000L, "it" to 11_000_000L, "the" to 50_000_000L, "from" to 4_100_000L, "form" to 190_000L, "world" to 550_000L, "hello" to 120_000L, "yo" to 4_000L, "ave" to 14_000L)
+        listOf("to" to 28_000_000L, "and" to 25_000_000L, "it" to 11_000_000L, "the" to 50_000_000L, "from" to 4_100_000L, "form" to 190_000L, "world" to 550_000L, "hello" to 120_000L, "yo" to 4_000L, "ave" to 14_000L, "toe" to 260_000L)
             .map { LexiconFile.Entry(it.first, it.second) },
         listOf(LexiconFile.Pair("yo", "it", 3_000L), LexiconFile.Pair("ave", "the", 10_000L), LexiconFile.Pair("from", "the", 900_000L), LexiconFile.Pair("hello", "world", 20_000L))
     )
@@ -51,6 +51,15 @@ class CommonWordGuardTest {
         e.glide(cand("and", 5.0f), cand("ave", 4.9f))
         e.glide(cand("the", 5.0f))
         assertEquals("and the ", e.rig.text)
+    }
+
+    /** A reading only 4.7 nats rarer ("toe", about 110 times) and a pair that only THE PERSON made: not in the shipped list, so it is never proof. */
+    @Test fun aPairOnlyThePersonMadeNeverOverturnsACommonWord() {
+        val e = Env()
+        repeat(4) { e.engine.learnWord(null, "toe", 1f); e.engine.learnWord("toe", "it", 1f) }
+        e.glide(cand("to", 5.0f), cand("toe", 4.95f))
+        e.glide(cand("it", 5.0f))
+        assertEquals("to it ", e.rig.text)
     }
 
     @Test fun aRareWordIsStillMendedToACommonOneWhenTheNextWordProvesIt() {
