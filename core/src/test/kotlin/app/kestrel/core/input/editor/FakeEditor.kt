@@ -105,6 +105,11 @@ class FakeEditor(text: String = "", sel: Int = text.length, val multiline: Boole
     fun userInsert(t: String) { sb.replace(lo(), hi(), t); selS = lo() + t.length; selE = selS; compS = -1; compE = -1; emit() }
     /** An address bar's inline completion: [suffix] is appended after the cursor and SELECTED (the cursor stays where the person typed). */
     fun appAutocomplete(suffix: String) { val at = lo(); sb.insert(hi(), suffix); selS = at; selE = at + suffix.length; compS = -1; compE = -1; emit() }
+    /**
+     * The app ends the composing word on its own (a web page's script, a React / Flutter / Compose field that re-sets its state, a spell checker): the text and the cursor stay, only the composing region is gone, and the
+     * editor sends the report Android sends for that (same selection, composing region -1..-1). R40-3.
+     */
+    fun appEndsComposing() { compS = -1; compE = -1; emit() }
     /** The app replaces everything with [t] and puts the cursor at the end. */
     fun appSetText(t: String) {
         // An app that replaces the text and leaves the cursor at the same offset sends NO report at all (real Android only reports changes of the
