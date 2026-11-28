@@ -2148,3 +2148,7 @@
 ## 2026-11-28T16:02:50Z
 > Status: both releases are out. Swoop alpha18 and Kestrel G alpha117 are published and recorded, and the Browser's full test run was green. A second simulation run is now testing your exact half-deleted-word case in a real Firefox-engine field. I'll check it in about eight minutes and then send the full report.
 <!-- sha:dc2f74b35771 -->
+
+## 2026-11-28T16:11:27Z
+> The second simulation run is still going, and the background timer will wake me to check it.
+<!-- sha:c325f253bafc -->
