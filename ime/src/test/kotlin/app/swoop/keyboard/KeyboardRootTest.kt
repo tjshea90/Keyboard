@@ -8,6 +8,7 @@ import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.widget.FrameLayout
+import app.kestrel.core.input.Key
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -429,5 +430,33 @@ class KeyboardRootTest {
         r.keys.floatMul = 1f; layout(r)
         assertTrue("the panel follows the keys: ${r.panelRect().height()} vs $tall", r.panelRect().height() < tall - 100 * dp)
         assertEquals("the overlay is exactly as tall as the keys", r.keys.height, r.overlay.height); assertEquals(r.keys.height + r.grip.height, r.panelRect().height())
+    }
+
+    // ---- R38 (2026-11-27): glides that start at the screen's edge were taken by the system's "back" swipe
+
+    @Test fun theKeyboardKeepsTheSystemBackSwipeOffItsLeftAndRightEdges() {
+        val (r, _) = root()
+        val p = r.panelRect(); val rects = r.systemGestureExclusionRects
+        assertTrue("a strip at the left edge of the keyboard: $rects", rects.any { it.left <= p.left && it.right >= p.left + 30 * dp && it.top <= p.top + p.height() / 2 && it.bottom >= p.bottom - 1 })
+        assertTrue("a strip at the right edge of the keyboard: $rects", rects.any { it.right >= p.right && it.left <= p.right - 30 * dp && it.top <= p.top + p.height() / 2 && it.bottom >= p.bottom - 1 })
+        assertTrue("only the edges, not the whole keyboard: $rects", rects.all { it.width() <= p.width() / 2 })
+    }
+    @Test fun theEdgeStripsFollowAKeyboardThatWasSqueezedOrFloated() {
+        val (r, _) = root { it.putInt(Prefs.DOCK_FRAC, 600); it.putInt(Prefs.DOCK_X, 500) }
+        val p = r.panelRect(); val rects = r.systemGestureExclusionRects
+        assertTrue("two strips: $rects", rects.size == 2)
+        assertTrue("the strips are the squeezed keyboard's own edges: $p $rects", rects.all { it.left >= p.left && it.right <= p.right })
+    }
+
+    @Test fun aTouchRightBesideASqueezedKeyboardIsTheKeysOwnAndTypesTheNearestKey() {
+        val (r, _) = root { it.putInt(Prefs.DOCK_FRAC, 600); it.putInt(Prefs.DOCK_X, 500) }
+        val typed = ArrayList<String>(); r.keys.listener = object : KeysView.Listener { override fun onKey(key: Key) { typed.add((key as? Key.Ch)?.text ?: key.toString()) }; override fun onCursor(steps: Int) {} }
+        val p = r.panelRect(); assertTrue("squeezed: ${p.left}", p.left > 40 * dp)
+        val (qx, qy) = r.keys.centerOf("q")!!; val y = p.top + r.grip.height + r.keys.top.toFloat() + qy
+        touch(r, MotionEvent.ACTION_DOWN, p.left - 12 * dp, y); touch(r, MotionEvent.ACTION_UP, p.left - 12 * dp, y)
+        assertEquals("a tap 12 dp outside the q key types q", listOf("q"), typed)
+        typed.clear()
+        touch(r, MotionEvent.ACTION_DOWN, p.left - 80 * dp, y); touch(r, MotionEvent.ACTION_UP, p.left - 80 * dp, y)
+        assertTrue("far from the keys it is still nobody's: $typed", typed.isEmpty())
     }
 }

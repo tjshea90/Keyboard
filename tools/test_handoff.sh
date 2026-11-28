@@ -80,6 +80,15 @@ assert cmds and all(\"swoop-checkpoint-hooks\" in c for c in cmds)
 " "$D/tools/session-root-hooks.json"'
 check "signing/CERT_SHA256 pins the certificate of the public dev key signing/dev/swoop-dev.p12" '[ "$(keytool -list -v -keystore "$D/signing/dev/swoop-dev.p12" -storetype PKCS12 -storepass swoop-dev -alias swoop-dev 2>/dev/null | sed -n "s/.*SHA256: *//p" | head -1 | tr -d ":" | tr "A-F" "a-f")" = "$(tr -d " \r\n" < "$D/signing/CERT_SHA256")" ]'
 check "the only keystore in the repo is the public dev key in signing/dev/" '! git -C "$D" ls-files 2>/dev/null | grep -E "\.(jks|keystore|p12)$" | grep -qv "^signing/dev/"'
+check "settings.gradle.kts asks the Google copy of Maven Central BEFORE mavenCentral() in both repository lists (R39: Central answers HTTP 429), and the init script is valid" 'python3 -I -c "
+import re,sys
+t=open(sys.argv[1]).read()
+blocks=re.findall(r\"repositories \\{(.*?)\\n    \\}\", t, re.S)
+assert len(blocks)==2, len(blocks)
+for b in blocks: assert \"centralMirror\" in b and b.index(\"centralMirror\") < b.index(\"mavenCentral()\"), b
+assert \"maven-central.storage-download.googleapis.com\" in t
+i=open(sys.argv[2]).read(); assert \"centralMirror\" in i and \"catch (Throwable\" in i
+" "$D/settings.gradle.kts" "$D/tools/gradle-central-mirror.init.gradle"'
 check "tools/MIRROR_MAIN is on or off" 'grep -Eq "^(on|off)$" "$D/tools/MIRROR_MAIN"'
 check "HANDOFF.md, BRIEF.md, TASKS.md, BUILDLOG.md and CLAUDE.md exist" '[ -f "$D/HANDOFF.md" ] && [ -f "$D/BRIEF.md" ] && [ -f "$D/TASKS.md" ] && [ -f "$D/BUILDLOG.md" ] && [ -f "$D/CLAUDE.md" ]'
 check "the app is readable through appinfo.sh (version, tag, asset) and only swoop-v tags count" '[ "$(bash "$D/tools/appinfo.sh" tag)" = "swoop-v$(bash "$D/tools/appinfo.sh" vname)" ] && [ -n "$(bash "$D/tools/appinfo.sh" asset)" ] && bash "$D/tools/appinfo.sh" of-tag swoop-v1.0 && ! bash "$D/tools/appinfo.sh" of-tag kestrel-v1.0'
@@ -91,7 +100,7 @@ check "the privacy rules are in .gitignore (keystores, APKs, learning exports, r
 git init -q --bare "$T/remote.git"
 git clone -q "$T/remote.git" "$T/work" 2>/dev/null
 mkdir -p "$T/work/tools" "$T/work/ime" "$T/work/signing"
-cp "$D"/tools/*.sh "$D"/tools/session-root-hooks.json "$D"/tools/MIRROR_MAIN "$D"/tools/expected-permissions.txt "$T/work/tools/" 2>/dev/null
+cp "$D"/tools/*.sh "$D"/tools/fit-brief.py "$D"/tools/session-root-hooks.json "$D"/tools/MIRROR_MAIN "$D"/tools/expected-permissions.txt "$T/work/tools/" 2>/dev/null
 echo off > "$T/work/tools/MIRROR_MAIN"
 cp "$D"/ship.sh "$D"/signing/CERT_SHA256 "$T/work/" 2>/dev/null
 cp "$D/.gitattributes" "$T/work/.gitattributes" 2>/dev/null
@@ -211,6 +220,30 @@ check "resume briefing fits the 10,000-char hook cap (with a long INBOX + TASKS 
   head -c 6000 /dev/zero | tr "\0" "x" >> INBOX.md
   bash tools/ckpt.sh "$(head -c 7000 /dev/zero | tr "\0" "d")" "$(head -c 3000 /dev/zero | tr "\0" "n")" >/dev/null 2>&1
   [ "$(bash tools/resume.sh --text | wc -c)" -lt 10000 ]'
+# The hook path (JSON) is what a new session sees. A fresh session branch merges many branches first, so its briefing outgrows the
+# cap (12 KB seen on 2026-11-26: cut to a 2 KB preview, 'Do this next' lost). fit-brief.py squeezes it, least important parts first.
+check "resume in hook mode prints valid hook JSON that carries the briefing" '
+  bash tools/resume.sh 2>/dev/null | python3 -I -c "import json,sys; d=json.load(sys.stdin)[\"hookSpecificOutput\"]; assert d[\"hookEventName\"]==\"SessionStart\" and \"RESUMING SWOOP\" in d[\"additionalContext\"]"'
+check "fit-brief leaves a small briefing untouched" '
+  [ "$(printf "%s" "small briefing" | python3 -I "$D/tools/fit-brief.py" | python3 -I -c "import json,sys; print(json.load(sys.stdin)[\"hookSpecificOutput\"][\"additionalContext\"])")" = "small briefing" ]'
+check "fit-brief squeezes a briefing with 12 merged branches under the hook cap and keeps the CHECKPOINT" '
+  {
+    echo "=== RESUMING TEST ==="
+    for i in $(seq 1 12); do echo "  sync: MERGED branch-$i (30 commit(s), its newest $i min old - cut off? read its card and the diff of its last commits)"; done
+    echo "######## CHECKPOINT.md - where the last session stopped. START HERE. ########"
+    echo "## Do this next"; echo "KEEPME-NEXT-STEP"; head -c 3000 /dev/zero | tr "\0" "c"; echo
+    echo "######## TASKS.md - the 18 NEWEST open items (line numbers; older ones: grep) ########"
+    for i in $(seq 1 18); do echo "$i:- [ ] task $(head -c 110 /dev/zero | tr "\0" "t")"; done
+    echo "  (5 done - not shown)"; echo
+    echo "######## INBOX.md tail - x ########"; head -c 2500 /dev/zero | tr "\0" "i"; echo
+    echo "######## OUTBOX.md tail - x ########"; head -c 2500 /dev/zero | tr "\0" "o"; echo
+    echo "######## RULES (x) ########"; head -c 1200 /dev/zero | tr "\0" "r"
+  } > "$T/big.txt"
+  python3 -I "$D/tools/fit-brief.py" < "$T/big.txt" > "$T/fit.json"
+  [ "$(wc -c < "$T/fit.json")" -le 9900 ] && grep -q KEEPME-NEXT-STEP "$T/fit.json" && grep -q "RESUMING TEST" "$T/fit.json" && grep -q "older branches" "$T/fit.json"'
+check "fit-brief still prints valid JSON under the cap for a hopeless 60 KB single line" '
+  head -c 60000 /dev/zero | tr "\0" "z" | python3 -I "$D/tools/fit-brief.py" > "$T/cut.json"
+  [ "$(wc -c < "$T/cut.json")" -le 9900 ] && python3 -I -c "import json,sys; json.load(open(sys.argv[1]))" "$T/cut.json"'
 
 # ---------------------------------------------------------------- many sessions and accounts: cards, merge driver, union files, conflicts, claims, cold clone
 check "ckpt keeps this session's own card in .checkpoints/" '[ -f .checkpoints/sess1.md ] && grep -q "^# CHECKPOINT" .checkpoints/sess1.md'

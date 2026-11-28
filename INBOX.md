@@ -579,3 +579,47 @@ What is a neural next word model
 ```
 @"/root/.claude/uploads/6b745898-fab9-531b-9e27-c84d56b04344/e9b93cb5-Swoop_glide_practice_2026-11-26_1702.txt" I did the glide practice and it is attached. Can you make a much longer glide training that i can glide full paragraphs and problematic words several times and the keyboard learns how i glide? Would this work,?
 ```
+
+## 2026-11-26T23:51:54Z
+```
+Tidy and improve this Claude Code setup for Android app building. I have uploaded a plugin called tj-android-kit (Android building, design, testing and debugging skills, including low-memory Android 10 Go tablets). Please do this in order and tell me results in plain words:
+1. Check that the tj-android-kit skills are in your skill list. If they are not, say so.
+2. Run: echo "$ANDROID_HOME"; ls "$ANDROID_HOME/platforms". Then build this project and its tests. If something fails because a download is blocked, tell me the exact domain to add to the environment's allowed domains.
+3. Look at this repository's CLAUDE.md, .claude/ folder and skills. Remove or shorten what is out of date, duplicated or wasteful. Add a short section to CLAUDE.md: which tj-android-kit skill to load before which kind of work, and that this repository's rules win over any skill. Keep my existing standing rules.
+4. List every plugin, skill and connector that is loaded in this session and that this project has no use for, so I can switch them off on claude.ai. Do not install anything that costs money, sends data out of the repository or changes my accounts.
+5. Commit your changes to a new branch and tell me what you changed.
+```
+
+## 2026-11-27T03:44:27Z
+```
+@"/root/.claude/uploads/97e3f906-84af-5886-921b-1000c61ed534/f6302ae1-Swoop_glide_training_2026-11-26_2239.txt" first see if the fixes were merged from earlier. Then optimize from the training file. It still often does not register that I'm glide typing, especially at the edges of the keyboard. It often types one letter when I'm trying to glide. Sometimes i have a hard time pressing the erase key because I'm moving fast. Try to make it bigger and easier to press. Without ruining anything else
+```
+
+## 2026-11-27T04:20:39Z
+```
+the Gradle downloads hit the Maven rate limit (HTTP 429
+
+This happens a lot and i thought i already fixed it with a setup script which gets a Google mirror. Figure out the best way to permanently fix this
+```
+
+## 2026-11-27T04:44:12Z
+```
+the Gradle downloads hit the Maven rate limit (HTTP 429
+
+This happens a lot and i thought i already fixed it with a setup script which gets a Google mirror. Figure out the best way to permanently fix this
+```
+
+## 2026-11-27T04:53:05Z
+```
+I have the same old setup script on other claude accounts from before the change you did. Should i change the other accounts also? How?
+```
+
+## 2026-11-27T04:59:19Z
+```
+This session's worker process was restarted. If your previous turn was already complete, take no action and wait for the next event. Otherwise, continue from where you left off.
+```
+
+## 2026-11-27T05:00:03Z
+```
+I hit my usage limit while you were working, but it has reset now. Please continue from where you left off.
+```

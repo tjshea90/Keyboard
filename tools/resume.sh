@@ -8,7 +8,9 @@
 # GitHub built that nobody recorded, then CHECKPOINT.md, the OPEN items of TASKS.md, the INBOX/OUTBOX tails, and the rules.
 #
 # BUDGET: Claude Code caps hook output at 10,000 characters (more is cut to a 2,000-char preview - the briefing is silently lost).
-# tools/test_handoff.sh checks the size. Keep this short; narrative belongs in CHECKPOINT.md / TASKS.md / HANDOFF.md / CLAUDE.md.
+# A fresh session branch merges many other branches first, so the briefing can outgrow that: tools/fit-brief.py (hook JSON path only;
+# --text prints everything) squeezes it under the cap at run time, least important parts first; tools/test_handoff.sh checks both.
+# Keep this short; narrative belongs in CHECKPOINT.md / TASKS.md / HANDOFF.md / CLAUDE.md.
 set -uo pipefail
 D="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"; cd "$D" || exit 0
 . tools/appinfo.sh 2>/dev/null || true
@@ -147,7 +149,8 @@ SHORT
 if [ "$TEXT_MODE" -eq 1 ]; then
   printf '%s\n' "$BRIEF"
 elif command -v python3 >/dev/null 2>&1; then
-  printf '%s' "$BRIEF" | python3 -I -c '
+  # fit-brief.py wraps the text in the hook JSON AND keeps it under the hook cap; if it is missing or fails: the plain wrapper, then raw text.
+  printf '%s' "$BRIEF" | python3 -I "$D/tools/fit-brief.py" 2>/dev/null || printf '%s' "$BRIEF" | python3 -I -c '
 import json, sys
 print(json.dumps({"hookSpecificOutput": {"hookEventName": "SessionStart", "additionalContext": sys.stdin.read()}}))
 ' 2>/dev/null || printf '%s\n' "$BRIEF"

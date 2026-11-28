@@ -542,6 +542,9 @@ class KeyboardPresenter(
             KeysView.NOTE_TAKEOVER -> st.takeovers++
             KeysView.NOTE_RESTING_IGNORED -> st.restingIgnored++
             KeysView.NOTE_PADDING_START -> st.paddingStarts++
+            KeysView.NOTE_SIDE_ERASE -> st.sideErases++
+            KeysView.NOTE_ADOPTED -> st.adoptedFingers++
+            KeysView.NOTE_MARGIN -> st.marginTouches++
         }
     }
 

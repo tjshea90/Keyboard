@@ -1,13 +1,13 @@
-# CHECKPOINT 1181 — read me first, then TASKS.md
+# CHECKPOINT 1259 — read me first, then TASKS.md
 
-**Written:** 2026-11-26T23:05:32Z · **tests:** all 1 fast checks green (gradle suite: see ship.sh)
-**Branch:** `claude/awesome-bell-gmcf0i` · **builds on:** `b47b39c` (this checkpoint is the commit after it)
+**Written:** 2026-11-27T05:04:51Z · **tests:** all 1 fast checks green (gradle suite: see ship.sh)
+**Branch:** `claude/great-fermi-3coauw` · **builds on:** `0d35480` (this checkpoint is the commit after it)
 
 ## Just done
-R36 DONE: swoop-v0.7.0-alpha16 released and recorded (https://github.com/tjshea90/Keyboard/releases/tag/swoop-v0.7.0-alpha16, run 45907515000 green: check, test-jvm, build; APK cert pin verified), emulator smoke green API 29 (45907615226) + API 36 (45907618364), BUILDLOG recorded, TASKS R36 ticked, research/R36-glide-training.md written
+R37 final polish: CLAUDE.md Skills section tightened to 1.9 KB (all 23 skills still mapped, repo rules win), CLAUDE.md 14348 -> 13394 bytes overall; tools/test_handoff.sh 78 passed 0 failed; R37 stays DONE
 
 ## Do this next
-nothing running. Waiting on the owner: R36f (alpha16: Settings > Help > Glide training at everyday speed, attach 'Swoop glide training <date>.txt'), R34f, R33f, R32f, R30f. When his training file arrives: from core/ run PRACTICE_FILE=<attached path> java -cp $CP org.junit.runner.JUnitCore app.kestrel.core.input.glide.PracticeEval (prints TRAINING lines: running text vs drills, rank of misses, the word before helps?, replay with teaching) after ./gradlew :core:compileTestKotlin and a cp.env (CP=build/classes/kotlin/main:build/classes/kotlin/test:build/resources/test:kotlin-stdlib:junit:hamcrest), never copy the file into the repo; decide next fix from the misses (language/order = R31 next-word model or context weight; path = reach of remembered shapes). Not synced to the Kestrel browser. R35 setup-script prompt answered (owner may say 'do it'). Final plain answer to the owner is the last thing to send
+nothing running for R37: the plain-words answer to the owner is the last thing to send (branch claude/great-fermi-3coauw). Owner's call, nothing done: switch off plugins (research/R37-claude-setup-audit.md section 3); old setup script on this account (paste block in research/R39-maven-429.md 'Other accounts', plus build-tools;35.0.0); default branch ccr-c57dc9d3-149psl has no tools/prewarm.sh. Do not touch claude/peaceful-turing-tyvm1e (alpha17 release, R38)
 
 *(resuming? CLAUDE.md's "FIRST ACTION OF EVERY SESSION" says how; the briefing is tools/resume.sh. Do that first, or autosave may stay off all session.)*
 
@@ -16,16 +16,16 @@ nothing running. Waiting on the owner: R36f (alpha16: Settings > Help > Glide tr
 
 ## Last ten checkpoints
 ```
-  75950b6 ckpt 1178: lab: PracticeEval.trainingReport (format-2 file decoded WITH the recorded wor
-  781f3b8 ckpt 1174: alpha16 (ime code 27, swoop-v0.7.0-alpha16) gated and pushed; android.yml DIS
-  3b001d5 ckpt 1173: gated swoop-v0.7.0-alpha16 (ime code 27) and pushed it: handoff self-test, un
-  047ef15 ckpt 1172: pre-ship: Glide training (Settings > Help): glide 8 everyday paragraphs and l
-  369bf17 ckpt 1167: R36 lab result: TrainingLabTest (made-up hand, real script, hold-out of unask
-  1ce6bc8 ckpt 1163: R36b+c: GlideTraining (core script: 8 paragraphs, 3 look-alike drills x4, own
-  8d6e357 ckpt 1148: R36a: GlideTeaching (core, pure: thumb + shape + confusion lessons from a KNO
-  feb6999 ckpt 1135: R36 (owner attached his glide practice file and asked for a much longer glide
-  426fe05 ckpt 1130: Android 16 emulator smoke PASSED on the released alpha15 tag (run 45900554490
-  ea77773 ckpt 1128: R34 DONE: alpha13, alpha14, alpha15 released and recorded (runs 45892015689, 
+  8348d0d ckpt 1257: R37 DONE (all 5 steps, evidence in TASKS.md): 23 tj-android-kit skills presen
+  d672e9d ckpt 1251: R39b answered: other accounts need one paste each (block in research/R39-mave
+  7e40362 ckpt 1249: alpha17 build dispatched: android.yml run 45942092495 (run_number 31) on clau
+  55b0b1e ckpt 1248: gated swoop-v0.7.0-alpha17 (ime code 28) and pushed it: handoff self-test, un
+  ec2b546 ckpt 1247: R38-1..4 ticked; version bumped to code 28 / 0.7.0-alpha17; full suites green
+  a540b09 ckpt 1245: R39 DONE: repo settings put Google's Maven Central copy before mavenCentral (
+  e97ab52 ckpt 1236: R39 (owner mid-session: Maven 429 keeps happening, thought a Google mirror in
+  b04be3e ckpt 1231: R38 code written, not yet verified: KeysView (erase key bigger via widenErase
+  b1d3f23 ckpt 1216: R38 (owner 2026-11-27: training file alpha16, glide edges/one-letter, bigger 
+  e66717b ckpt 1205: R37-2 DONE with evidence: cold container, 5 Gradle attempts (1-4 stopped only
 ```
 
 (1 automatic checkpoint(s) since the last deliberate one — the

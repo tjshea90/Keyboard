@@ -8,7 +8,7 @@ The photo is a Gboard screenshot (dark teal). It reached the session of branch `
 | toolbar | settings, clipboard, translate, spread evenly across the strip (the photo's grid, emoji and microphone buttons are NOT built: the owner listed which icons he wants) |
 | 1 | q w e r t y u i o p, a small digit hint 1-0 in the top-right corner of each (a held key types its digit) |
 | 2 | a s d f g h j k l, indented half a key at both ends |
-| 3 | Shift 1.5, z x c v b n m, Backspace 1.5 (Z stands under S, M under K: all three rows share one pitch) |
+| 3 | Shift 1.5, z x c v b n m, Backspace 1.5 (Z stands under S, M under K: all three rows share one pitch). R38: the erase key is DRAWN AND HIT bigger than its slot (half a gap more left, above and below, a little more into the margin at the right: about 24 % taller and 12 % wider on the tablet) so no letter has to move; a touch in a gap goes to the key with the nearest EDGE |
 | 4 | ?123 1.5 (round, pale blue, LEFT), comma 1, space 5 (blank), full stop 1, Enter 1.5 (round, cyan, RIGHT) |
 | below row 4 | nothing: no bottom bar, no down arrow, no globe, no emoji key, no voice key |
 

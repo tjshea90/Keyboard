@@ -32,10 +32,11 @@ class DiagnosticsTest {
     @Test fun theTouchLineHasOnlyNumbersAndAppearsOnlyAfterAStroke() {
         val s = InputStats()
         assertFalse(Diagnostics.text(app, s, "", false).contains("touch:"))
-        s.strokes = 4; s.strokePoints = 120; s.strokeMs = 1600; s.firstMoveMs = 80; s.firstMoveMax = 40; s.takeovers = 1; s.restingIgnored = 2; s.paddingStarts = 3
+        s.strokes = 4; s.strokePoints = 120; s.strokeMs = 1600; s.firstMoveMs = 80; s.firstMoveMax = 40; s.takeovers = 1; s.restingIgnored = 2; s.paddingStarts = 3; s.sideErases = 5; s.adoptedFingers = 6; s.marginTouches = 7
         val t = Diagnostics.text(app, s, "", false)
         assertTrue(t, t.contains("touch: 4 glide strokes, avg 30 touch points in 400 ms"))
         assertTrue(t.contains("second thumb took over 1 times") && t.contains("3 strokes began on the padding"))
+        assertTrue(t, t.contains("erase pressed during the other thumb's glide 5 times") && t.contains("was kept 6 times") && t.contains("7 touches began in the margin"))
     }
 
     @Test fun beforeAnyGlideItSaysSo() { assertTrue(Diagnostics.text(app, InputStats(), "", false).contains("glide: no glide yet")) }

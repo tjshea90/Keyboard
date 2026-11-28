@@ -440,9 +440,25 @@ class KeyboardRoot(context: Context) : FrameLayout(context), GripBar.Host {
         super.onMeasure(widthMeasureSpec, heightMeasureSpec)
     }
 
+    /**
+     * R38 (owner 2026-11-27: "it still often does not register that I'm glide typing, especially at the edges of the keyboard"): with gesture navigation (the Android 10 tablet's default, and the phone's) a touch that starts within
+     * about 30 dp of the left or right edge of the SCREEN is the "back" swipe: Android takes the finger away from the keyboard (the keyboard gets a cancel), so a glide that starts on q, a, p or l, or on the erase key,
+     * dies before it began. The keyboard's two side strips are handed back to the keyboard (API 29 `setSystemGestureExclusionRects`; the system only looks at the part of them that touches a screen edge, and keeps at most 200 dp
+     * of height per edge). A keyboard floating or squeezed away from the edges is not touched by this. The "back" swipe still works everywhere above the keyboard.
+     */
+    private fun keepEdgeSwipeOffTheKeys() {
+        val p = panelRect()
+        if (p.width() <= 0 || p.height() <= 0) { if (edgeRects.isNotEmpty()) { edgeRects = emptyList(); systemGestureExclusionRects = edgeRects }; return }
+        val e = Math.min((EDGE_EXCLUDE_DP * d).toInt(), p.width() / 2)
+        val want = listOf(Rect(p.left, p.top, p.left + e, p.bottom), Rect(p.right - e, p.top, p.right, p.bottom))
+        if (want != edgeRects) { edgeRects = want; systemGestureExclusionRects = want }
+    }
+    private var edgeRects: List<Rect> = emptyList()
+
     private var lastLayoutLog = ""
     override fun onLayout(changed: Boolean, l: Int, t: Int, r: Int, b: Int) {
         super.onLayout(changed, l, t, r, b)
+        keepEdgeSwipeOffTheKeys()
         val loc = IntArray(2); grip.getLocationOnScreen(loc)
         val msg = "layout root=${r - l}x${b - t} panel=${panelRect().flattenToString()} grip=${grip.width}x${grip.height} at screen ${loc[0]},${loc[1]} keys=${keys.width}x${keys.height} floating=$floating"
         if (msg != lastLayoutLog) { lastLayoutLog = msg; Diag.d(msg) }
@@ -582,10 +598,30 @@ class KeyboardRoot(context: Context) : FrameLayout(context), GripBar.Host {
 
     // ------------------------------------------------------------------ the corners
 
+    /**
+     * R38: a squeezed docked keyboard stands in a window as wide as the screen; the strips beside it belonged to nobody, so a thumb that began a glide a few millimetres outside the q or p key (the edge keys are where the
+     * thumb overshoots most) did nothing at all. A touch that starts in the margin right beside the keys is now the keys' own: it is handed to the keys view, which takes the nearest key, and the whole touch (moves and lift) follows.
+     */
+    private var marginTouch = false; private var marginDx = 0f; private var marginDy = 0f
+    private fun inKeyMargin(x: Float, y: Float): Boolean {
+        if (floating || !squeezed || previewOnly || previewing || resizeCorner >= 0 || clipboard.isOpen || keys.width <= 0) return false
+        val p = panelRect(); if (y < p.top + grip.height || y >= p.bottom) return false
+        val m = EDGE_MARGIN_DP * d
+        return (p.left > 0 && x >= p.left - m && x < p.left) || (p.right < width && x >= p.right && x < p.right + m)
+    }
+
     override fun dispatchTouchEvent(ev: MotionEvent): Boolean {
         if (ev.actionMasked == MotionEvent.ACTION_DOWN) {
+            marginTouch = false
             val c = cornerAt(ev.x, ev.y)
             if (c >= 0) { startResize(c, ev); return true }
+            if (inKeyMargin(ev.x, ev.y)) { marginTouch = true; keys.listener?.onTouchNote(KeysView.NOTE_MARGIN); marginDx = (panel.left + pane.left + keys.left).toFloat(); marginDy = (panel.top + pane.top + keys.top).toFloat() }
+        }
+        if (marginTouch) {
+            val m = MotionEvent.obtain(ev); m.offsetLocation(-marginDx, -marginDy)
+            keys.dispatchTouchEvent(m); m.recycle()
+            if (ev.actionMasked == MotionEvent.ACTION_UP || ev.actionMasked == MotionEvent.ACTION_CANCEL) marginTouch = false
+            return true
         }
         if (resizeCorner >= 0) {
             when (ev.actionMasked) {
@@ -655,5 +691,9 @@ class KeyboardRoot(context: Context) : FrameLayout(context), GripBar.Host {
         const val VERT_DEAD_DP = 10f
         const val FRAME_DP = 8f
         const val CORNER_DP = 24f
+        /** R38: how wide the strips at the keyboard's left and right edge are that the system's "back" swipe may not take (it starts within about 30 dp of a screen edge, a bit more with the high sensitivity setting). */
+        const val EDGE_EXCLUDE_DP = 56f
+        /** R38: how far beside a squeezed keyboard a touch still counts as the keys' own (see [inKeyMargin]). */
+        const val EDGE_MARGIN_DP = 36f
     }
 }

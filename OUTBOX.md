@@ -2042,3 +2042,52 @@
 > - **You, from before:** R34f (translation turns itself off, glides starting on the top-row keys, e-mail addresses learned in login boxes, domains after @), R33f (glide "and" a dozen times and tap "and" if "ave" appears), R32f and R30f.
 > - **Me:** the next-word suggestion model is not started, and it is your call. The Kestrel browser's copy of the keyboard is not updated. For the setup-script change, say "do it" and I will make it.
 <!-- sha:54afc7a56147 -->
+
+## 2026-11-27T05:05:47Z
+> All five steps are done and pushed to the new branch `claude/great-fermi-3coauw`. The build and tests pass. I installed nothing and changed no account, environment or plugin setting.
+>
+> https://github.com/tjshea90/Keyboard/tree/claude/great-fermi-3coauw
+>
+> **1. tj-android-kit skills: yes, all 23 are in my skill list.** That list holds 682 skills from 74 plugins in total, tj-android-kit being one of them.
+>
+> **2. Build and tests**
+> - `ANDROID_HOME` is `/opt/android-sdk`. The platforms are android-29, android-34 and android-36.
+> - I built in a fresh container. The core tests ran 694 with 0 failures, and 15 lab tests are skipped by design. The app tests ran 361 with 0 failures. Lint found 0 errors and 57 warnings. The debug APK is 7.7 MB, and the two helper modules build.
+> - After another session's work was merged in, everything still compiles and the repo's own tooling self-test passes (78 of 78). My test numbers predate that session's latest keyboard changes.
+> - **No domain is blocked, so there is nothing to add.** The environment's network is "unrestricted".
+> - The only failures were HTTP 429 "too many requests" from Maven Central (`repo.maven.apache.org`). That is a rate limit, and the build passed on the 5th attempt. Another session has since fixed the cause in the repo by putting Google's public copy of Maven Central first in `settings.gradle.kts`.
+> - This account's setup script is still the old one without the Maven mirror lines. I didn't edit it. The block to paste is in `research/R39-maven-429.md` under "Other accounts".
+> - I did not run anything on the tablet or an emulator, or the GitHub Actions workflow.
+>
+> **3. CLAUDE.md, `.claude/` and skills**
+> - `.claude/` holds only `settings.json`, with six light save-ladder hooks that match the copy in `tools/`. The repo has no skills, commands or agents of its own. I left all of that alone.
+> - CLAUDE.md went from 14.3 KB to 13.4 KB even with the new section. I removed the "Session Learnings" block (4.3 KB). It was an exact copy of the one in `AGENTS.md`, last written on 19 November.
+> - I fixed several out-of-date lines:
+>   - The SDK platforms (it said 36/37, the real ones are 29/34/36).
+>   - The branch line, which named the repo's default branch as if it were each session's own.
+>   - The "encrypted key file" mention, which no longer exists.
+>   - The "permissions empty until KB-601" wording.
+>   - The absolute path to the Browser repo (now `../Browser`).
+> - I added the build command and a pointer to the real-swipe command.
+> - No standing rule was removed or loosened. I made one rule explicit that was only a comment in `tools/push.sh`: sessions never push to the default branch.
+> - The new "Skills" section (1.9 KB) says which tj-android-kit skill to load before which kind of work, and that this repo's rules win over any skill. Three skills would break your rules if followed literally: `testing-setup` installs Hilt, `edge-to-edge` needs Compose, and `kotlin-concurrency-and-flow` assumes coroutines. The Compose, Material, `adap
+> [... 2912 characters omitted ...]
+> ur save system merges in on its own. My own changes are:
+> - `CLAUDE.md`
+> - `TASKS.md` (R37, all five boxes ticked with evidence)
+> - `research/R37-claude-setup-audit.md`
+> - `tools/resume.sh`
+> - new `tools/fit-brief.py`
+> - `tools/test_handoff.sh`
+>
+> Your call, nothing done:
+> - Switch off the plugins above.
+> - This account's setup script is still the old one. Beyond the Maven mirror block, adding `build-tools;35.0.0` would save a roughly one-minute download in each fresh session. Say "do it" and I'll make the edit, which will ask for your approval.
+> - The repo's default branch `ccr-c57dc9d3-149psl` has no `tools/prewarm.sh`, so the setup script's warm-up step only runs the fallback. Merging newer work into that branch fixes it.
+>
+> Still waiting on you, and not part of this task:
+> - R36f, the glide training file.
+> - R34f, R33f, R32f and R30f.
+>
+> The alpha17 release (R38) is being finished by another session.
+<!-- sha:26be1a28d6b1 -->

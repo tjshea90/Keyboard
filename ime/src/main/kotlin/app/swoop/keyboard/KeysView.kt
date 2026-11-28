@@ -167,6 +167,19 @@ class KeysView(context: Context) : View(context) {
     /** R34d: when the waiting finger landed, and a letter it tapped and lifted while the first finger had not decided yet (typed right after the first finger's own letter, dropped when that finger glides). */
     private var waitAt = 0L
     private var pendingTap: KeySpec? = null
+    /** R38: the finger now tracked landed while another one was gliding and had not moved yet when that one lifted: if it only lifts again it is no key press (a palm, a resting thumb), but if it moves it is the next word's glide. */
+    private var noTap = false
+    /** R38: the erase key pressed by the OTHER thumb while the first one is gliding (it used to be thrown away with every other second touch): its pointer id, when it went down, and its own repeat. */
+    private var sideId = -1
+    private var sideStartAt = 0L
+    private val sideRepeat = object : Runnable {
+        override fun run() {
+            if (sideId < 0) return
+            val held = SystemClock.uptimeMillis() - sideStartAt
+            if (BackspaceRepeat.wordMode(held)) listener?.onDeleteWord() else listener?.onKey(Key.Backspace)
+            handler.postDelayed(this, BackspaceRepeat.delayAfter(held))
+        }
+    }
 
     // ---- glide (KB-103)
     private var glideEnabled = false
@@ -328,7 +341,20 @@ class KeysView(context: Context) : View(context) {
     private fun layoutKeys() {
         if (rectsW == width && rectsH == height && rects.isNotEmpty()) return
         rectsW = width; rectsH = height
-        rects = MiniKeyboardGeometry.slots(rows, width - 2 * pad, height - 2 * pad - stripPx(), gapX(), gapY(), 0f, ImeLayout.rowWeights(rows)).map { r -> r.map { KeyBox(it.left + pad, it.top + pad + stripPx(), it.right + pad, it.bottom + pad + stripPx()) } }
+        rects = MiniKeyboardGeometry.slots(rows, width - 2 * pad, height - 2 * pad - stripPx(), gapX(), gapY(), 0f, ImeLayout.rowWeights(rows)).mapIndexed { i, r -> r.mapIndexed { j, it ->
+            val kb = KeyBox(it.left + pad, it.top + pad + stripPx(), it.right + pad, it.bottom + pad + stripPx())
+            if (rows[i][j].key === Key.Backspace) widenErase(kb) else kb
+        } }
+    }
+
+    /**
+     * R38 (owner 2026-11-27: "I have a hard time pressing the erase key because I'm moving fast. Try to make it bigger and easier to press ... without ruining anything else"): the erase key is drawn and hit bigger. No letter may move
+     * to make room (the glide shapes and the learned thumb habit are measured on the letters' places), so it grows into the gaps around it: half a gap to the left, a bit into the margin at the right, half of the gap above and
+     * below. The neighbours keep their own boxes; what stays between them and it is still shared by nearest edge ([keyAt]).
+     */
+    private fun widenErase(b: KeyBox): KeyBox {
+        val gx = gapX(); val gy = gapY()
+        return KeyBox(b.left - gx * ERASE_GROW_X, b.top - gy * ERASE_GROW_Y, Math.min(b.right + pad * ERASE_GROW_RIGHT, width.toFloat()), Math.min(b.bottom + gy * ERASE_GROW_Y, height.toFloat()))
     }
 
     /** The 26 letter keys' centres as laid out now (the same function that draws them), for the glide decoder (KB-103). Null before the first layout. */
@@ -616,6 +642,8 @@ class KeysView(context: Context) : View(context) {
     private fun keyAt(x: Float, y: Float): KeySpec? {
         layoutKeys()
         if (rects.isEmpty()) return null
+        // inside a drawn key: the key (the erase key's box reaches into the gaps around it, so this comes before the rows are compared)
+        for ((i, row) in rects.withIndex()) for ((j, b) in row.withIndex()) { val k = rows[i][j]; if (k.key != null && b.contains(x, y)) return k }
         // the row under (or nearest to) the finger: the pad around the keys and the gaps between rows belong to the closest row
         var ri = 0; var best = Float.MAX_VALUE
         for ((i, row) in rects.withIndex()) {
@@ -624,12 +652,12 @@ class KeysView(context: Context) : View(context) {
             if (d < best) { best = d; ri = i }
         }
         if (best > dp(10f)) return null
-        // inside a key, else the nearest key of that row horizontally (a thumb that lands on a gap still types)
+        // else the nearest key of that row horizontally (a thumb that lands on a gap still types). R38: nearest by the distance to the key's EDGE; by the distance to its centre a wide key (erase, shift, enter) lost the gap beside it to a narrow neighbour
         var near: KeySpec? = null; var nearD = Float.MAX_VALUE
         for ((j, b) in rects[ri].withIndex()) {
             val k = rows[ri][j]; if (k.key == null) continue
-            if (b.contains(x, y)) return k
-            val d = Math.abs(x - b.centerX); if (d < nearD) { nearD = d; near = k }
+            val d = if (x < b.left) b.left - x else if (x > b.right) x - b.right else 0f
+            if (d < nearD) { nearD = d; near = k }
         }
         return near
     }
@@ -753,9 +781,12 @@ class KeysView(context: Context) : View(context) {
     @SuppressLint("ClickableViewAccessibility") // KB-305 adds TalkBack key descriptions; this view is a keyboard, not a button
     override fun onTouchEvent(e: MotionEvent): Boolean {
         when (e.actionMasked) {
-            MotionEvent.ACTION_DOWN -> { requestUnbufferedDispatch(e); waitId = -1; wtn = 0; pendingTap = null; activeId = e.getPointerId(0); pressDown(e.getX(0), e.getY(0), at = e.eventTime) }   // unbuffered: every touch sample at once, not batched to the frame (a fast trail)
+            MotionEvent.ACTION_DOWN -> { requestUnbufferedDispatch(e); stopSideErase(); waitId = -1; wtn = 0; pendingTap = null; activeId = e.getPointerId(0); pressDown(e.getX(0), e.getY(0), at = e.eventTime) }   // unbuffered: every touch sample at once, not batched to the frame (a fast trail)
             MotionEvent.ACTION_POINTER_DOWN -> {
                 val ni = e.actionIndex
+                // R38 (owner 2026-11-27: "I have a hard time pressing the erase key because I'm moving fast"): the other thumb presses erase while this one is drawing a word. That touch used to be recorded as "a second finger during a glide" and
+                // thrown away, so the erase key did nothing. It is a real press: it erases at once (the first thumb's glide goes on untouched) and repeats while held.
+                if (gliding && !firstUndecided() && sideId < 0 && waitId < 0 && popup == null && !inStrip(e.getY(ni)) && keyAt(e.getX(ni), e.getY(ni))?.key === Key.Backspace) { startSideErase(e.getPointerId(ni)); return true }
                 // R34d (owner 2026-11-26: "make the delay from first key to glide instant so it doesn't erroneously type one letter"): a finger that has rested on a letter for a while is a thumb that holds the tablet (or a palm), not a key press:
                 // it types nothing, and the finger that lands now is the one that types or glides
                 if (armed && waitId < 0 && popup == null && holdAlt == null && firstUndecided() && SystemClock.uptimeMillis() - downAt >= RESTING_MS) {
@@ -787,14 +818,27 @@ class KeysView(context: Context) : View(context) {
             }
             MotionEvent.ACTION_POINTER_UP -> {
                 val i = e.actionIndex; val id = e.getPointerId(i)
+                if (id == sideId) { stopSideErase(); return true }
                 if (id == activeId) { val undecided = firstUndecided(); pressUp(e, i); activeId = -1; takeOverWaiting(e, restingOk = undecided) }
                 else if (id == waitId) noteWaitLift()
             }
-            MotionEvent.ACTION_UP -> { if (activeId >= 0) { val i = e.findPointerIndex(activeId).let { if (it < 0) 0 else it }; pressUp(e, i) }; activeId = -1 }
-            MotionEvent.ACTION_CANCEL -> { pressCancel(); activeId = -1; waitId = -1; wtn = 0; pendingTap = null }
+            MotionEvent.ACTION_UP -> { stopSideErase(); if (activeId >= 0) { val i = e.findPointerIndex(activeId).let { if (it < 0) 0 else it }; pressUp(e, i) }; activeId = -1 }
+            MotionEvent.ACTION_CANCEL -> { stopSideErase(); pressCancel(); activeId = -1; waitId = -1; wtn = 0; pendingTap = null }
         }
         return true
     }
+
+    private fun startSideErase(id: Int) {
+        sideId = id; sideStartAt = SystemClock.uptimeMillis()
+        listener?.onTouchNote(NOTE_SIDE_ERASE)
+        haptic(); click()
+        val k = rows.firstNotNullOfOrNull { row -> row.firstOrNull { it.key === Key.Backspace } }
+        if (k != null) light(k)
+        listener?.onKey(Key.Backspace)
+        handler.removeCallbacks(sideRepeat); handler.postDelayed(sideRepeat, BackspaceRepeat.FIRST_MS)
+    }
+
+    private fun stopSideErase() { sideId = -1; handler.removeCallbacks(sideRepeat) }
 
     private fun addWait(x: Float, y: Float, t: Long) {
         if (wtn == wtx.size) { if (wtn >= 1024) return; wtx = wtx.copyOf(wtn * 2); wty = wty.copyOf(wtn * 2); wtt = wtt.copyOf(wtn * 2) }
@@ -862,9 +906,14 @@ class KeysView(context: Context) : View(context) {
         for (k in 1 until n) { val dx = wtx[k] - wtx[0]; val dy = wty[k] - wty[0]; if (dx * dx + dy * dy > lim) { moved = true; break } }
         if (!isLetter(keyAt(wtx[0], wty[0]))) { listener?.onTouchNote(NOTE_RESTING_IGNORED); return }
         if (!moved) {
-            if (!restingOk || SystemClock.uptimeMillis() - waitAt >= RESTING_MS) { listener?.onTouchNote(NOTE_RESTING_IGNORED); return }
+            // R38 (owner 2026-11-27: "it still often does not register that I'm glide typing"): people rest about 100 ms on the first key before they move (their own file: median 106 ms, up to 213 ms). A thumb that
+            // landed moments ago while the other one was still drawing, and has not moved yet when that one lifts, is the NEXT word's glide beginning: it is kept and glides when it moves. It used to be dropped whole
+            // (activeId = -1 above, every later move ignored). A finger that has been resting longer than that is a palm or a thumb that holds the tablet, as before.
+            val fresh = SystemClock.uptimeMillis() - waitAt < RESTING_MS
+            if (!fresh) { listener?.onTouchNote(NOTE_RESTING_IGNORED); return }
             activeId = id
-            pressDown(wtx[0], wty[0], quiet = true, at = wtt[0])          // (its key click was played when it landed)
+            if (!restingOk) listener?.onTouchNote(NOTE_ADOPTED)
+            pressDown(wtx[0], wty[0], quiet = true, at = wtt[0], noTap = !restingOk)          // (its key click was played when it landed)
             for (k in 1 until n) addPoint(wtx[k], wty[k], wtt[k])
             return
         }
@@ -877,9 +926,9 @@ class KeysView(context: Context) : View(context) {
         listener?.onTouchNote(NOTE_TAKEOVER)
     }
 
-    private fun pressDown(x: Float, y: Float, quiet: Boolean = false, at: Long = SystemClock.uptimeMillis()) {
+    private fun pressDown(x: Float, y: Float, quiet: Boolean = false, at: Long = SystemClock.uptimeMillis(), noTap: Boolean = false) {
         handler.removeCallbacks(repeat); clearHold()
-        armed = false; gliding = false; stripDown = -1; pendingTap = null
+        armed = false; gliding = false; stripDown = -1; pendingTap = null; this.noTap = noTap
         if (inStrip(y)) {                                             // the strip was touched: a toolbar icon or a guess
             toolDown = toolAt(x, y); stripDown = if (toolDown >= 0) -1 else chipAt(x, y); stripLong = false
             if (toolDown >= 0) haptic()
@@ -893,7 +942,7 @@ class KeysView(context: Context) : View(context) {
         if (isBubbleKey(k)) { bubbleKey = k; bubbleText = k!!.label }
         spaceIsDown = (k?.key as? Key.Ch)?.text == " "; spaceHeld = false
         if (spaceIsDown) handler.postDelayed(spaceHold, SPACE_HOLD_MS)
-        if (k != null) { if (!quiet) { haptic(); click() }; if (altOf(k) != null || isSymbolKey(k) || isDigitKey(k)) handler.postDelayed(hold, HOLD_MS) }
+        if (k != null) { if (!quiet) { haptic(); click() }; if (!noTap && (altOf(k) != null || isSymbolKey(k) || isDigitKey(k))) handler.postDelayed(hold, HOLD_MS) }
         if (k?.key === Key.Backspace) { listener?.onKey(Key.Backspace); repeatStartAt = SystemClock.uptimeMillis(); handler.postDelayed(repeat, BackspaceRepeat.FIRST_MS) }
         downX = x; downY = y; downAt = SystemClock.uptimeMillis(); firstMoveAt = 0L
         if (glideEnabled && page == Page.LETTERS && pressedLetter != null) {
@@ -957,6 +1006,7 @@ class KeysView(context: Context) : View(context) {
         val letter = pressedLetter
         if (letter != null) {                              // a tap on a letter types the letter it went down on, even when the finger drifted (held: its digit)
             pressedLetter = null; down = null; gn = 0
+            if (noTap) { noTap = false; dyn(); listener?.onTouchNote(NOTE_RESTING_IGNORED); return }          // R38: it landed during another finger's glide and never moved: not a key press
             light(letter); emit(if (alt != null) Key.Ch(alt) else letter.key!!)
             flushPendingTap()
             return
@@ -978,6 +1028,7 @@ class KeysView(context: Context) : View(context) {
         handler.removeCallbacks(repeat)
         val alt = holdAlt; clearHold(); popup = null
         pressedLetter = null; down = null; armed = false; gliding = false; gn = 0
+        if (noTap) { noTap = false; return }                                                              // R38: not a key press (see [noTap])
         light(l); emit(if (alt != null) Key.Ch(alt) else l.key!!)
     }
 
@@ -1035,10 +1086,12 @@ class KeysView(context: Context) : View(context) {
         val k = glideDown; glideDown = null
         if (stayedOnKey(k)) {                            // a tap that slid a little (the finger never left its own key): the key it went down on
             gn = 0; dyn()
+            if (noTap) { noTap = false; listener?.onTouchNote(NOTE_RESTING_IGNORED); return }          // R38: (a finger that landed during another finger's glide and only wobbled)
             if (k?.key != null) { light(k); emit(k.key!!) }
             flushPendingTap()
             return
         }
+        noTap = false                                    // (a real glide: the flag only keeps a wobble of a finger that landed during another glide from being typed)
         pendingTap = null                                // (a glide: a quick tap of another finger during it types nothing)
         val now = SystemClock.uptimeMillis()
         listener?.onTouchNote(NOTE_STROKE, gn, (now - downAt).toInt(), (firstMoveAt - downAt).toInt().coerceAtLeast(0))
@@ -1069,6 +1122,8 @@ class KeysView(context: Context) : View(context) {
         for ((i, row) in rows.withIndex()) for ((j, k) in row.withIndex()) if (k.label == label && k.key != null) return rects[i][j].centerX to rects[i][j].centerY
         return null
     }
+    /** Tests: the drawn (and hit) box of the key labelled [label], in this view's pixels. */
+    fun boxForTest(label: String): RectF? { layoutKeys(); for ((i, row) in rows.withIndex()) for ((j, k) in row.withIndex()) if (k.label == label && k.key != null) return rects[i][j].let { RectF(it.left, it.top, it.right, it.bottom) }; return null }
     fun bubbleTextForTest(): String? = if (bubbleKey != null) bubbleText else null
     fun pageForTest(): Page = page
     fun candidatesForTest(): List<String> = cands
@@ -1108,6 +1163,10 @@ class KeysView(context: Context) : View(context) {
         const val TOOL_CLIPBOARD = 2
         const val TOOL_TRANSLATE = 3
         /** A finger that has moved this far (dp) from where it went down has started a glide (a path that never leaves its own key and stays short is still a tap, see [stayedOnKey]). R28b: 5 -> 2.5 (owner: "as soon as I start moving my finger it recognizes that I'm glide typing"). */
+        /** R38: how far the erase key grows into the gaps around it, in gaps (left, above and below) and in margins (right). */
+        const val ERASE_GROW_X = 0.5f
+        const val ERASE_GROW_Y = 0.5f
+        const val ERASE_GROW_RIGHT = 0.7f
         const val GLIDE_START_DP = 2.5f
         /** ... but a long press that already shows its digit needs this much, so the digit is not lost to a rolling thumb. */
         const val GLIDE_START_HELD_DP = 8f
@@ -1115,6 +1174,10 @@ class KeysView(context: Context) : View(context) {
         const val NOTE_TAKEOVER = 2
         const val NOTE_RESTING_IGNORED = 3
         const val NOTE_PADDING_START = 4
+        /** R38: the erase key pressed by the other thumb during a glide / a finger that landed during a glide and moved only later was kept / a touch began in the margin beside a squeezed keyboard. */
+        const val NOTE_SIDE_ERASE = 5
+        const val NOTE_ADOPTED = 6
+        const val NOTE_MARGIN = 7
         /** R34d: a finger that has stayed on a letter this long (ms) without moving when another finger lands is a thumb that holds the tablet, not a key press: it types nothing. A fast two-thumb tap overlaps by far less. */
         const val RESTING_MS = 300L
         /** A path shorter than this (in key pitches) is a tap that slid a little, not a glide. */
