@@ -54,10 +54,12 @@ for m in re.finditer(r'<node [^>]*class="android.widget.EditText"[^>]*bounds="\[
 PY
 }
 TAP=""
-for i in 1 2 3 4 5 6; do
+# R40: the scroll uses the REAL screen size (it was a fixed swipe from y=1500, which starts below the screen of the 1280 px tall API 36 emulator: a longer Setup text then hid the try-it box for good)
+SZ="$(adb shell wm size | grep -oE '[0-9]+x[0-9]+' | tail -1)"; SW="${SZ%x*}"; SH="${SZ#*x}"; [ -n "$SW" ] && [ -n "$SH" ] || { SW=720; SH=1280; }
+for i in 1 2 3 4 5 6 7 8; do
   dump; TAP="$(find_edit)"
   if [ -n "$TAP" ]; then break; fi
-  adb shell input swipe 500 1500 500 500 300
+  adb shell input swipe $((SW / 2)) $((SH * 3 / 4)) $((SW / 2)) $((SH / 4)) 300
 done
 [ -n "$TAP" ] && ok "found the try-it field at $TAP" || { bad "no text field on the Setup screen"; shot setup; }
 adb shell input tap $TAP; sleep 3
