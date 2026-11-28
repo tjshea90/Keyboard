@@ -19,7 +19,7 @@ class GlideLearningTest {
     private class Env(bytes: ByteArray, keys: GlideKeys) {
         val saved = ArrayList<String>()
         val engine = GlideTyping({ bytes }, Executor { it.run() }, savePersonal = { saved.add(it) }).also { it.prepare(keys, null, null) }
-        fun model(): PersonalModel { engine.saveLearned(); return PersonalModel.parse(saved.last()) }
+        fun model(): PersonalModel { engine.saveLearned(); return if (saved.isEmpty()) PersonalModel() else PersonalModel.parse(saved.last()) }       // (nothing learned: nothing is ever saved)
     }
     private fun env() = Env(bytes, keys)
 
