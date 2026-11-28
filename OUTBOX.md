@@ -2160,3 +2160,7 @@
 ## 2026-11-28T16:16:12Z
 > Waiting on the run's last steps.
 <!-- sha:530f38c98c1a -->
+
+## 2026-11-28T16:18:08Z
+> The run should finish within a few minutes. I'll poll its small artifact listing next, which is cheaper than the full run record.
+<!-- sha:9c566e8f5a37 -->
