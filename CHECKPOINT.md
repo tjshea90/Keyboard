@@ -1,13 +1,13 @@
-# CHECKPOINT 1324 — read me first, then TASKS.md
+# CHECKPOINT 1329 — read me first, then TASKS.md
 
-**Written:** 2026-11-28T15:19:31Z · **tests:** all 1 fast checks green (gradle suite: see ship.sh)
-**Branch:** `claude/bold-knuth-nn3ywo` · **builds on:** `0a989a5` (this checkpoint is the commit after it)
+**Written:** 2026-11-28T15:37:38Z · **tests:** all 1 fast checks green (gradle suite: see ship.sh)
+**Branch:** `claude/bold-knuth-nn3ywo` · **builds on:** `936d206` (this checkpoint is the commit after it)
 
 ## Just done
-alpha19 prep (NOT released): core GlideLearning.confirm + KeptGlide = the shared glide-learning rule (R29 LearnGuard, R33 keepTrust, unlearn the wrong first guess) extracted from GlideSession.confirmPrevious with unchanged behaviour (GlideSessionTest, PostCorrectionTest, KeptRareWordTest, AdaptiveLearningTest, CommonWordGuardTest all green) + GlideLearningTest 5; ShapeRescorerTest and ShapeNetParityTest also find the weights in geckoapp/src/main/assets/glide (the Browser layout); tools/sync-browser.sh (status / sync / --test) wired into resume.sh (status line), ship.sh (next-step card) and test_handoff.sh. alpha18 build is still running: run 46159028756
+STATE: Swoop alpha18 RELEASED AND RECORDED (https://github.com/tjshea90/Keyboard/releases/tag/swoop-v0.7.0-alpha18, run 46159028756 green, BUILDLOG line written). Emulator smoke on a real Android: API 29 run 44 GREEN; API 36 run 45 FAILED before typing (no Setup text field: smoke.sh scrolled with a fixed swipe from y=1500, off the 1280 px API 36 screen, and my longer 'Fix the word before' text pushed the try-it box below the fold) -> tools/emu/smoke.sh now scrolls with the real screen size (834c46d), API 36 smoke RE-DISPATCHED (check it). Browser (own branch claude/bold-knuth-nn3ywo, pushed ckpt 3613 95c93622, green handoff 100/100; Browser tests here: core 2297 tests 1 load-flake (PhoneBackendTest, 19/19 alone), app 516 + new MiniNavTest rare-look-alike test 0 failed, mutation-checked): Kestrel alpha117 (gecko code 218) DISPATCHED: Browser android.yml run 46160819337 (run_number 319); note saved in scratchpad/browser-note.txt (same text as the dispatch). alpha116 (code 217) of the other Browser session is published but UNRECORDED in the Browser BUILDLOG
 
 ## Do this next
-next: (1) check run 46159028756 (mcp__github__actions_get get_workflow_run resource_id 46159028756) and record alpha18 when green: bash tools/record-release.sh swoop-v0.7.0-alpha18 with the ship note; (2) Browser: add swipe_reference.bin copy to its sync-keyboard-core.sh, run bash tools/sync-browser.sh --test (or the steps by hand), MiniNav.confirmGlide -> GlideLearning.confirm (+ pendingSerial from GlideResult), MiniNavTest kept-rare-look-alike test, docs/KEYBOARD-LINK.md; (3) Swoop docs/KESTREL-LINK.md + CLAUDE.md rule line + TASKS R40-6 boxes; then ship alpha19 (version bump 0.7.0-alpha19 code 30) so the Browser pin names a RELEASED engine
+next: (1) mcp__github__actions_get get_workflow_run resource_id 46160819337 on tjshea90/Browser (or get_release_by_tag kestrel-g-v0.3.0-alpha117); when green: cd-free: bash /home/user/Browser/tools/record-release.sh kestrel-g-v0.3.0-alpha117 "$(cat scratchpad/browser-note.txt)" then git -C /home/user/Browser push (the record commit goes on my Browser branch only); if red read get_job_logs failed_only and fix on my Browser branch (never main); (2) check the API 36 smoke re-run on this repo (list_workflow_runs emu-smoke.yml); (3) tick TASKS R40 + R40-6d and the Browser TASKS KBR40d with the Release link; (4) tell the owner in plain words (what was fixed, research, what is NOT proven on the tablet, the R41 decision, alpha116 unrecorded)
 
 *(resuming? CLAUDE.md's "FIRST ACTION OF EVERY SESSION" says how; the briefing is tools/resume.sh. Do that first, or autosave may stay off all session.)*
 
@@ -16,6 +16,7 @@ next: (1) check run 46159028756 (mcp__github__actions_get get_workflow_run resou
 
 ## Last ten checkpoints
 ```
+  f4f0a89 ckpt 1324: alpha19 prep (NOT released): core GlideLearning.confirm + KeptGlide = the sha
   2ff9b78 ckpt 1318: alpha18 DISPATCHED: android.yml run 46159028756 (run_number 32) on commit 93b
   93bb9c7 ckpt 1317: gated swoop-v0.7.0-alpha18 (ime code 29) and pushed it: handoff self-test, un
   10c0ce1 ckpt 1316: worker restarted mid-ship: state after ckpt 1304 is all committed+pushed: ime
@@ -25,8 +26,7 @@ next: (1) check run 46159028756 (mcp__github__actions_get get_workflow_run resou
   d7a582d ckpt 1259: R37 final polish: CLAUDE.md Skills section tightened to 1.9 KB (all 23 skills
   8348d0d ckpt 1257: R37 DONE (all 5 steps, evidence in TASKS.md): 23 tj-android-kit skills presen
   d672e9d ckpt 1251: R39b answered: other accounts need one paste each (block in research/R39-mave
-  7e40362 ckpt 1249: alpha17 build dispatched: android.yml run 45942092495 (run_number 31) on clau
 ```
 
-(5 automatic checkpoint(s) since the last deliberate one — the
+(1 automatic checkpoint(s) since the last deliberate one — the
 session was still mid-step. `git diff` against it shows what changed.)
