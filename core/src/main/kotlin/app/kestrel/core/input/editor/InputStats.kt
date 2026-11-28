@@ -15,6 +15,8 @@ class InputStats {
     @JvmField var foreignReports = 0
     /** Times an editor call failed or surprised the keyboard and it re-read the editor. */
     @JvmField var resyncs = 0
+    /** R40-3: times the editor reported that the word being tapped was no longer composing (the app ended it on its own) and the keyboard stopped treating it as composing. Counter only. */
+    @JvmField var composingLost = 0
 
     /** R28b: the touch stream of the glides (numbers only): how many strokes, their touch points and duration, the time to the first move, second-thumb hand-overs. Read by Diagnostics, so a report from the tablet says how its screen delivers touches. */
     @JvmField var strokes = 0
