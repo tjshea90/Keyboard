@@ -502,6 +502,9 @@ class InputController(editor: EditorBridge, val stats: InputStats = InputStats()
         if (word.isEmpty() || (selStart >= 0 && selStart != selEnd)) return false
         settle()
         swapAt = -1
+        // R40-3: the word before the cursor is the word to replace, WHOLE. When the app ended the composing word on its own in the middle of a word, only the end of it is composing: that composing part is closed first and the
+        // whole word is replaced as plain text (never just its tail, which would leave the first half of the word in front of the picked one).
+        if (composing != null && (wordBeforeCursor()?.length ?: 0) > composing!!.length) endComposing()
         val c = composing
         val stem = wordBeforeCursor() ?: ""
         var w = word
